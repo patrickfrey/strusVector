@@ -2,20 +2,13 @@
 *.slo
 *.lo
 *.o
-*.obj
-
-# Precompiled Headers
-*.gch
-*.pch
 
 # Compiled Dynamic libraries
+*.so.0.*
+*.so.0
 *.so
 *.dylib
 *.dll
-
-# Fortran module files
-*.mod
-*.smod
 
 # Compiled Static libraries
 *.lai
@@ -23,7 +16,47 @@
 *.a
 *.lib
 
-# Executables
-*.exe
-*.out
-*.app
+# Dependency files
+*.d
+
+# Valgring suppression files
+*.sup
+
+# Generated test data (cleaned with make clean)
+
+# CMake generated files
+CMakeCache.txt
+CMakeFiles
+Makefile
+cmake_install.cmake
+install_manifest.txt
+CTestTestfile.cmake
+CMakeLists.txt.user
+cmake/uninstall.cmake
+DartConfiguration.tcl
+Testing/
+*.cmake.user
+include/strus/versionVector.hpp
+src/utils/internationalization.cpp
+dist/obs/deploy_to_obs.sh
+dist/archlinux/PKGBUILD
+dist/obs/strusvector.dsc
+dist/obs/strusvector-Debian_7.0.dsc
+dist/obs/strusvector-xUbuntu_12.04.dsc
+dist/redhat/strusvector.spec
+3rdParty/armadillo/InstallFiles/ArmadilloConfig.cmake
+3rdParty/armadillo/ArmadilloConfig.cmake
+3rdParty/armadillo/libstrus_armadillo.so.7
+3rdParty/armadillo/libstrus_armadillo.so.7.400.2
+3rdParty/armadillo/tmp/
+
+# Compiled Programs
+tests/vectorSpaceModel/src/testArmadillo
+tests/vectorSpaceModel/src/testLshVectorSpaceModel
+tests/vectorSpaceModel/src/testLshSimHash
+tests/vectorSpaceModel/src/testVectorSpaceModel
+tests/vectorSpaceModel/test.vm
+tests/vectorSpaceModel/test.vm.in.txt
+tests/vectorSpaceModel/test.vm.out.txt
+.travis.yml
+

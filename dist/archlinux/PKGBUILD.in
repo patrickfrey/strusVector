@@ -1,0 +1,46 @@
+# Contributor: Patrick Frey <patrickpfrey@yahoo.com> 
+# Maintainer: Patrick Frey <patrickpfrey@yahoo.com> 
+
+pkgname=strusvector
+_deppkgver=@STRUS_MAJOR_VERSION@.@STRUS_MINOR_VERSION@
+_mainpkgver=@STRUS_VERSION@
+pkgver=${_mainpkgver}
+pkgrel=1
+pkgdesc='Library implementing the storage of a text search engine.'
+license=('MPL2')
+arch=('i686' 'x86_64')
+url="http://project-strus.net"
+depends=('boost>=1.53' 'boost-libs>=1.53' 'leveldb' "strusbase>=${_deppkgver}")
+makedepends=('cmake')
+source=("${pkgname}-${_mainpkgver}.tar.gz")
+
+build() {
+  cd ${srcdir}/${pkgname}-${_mainpkgver}
+
+  msg "Building..."
+  mkdir build
+  cd build
+  cmake -DCMAKE_INSTALL_PREFIX=/usr -DCMAKE_BUILD_TYPE=Release -DLIB_INSTALL_DIR=lib ..
+  make
+}
+
+package() {
+  cd ${srcdir}/${pkgname}-${_mainpkgver}
+
+  msg "Installing.."
+  cd build
+  make DESTDIR=${pkgdir} install
+  
+  msg "Adding strusvector to ld.so.conf..."
+  install -d ${pkgdir}/etc/ld.so.conf.d
+  echo "/usr/lib/${pkgname}" > ${pkgdir}/etc/ld.so.conf.d/${pkgname}.conf  
+}
+
+check() {
+  cd ${srcdir}/${pkgname}-${_mainpkgver}
+
+  msg "Testing..."
+  cd build
+  make test
+}
+

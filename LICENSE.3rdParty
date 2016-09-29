@@ -1,0 +1,28 @@
+3rd party licenses of strusVector
+====================
+
+Table of Contents
+-----------------
+
+  boost
+  lapack
+  armadillo
+
+boost
+-----
+   License: http://www.boost.org/LICENSE_1_0.txt
+
+Lapack
+---------
+   Link: http://www.netlib.org/lapack/
+   License:  Modified BSD   (http://www.netlib.org/lapack/LICENSE.txt)
+
+Armadillo
+------------
+   License: MPL v2.0 (3rdParty/armadillo/LICENSE.txt)
+   Developers:  Conrad Sanderson, Ryan Curtin
+   Link:  http://arma.sourceforge.net
+
+
+
+
