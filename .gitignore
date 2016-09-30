@@ -51,7 +51,7 @@ dist/redhat/strusvector.spec
 3rdParty/armadillo/tmp/
 
 # Compiled Programs
-tests/vectorSpaceModel/src/testArmadillo
+tests/armadillo/src/testArmadillo
 tests/vectorSpaceModel/src/testLshVectorSpaceModel
 tests/vectorSpaceModel/src/testLshSimHash
 tests/vectorSpaceModel/src/testVectorSpaceModel

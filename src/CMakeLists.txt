@@ -30,9 +30,9 @@ link_directories(
 	"${strusbase_LIBRARY_DIRS}"
 )
 
-# ----------------------------------------------
-# VECTOR SPACE MODEL LIBRARY
-# ----------------------------------------------
+# ------------------------------
+# MODULE 
+# ------------------------------
 add_library( strus_vectorspace_static STATIC ${libstrus_vectorspace_source_files} )
 target_link_libraries( strus_vectorspace_static strus_base strus_armadillo )
 
@@ -46,9 +46,17 @@ set_target_properties(
     VERSION ${STRUS_VERSION}
 )
 
+add_library( modstrus_storage_vectorspace  MODULE  modstrus_storage_vectorspace.cpp )
+set_target_properties( modstrus_storage_vectorspace PROPERTIES PREFIX "")
+target_link_libraries( modstrus_storage_vectorspace strus_module strus_vectorspace )
+
 # ------------------------------
 # INSTALLATION
 # ------------------------------
 install( TARGETS strus_vectorspace
            LIBRARY DESTINATION ${LIB_INSTALL_DIR}/strus )
+
+install( TARGETS modstrus_storage_vectorspace
+           LIBRARY DESTINATION ${LIB_INSTALL_DIR}/strus/modules
+	   RUNTIME DESTINATION bin )
 
