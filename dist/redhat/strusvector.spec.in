@@ -296,6 +296,9 @@ make test
 %{_includedir}/%{name}/lib/*.hpp
 
 %changelog
+* Sat Oct 1 2016 Patrick Frey <patrickpfrey@yahoo.com> 0.12.0-0.1
+- moved interfaces to strus core (only implementation in this project)
+
 * Thu Sep 29 2016 Patrick Frey <patrickpfrey@yahoo.com> 0.11.0-0.1
 - initial revision
 - integrated the armadillo library for fast linear algebra operations
