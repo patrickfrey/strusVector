@@ -243,18 +243,20 @@ std::vector<SimHash> SimHash::createFromSerialization( const std::string& in, st
 	return rt;
 }
 
+#define UINT64_CONST(hi,lo) (((uint64_t)hi << 32) | (uint64_t)lo)
+
 uint64_t hash64Bitshuffle( uint64_t a)
 {
-	a = (a+0x7ed55d1617ad327a) + (a<<31);
-	a = (a^0xc761c23c384321a7) ^ (a>>19);
-	a = (a+0x165667b171b497a3) + (a<<5);
-	a = (a+0xd3a2646c61a5cd01) ^ (a<<9);
-	a = (a+0xfd7046c529aa46c8) + (a<<41);
-	a = (a^0xb55a4f091a99cf51) ^ (a>>17);
-	a = (a+0x19fa430a826cd104) + (a<<7);
-	a = (a^0xc78123985cfa1097) ^ (a>>27);
-	a = (a+0x37af76271ff18537) ^ (a<<12);
-	a = (a+0xc16752fa0917283a) + (a<<21);
+	a = (a+UINT64_CONST(0x7ed55d16, 0x17ad327a)) + (a<<31);
+	a = (a^UINT64_CONST(0xc761c23c, 0x384321a7)) ^ (a>>19);
+	a = (a+UINT64_CONST(0x165667b1, 0x71b497a3)) + (a<<5);
+	a = (a+UINT64_CONST(0xd3a2646c, 0x61a5cd01)) ^ (a<<9);
+	a = (a+UINT64_CONST(0xfd7046c5, 0x29aa46c8)) + (a<<41);
+	a = (a^UINT64_CONST(0xb55a4f09, 0x1a99cf51)) ^ (a>>17);
+	a = (a+UINT64_CONST(0x19fa430a, 0x826cd104)) + (a<<7);
+	a = (a^UINT64_CONST(0xc7812398, 0x5cfa1097)) ^ (a>>27);
+	a = (a+UINT64_CONST(0x37af7627, 0x1ff18537)) ^ (a<<12);
+	a = (a+UINT64_CONST(0xc16752fa, 0x0917283a)) + (a<<21);
 	return a;
 }
 
