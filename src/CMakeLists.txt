@@ -48,7 +48,7 @@ set_target_properties(
 
 add_library( modstrus_storage_vectorspace  MODULE  modstrus_storage_vectorspace.cpp )
 set_target_properties( modstrus_storage_vectorspace PROPERTIES PREFIX "")
-target_link_libraries( modstrus_storage_vectorspace strus_module strus_vectorspace )
+target_link_libraries( modstrus_storage_vectorspace strus_module_storage strus_vectorspace )
 
 # ------------------------------
 # INSTALLATION
