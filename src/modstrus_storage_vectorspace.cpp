@@ -12,7 +12,7 @@
 #include "internationalization.hpp"
 #include "errorUtils.hpp"
 
-static const strus::VectorSpaceModelReference standard_vsmodel =
+static const strus::VectorSpaceModelConstructor standard_vsmodel =
 {
 	"default", strus::createVectorSpaceModel_std
 };
