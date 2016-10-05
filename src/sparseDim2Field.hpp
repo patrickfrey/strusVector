@@ -17,6 +17,17 @@
 
 namespace strus {
 
+template <typename TYPE>
+void SparseDim2Field_printValue( std::ostream& out, const TYPE& value)
+{
+	out << value;
+}
+template <>
+void SparseDim2Field_printValue( std::ostream& out, const unsigned char& value)
+{
+	out << (unsigned int)value;
+}
+
 /// \brief Structure for a sparse field of dimension 2
 template <typename ValueType>
 class SparseDim2Field
@@ -107,7 +118,9 @@ public:
 		typename std::map<Coord,ValueType>::const_iterator mi = m_map.begin(), me = m_map.end();
 		for (; mi != me; ++mi)
 		{
-			buf << "(" << mi->first.x << "," << mi->first.y << ") = " << mi->second << std::endl;
+			buf << "(" << mi->first.x << "," << mi->first.y << ") = ";
+			SparseDim2Field_printValue<ValueType>( buf, mi->second);
+			buf << std::endl;
 		}
 		return buf.str();
 	}
