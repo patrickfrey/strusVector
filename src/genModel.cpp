@@ -361,7 +361,6 @@ std::vector<SimHash> GenModel::run( const std::vector<SimHash>& samplear) const
 				{
 					if (*si != gi->id())
 					{
-						std::cerr << "++++ found neighbour group " << *si << " member sample " << *mi << std::endl;
 #ifdef STRUS_LOWLEVEL_DEBUG
 						std::cerr << "found neighbour group " << *si << " member sample " << *mi << std::endl;
 #endif

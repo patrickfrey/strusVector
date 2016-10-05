@@ -68,7 +68,7 @@ public:
 	const_node_iterator node_end( std::size_t ndidx) const		{const Node& nd = m_nodear[ ndidx]; return const_node_iterator( nd.groupidx + nd.size);}
 
 private:
-	enum {NofNodeBranches=7};
+	enum {NofNodeBranches=15};
 	struct Node
 	{
 		FeatureIndex size;

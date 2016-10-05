@@ -84,7 +84,7 @@ bool SimGroupMap::Node::insert( const FeatureIndex& gidx)
 		if (groupidx[ii] >= gidx)
 		{
 			if (groupidx[ii] == gidx) return false;
-			FeatureIndex kk = ++size;
+			FeatureIndex kk = size++;
 			for (; kk>ii; --kk)
 			{
 				groupidx[kk] = groupidx[kk-1];
