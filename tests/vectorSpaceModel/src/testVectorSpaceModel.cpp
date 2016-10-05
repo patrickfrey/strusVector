@@ -26,7 +26,7 @@
 #include <cmath>
 #include <limits>
 
-#define STRUS_LOWLEVEL_DEBUG
+#undef STRUS_LOWLEVEL_DEBUG
 
 static void initRandomNumberGenerator()
 {

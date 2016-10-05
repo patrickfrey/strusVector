@@ -57,6 +57,7 @@ struct VectorSpaceModelConfig
 		DefaultBits = 64,
 		DefaultVariations = 32,
 		DefaultSimDist = 340,	//< 340 out of 2K (32*64) ~ cosine dist 0.9
+		DefaultRadDist = 320,	//< 340 out of 2K (32*64) ~ cosine dist 0.9
 		DefaultEqDist = 60,
 		DefaultMutations = 50,
 		DefaultMutationVotes = 13,
@@ -66,16 +67,16 @@ struct VectorSpaceModelConfig
 	};
 	VectorSpaceModelConfig( const VectorSpaceModelConfig& o)
 		:path(o.path),dim(o.dim),bits(o.bits),variations(o.variations)
-		,simdist(o.simdist),eqdist(o.eqdist),mutations(o.mutations),votes(o.votes)
+		,simdist(o.simdist),raddist(o.raddist),eqdist(o.eqdist),mutations(o.mutations),votes(o.votes)
 		,descendants(o.descendants),maxage(o.maxage),iterations(o.iterations){}
 	VectorSpaceModelConfig()
 		:path(),dim(DefaultDim),bits(DefaultBits),variations(DefaultVariations)
-		,simdist(DefaultSimDist),eqdist(DefaultEqDist)
+		,simdist(DefaultSimDist),raddist(DefaultRadDist),eqdist(DefaultEqDist)
 		,mutations(DefaultMutations),votes(DefaultMutationVotes)
 		,descendants(DefaultDescendants),maxage(DefaultMaxAge),iterations(DefaultIterations){}
 	VectorSpaceModelConfig( const std::string& config, ErrorBufferInterface* errorhnd)
 		:path(),dim(DefaultDim),bits(DefaultBits),variations(DefaultVariations)
-		,simdist(DefaultSimDist),eqdist(DefaultEqDist)
+		,simdist(DefaultSimDist),raddist(DefaultRadDist),eqdist(DefaultEqDist)
 		,mutations(DefaultMutations),votes(DefaultMutationVotes)
 		,descendants(DefaultDescendants),maxage(DefaultMaxAge),iterations(DefaultIterations)
 	{
@@ -84,16 +85,38 @@ struct VectorSpaceModelConfig
 		if (extractUIntFromConfigString( dim, src, "dim", errorhnd)){}
 		if (extractUIntFromConfigString( bits, src, "bit", errorhnd)){}
 		if (extractUIntFromConfigString( variations, src, "var", errorhnd)){}
-		if (extractUIntFromConfigString( simdist, src, "simdist", errorhnd)){}
+		if (extractUIntFromConfigString( simdist, src, "simdist", errorhnd))
+		{
+			raddist = simdist;
+			eqdist = simdist / 6;
+		}
+		if (extractUIntFromConfigString( raddist, src, "raddist", errorhnd)){}
+		if (raddist > simdist)
+		{
+			throw strus::runtime_error(_TXT("the 'raddist' configuration parameter must not be bigger than 'simdist'"));
+		}
 		if (extractUIntFromConfigString( eqdist, src, "eqdist", errorhnd)){}
+		if (eqdist > simdist)
+		{
+			throw strus::runtime_error(_TXT("the 'eqdist' configuration parameter must not be bigger than 'simdist'"));
+		}
 		if (extractUIntFromConfigString( mutations, src, "mutations", errorhnd)){}
 		if (extractUIntFromConfigString( votes, src, "votes", errorhnd)){}
 		if (extractUIntFromConfigString( descendants, src, "descendants", errorhnd)){}
+		if (extractUIntFromConfigString( iterations, src, "iterations", errorhnd))
+		{
+			maxage = iterations;
+		}
 		if (extractUIntFromConfigString( maxage, src, "maxage", errorhnd)){}
-		if (extractUIntFromConfigString( iterations, src, "iterations", errorhnd)){}
 		if (dim == 0 || bits == 0 || variations == 0 || mutations == 0 || descendants == 0 || maxage == 0 || iterations == 0)
 		{
 			throw strus::runtime_error(_TXT("error in vector space model configuration: dim, bits, var, mutations, descendants, maxage or iterations values must not be zero"));
+		}
+		std::string::const_iterator si = src.begin(), se = src.end();
+		for (; si != se && (unsigned char)*si <= 32; ++si){}
+		if (si != se)
+		{
+			throw strus::runtime_error(_TXT("unknown configuration parameter: %s"), src.c_str());
 		}
 		if (errorhnd->hasError())
 		{
@@ -106,6 +129,7 @@ struct VectorSpaceModelConfig
 	unsigned int bits;
 	unsigned int variations;
 	unsigned int simdist;
+	unsigned int raddist;
 	unsigned int eqdist;
 	unsigned int mutations;
 	unsigned int votes;
@@ -237,7 +261,7 @@ public:
 		try
 		{
 			m_lshmodel = new LshModel( m_config.dim, m_config.bits, m_config.variations);
-			m_genmodel = new GenModel( m_config.simdist, m_config.eqdist, m_config.mutations, m_config.votes, m_config.descendants, m_config.maxage, m_config.iterations);
+			m_genmodel = new GenModel( m_config.simdist, m_config.raddist, m_config.eqdist, m_config.mutations, m_config.votes, m_config.descendants, m_config.maxage, m_config.iterations);
 		}
 		catch (const std::exception& err)
 		{

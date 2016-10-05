@@ -58,6 +58,7 @@ SimGroup::const_iterator SimGroup::removeMemberItr( const_iterator itr)
 	const_iterator rt = itr;
 	++rt;
 	m_members.erase( itr);
+	--m_nofmembers;
 	return rt;
 }
 

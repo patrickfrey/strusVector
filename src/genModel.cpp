@@ -450,7 +450,8 @@ std::vector<SimHash> GenModel::run( const std::vector<SimHash>& samplear) const
 			SimGroup::const_iterator mi = gi->begin(), me = gi->end();
 			for (std::size_t midx=0; mi != me; ++mi,++midx)
 			{
-				if (!gi->gencode().near( samplear[ *mi], m_simdist))
+				unsigned int dist = m_raddist + ((m_simdist - m_raddist) * (m_iterations - iteration - 1) / (m_iterations - 1));
+				if (!gi->gencode().near( samplear[ *mi], dist))
 				{
 					// Dropped members that got too far out of the group:
 					SampleIndex member = *mi;
@@ -458,6 +459,7 @@ std::vector<SimHash> GenModel::run( const std::vector<SimHash>& samplear) const
 					--mi;
 					--midx;
 					simGroupMap.remove( member, gi->id());
+					if (gi->size() < 2) break;
 				}
 			}
 			if (gi->size() < 2)
