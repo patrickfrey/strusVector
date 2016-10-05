@@ -264,13 +264,14 @@ public:
 		CATCH_ERROR_ARG1_MAP( _TXT("error adding sample vector to '%s' builder: %s"), MODULENAME, *m_errorhnd);
 	}
 
-	virtual void finalize()
+	virtual bool finalize()
 	{
 		try
 		{
 			m_resultar = m_genmodel->run( m_samplear);
+			return true;
 		}
-		CATCH_ERROR_ARG1_MAP( _TXT("error finalizing '%s' builder: %s"), MODULENAME, *m_errorhnd);
+		CATCH_ERROR_ARG1_MAP_RETURN( _TXT("error finalizing '%s' builder: %s"), MODULENAME, *m_errorhnd, false);
 	}
 
 	virtual bool store()

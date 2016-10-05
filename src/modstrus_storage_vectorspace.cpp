@@ -22,7 +22,7 @@ static const char* lapack_license =
 	" ----------------------------------------------\n"
 	" Copyright (c) 1992-2013 The University of Tennessee and The University\n"
 	"    of Tennessee Research Foundation.  All rights reserved.\n"
-	" Copyright (c) 2000-2013 The University of California Berkeley."
+	" Copyright (c) 2000-2013 The University of California Berkeley.\n"
 	"    All rights reserved.\n"
 	" Copyright (c) 2006-2013 The University of Colorado Denver.\n"
 	"    All rights reserved.\n\n"
