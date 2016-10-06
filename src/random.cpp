@@ -37,9 +37,8 @@ Random::Random()
 	now = ::localtime( &nowtime);
 
 	m_value = uint32_hash( ((now->tm_year+1)
-				* (now->tm_mon+99)
-/*[-]*/				* 29));
-//[+]				* (now->tm_mday+1)));
+				* (now->tm_mon+100)
+				* (now->tm_mday+1)));
 	m_incr = m_value * KnuthIntegerHashFactor;
 }
 

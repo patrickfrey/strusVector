@@ -53,6 +53,9 @@ public:
 	/// \brief Get the number of members in the group
 	std::size_t size() const					{return m_nofmembers;}
 
+	/// \brief Get the number of members that differ (edit distance)
+	unsigned int diffMembers( const SimGroup& o, unsigned int maxdiff) const;
+
 	/// \brief Calculate the fitness of this individual
 	/// \param[in] samplear global array of samples the reference system of this individual is based on
 	double fitness( const std::vector<SimHash>& samplear) const;

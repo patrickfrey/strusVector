@@ -349,7 +349,7 @@ std::vector<SimHash> GenModel::run( const std::vector<SimHash>& samplear) const
 		for (; gi != ge; ++gi)
 		{
 #ifdef STRUS_LOWLEVEL_DEBUG
-			std::cerr << "visit group " << gi->id() << std::endl;
+			std::cerr << "visit group " << gi->id() << " age " << gi->age() << std::endl;
 #endif
 			// Build the set of neighbour groups:
 			std::set<FeatureIndex> neighbour_groups;
@@ -416,7 +416,7 @@ std::vector<SimHash> GenModel::run( const std::vector<SimHash>& samplear) const
 				}
 				if (sim_gi != groupInstanceList.end() && gi->gencode().near( sim_gi->gencode(), m_simdist))
 				{
-					// Try add one member of sim_gi to gi that is similar to sim_gi:
+					// Try add one member of sim_gi to gi that is similar to gi:
 					SimGroup::const_iterator mi = sim_gi->begin(), me = sim_gi->end();
 					for (; mi != me; ++mi)
 					{
@@ -430,6 +430,16 @@ std::vector<SimHash> GenModel::run( const std::vector<SimHash>& samplear) const
 								}
 							}
 						}
+					}
+					// Eliminate similar group that contains most of this group members and that has a smaller fitness:
+					unsigned int eqdiff = std::min( gi->size(), sim_gi->size()) / 4;
+					if (gi->diffMembers( *sim_gi, eqdiff) < eqdiff)
+					{
+						if (sim_gi->fitness( samplear) < gi->fitness( samplear))
+						{
+							removeGroup( sim_gi->id(), groupIdAllocator, groupInstanceList, groupInstanceMap, simGroupMap);
+						}
+						sim_gi = groupInstanceList.end();
 					}
 				}
 			}

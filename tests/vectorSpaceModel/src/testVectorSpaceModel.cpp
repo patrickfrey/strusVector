@@ -198,8 +198,12 @@ int main( int argc, const char** argv)
 		}
 		std::cerr << "loaded trained model with " << categorizer->nofFeatures() << " features" << std::endl;
 		typedef strus::SparseDim2Field<unsigned char> FeatureMatrix;
+		typedef std::multimap<unsigned int,std::size_t> ClassesMap;
+		typedef std::pair<unsigned int,std::size_t> ClassesElem;
 		FeatureMatrix featureMatrix;
 		FeatureMatrix featureInvMatrix;
+		ClassesMap classesmap;
+
 		std::vector<std::vector<double> >::const_iterator si = samplear.begin(), se = samplear.end();
 		for (sidx=0; si != se; ++si,++sidx)
 		{
@@ -212,6 +216,19 @@ int main( int argc, const char** argv)
 				featureInvMatrix( *ci-1, sidx) = 1;
 				if (cidx) std::cout << ", ";
 				std::cout << *ci;
+				classesmap.insert( ClassesElem( *ci, sidx));
+			}
+			std::cout << std::endl;
+		}
+		// Output classes:
+		ClassesMap::const_iterator ci = classesmap.begin(), ce = classesmap.end();
+		while (ci != ce)
+		{
+			unsigned int key = ci->first;
+			std::cout << "(" << key << ") <= ";
+			for (; ci != ce && ci->first == key; ++ci)
+			{
+				std::cout << ' ' << ci->second;
 			}
 			std::cout << std::endl;
 		}

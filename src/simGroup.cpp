@@ -215,3 +215,40 @@ void SimGroup::mutate( const std::vector<SimHash>& samplear, unsigned int descen
 	}
 }
 
+unsigned int SimGroup::diffMembers( const SimGroup& o, unsigned int maxdiff) const
+{
+	unsigned int rt = 0;
+	std::set<SampleIndex>::const_iterator
+		ai = m_members.begin(), ae = m_members.end(),
+		oi = o.m_members.begin(), oe = o.m_members.end();
+	while (ai != ae && oi != oe && rt <= maxdiff)
+	{
+		if (*ai > *oi)
+		{
+			++oi;
+			++rt;
+		}
+		else if (*ai < *oi)
+		{
+			++ai;
+			++rt;
+		}
+		else
+		{
+			++ai;
+			++oi;
+		}
+	}
+	while (ai != ae && rt <= maxdiff)
+	{
+		++ai;
+		++rt;
+	}
+	while (oi != oe && rt <= maxdiff)
+	{
+		++ai;
+		++rt;
+	}
+	return rt;
+}
+
