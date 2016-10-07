@@ -178,6 +178,7 @@ static FeatureIndex getSampleClosestSimGroup(
 	return rt;
 }
 
+/// \brief Find the closest sample to a given sample that is not yet in a group with this sample and can still be assigned to a new group
 static bool findClosestFreeSample( SimRelationMap::Element& res, SampleIndex sampleidx, const SimGroupMap& simGroupMap, const SimRelationMap& simrelmap)
 {
 	SimRelationMap::Row row = simrelmap.row( sampleidx);
@@ -191,6 +192,115 @@ static bool findClosestFreeSample( SimRelationMap::Element& res, SampleIndex sam
 		}
 	}
 	return false;
+}
+
+
+typedef std::pair<unsigned int,unsigned int> Dependency;
+typedef std::set<Dependency> DependencyGraph;
+
+/// \brief Build a directed graph of dependencies of groups derived from the map of samples to groups.
+/// \note A group is dependent on another if every of its member is also member of the other group
+static DependencyGraph buildGroupDependencyGraph( std::size_t nofSamples, const SimGroupMap& simGroupMap)
+{
+	DependencyGraph rt;
+	std::vector<unsigned char> independentmark( nofSamples, 0); /*values are 0,1,2*/
+	SampleIndex si=0, se=nofSamples;
+	for (; si < se; ++si)
+	{
+		SimGroupMap::const_node_iterator ni = simGroupMap.node_begin( si), ne = simGroupMap.node_end( si);
+		SimGroupMap::const_node_iterator na = ni;
+		for (; ni != ne; ++ni)
+		{
+			if (independentmark[ *ni] == 2)
+			{}
+			else if (independentmark[ *ni] == 0)
+			{
+				SimGroupMap::const_node_iterator oni = na, one = ne;
+				for (; oni != one; ++oni)
+				{
+					if (*oni != *ni)
+					{
+						// postulate *ni dependent from *oni
+						rt.insert( Dependency( *ni, *oni));
+					}
+				}
+				independentmark[ *ni] = 1;
+			}
+			else if (independentmark[ *ni] == 1)
+			{
+				bool have_found = false;
+				std::set<Dependency>::iterator di = rt.upper_bound( Dependency( *ni, 0));
+				while (di != rt.end() && di->first == *ni)
+				{
+					if (simGroupMap.contains( si, di->second))
+					{
+						have_found = true;
+						++di;
+					}
+					else
+					{
+						std::set<Dependency>::iterator di_del = di;
+						++di;
+						rt.erase( di_del);
+					}
+				}
+				if (!have_found)
+				{
+					independentmark[ *ni] = 2;
+					continue;
+				}
+			}
+			else
+			{
+				throw strus::runtime_error(_TXT("internal: wrong group dependency status"));
+			}
+		}
+	}
+	return rt;
+}
+
+/// \brief Eliminate circular dependencies from a directed graph represented as set
+static void eliminateCircularReferences( DependencyGraph& graph)
+{
+	std::set<Dependency>::iterator hi = graph.begin(), he = graph.end();
+	while (hi != he)
+	{
+		std::set<unsigned int> visited;		// set of visited for not processing nodes more than once
+		std::vector<unsigned int> queue;	// queue with candidates to process
+		std::size_t qidx = 0;			// iterator in the candidate queue
+		unsigned int gid = hi->first;		// current node visited
+		// Iterate through all vertices pointed to by arcs rooted in the current node visited:
+		for (++hi; hi != he && gid == hi->first; ++hi)
+		{
+			// Insert the visited vertex into the queue of nodes to process:
+			if (visited.insert( hi->second).second)
+			{
+				queue.push_back( hi->second);
+			}
+		}
+		// Iterate through the set of reachable vertices and check if they have an arc pointing to
+		//   the current node visited. If yes, eliminate this arc to eliminate the circular dependency:
+		while (qidx < queue.size())
+		{
+			std::set<Dependency>::iterator
+				dep_hi = graph.find( Dependency( queue[qidx], gid));
+			if (dep_hi != graph.end())
+			{
+				// Found a circular reference, eliminate the dependency to the current node:
+				graph.erase( dep_hi);
+			}
+			// Expand the set of vertices opened by this follow node:
+			std::set<Dependency>::iterator
+				next_hi = graph.upper_bound( Dependency( queue[qidx], 0));
+			for (; next_hi != graph.end() && queue[qidx] == next_hi->first; ++next_hi)
+			{
+				if (visited.insert( next_hi->second).second)
+				{
+					queue.push_back( hi->second);
+				}
+			}
+		}
+	}
 }
 
 #ifdef STRUS_LOWLEVEL_DEBUG
@@ -263,7 +373,7 @@ static void checkSimGroupStructures(
 }
 #endif
 
-std::vector<SimHash> GenModel::run( const std::vector<SimHash>& samplear) const
+std::vector<SimHash> GenModel::run( const std::vector<SimHash>& samplear, const char* logfile) const
 {
 	GroupIdAllocator groupIdAllocator;					// Allocator of group ids
 	GroupInstanceList groupInstanceList;					// list of similarity group representants
@@ -276,10 +386,27 @@ std::vector<SimHash> GenModel::run( const std::vector<SimHash>& samplear) const
 #ifdef STRUS_LOWLEVEL_DEBUG
 	std::cerr << "got similarity relation map:" << std::endl << simrelmap.tostring() << std::endl;
 #endif
+	std::ostream& logout = std::cerr;
+	std::ofstream logfilestream;
+	if (logfile)
+	{
+		if (logfile[0] != '-' || logfile[1])
+		{
+			try
+			{
+				logfilestream.open( logfile, std::ofstream::out);
+			}
+			catch (const std::exception& err)
+			{
+				throw strus::runtime_error(_TXT("failed to open logfile '%s': %s"), logfile, err.what());
+			}
+		}
+	}
 	// Do the iterations of creating new individuals
 	unsigned int iteration=0;
 	for (; iteration != m_iterations; ++iteration)
 	{
+		if (logfile) logout << "iteration " << iteration << ":" << std::endl;
 #ifdef STRUS_LOWLEVEL_DEBUG
 		std::cerr << "GenModel::run iteration " << iteration << std::endl;
 		checkSimGroupStructures( groupInstanceList, groupInstanceMap, simGroupMap, samplear.size());
@@ -291,8 +418,9 @@ std::vector<SimHash> GenModel::run( const std::vector<SimHash>& samplear) const
 			std::cerr << " " << li->id();
 		}
 		std::cerr << std::endl;
-		std::cerr << "create new groups" << std::endl;
+		std::cerr << "create new individuals ..." << std::endl;
 #endif
+		if (logfile) logout << "create new groups" << std::endl;
 		// Go through all elements and try to create new groups with the closest free neighbours:
 		std::vector<SimHash>::const_iterator si = samplear.begin(), se = samplear.end();
 		for (SampleIndex sidx=0; si != se; ++si,++sidx)
@@ -343,6 +471,8 @@ std::vector<SimHash> GenModel::run( const std::vector<SimHash>& samplear) const
 #ifdef STRUS_LOWLEVEL_DEBUG
 		std::cerr << "find neighbour groups out of " << groupIdAllocator.nofGroupsAllocated() << std::endl;
 #endif
+		if (logfile) logout << "unify individuals ..." << std::endl;
+
 		// Go through all groups and try to make elements jump to neighbour groups and try
 		// to unify groups:
 		GroupInstanceList::iterator gi = groupInstanceList.begin(), ge = groupInstanceList.end();
@@ -447,6 +577,8 @@ std::vector<SimHash> GenModel::run( const std::vector<SimHash>& samplear) const
 #ifdef STRUS_LOWLEVEL_DEBUG
 		std::cerr << "start mutation step" << std::endl;
 #endif
+		if (logfile) logout << "mutations ..." << std::endl;
+
 		// Mutation step for all groups and dropping of elements that got too far away from the
 		// representants genom:
 		gi = groupInstanceList.begin(), ge = groupInstanceList.end();
@@ -488,100 +620,14 @@ std::vector<SimHash> GenModel::run( const std::vector<SimHash>& samplear) const
 #ifdef STRUS_LOWLEVEL_DEBUG
 	std::cerr << "eliminate redundant groups" << std::endl;
 #endif
+	if (logfile) logout << "done, eliminate redundant groups ..." << std::endl;
 	{
 		// Build the dependency graph:
-		typedef std::pair<unsigned int,unsigned int> Dependency;
-		std::set<Dependency> dependencyset;
-		std::vector<unsigned char> independentmark( samplear.size(), 0); /*values are 0,1,2*/
-		SampleIndex si=0, se=samplear.size();
-		for (; si != se; ++si)
-		{
-			SimGroupMap::const_node_iterator ni = simGroupMap.node_begin( si), ne = simGroupMap.node_end( si);
-			SimGroupMap::const_node_iterator na = ni;
-			for (; ni != ne; ++ni)
-			{
-				if (independentmark[ *ni] == 2)
-				{}
-				else if (independentmark[ *ni] == 0)
-				{
-					SimGroupMap::const_node_iterator oni = na, one = ne;
-					for (; oni != one; ++oni)
-					{
-						if (*oni != *ni)
-						{
-							// postulate *ni dependent from *oni
-							dependencyset.insert( Dependency( *ni, *oni));
-						}
-					}
-					independentmark[ *ni] = 1;
-				}
-				else if (independentmark[ *ni] == 1)
-				{
-					bool have_found = false;
-					std::set<Dependency>::iterator di = dependencyset.upper_bound( Dependency( *ni, 0));
-					while (di != dependencyset.end() && di->first == *ni)
-					{
-						if (simGroupMap.contains( si, di->second))
-						{
-							have_found = true;
-							++di;
-						}
-						else
-						{
-							std::set<Dependency>::iterator di_del = di;
-							++di;
-							dependencyset.erase( di_del);
-						}
-					}
-					if (!have_found)
-					{
-						independentmark[ *ni] = 2;
-						continue;
-					}
-				}
-				else
-				{
-					throw strus::runtime_error(_TXT("internal: wrong group dependency status"));
-				}
-			}
-		}
+		DependencyGraph groupDependencyGraph = buildGroupDependencyGraph( samplear.size(), simGroupMap);
 		// Eliminate circular references from the graph:
-		std::set<Dependency>::iterator hi = dependencyset.begin(), he = dependencyset.end();
-		while (hi != he)
-		{
-			std::set<unsigned int> visited;
-			std::vector<unsigned int> queue;
-			std::size_t qidx = 0;
-			unsigned int gid = hi->first;
-			for (++hi; hi != he && gid == hi->first; ++hi)
-			{
-				if (visited.insert( hi->second).second)
-				{
-					queue.push_back( hi->second);
-				}
-			}
-			while (qidx < queue.size())
-			{
-				std::set<Dependency>::iterator
-					dep_hi = dependencyset.find( Dependency( queue[qidx], gid));
-				if (dep_hi != dependencyset.end())
-				{
-					// Found a circular reference, eliminate the dependency to the origin:
-					dependencyset.erase( dep_hi);
-				}
-				std::set<Dependency>::iterator
-					next_hi = dependencyset.upper_bound( Dependency( queue[qidx], 0));
-				for (; next_hi != dependencyset.end() && queue[qidx] == next_hi->first; ++next_hi)
-				{
-					if (visited.insert( next_hi->second).second)
-					{
-						queue.push_back( hi->second);
-					}
-				}
-			}
-		}
+		eliminateCircularReferences( groupDependencyGraph);
 		// Eliminate the groups dependent of others:
-		std::set<Dependency>::const_iterator di = dependencyset.begin(), de = dependencyset.end();
+		DependencyGraph::const_iterator di = groupDependencyGraph.begin(), de = groupDependencyGraph.end();
 		while (di != de)
 		{
 			unsigned int gid = di->first;
@@ -592,6 +638,8 @@ std::vector<SimHash> GenModel::run( const std::vector<SimHash>& samplear) const
 #ifdef STRUS_LOWLEVEL_DEBUG
 	std::cerr << "build the result" << std::endl;
 #endif
+	if (logfile) logout << "build the result ..." << std::endl;
+
 	// Build the result:
 	std::vector<SimHash> rt;
 	GroupInstanceList::const_iterator gi = groupInstanceList.begin(), ge = groupInstanceList.end();
@@ -614,6 +662,7 @@ std::vector<SimHash> GenModel::run( const std::vector<SimHash>& samplear) const
 		std::cerr << std::endl;
 	}
 #endif
+	if (logfile) logout << "done, got " << rt.size() << " categories"<< std::endl;
 	return rt;
 }
 

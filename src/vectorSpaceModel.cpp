@@ -66,22 +66,23 @@ struct VectorSpaceModelConfig
 		DefaultIterations = 20
 	};
 	VectorSpaceModelConfig( const VectorSpaceModelConfig& o)
-		:path(o.path),dim(o.dim),bits(o.bits),variations(o.variations)
+		:path(o.path),logfile(o.logfile),dim(o.dim),bits(o.bits),variations(o.variations)
 		,simdist(o.simdist),raddist(o.raddist),eqdist(o.eqdist),mutations(o.mutations),votes(o.votes)
 		,descendants(o.descendants),maxage(o.maxage),iterations(o.iterations){}
 	VectorSpaceModelConfig()
-		:path(),dim(DefaultDim),bits(DefaultBits),variations(DefaultVariations)
+		:path(),logfile(),dim(DefaultDim),bits(DefaultBits),variations(DefaultVariations)
 		,simdist(DefaultSimDist),raddist(DefaultRadDist),eqdist(DefaultEqDist)
 		,mutations(DefaultMutations),votes(DefaultMutationVotes)
 		,descendants(DefaultDescendants),maxage(DefaultMaxAge),iterations(DefaultIterations){}
 	VectorSpaceModelConfig( const std::string& config, ErrorBufferInterface* errorhnd)
-		:path(),dim(DefaultDim),bits(DefaultBits),variations(DefaultVariations)
+		:path(),logfile(),dim(DefaultDim),bits(DefaultBits),variations(DefaultVariations)
 		,simdist(DefaultSimDist),raddist(DefaultRadDist),eqdist(DefaultEqDist)
 		,mutations(DefaultMutations),votes(DefaultMutationVotes)
 		,descendants(DefaultDescendants),maxage(DefaultMaxAge),iterations(DefaultIterations)
 	{
 		std::string src = config;
 		if (extractStringFromConfigString( path, src, "path", errorhnd)){}
+		if (extractStringFromConfigString( logfile, src, "log", errorhnd)){}
 		if (extractUIntFromConfigString( dim, src, "dim", errorhnd)){}
 		if (extractUIntFromConfigString( bits, src, "bit", errorhnd)){}
 		if (extractUIntFromConfigString( variations, src, "var", errorhnd)){}
@@ -125,6 +126,7 @@ struct VectorSpaceModelConfig
 	}
 
 	std::string path;
+	std::string logfile;
 	unsigned int dim;
 	unsigned int bits;
 	unsigned int variations;
@@ -292,7 +294,8 @@ public:
 	{
 		try
 		{
-			m_resultar = m_genmodel->run( m_samplear);
+			const char* logfile = m_config.logfile.empty()?0:m_config.logfile.c_str();
+			m_resultar = m_genmodel->run( m_samplear, logfile);
 			return true;
 		}
 		CATCH_ERROR_ARG1_MAP_RETURN( _TXT("error finalizing '%s' builder: %s"), MODULENAME, *m_errorhnd, false);
