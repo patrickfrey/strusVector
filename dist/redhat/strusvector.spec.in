@@ -279,21 +279,21 @@ make test
 
 %files
 %defattr( -, root, root )
-%dir %{_libdir}/%{name}
-%{_libdir}/%{name}/libstrus_armadillo.so.@STRUS_MAJOR_VERSION@.@STRUS_MINOR_VERSION@
-%{_libdir}/%{name}/libstrus_armadillo.so.@STRUS_MAJOR_VERSION@.@STRUS_MINOR_VERSION@.@STRUS_PATCH_VERSION@
-%{_libdir}/%{name}/libstrus_vectorspace.so.@STRUS_MAJOR_VERSION@.@STRUS_MINOR_VERSION@
-%{_libdir}/%{name}/libstrus_vectorspace.so.@STRUS_MAJOR_VERSION@.@STRUS_MINOR_VERSION@.@STRUS_PATCH_VERSION@
-%{_sysconfdir}/ld.so.conf.d/%{name}.conf
+%dir %{_libdir}/strus
+%{_libdir}/strus/libstrus_armadillo.so.@STRUS_MAJOR_VERSION@.@STRUS_MINOR_VERSION@
+%{_libdir}/strus/libstrus_armadillo.so.@STRUS_MAJOR_VERSION@.@STRUS_MINOR_VERSION@.@STRUS_PATCH_VERSION@
+%{_libdir}/strus/libstrus_vectorspace.so.@STRUS_MAJOR_VERSION@.@STRUS_MINOR_VERSION@
+%{_libdir}/strus/libstrus_vectorspace.so.@STRUS_MAJOR_VERSION@.@STRUS_MINOR_VERSION@.@STRUS_PATCH_VERSION@
+%{_libdir}/strus/modules/modstrus_analyzer_pattern.so
 
 %files devel
 %defattr( -, root, root )
-%{_libdir}/%{name}/libstrus_armadillo.so
-%{_libdir}/%{name}/libstrus_vectorspace.so
-%dir %{_includedir}/%{name}
-%{_includedir}/%{name}/*.hpp
-%dir %{_includedir}/%{name}/lib
-%{_includedir}/%{name}/lib/*.hpp
+%{_libdir}/name/libstrus_armadillo.so
+%{_libdir}/name/libstrus_vectorspace.so
+%dir %{_includedir}/name
+%{_includedir}/name/*.hpp
+%dir %{_includedir}/name/lib
+%{_includedir}/name/lib/*.hpp
 
 %changelog
 * Sat Oct 1 2016 Patrick Frey <patrickpfrey@yahoo.com> 0.12.0-0.1
