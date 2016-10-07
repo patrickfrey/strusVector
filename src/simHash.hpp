@@ -9,6 +9,7 @@
 #ifndef _STRUS_VECTOR_SPACE_MODEL_SIMHASH_HPP_INCLUDED
 #define _STRUS_VECTOR_SPACE_MODEL_SIMHASH_HPP_INCLUDED
 #include "strus/base/stdint.h"
+#include "intrusiveVector.hpp"
 #include <vector>
 #include <string>
 

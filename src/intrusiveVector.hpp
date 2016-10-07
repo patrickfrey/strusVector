@@ -12,6 +12,7 @@
 #include <list>
 #include <vector>
 #include <cstring>
+#include <cstdlib>
 #include <stdexcept>
 
 namespace strus
@@ -77,7 +78,8 @@ public:
 		:m_freelist(o.m_freelist),m_vecsize(o.m_vecsize),m_blksize(o.m_blksize),m_blkitr(o.m_blksize)
 	{
 		m_blocks.reserve( o.m_blocks.size());
-		std::vector<ScalarType*>::const_iterator bi = o.m_blocks.begin(), be = o.m_blocks.end();
+		typename std::vector<ScalarType*>::const_iterator
+			bi = o.m_blocks.begin(), be = o.m_blocks.end();
 		for (; bi != be; ++bi)
 		{
 			ScalarType* blk = allocBlock();
@@ -88,7 +90,8 @@ public:
 
 	~IntrusiveVectorCollection()
 	{
-		std::vector<ScalarType*>::iterator bi = m_blocks.begin(), be = m_blocks.end();
+		typename std::vector<ScalarType*>::iterator
+			bi = m_blocks.begin(), be = m_blocks.end();
 		for (; bi != be; ++bi) std::free( *bi);
 	}
 
@@ -96,7 +99,7 @@ public:
 	{
 		return m_vecsize;
 	}
-	IntrusiveVector newVector()
+	IntrusiveVector<ScalarType> newVector()
 	{
 		if (m_freelist.empty())
 		{
@@ -104,28 +107,28 @@ public:
 			{
 				ScalarType* blk = allocBlock();
 				m_blkitr = 1;
-				return IntrusiveVector( m_vecsize, m_blocks.size()-1, blk);
+				return IntrusiveVector<ScalarType>( m_vecsize, m_blocks.size()-1, blk);
 				//... first element
 			}
 			else
 			{
 				ScalarType* vec = m_blocks.back() + m_blkitr * m_vecsize;
 				++m_blkitr;
-				return IntrusiveVector( m_vecsize, m_blocks.size()-1, vec);
+				return IntrusiveVector<ScalarType>( m_vecsize, m_blocks.size()-1, vec);
 			}
 		}
 		else
 		{
 			std::size_t vecidx = m_freelist.back();
 			m_freelist.pop_back();
-			std::size_t blkidx = vedidx / m_blksize;
-			std::size_t elemidx = vedidx % m_blksize;
+			std::size_t blkidx = vecidx / m_blksize;
+			std::size_t elemidx = vecidx % m_blksize;
 			ScalarType* vec = m_blocks[ blkidx] + elemidx * m_vecsize;
 			std::memset( vec, 0, m_vecsize * sizeof(vec));
-			return IntrusiveVector( m_vecsize, blkidx, vec);
+			return IntrusiveVector<ScalarType>( m_vecsize, blkidx, vec);
 		}
 	}
-	void freeVector( const IntrusiveVector& vv)
+	void freeVector( const IntrusiveVector<ScalarType>& vv)
 	{
 		std::size_t wordofs = (vv.data() - m_blocks[ vv.origblkidx()]) / m_vecsize;
 		if (wordofs >= m_blksize) throw strus::runtime_error("illegal free vector call");
@@ -152,4 +155,7 @@ private:
 	std::size_t m_blksize;
 	std::size_t m_blkitr;
 };
+
+}//namespace
+#endif
 
