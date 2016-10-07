@@ -386,7 +386,7 @@ std::vector<SimHash> GenModel::run( const std::vector<SimHash>& samplear, const 
 #ifdef STRUS_LOWLEVEL_DEBUG
 	std::cerr << "got similarity relation map:" << std::endl << simrelmap.tostring() << std::endl;
 #endif
-	std::ostream& logout = std::cerr;
+	std::ostream* logout = &std::cerr;
 	std::ofstream logfilestream;
 	if (logfile)
 	{
@@ -395,6 +395,7 @@ std::vector<SimHash> GenModel::run( const std::vector<SimHash>& samplear, const 
 			try
 			{
 				logfilestream.open( logfile, std::ofstream::out);
+				logout = &logfilestream;
 			}
 			catch (const std::exception& err)
 			{
@@ -406,7 +407,7 @@ std::vector<SimHash> GenModel::run( const std::vector<SimHash>& samplear, const 
 	unsigned int iteration=0;
 	for (; iteration != m_iterations; ++iteration)
 	{
-		if (logfile) logout << "iteration " << iteration << ":" << std::endl;
+		if (logfile) (*logout) << "iteration " << iteration << ":" << std::endl;
 #ifdef STRUS_LOWLEVEL_DEBUG
 		std::cerr << "GenModel::run iteration " << iteration << std::endl;
 		checkSimGroupStructures( groupInstanceList, groupInstanceMap, simGroupMap, samplear.size());
@@ -420,7 +421,7 @@ std::vector<SimHash> GenModel::run( const std::vector<SimHash>& samplear, const 
 		std::cerr << std::endl;
 		std::cerr << "create new individuals ..." << std::endl;
 #endif
-		if (logfile) logout << "create new groups" << std::endl;
+		if (logfile) (*logout) << "create new groups" << std::endl;
 		// Go through all elements and try to create new groups with the closest free neighbours:
 		std::vector<SimHash>::const_iterator si = samplear.begin(), se = samplear.end();
 		for (SampleIndex sidx=0; si != se; ++si,++sidx)
@@ -471,7 +472,7 @@ std::vector<SimHash> GenModel::run( const std::vector<SimHash>& samplear, const 
 #ifdef STRUS_LOWLEVEL_DEBUG
 		std::cerr << "find neighbour groups out of " << groupIdAllocator.nofGroupsAllocated() << std::endl;
 #endif
-		if (logfile) logout << "unify individuals ..." << std::endl;
+		if (logfile) (*logout) << "unify individuals ..." << std::endl;
 
 		// Go through all groups and try to make elements jump to neighbour groups and try
 		// to unify groups:
@@ -577,7 +578,7 @@ std::vector<SimHash> GenModel::run( const std::vector<SimHash>& samplear, const 
 #ifdef STRUS_LOWLEVEL_DEBUG
 		std::cerr << "start mutation step" << std::endl;
 #endif
-		if (logfile) logout << "mutations ..." << std::endl;
+		if (logfile) (*logout) << "mutations ..." << std::endl;
 
 		// Mutation step for all groups and dropping of elements that got too far away from the
 		// representants genom:
@@ -620,7 +621,7 @@ std::vector<SimHash> GenModel::run( const std::vector<SimHash>& samplear, const 
 #ifdef STRUS_LOWLEVEL_DEBUG
 	std::cerr << "eliminate redundant groups" << std::endl;
 #endif
-	if (logfile) logout << "done, eliminate redundant groups ..." << std::endl;
+	if (logfile) (*logout) << "done, eliminate redundant groups ..." << std::endl;
 	{
 		// Build the dependency graph:
 		DependencyGraph groupDependencyGraph = buildGroupDependencyGraph( samplear.size(), simGroupMap);
@@ -638,7 +639,7 @@ std::vector<SimHash> GenModel::run( const std::vector<SimHash>& samplear, const 
 #ifdef STRUS_LOWLEVEL_DEBUG
 	std::cerr << "build the result" << std::endl;
 #endif
-	if (logfile) logout << "build the result ..." << std::endl;
+	if (logfile) (*logout) << "build the result ..." << std::endl;
 
 	// Build the result:
 	std::vector<SimHash> rt;
@@ -662,7 +663,7 @@ std::vector<SimHash> GenModel::run( const std::vector<SimHash>& samplear, const 
 		std::cerr << std::endl;
 	}
 #endif
-	if (logfile) logout << "done, got " << rt.size() << " categories"<< std::endl;
+	if (logfile) (*logout) << "done, got " << rt.size() << " categories"<< std::endl;
 	return rt;
 }
 
