@@ -82,7 +82,7 @@ struct VectorSpaceModelConfig
 	{
 		std::string src = config;
 		if (extractStringFromConfigString( path, src, "path", errorhnd)){}
-		if (extractStringFromConfigString( logfile, src, "log", errorhnd)){}
+		if (extractStringFromConfigString( logfile, src, "logfile", errorhnd)){}
 		if (extractUIntFromConfigString( dim, src, "dim", errorhnd)){}
 		if (extractUIntFromConfigString( bits, src, "bit", errorhnd)){}
 		if (extractUIntFromConfigString( variations, src, "var", errorhnd)){}
