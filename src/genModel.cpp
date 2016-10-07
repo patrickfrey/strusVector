@@ -486,6 +486,110 @@ std::vector<SimHash> GenModel::run( const std::vector<SimHash>& samplear) const
 		}
 	}
 #ifdef STRUS_LOWLEVEL_DEBUG
+	std::cerr << "eliminate redundant groups" << std::endl;
+#endif
+	{
+		// Build the dependency graph:
+		typedef std::pair<unsigned int,unsigned int> Dependency;
+		std::set<Dependency> dependencyset;
+		std::vector<unsigned char> independentmark( samplear.size(), 0); /*values are 0,1,2*/
+		SampleIndex si=0, se=samplear.size();
+		for (; si != se; ++si)
+		{
+			SimGroupMap::const_node_iterator ni = simGroupMap.node_begin( si), ne = simGroupMap.node_end( si);
+			SimGroupMap::const_node_iterator na = ni;
+			for (; ni != ne; ++ni)
+			{
+				if (independentmark[ *ni] == 2)
+				{}
+				else if (independentmark[ *ni] == 0)
+				{
+					SimGroupMap::const_node_iterator oni = na, one = ne;
+					for (; oni != one; ++oni)
+					{
+						if (*oni != *ni)
+						{
+							// postulate *ni dependent from *oni
+							dependencyset.insert( Dependency( *ni, *oni));
+						}
+					}
+					independentmark[ *ni] = 1;
+				}
+				else if (independentmark[ *ni] == 1)
+				{
+					bool have_found = false;
+					std::set<Dependency>::iterator di = dependencyset.upper_bound( Dependency( *ni, 0));
+					while (di != dependencyset.end() && di->first == *ni)
+					{
+						if (simGroupMap.contains( si, di->second))
+						{
+							have_found = true;
+							++di;
+						}
+						else
+						{
+							std::set<Dependency>::iterator di_del = di;
+							++di;
+							dependencyset.erase( di_del);
+						}
+					}
+					if (!have_found)
+					{
+						independentmark[ *ni] = 2;
+						continue;
+					}
+				}
+				else
+				{
+					throw strus::runtime_error(_TXT("internal: wrong group dependency status"));
+				}
+			}
+		}
+		// Eliminate circular references from the graph:
+		std::set<Dependency>::iterator hi = dependencyset.begin(), he = dependencyset.end();
+		while (hi != he)
+		{
+			std::set<unsigned int> visited;
+			std::vector<unsigned int> queue;
+			std::size_t qidx = 0;
+			unsigned int gid = hi->first;
+			for (++hi; hi != he && gid == hi->first; ++hi)
+			{
+				if (visited.insert( hi->second).second)
+				{
+					queue.push_back( hi->second);
+				}
+			}
+			while (qidx < queue.size())
+			{
+				std::set<Dependency>::iterator
+					dep_hi = dependencyset.find( Dependency( queue[qidx], gid));
+				if (dep_hi != dependencyset.end())
+				{
+					// Found a circular reference, eliminate the dependency to the origin:
+					dependencyset.erase( dep_hi);
+				}
+				std::set<Dependency>::iterator
+					next_hi = dependencyset.upper_bound( Dependency( queue[qidx], 0));
+				for (; next_hi != dependencyset.end() && queue[qidx] == next_hi->first; ++next_hi)
+				{
+					if (visited.insert( next_hi->second).second)
+					{
+						queue.push_back( hi->second);
+					}
+				}
+			}
+		}
+		// Eliminate the groups dependent of others:
+		std::set<Dependency>::const_iterator di = dependencyset.begin(), de = dependencyset.end();
+		while (di != de)
+		{
+			unsigned int gid = di->first;
+			removeGroup( gid, groupIdAllocator, groupInstanceList, groupInstanceMap, simGroupMap);
+			for (++di; di != de && gid == di->first; ++di){}
+		}
+	}
+#ifdef STRUS_LOWLEVEL_DEBUG
 	std::cerr << "build the result" << std::endl;
 #endif
 	// Build the result:
