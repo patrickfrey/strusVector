@@ -194,7 +194,9 @@ public:
 
 private:
 	void loadModelFromFile( const std::string& path);
+#ifdef STRUS_LOWLEVEL_DEBUG
 	std::string tostring() const;
+#endif
 
 private:
 	ErrorBufferInterface* m_errorhnd;
@@ -239,6 +241,7 @@ void VectorSpaceModelInstance::loadModelFromFile( const std::string& path)
 #endif
 }
 
+#ifdef STRUS_LOWLEVEL_DEBUG
 std::string VectorSpaceModelInstance::tostring() const
 {
 	std::ostringstream txtdump;
@@ -252,6 +255,7 @@ std::string VectorSpaceModelInstance::tostring() const
 	txtdump << std::endl;
 	return txtdump.str();
 }
+#endif
 
 class VectorSpaceModelBuilder
 	:public VectorSpaceModelBuilderInterface
@@ -284,7 +288,9 @@ public:
 	{
 		try
 		{
+#ifdef STRUS_LOWLEVEL_DEBUG
 			m_samplevecar.push_back( vec);
+#endif
 			m_samplear.push_back( m_lshmodel->simHash( arma::vec( vec)));
 		}
 		CATCH_ERROR_ARG1_MAP( _TXT("error adding sample vector to '%s' builder: %s"), MODULENAME, *m_errorhnd);
@@ -331,6 +337,7 @@ public:
 	}
 
 private:
+#ifdef STRUS_LOWLEVEL_DEBUG
 	std::string tostring() const
 	{
 		std::ostringstream txtdump;
@@ -361,13 +368,16 @@ private:
 		txtdump << "GEN:" << std::endl << m_genmodel->tostring() << std::endl;
 		return txtdump.str();
 	}
+#endif
 
 private:
 	ErrorBufferInterface* m_errorhnd;
 	VectorSpaceModelConfig m_config;
 	LshModel* m_lshmodel;
 	GenModel* m_genmodel;
+#ifdef STRUS_LOWLEVEL_DEBUG
 	std::vector<std::vector<double> > m_samplevecar;
+#endif
 	std::vector<SimHash> m_samplear;
 	std::vector<SimHash> m_resultar;
 };
