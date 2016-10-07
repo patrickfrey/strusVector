@@ -280,7 +280,7 @@ static void eliminateCircularReferences( DependencyGraph& graph)
 		}
 		// Iterate through the set of reachable vertices and check if they have an arc pointing to
 		//   the current node visited. If yes, eliminate this arc to eliminate the circular dependency:
-		while (qidx < queue.size())
+		for (; qidx < queue.size(); ++qidx)
 		{
 			std::set<Dependency>::iterator
 				dep_hi = graph.find( Dependency( queue[qidx], gid));
@@ -289,7 +289,7 @@ static void eliminateCircularReferences( DependencyGraph& graph)
 				// Found a circular reference, eliminate the dependency to the current node:
 				graph.erase( dep_hi);
 			}
-			// Expand the set of vertices opened by this follow node:
+			// Expand the set of vertices directed to from the follow arcs of the processed edge:
 			std::set<Dependency>::iterator
 				next_hi = graph.upper_bound( Dependency( queue[qidx], 0));
 			for (; next_hi != graph.end() && queue[qidx] == next_hi->first; ++next_hi)
@@ -625,8 +625,10 @@ std::vector<SimHash> GenModel::run( const std::vector<SimHash>& samplear, const 
 	{
 		// Build the dependency graph:
 		DependencyGraph groupDependencyGraph = buildGroupDependencyGraph( samplear.size(), simGroupMap);
+
 		// Eliminate circular references from the graph:
 		eliminateCircularReferences( groupDependencyGraph);
+
 		// Eliminate the groups dependent of others:
 		DependencyGraph::const_iterator di = groupDependencyGraph.begin(), de = groupDependencyGraph.end();
 		while (di != de)
