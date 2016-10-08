@@ -19,6 +19,7 @@ set(
 
 include_directories(
 	"${Boost_INCLUDE_DIRS}"
+	"${Intl_INCLUDE_DIRS}"
 	"${PROJECT_SOURCE_DIR}/3rdParty/armadillo/include/"
 	"${PROJECT_SOURCE_DIR}/include"
 	"${strusbase_INCLUDE_DIRS}"
@@ -37,7 +38,7 @@ add_library( strus_vectorspace_static STATIC ${libstrus_vectorspace_source_files
 target_link_libraries( strus_vectorspace_static strus_base strus_armadillo )
 
 add_library( strus_vectorspace SHARED libstrus_vectorspace.cpp )
-target_link_libraries( strus_vectorspace strus_vectorspace_static strus_base strus_armadillo )
+target_link_libraries( strus_vectorspace strus_vectorspace_static strus_base strus_armadillo ${Intl_LIBRARIES})
 set_target_properties(
     strus_vectorspace
     PROPERTIES
@@ -48,7 +49,7 @@ set_target_properties(
 
 add_library( modstrus_storage_vectorspace  MODULE  modstrus_storage_vectorspace.cpp )
 set_target_properties( modstrus_storage_vectorspace PROPERTIES PREFIX "")
-target_link_libraries( modstrus_storage_vectorspace strus_module_storage strus_vectorspace )
+target_link_libraries( modstrus_storage_vectorspace strus_module_storage strus_vectorspace ${Intl_LIBRARIES})
 
 # ------------------------------
 # INSTALLATION
