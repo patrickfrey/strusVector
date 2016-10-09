@@ -22,14 +22,22 @@ struct Functor_INV {static uint64_t call( uint64_t aa)			{return ~aa;}};
 
 /// \brief Structure for the similarity fingerprint used
 class SimHash
+	:public IntrusiveVector<uint64_t>
 {
 public:
+	typedef IntrusiveVector<uint64_t> Parent;
+	typedef IntrusiveVectorCollection<uint64_t> Collection;
+
+public:
 	SimHash()
-		:m_ar(),m_size(0){}
+		:Parent(),m_nofbits(0){}
 	SimHash( const SimHash& o)
-		:m_ar(o.m_ar),m_size(o.m_size){}
-	SimHash( const std::vector<bool>& bv);
-	SimHash( std::size_t size_, bool initval);
+		:Parent(o),m_nofbits(o.m_nofbits){}
+	SimHash( const std::vector<bool>& bv, Collection& collection);
+	SimHash( std::size_t nofbits_, bool initval, Collection& collection);
+	SimHash( const SimHash& o, Collection& collection)
+		:Parent(collection.newVectorCopy(o)),m_nofbits(o.m_nofbits)
+	{}
 
 	/// \brief Get element value by index
 	bool operator[]( std::size_t idx) const;
@@ -44,71 +52,133 @@ public:
 	/// \brief Get all indices of elements set to 1 or 0 (defined by parameter)
 	std::vector<std::size_t> indices( bool what) const;
 
+	SimHash& operator=( const SimHash& o)
+	{
+		assignContentCopy( o);
+		return *this;
+	}
+
 private:
 	template <class Functor>
-	SimHash BINOP( const SimHash& o) const
+	SimHash BINOP( const SimHash& o, Collection& collection) const
 	{
-		SimHash rt;
-		std::vector<uint64_t>::const_iterator ai = m_ar.begin(), ae = m_ar.end(), oi = o.m_ar.begin(), oe = o.m_ar.end();
-		for (; ai != ae && oi != oe; ++ai, ++oi) rt.m_ar.push_back( Functor::call( *ai, *oi));
-		for (; ai != ae; ++ai) rt.m_ar.push_back( Functor::call( *ai, 0));
-		for (; oi != oe; ++oi) rt.m_ar.push_back( Functor::call( 0, *oi));
-		rt.m_size = (o.m_size > m_size) ? o.m_size : m_size;
+		if (o.m_nofbits != m_nofbits) throw strus::runtime_error(_TXT("simhash binary operation with incompatible arguments"));
+		SimHash rt( m_nofbits, false, collection);
+		Parent::const_iterator ai = begin(), ae = end();
+		Parent::const_iterator oi = o.begin();
+		Parent::iterator ri = rt.begin();
+		for (; ai != ae; ++ri,++ai,++oi) *ri = Functor::call( *ai, *oi);
 		return rt;
 	}
 	template <class Functor>
-	SimHash& BINOP_ASSIGN( const SimHash& o)
+	SimHash& BINOP_ASSIGN( const SimHash& o, Collection& collection)
 	{
-		std::vector<uint64_t>::iterator ai = m_ar.begin(), ae = m_ar.end();
-		std::vector<uint64_t>::const_iterator oi = o.m_ar.begin(), oe = o.m_ar.end();
-		for (; ai != ae && oi != oe; ++ai, ++oi) *ai = Functor::call( *ai, *oi);
-		for (; ai != ae; ++ai) *ai = Functor::call( *ai, *oi);
-		for (; oi != oe; ++oi) m_ar.push_back( Functor::call( 0, *oi));
-		if (o.m_size > m_size) m_size = o.m_size;
+		if (o.m_nofbits != m_nofbits) throw strus::runtime_error(_TXT("simhash binary operation with incompatible arguments"));
+		Parent::iterator ai = Parent::begin(), ae = Parent::end();
+		Parent::const_iterator oi = o.Parent::begin();
+		for (; ai != ae; ++ai,++oi) *ai = Functor::call( *ai, *oi);
 		return *this;
 	}
 	template <class Functor>
-	SimHash UNOP() const
+	SimHash UNOP( Collection& collection) const
 	{
-		SimHash rt;
-		rt.m_size = m_size;
-		std::vector<uint64_t>::const_iterator ai = m_ar.begin(), ae = m_ar.end();
-		for (; ai != ae; ++ai) rt.m_ar.push_back( Functor::call( *ai));
+		SimHash rt( m_nofbits, false, collection);
+		Parent::iterator ri = rt.begin();
+		Parent::const_iterator ai = Parent::begin(), ae = Parent::end();
+		for (; ai != ae; ++ri,++ai) *ri = Functor::call( *ai);
 		return rt;
 	}
 public:
-
 	/// \brief Binary XOR
-	SimHash operator ^ ( const SimHash& o) const	{return BINOP<Functor_XOR>( o);}
+	SimHash XOR( const SimHash& o, Collection& collection) const	{return BINOP<Functor_XOR>( o, collection);}
 	/// \brief Binary AND
-	SimHash operator & ( const SimHash& o) const	{return BINOP<Functor_AND>( o);}
+	SimHash AND( const SimHash& o, Collection& collection) const	{return BINOP<Functor_AND>( o, collection);}
 	/// \brief Binary OR
-	SimHash operator | ( const SimHash& o) const	{return BINOP<Functor_OR>( o);}
+	SimHash OR( const SimHash& o, Collection& collection) const	{return BINOP<Functor_OR>( o, collection);}
 	/// \brief Unary negation
-	SimHash operator ~ () const			{return UNOP<Functor_INV>();}
+	SimHash INV( Collection& collection) const			{return UNOP<Functor_INV>( collection);}
 	/// \brief Assignment XOR
-	SimHash& operator ^= ( const SimHash& o)	{return BINOP_ASSIGN<Functor_XOR>( o);}
+	SimHash& assign_XOR( const SimHash& o, Collection& collection)	{return BINOP_ASSIGN<Functor_XOR>( o, collection);}
 	/// \brief Assignment AND
-	SimHash& operator &= ( const SimHash& o)	{return BINOP_ASSIGN<Functor_AND>( o);}
+	SimHash& assign_AND( const SimHash& o, Collection& collection)	{return BINOP_ASSIGN<Functor_AND>( o, collection);}
 	/// \brief Assignment OR
-	SimHash& operator |= ( const SimHash& o)	{return BINOP_ASSIGN<Functor_OR>( o);}
+	SimHash& assign_OR( const SimHash& o, Collection& collection)	{return BINOP_ASSIGN<Functor_OR>( o, collection);}
 
 	/// \brief Get the bit field as string of "0" and "1"
 	std::string tostring() const;
 	/// \brief Number of bits represented
-	std::size_t size() const			{return m_size;}
+	std::size_t nofbits() const					{return m_nofbits;}
 
 	/// \brief Create a randomized SimHash of a given size
-	static SimHash randomHash( std::size_t size_, unsigned int seed);
-	/// \brief Serialize
-	static void printSerialization( std::string& out, const std::vector<SimHash>& ar);
-	/// \brief Deserialize
-	static std::vector<SimHash> createFromSerialization( const std::string& in, std::size_t& itr);
+	static SimHash randomHash( std::size_t nofbits_, unsigned int seed, Collection& collection);
+
+	enum {NofElementBits=64};
 
 private:
-	enum {NofElementBits=64};
-	std::vector<uint64_t> m_ar;
-	std::size_t m_size;
+	std::size_t m_nofbits;
+};
+
+typedef IntrusiveVectorCollection<uint64_t> SimHashAllocator;
+
+class SimHashCollection
+	:protected IntrusiveVectorCollection<uint64_t>
+{
+public:
+	typedef IntrusiveVectorCollection<uint64_t> Parent;
+public:
+	explicit SimHashCollection( std::size_t nofbits_)
+		:Parent(
+			nofbits_ / SimHash::NofElementBits
+			+ (nofbits_ % SimHash::NofElementBits != 0)?1:0,
+			NofBlockElements)
+		,m_nofbits(nofbits_){}
+	SimHashCollection( const SimHashCollection& o)
+		:Parent(
+			o.m_nofbits / SimHash::NofElementBits
+			+ (o.m_nofbits % SimHash::NofElementBits != 0)?1:0,
+			NofBlockElements)
+		 ,m_nofbits(o.m_nofbits)
+	{
+		const_iterator oi = o.begin(), oe = o.end();
+		for (; oi != oe; ++oi)
+		{
+			m_ar.push_back( SimHash( *oi, *this));
+		}
+	}
+
+	void push_back( const SimHash& element)
+	{
+		m_ar.push_back( SimHash( element, *this));
+	}
+	void push_back_own( const SimHash& element)
+	{
+		m_ar.push_back( element);
+	}
+
+	const SimHash& operator[]( std::size_t idx) const	{return m_ar[ idx];}
+	SimHash& operator[]( std::size_t idx)			{return m_ar[ idx];}
+
+	typedef std::vector<SimHash>::const_iterator const_iterator;
+	typedef std::vector<SimHash>::iterator iterator;
+
+	const_iterator begin() const				{return m_ar.begin();}
+	const_iterator end() const				{return m_ar.end();}
+	iterator begin()					{return m_ar.begin();}
+	iterator end()						{return m_ar.end();}
+
+	std::size_t nofbits() const				{return m_nofbits;}
+	std::size_t size() const				{return m_ar.size();}
+	std::size_t vecsize() const				{return Parent::vecsize();}
+
+	/// \brief Serialize
+	static void printSerialization( std::string& out, const SimHashCollection& ar);
+	/// \brief Deserialize
+	static SimHashCollection createFromSerialization( const std::string& in, std::size_t& itr);
+
+private:
+	enum {NofBlockElements=128};
+	std::vector<SimHash> m_ar;
+	std::size_t m_nofbits;
 };
 
 }//namespace

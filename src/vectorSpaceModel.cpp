@@ -153,7 +153,11 @@ class VectorSpaceModelInstance
 {
 public:
 	VectorSpaceModelInstance( const std::string& config_, ErrorBufferInterface* errorhnd_)
-		:m_errorhnd(errorhnd_),m_config(config_,errorhnd_),m_configstr(config_),m_lshmodel(0)
+		:m_errorhnd(errorhnd_)
+		,m_config(config_,errorhnd_)
+		,m_configstr(config_)
+		,m_lshmodel(0)
+		,m_individuals(0)
 	{
 		loadModelFromFile( m_config.path);
 	}
@@ -168,8 +172,10 @@ public:
 		try
 		{
 			std::vector<unsigned int> rt;
-			SimHash hash( m_lshmodel->simHash( arma::vec( vec)));
-			std::vector<SimHash>::const_iterator ii = m_individuals.begin(), ie = m_individuals.end();
+			unsigned int nofbits = m_config.bits * m_config.variations;
+			SimHashAllocator allocator( m_individuals.vecsize());
+			SimHash hash( m_lshmodel->simHash( arma::vec( vec), allocator));
+			SimHashCollection::const_iterator ii = m_individuals.begin(), ie = m_individuals.end();
 			for (std::size_t iidx=1; ii != ie; ++ii,++iidx)
 			{
 				if (ii->near( hash, m_config.simdist))
@@ -203,7 +209,7 @@ private:
 	VectorSpaceModelConfig m_config;
 	std::string m_configstr;
 	LshModel* m_lshmodel;
-	std::vector<SimHash> m_individuals;
+	SimHashCollection m_individuals;
 };
 
 
@@ -219,7 +225,7 @@ void VectorSpaceModelInstance::loadModelFromFile( const std::string& path)
 	hdr.check();
 	std::size_t itr = sizeof(hdr);
 	std::auto_ptr<LshModel> lshmodel( LshModel::createFromSerialization( dump, itr));
-	m_individuals = SimHash::createFromSerialization( dump, itr);
+	m_individuals = SimHashCollection::createFromSerialization( dump, itr);
 	m_configstr = std::string( dump.c_str() + itr);
 	try
 	{
@@ -247,7 +253,7 @@ std::string VectorSpaceModelInstance::tostring() const
 	std::ostringstream txtdump;
 	txtdump << "LSH:" << std::endl << m_lshmodel->tostring() << std::endl;
 	txtdump << "GEN:" << std::endl;
-	std::vector<SimHash>::const_iterator ii = m_individuals.begin(), ie = m_individuals.end();
+	SimHashCollection::const_iterator ii = m_individuals.begin(), ie = m_individuals.end();
 	for (; ii != ie; ++ii)
 	{
 		txtdump << ii->tostring() << std::endl;
@@ -262,10 +268,16 @@ class VectorSpaceModelBuilder
 {
 public:
 	VectorSpaceModelBuilder( const std::string& config_, ErrorBufferInterface* errorhnd_)
-		:m_errorhnd(errorhnd_),m_config(config_,errorhnd_),m_lshmodel(0),m_genmodel(0)
+		:m_errorhnd(errorhnd_)
+		,m_config(config_,errorhnd_)
+		,m_lshmodel(0)
+		,m_genmodel(0)
+		,m_samplear(0)
+		,m_resultar(0)
 	{
 		try
 		{
+			m_samplear = SimHashCollection( m_config.bits * m_config.variations);
 			m_lshmodel = new LshModel( m_config.dim, m_config.bits, m_config.variations);
 			m_genmodel = new GenModel( m_config.simdist, m_config.raddist, m_config.eqdist, m_config.mutations, m_config.votes, m_config.descendants, m_config.maxage, m_config.iterations);
 		}
@@ -291,7 +303,7 @@ public:
 #ifdef STRUS_LOWLEVEL_DEBUG
 			m_samplevecar.push_back( vec);
 #endif
-			m_samplear.push_back( m_lshmodel->simHash( arma::vec( vec)));
+			m_samplear.push_back_own( m_lshmodel->simHash( arma::vec( vec), m_samplear));
 		}
 		CATCH_ERROR_ARG1_MAP( _TXT("error adding sample vector to '%s' builder: %s"), MODULENAME, *m_errorhnd);
 	}
@@ -325,7 +337,7 @@ public:
 			VectorSpaceModelHdr hdr;
 			dump.append( (const char*)&hdr, sizeof( hdr));
 			m_lshmodel->printSerialization( dump);
-			SimHash::printSerialization( dump, m_resultar);
+			SimHashCollection::printSerialization( dump, m_resultar);
 			ec = writeFile( m_config.path, dump);
 			if (ec)
 			{
@@ -354,12 +366,12 @@ private:
 			}
 			txtdump << std::endl;
 		}
-		std::vector<SimHash>::const_iterator si = m_samplear.begin(), se = m_samplear.end();
+		SimHashCollection::const_iterator si = m_samplear.begin(), se = m_samplear.end();
 		for (unsigned int sidx=0; si != se; ++si,++sidx)
 		{
 			txtdump << "hash [" << sidx << "] " << si->tostring() << std::endl;
 		}
-		std::vector<SimHash>::const_iterator ri = m_resultar.begin(), re = m_resultar.end();
+		SimHashCollection::const_iterator ri = m_resultar.begin(), re = m_resultar.end();
 		for (unsigned int ridx=0; ri != re; ++ri,++ridx)
 		{
 			txtdump << "result [" << ridx << "] " << ri->tostring() << std::endl;
@@ -378,8 +390,8 @@ private:
 #ifdef STRUS_LOWLEVEL_DEBUG
 	std::vector<std::vector<double> > m_samplevecar;
 #endif
-	std::vector<SimHash> m_samplear;
-	std::vector<SimHash> m_resultar;
+	SimHashCollection m_samplear;
+	SimHashCollection m_resultar;
 };
 
 

@@ -18,64 +18,75 @@
 
 using namespace strus;
 
-SimHash::SimHash( std::size_t size_, bool initval)
-	:m_ar(),m_size(size_)
+SimHash::SimHash( std::size_t nofbits_, bool initval, Collection& collection)
+	:Parent(collection.newVector()),m_nofbits(nofbits_)
 {
-	if (m_size == 0) return;
+	if (m_nofbits == 0) return;
+	std::size_t allelem = collection.vecsize() * NofElementBits;
+	if (m_nofbits > allelem) throw strus::runtime_error(_TXT("sim hash number of elements out of range"));
+	std::size_t fillelem = (collection.vecsize()-1) * NofElementBits;
+	if (m_nofbits <= fillelem) throw strus::runtime_error(_TXT("sim hash number of elements out of range"));
+	std::size_t restelem = m_nofbits - fillelem;
+	if (restelem == NofElementBits)
+	{
+		restelem = 0;
+	}
 
 	uint64_t elem = (initval)?std::numeric_limits<uint64_t>::max():0;
-	std::size_t ii = 0, nn = m_size / NofElementBits;
-	for (; ii < nn; ++ii)
+	Parent::iterator ai = Parent::begin(), ae = Parent::end();
+	if (restelem)
 	{
-		m_ar.push_back( elem);
+		for (--ae; ai != ae; ++ai) *ai = elem;
+		elem <<= (NofElementBits - restelem);
+		*ai = elem;
 	}
-	if (m_size > nn * NofElementBits)
+	else
 	{
-		elem <<= m_size - (nn * NofElementBits);
-		m_ar.push_back( elem);
+		for (; ai != ae; ++ai) *ai = elem;
 	}
 }
 
-SimHash::SimHash( const std::vector<bool>& bv)
-	:m_ar(),m_size(bv.size())
+SimHash::SimHash( const std::vector<bool>& bv, Collection& collection)
+	:Parent(collection.newVector()),m_nofbits(bv.size())
 {
 	if (bv.empty()) return;
 	uint64_t elem = 0;
-	std::vector<bool>::const_iterator ai = bv.begin(), ae = bv.end();
-	unsigned int aidx = 0;
-	for (; ai != ae; ++ai,++aidx)
+	std::vector<bool>::const_iterator bi = bv.begin(), be = bv.end();
+	Parent::iterator ai = Parent::begin();
+	unsigned int bidx = 0;
+	for (; bi != be; ++bi,++bidx)
 	{
-		if (aidx == (int)NofElementBits)
+		if (bidx == (int)NofElementBits)
 		{
-			m_ar.push_back( elem);
+			*ai++ = elem;
 			elem = 0;
-			aidx = 0;
+			bidx = 0;
 		}
 		else
 		{
 			elem <<= 1;
 		}
-		elem |= *ai ? 1:0;
+		elem |= *bi ? 1:0;
 	}
-	elem <<= (NofElementBits - aidx);
-	m_ar.push_back( elem);
+	elem <<= (NofElementBits - bidx);
+	*ai = elem;
 }
 
 bool SimHash::operator[]( std::size_t idx) const
 {
 	std::size_t aridx = idx / NofElementBits;
 	std::size_t arofs = idx % NofElementBits;
-	if (aridx >= m_ar.size()) return false;
+	if (aridx >= Parent::size()) return false;
 	uint64_t mask = 1;
 	mask <<= (NofElementBits-1 - arofs);
-	return (m_ar[ aridx] & mask) != 0;
+	return (Parent::operator[]( aridx) & mask) != 0;
 }
 
 void SimHash::set( std::size_t idx, bool value)
 {
 	std::size_t aridx = idx / NofElementBits;
 	std::size_t arofs = idx % NofElementBits;
-	if (aridx >= m_ar.size())
+	if (aridx >= Parent::size())
 	{
 		throw strus::runtime_error(_TXT("array bound write in %s"), "SimHash");
 	}
@@ -83,18 +94,18 @@ void SimHash::set( std::size_t idx, bool value)
 	mask <<= (NofElementBits-1 - arofs);
 	if (value)
 	{
-		m_ar[ aridx] |= mask;
+		Parent::operator[]( aridx) |= mask;
 	}
 	else
 	{
-		m_ar[ aridx] &= ~mask;
+		Parent::operator[]( aridx) &= ~mask;
 	}
 }
 
 std::vector<std::size_t> SimHash::indices( bool what) const
 {
 	std::vector<std::size_t> rt;
-	std::vector<uint64_t>::const_iterator ai = m_ar.begin(), ae = m_ar.end();
+	Parent::const_iterator ai = Parent::begin(), ae = Parent::end();
 	std::size_t aridx = 0;
 	for (; ai != ae; ++ai,++aridx)
 	{
@@ -114,7 +125,7 @@ std::vector<std::size_t> SimHash::indices( bool what) const
 unsigned int SimHash::count() const
 {
 	unsigned int rt = 0;
-	std::vector<uint64_t>::const_iterator ai = m_ar.begin(), ae = m_ar.end();
+	Parent::const_iterator ai = Parent::begin(), ae = Parent::end();
 	for (; ai != ae; ++ai)
 	{
 		rt += strus::BitOperations::bitCount( *ai);
@@ -125,8 +136,8 @@ unsigned int SimHash::count() const
 unsigned int SimHash::dist( const SimHash& o) const
 {
 	unsigned int rt = 0;
-	std::vector<uint64_t>::const_iterator ai = m_ar.begin(), ae = m_ar.end();
-	std::vector<uint64_t>::const_iterator oi = o.m_ar.begin(), oe = o.m_ar.end();
+	Parent::const_iterator ai = Parent::begin(), ae = Parent::end();
+	Parent::const_iterator oi = o.begin(), oe = o.end();
 	for (; oi != oe && ai != ae; ++oi,++ai)
 	{
 		rt += strus::BitOperations::bitCount( *ai ^ *oi);
@@ -145,8 +156,8 @@ unsigned int SimHash::dist( const SimHash& o) const
 bool SimHash::near( const SimHash& o, unsigned int dist) const
 {
 	unsigned int cnt = 0;
-	std::vector<uint64_t>::const_iterator ai = m_ar.begin(), ae = m_ar.end();
-	std::vector<uint64_t>::const_iterator oi = o.m_ar.begin(), oe = o.m_ar.end();
+	Parent::const_iterator ai = Parent::begin(), ae = Parent::end();
+	Parent::const_iterator oi = o.begin(), oe = o.end();
 	for (; oi != oe && ai != ae; ++oi,++ai)
 	{
 		cnt += strus::BitOperations::bitCount( *ai ^ *oi);
@@ -168,12 +179,12 @@ bool SimHash::near( const SimHash& o, unsigned int dist) const
 std::string SimHash::tostring() const
 {
 	std::ostringstream rt;
-	std::vector<uint64_t>::const_iterator ai = m_ar.begin(), ae = m_ar.end();
+	Parent::const_iterator ai = Parent::begin(), ae = Parent::end();
 	for (unsigned int aidx=0; ai != ae; ++ai,++aidx)
 	{
 		if (aidx) rt << '|';
 		uint64_t mi = 1;
-		unsigned int cnt = m_size - (aidx * NofElementBits);
+		unsigned int cnt = m_nofbits - (aidx * NofElementBits);
 		mi <<= (NofElementBits-1);
 		for (; mi && cnt; mi >>= 1, --cnt)
 		{
@@ -183,61 +194,43 @@ std::string SimHash::tostring() const
 	return rt.str();
 }
 
-void SimHash::printSerialization( std::string& out, const std::vector<SimHash>& ar)
+void SimHashCollection::printSerialization( std::string& out, const SimHashCollection& ar)
 {
-	std::size_t maxsize = 0;
-	std::vector<SimHash>::const_iterator vi = ar.begin(), ve = ar.end();
+	uint32_t nw;
+	nw = htonl( (uint32_t)ar.nofbits());	out.append( (const char*)&nw, sizeof(nw));
+	nw = htonl( (uint32_t)ar.size());	out.append( (const char*)&nw, sizeof(nw));
+	const_iterator vi = ar.begin(), ve = ar.end();
 	for (; vi != ve; ++vi)
 	{
-		if (vi->size() > maxsize)
-		{
-			maxsize = vi->size();
-		}
-	}
-	std::size_t maxnofelem = maxsize/NofElementBits;
-	if (ar.size() > std::numeric_limits<uint32_t>::max()) throw strus::runtime_error(_TXT("sim hash vector too big to serialize"));
-	if (maxnofelem > std::numeric_limits<uint32_t>::max()) throw strus::runtime_error(_TXT("sim hash vector elements too big to serialize"));
-
-	uint32_t nw;
-	nw = htonl( (uint32_t)maxnofelem);	out.append( (const char*)&nw, sizeof(nw));
-	nw = htonl( (uint32_t)ar.size());	out.append( (const char*)&nw, sizeof(nw));
-	for (vi = ar.begin(); vi != ve; ++vi)
-	{
-		std::vector<uint64_t>::const_iterator ai = vi->m_ar.begin(), ae = vi->m_ar.end();
-		std::size_t wi = 0, we = maxnofelem;
-		for (; ai != ae; ++ai,++wi)
+		SimHash::const_iterator ai = vi->begin(), ae = vi->end();
+		for (; ai != ae; ++ai)
 		{
 			nw = htonl( *ai >> 32);		out.append( (const char*)&nw, sizeof(nw));
 			nw = htonl( *ai & 0xFFffFFffU);	out.append( (const char*)&nw, sizeof(nw));
 		}
-		for (; wi != we; ++wi)
-		{
-			nw = 0;
-			out.append( (const char*)&nw, sizeof(nw));
-			out.append( (const char*)&nw, sizeof(nw));
-		}
 	}
 }
 
-std::vector<SimHash> SimHash::createFromSerialization( const std::string& in, std::size_t& itr)
+SimHashCollection SimHashCollection::createFromSerialization( const std::string& in, std::size_t& itr)
 {
-	std::vector<SimHash> rt;
 	uint32_t const* nw = (const uint32_t*)(void*)(in.c_str() + itr);
 	const uint32_t* start = nw;
-	std::size_t maxnofelem = ntohl( *nw++);
-	std::size_t vi=0,ve = ntohl( *nw++);
+	std::size_t nofbits = ntohl( *nw++);
+	std::size_t arsize = ntohl( *nw++);
+	SimHashCollection rt( nofbits);
+
+	std::size_t vi=0,ve = arsize;
 	for (; vi < ve; ++vi)
 	{
-		SimHash elem;
-		std::size_t ai=0,ae=maxnofelem;
-		for (; ai != ae; ++ai)
+		SimHash elem( nofbits, false, rt);
+		SimHash::iterator ri = elem.begin(), re = elem.end();
+		for (; ri != re; ++ri)
 		{
 			uint64_t val = ntohl( *nw++);
 			val = (val << 32) | ntohl( *nw++);
-			elem.m_ar.push_back( val);
+			*ri = val;
 		}
-		elem.m_size = maxnofelem * NofElementBits;
-		rt.push_back( elem);
+		rt.push_back_own( elem);
 	}
 	itr += (nw - start) * sizeof(uint32_t);
 	return rt;
@@ -260,16 +253,28 @@ uint64_t hash64Bitshuffle( uint64_t a)
 	return a;
 }
 
-SimHash SimHash::randomHash( std::size_t size_, unsigned int seed)
+SimHash SimHash::randomHash( std::size_t nofbits_, unsigned int seed, Collection& collection)
 {
-	SimHash rt;
-	std::size_t ai=0,ae = (size_ + NofElementBits - 1) / NofElementBits;
-	rt.m_size = size_;
-	rt.m_ar.reserve( ae);
+	SimHash rt( nofbits_, false, collection);
+	iterator ri = rt.begin(), re = rt.end();
 	enum {KnuthConst=2654435761};
-	for (; ai != ae; ++ai)
+	std::size_t restelem = nofbits_ % NofElementBits;
+	if (restelem)
 	{
-		rt.m_ar.push_back( hash64Bitshuffle( (seed + ai) * KnuthConst));
+		unsigned int ridx=0;
+		for (--re; ri != re; ++ri,++ridx)
+		{
+			*ri = hash64Bitshuffle( (seed + ridx) * KnuthConst);
+		}
+		*ri = hash64Bitshuffle( (seed + ridx) * KnuthConst) << (NofElementBits - restelem);
+	}
+	else
+	{
+		unsigned int ridx=0;
+		for (; ri != re; ++ri,++ridx)
+		{
+			*ri = hash64Bitshuffle( (seed + ridx) * KnuthConst);
+		}
 	}
 	return rt;
 }

@@ -6,8 +6,8 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 /// \brief Structure for a map of sample indices to similarity groups they are members of
-#ifndef _STRUS_VECTOR_SPACE_MODEL_SIMILAITY_GROUP_MAP_HPP_INCLUDED
-#define _STRUS_VECTOR_SPACE_MODEL_SIMILAITY_GROUP_MAP_HPP_INCLUDED
+#ifndef _STRUS_VECTOR_SPACE_MODEL_SIMILARITY_GROUP_MAP_HPP_INCLUDED
+#define _STRUS_VECTOR_SPACE_MODEL_SIMILARITY_GROUP_MAP_HPP_INCLUDED
 #include "simGroup.hpp"
 #include <map>
 #include <cstring>

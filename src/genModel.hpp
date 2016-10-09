@@ -37,7 +37,7 @@ public:
 	std::string tostring() const;
 
 	/// \brief Unsupervised learning of a good group representantion of the sample set passed as argument
-	std::vector<SimHash> run( const std::vector<SimHash>& samples, const char* logfile) const;
+	SimHashCollection run( const SimHashCollection& samples, const char* logfile) const;
 
 private:
 	unsigned int m_simdist;			///< maximal distance to be considered similar

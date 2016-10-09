@@ -35,7 +35,7 @@ public:
 	/// \brief Calculate similarity hash of a vector
 	/// \param[in] vec input vector
 	/// \return simhash value acording to this model
-	SimHash simHash( const arma::vec& vec) const;
+	SimHash simHash( const arma::vec& vec, SimHashAllocator& allocator) const;
 
 private:
 	static arma::mat createModelMatrix( std::size_t dim_, std::size_t nofbits_);

@@ -11,19 +11,21 @@
 #include "internationalization.hpp"
 #include "errorUtils.hpp"
 #include <algorithm>
+#include <limits>
+#include <cmath>
 
 using namespace strus;
 
 static Random g_random;
 
-SimGroup::SimGroup( const std::vector<SimHash>& samplear, std::size_t m1, std::size_t m2, const FeatureIndex& id_)
+SimGroup::SimGroup( const SimHashCollection& samplear, std::size_t m1, std::size_t m2, const FeatureIndex& id_, SimHashAllocator& allocator)
 	:m_id(id_),m_gencode(),m_age(0),m_members(),m_nofmembers(2)
 {
 	if (m1 == m2) throw strus::runtime_error(_TXT("illegal group creations (two init members are duplicates)"));
 	if (m1 > m2) std::swap( m1, m2);
 	m_members.insert( m1);
 	m_members.insert( m2);
-	m_gencode = inithash( samplear);
+	m_gencode = inithash( samplear, allocator);
 }
 
 void SimGroup::setGencode( const SimHash& gc)
@@ -67,7 +69,7 @@ bool SimGroup::isMember( const SampleIndex& idx) const
 	return m_members.find( idx) != m_members.end();
 }
 
-double SimGroup::fitness( const std::vector<SimHash>& samplear) const
+double SimGroup::fitness( const SimHashCollection& samplear) const
 {
 	return fitness( samplear, gencode());
 }
@@ -82,7 +84,7 @@ double pow_uint( double value, unsigned int exp)
 	return rt;
 }
 
-double SimGroup::fitness( const std::vector<SimHash>& samplear, const SimHash& genom) const
+double SimGroup::fitness( const SimHashCollection& samplear, const SimHash& genom) const
 {
 	double sqrsum = 0.0;
 	const_iterator mi = m_members.begin(), me = m_members.end();
@@ -94,22 +96,22 @@ double SimGroup::fitness( const std::vector<SimHash>& samplear, const SimHash& g
 	return pow_uint( 1.0 + 1.0 / std::sqrt( sqrsum / m_nofmembers), m_nofmembers) - 1.0;
 }
 
-SimHash SimGroup::kernel( const std::vector<SimHash>& samplear) const
+SimHash SimGroup::kernel( const SimHashCollection& samplear, SimHashAllocator& allocator) const
 {
 	const_iterator si = m_members.begin(), se = m_members.end();
 	if (si == se) return gencode();
 
-	SimHash first( samplear[ *si]);
-	SimHash rt( first.size(), true);
+	SimHash first( samplear[ *si], allocator);
+	SimHash rt( first.size(), true, allocator);
 
 	for (++si; si != se; ++si)
 	{
-		rt &= ~(first ^ samplear[ *si]);
+		rt.assign_AND( first.XOR( samplear[ *si], allocator).INV(allocator), allocator);
 	}
 	return rt;
 }
 
-bool SimGroup::mutation_vote( const std::vector<SimHash>& samplear, unsigned int mutidx, unsigned int nofqueries) const
+bool SimGroup::mutation_vote( const SimHashCollection& samplear, unsigned int mutidx, unsigned int nofqueries) const
 {
 	unsigned int true_cnt=0, false_cnt=0;
 	unsigned int ci = 0, ce = nofqueries;
@@ -156,21 +158,20 @@ bool SimGroup::mutation_vote( const std::vector<SimHash>& samplear, unsigned int
 	}
 }
 
-SimHash SimGroup::mutation( const std::vector<SimHash>& samplear, unsigned int maxNofMutations, unsigned int maxNofVotes) const
+SimHash SimGroup::mutation( const SimHashCollection& samplear, unsigned int maxNofMutations, unsigned int maxNofVotes, SimHashAllocator& allocator) const
 {
 	if (m_nofmembers < 2) return gencode();
 
-	SimHash rt( m_gencode);
+	SimHash rt( m_gencode, allocator);
 	// Calculate 'kernel' = the set of all elements equal for all members. These cannot be mutated:
-	SimHash kn = kernel( samplear);
+	SimHash kn = kernel( samplear, allocator);
 
 	unsigned int ki=0, ke=maxNofMutations;
 	for (; ki != ke; ++ki)
 	{
 		unsigned int mutidx = g_random.get( 0, gencode().size());
-		if (!kn[ mutidx])
+		if (!kn[ mutidx]) //.... only mutate non kernel elements
 		{
-			//.... only mutate non kernel elements
 			// The majority of randomly selected members decide the direction of the mutation:
 			bool mutval = mutation_vote( samplear, mutidx, maxNofVotes);
 			rt.set( mutidx, mutval);
@@ -179,39 +180,45 @@ SimHash SimGroup::mutation( const std::vector<SimHash>& samplear, unsigned int m
 	return rt;
 }
 
-SimHash SimGroup::inithash( const std::vector<SimHash>& samplear) const
+SimHash SimGroup::inithash( const SimHashCollection& samplear, SimHashAllocator& allocator) const
 {
 	if (m_nofmembers == 0) return gencode();
 
 	// Calculate 'kernel' = the set of all elements equal for all members. These cannot be mutated:
-	SimHash kn = kernel( samplear);
-	SimHash rnd( SimHash::randomHash( kn.size(), g_random.get( 0, std::numeric_limits<unsigned int>::max())));
+	SimHash kn = kernel( samplear, allocator);
+	SimHash rnd( SimHash::randomHash( kn.size(), g_random.get( 0, std::numeric_limits<unsigned int>::max()), allocator), allocator);
 	// All elements belonging to the kernel are taken from the first element the others chosen randomly:
-	SimHash rt( (~kn & rnd) |(kn & samplear[ *m_members.begin()]) );
+	SimHash rt(
+			(kn.INV(allocator).AND(rnd,allocator))
+			.OR( kn
+				.AND( samplear[ *m_members.begin()],allocator)
+			,allocator)
+		,allocator);
 	return rt;
 }
 
-void SimGroup::mutate( const std::vector<SimHash>& samplear, unsigned int descendants, unsigned int maxNofMutations, unsigned int maxNofVotes)
+void SimGroup::mutate( const SimHashCollection& samplear, unsigned int descendants, unsigned int maxNofMutations, unsigned int maxNofVotes, SimHashAllocator& allocator)
 {
-	std::vector<SimHash> descendantlist;
-	descendantlist.reserve( descendants);
+	SimHash fittest_simhash;
+	SimHash current_simhash;
 
 	double max_fitness = fitness( samplear);
 	int selected = -1;
 	std::size_t di=0, de=descendants;
 	for (; di != de; ++di)
 	{
-		descendantlist.push_back( mutation( samplear, maxNofMutations, maxNofVotes));
-		double desc_fitness = fitness( samplear, descendantlist.back());
+		current_simhash = mutation( samplear, maxNofMutations, maxNofVotes, allocator);
+		double desc_fitness = fitness( samplear, current_simhash);
 		if (desc_fitness > max_fitness)
 		{
 			selected = (int)di;
 			max_fitness = desc_fitness;
+			fittest_simhash = current_simhash;
 		}
 	}
 	if (selected >= 0)
 	{
-		setGencode( descendantlist[ selected]);
+		setGencode( fittest_simhash);
 	}
 }
 

@@ -88,7 +88,7 @@ std::string LshModel::tostring() const
 	return rt.str();
 }
 
-SimHash LshModel::simHash( const arma::vec& vec) const
+SimHash LshModel::simHash( const arma::vec& vec, SimHashAllocator& allocator) const
 {
 	std::vector<bool> rt;
 	if (m_dim != vec.size())
@@ -105,7 +105,7 @@ SimHash LshModel::simHash( const arma::vec& vec) const
 			rt.push_back( *resi >= 0.0);
 		}
 	}
-	return SimHash( rt);
+	return SimHash( rt, allocator);
 }
 
 union PackedDouble
