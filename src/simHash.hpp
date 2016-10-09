@@ -25,11 +25,11 @@ class SimHash
 {
 public:
 	SimHash()
-		:m_ar(),m_size(0){}
-	SimHash( const SimHash& o)
-		:m_ar(o.m_ar),m_size(o.m_size){}
+		:m_ar(0),m_size(0){}
+	SimHash( const SimHash& o);
 	SimHash( const std::vector<bool>& bv);
 	SimHash( std::size_t size_, bool initval);
+	~SimHash();
 
 	/// \brief Get element value by index
 	bool operator[]( std::size_t idx) const;
@@ -44,36 +44,36 @@ public:
 	/// \brief Get all indices of elements set to 1 or 0 (defined by parameter)
 	std::vector<std::size_t> indices( bool what) const;
 
+	SimHash& operator=( const SimHash& o);
+
 private:
 	template <class Functor>
 	SimHash BINOP( const SimHash& o) const
 	{
-		SimHash rt;
-		std::vector<uint64_t>::const_iterator ai = m_ar.begin(), ae = m_ar.end(), oi = o.m_ar.begin(), oe = o.m_ar.end();
-		for (; ai != ae && oi != oe; ++ai, ++oi) rt.m_ar.push_back( Functor::call( *ai, *oi));
-		for (; ai != ae; ++ai) rt.m_ar.push_back( Functor::call( *ai, 0));
-		for (; oi != oe; ++oi) rt.m_ar.push_back( Functor::call( 0, *oi));
-		rt.m_size = (o.m_size > m_size) ? o.m_size : m_size;
+		if (size() != o.size()) throw strus::runtime_error(_TXT("binary sim hash operation on incompatible operands"));
+		SimHash rt( size(), false);
+		uint64_t* ri = rt.m_ar;
+		uint64_t const* ai = m_ar; const uint64_t* ae = m_ar + arsize();
+		uint64_t const* oi = o.m_ar;
+		for (; ai != ae; ++ri,++ai,++oi) *ri = Functor::call( *ai, *oi);
 		return rt;
 	}
 	template <class Functor>
 	SimHash& BINOP_ASSIGN( const SimHash& o)
 	{
-		std::vector<uint64_t>::iterator ai = m_ar.begin(), ae = m_ar.end();
-		std::vector<uint64_t>::const_iterator oi = o.m_ar.begin(), oe = o.m_ar.end();
-		for (; ai != ae && oi != oe; ++ai, ++oi) *ai = Functor::call( *ai, *oi);
-		for (; ai != ae; ++ai) *ai = Functor::call( *ai, *oi);
-		for (; oi != oe; ++oi) m_ar.push_back( Functor::call( 0, *oi));
-		if (o.m_size > m_size) m_size = o.m_size;
+		if (size() != o.size()) throw strus::runtime_error(_TXT("binary sim hash operation on incompatible operands"));
+		uint64_t* ai = m_ar; uint64_t* ae = m_ar + arsize();
+		uint64_t const* oi = o.m_ar;
+		for (; ai != ae; ++ai,++oi) *ai = Functor::call( *ai, *oi);
 		return *this;
 	}
 	template <class Functor>
 	SimHash UNOP() const
 	{
-		SimHash rt;
-		rt.m_size = m_size;
-		std::vector<uint64_t>::const_iterator ai = m_ar.begin(), ae = m_ar.end();
-		for (; ai != ae; ++ai) rt.m_ar.push_back( Functor::call( *ai));
+		SimHash rt( m_size, false);
+		uint64_t* ri = rt.m_ar;
+		uint64_t const* ai = m_ar; const uint64_t* ae = m_ar + arsize();
+		for (; ai != ae; ++ri,++ai) *ri = Functor::call( *ai);
 		return rt;
 	}
 public:
@@ -105,10 +105,15 @@ public:
 	/// \brief Deserialize
 	static std::vector<SimHash> createFromSerialization( const std::string& in, std::size_t& itr);
 
+	/// \brief Get the size of the array used to represent the sim hash value
+	std::size_t arsize() const			{return (m_size+NofElementBits-1)/NofElementBits;}
+	/// \brief Get the size of the array used to represent the sim hash value
+	static std::size_t arsize( unsigned int size_)	{return (size_+NofElementBits-1)/NofElementBits;}
+
 private:
 	enum {NofElementBits=64};
-	std::vector<uint64_t> m_ar;
-	std::size_t m_size;
+	uint64_t* m_ar;
+	unsigned int m_size;
 };
 
 }//namespace

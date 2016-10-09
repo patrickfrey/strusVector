@@ -25,11 +25,11 @@ class SimGroup
 public:
 	SimGroup( const std::vector<SimHash>& samplear, std::size_t m1, std::size_t m2, const FeatureIndex& id_);
 	SimGroup( const SimHash& gencode_, const FeatureIndex& id_)
-		:m_id(id_),m_gencode(gencode_),m_age(0),m_members(),m_nofmembers(0){}
+		:m_id(id_),m_gencode(gencode_),m_age(0),m_members(),m_nofmembers(0),m_fitness(0.0),m_fitness_valid(false){}
 	SimGroup( const SimGroup& o)
-		:m_id(o.m_id),m_gencode(o.m_gencode),m_age(o.m_age),m_members(o.m_members),m_nofmembers(o.m_nofmembers){}
+		:m_id(o.m_id),m_gencode(o.m_gencode),m_age(o.m_age),m_members(o.m_members),m_nofmembers(o.m_nofmembers),m_fitness(o.m_fitness),m_fitness_valid(o.m_fitness_valid){}
 	SimGroup( const SimGroup& o, const FeatureIndex& id_)
-		:m_id(id_),m_gencode(o.m_gencode),m_age(o.m_age),m_members(o.m_members),m_nofmembers(o.m_nofmembers){}
+		:m_id(id_),m_gencode(o.m_gencode),m_age(o.m_age),m_members(o.m_members),m_nofmembers(o.m_nofmembers),m_fitness(o.m_fitness),m_fitness_valid(o.m_fitness_valid){}
 
 	const FeatureIndex& id() const					{return m_id;}
 	const SimHash& gencode() const					{return m_gencode;}
@@ -93,7 +93,9 @@ private:
 	SimHash m_gencode;			///< genetic code of the group
 	unsigned int m_age;			///< virtual value for age of the genom
 	std::set<SampleIndex> m_members;	///< members of the group
-	std::size_t m_nofmembers;
+	std::size_t m_nofmembers;		///< number of members in the group
+	mutable double m_fitness;		///< cached fitness value
+	mutable bool m_fitness_valid;		///< true if cached fitness value is valid
 };
 
 }//namespace

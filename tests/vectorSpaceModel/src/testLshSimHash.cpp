@@ -15,6 +15,7 @@
 #include <cstdlib>
 #include <cmath>
 #include <limits>
+#include <algorithm>
 #include <stdexcept>
 
 #undef STRUS_LOWLEVEL_DEBUG
@@ -105,6 +106,65 @@ int main( int argc, const char** argv)
 		}
 		for (ti=0; ti != te; ++ti)
 		{
+			{
+				std::string expected;
+				std::cerr << "test RANDOM SET " << (ti+1) << " size " << sizear[ti] << std::endl;
+				strus::SimHash res( sizear[ti], false);
+				std::vector<unsigned int> elems;
+				for (unsigned int ii=0; ii<10; ++ii)
+				{
+					unsigned int idx = rand() % sizear[ti];
+					res.set( idx, true);
+					elems.push_back( idx);
+				}
+				std::sort( elems.begin(), elems.end());
+				std::vector<unsigned int>::const_iterator ei = elems.begin(), ee = elems.end();
+				unsigned int prev = 0;
+				for (; ei != ee; ++ei)
+				{
+					if (prev > *ei) continue;
+					for (; prev < *ei; ++prev)
+					{
+						expected.push_back( '0');
+						if ((prev+1) % 64 == 0)
+						{
+							expected.push_back( '|');
+						}
+					}
+					expected.push_back( '1');
+					if ((prev+1) % 64 == 0)
+					{
+						expected.push_back( '|');
+					}
+					++prev;
+				}
+				for (; prev < sizear[ti]; ++prev)
+				{
+					expected.push_back( '0');
+					if ((prev+1) % 64 == 0)
+					{
+						expected.push_back( '|');
+					}
+				}
+				if (expected.size() && expected[ expected.size()-1] == '|')
+				{
+					expected.resize( expected.size()-1);
+				}
+				std::string result( res.tostring());
+#ifdef STRUS_LOWLEVEL_DEBUG
+				std::cout << "expected " << expected << std::endl;
+				std::cout << "result   " << result << std::endl;
+#endif
+				if (expected != result)
+				{
+					std::cerr << "RES " << res.tostring() << std::endl;
+					std::cerr << "EXP " << expected << std::endl;
+					throw std::runtime_error( "matching of 'random set' failed");
+				}
+			}
+		}
+		for (ti=0; ti != te; ++ti)
+		{
 			std::cerr << "test PRIME NUMBER SIEVE " << (ti+1) << " size " << sizear[ti] << std::endl;
 			strus::SimHash expected = createPrimBitSet( sizear[ti]);
 #ifdef STRUS_LOWLEVEL_DEBUG
@@ -112,16 +172,18 @@ int main( int argc, const char** argv)
 #endif
 			strus::SimHash res = createDivBitSet( sizear[ti], 2);
 			res.set( 0, true);
-#ifdef STRUS_LOWLEVEL_DEBUG
-			std::cout << "result   " << res.tostring() << std::endl;
-#endif
 			unsigned int di=3, de=sizear[ti]/2;
 			for (; di < de; ++di)
 			{
 				res |= createDivBitSet( sizear[ti], di);
 			}
+#ifdef STRUS_LOWLEVEL_DEBUG
+			std::cout << "inv res  " << res.tostring() << std::endl;
+#endif
 			res = ~res;
-
+#ifdef STRUS_LOWLEVEL_DEBUG
+			std::cout << "result   " << res.tostring() << std::endl;
+#endif
 			strus::SimHash zerofill( sizear[ti], false);
 			doMatch( " primes inverse divisible", res, expected);
 			doMatch( " result AND expected equals OR", res & expected, res | expected);

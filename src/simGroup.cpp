@@ -17,7 +17,7 @@ using namespace strus;
 static Random g_random;
 
 SimGroup::SimGroup( const std::vector<SimHash>& samplear, std::size_t m1, std::size_t m2, const FeatureIndex& id_)
-	:m_id(id_),m_gencode(),m_age(0),m_members(),m_nofmembers(2)
+	:m_id(id_),m_gencode(),m_age(0),m_members(),m_nofmembers(2),m_fitness(0.0),m_fitness_valid(false)
 {
 	if (m1 == m2) throw strus::runtime_error(_TXT("illegal group creations (two init members are duplicates)"));
 	if (m1 > m2) std::swap( m1, m2);
@@ -29,6 +29,7 @@ SimGroup::SimGroup( const std::vector<SimHash>& samplear, std::size_t m1, std::s
 void SimGroup::setGencode( const SimHash& gc)
 {
 	m_gencode = gc;
+	m_fitness_valid = false;
 	++m_age;
 }
 
@@ -36,6 +37,7 @@ bool SimGroup::addMember( const SampleIndex& idx)
 {
 	if (m_members.insert( idx).second)
 	{
+		m_fitness_valid = false;
 		++m_nofmembers;
 		m_age -= m_age/3;
 		return true;
@@ -47,6 +49,7 @@ bool SimGroup::removeMember( const SampleIndex& idx)
 {
 	if (m_members.erase( idx) > 0)
 	{
+		m_fitness_valid = false;
 		--m_nofmembers;
 		return true;
 	}
@@ -59,6 +62,7 @@ SimGroup::const_iterator SimGroup::removeMemberItr( const_iterator itr)
 	++rt;
 	m_members.erase( itr);
 	--m_nofmembers;
+	m_fitness_valid = false;
 	return rt;
 }
 
@@ -69,7 +73,7 @@ bool SimGroup::isMember( const SampleIndex& idx) const
 
 double SimGroup::fitness( const std::vector<SimHash>& samplear) const
 {
-	return fitness( samplear, gencode());
+	return m_fitness_valid?m_fitness:fitness( samplear, gencode());
 }
 
 double pow_uint( double value, unsigned int exp)
@@ -212,6 +216,8 @@ void SimGroup::mutate( const std::vector<SimHash>& samplear, unsigned int descen
 	if (selected >= 0)
 	{
 		setGencode( descendantlist[ selected]);
+		m_fitness_valid = true;
+		m_fitness = max_fitness;
 	}
 }
 

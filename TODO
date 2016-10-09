@@ -1,0 +1,5 @@
++ cache fitness function value
++ element that gets to maximum group membership leaves the group with the worst fitting factor (1: dist to group sim hash / 10, 2: group fittness)
++ rename SimGroupMap to SampleSimGroupMap
+
+
