@@ -7,7 +7,7 @@
  */
 /// \brief Structure for breeding good representants of similarity classes with help of genetic algorithms
 #include "genModel.hpp"
-#include "simGroupMap.hpp"
+#include "sampleSimGroupMap.hpp"
 #include "random.hpp"
 #include "internationalization.hpp"
 #include <ctime>
@@ -97,10 +97,10 @@ static void removeGroup(
 		GroupIdAllocator& groupIdAllocator,
 		GroupInstanceList& groupInstanceList,
 		GroupInstanceMap& groupInstanceMap,
-		SimGroupMap& simGroupMap)
+		SampleSimGroupMap& sampleSimGroupMap)
 {
 	GroupInstanceMap::iterator group_slot = groupInstanceMap.find( group_id);
-	if (group_slot == groupInstanceMap.end()) throw strus::runtime_error(_TXT("illegal reference in group map (removeGroup): %u"), group_id);
+	if (group_slot == groupInstanceMap.end()) throw strus::runtime_error(_TXT("illegal reference in group map (%s): %u"), "removeGroup", group_id);
 	GroupInstanceList::iterator group_iter = group_slot->second;
 	if (group_iter->id() != group_id) throw strus::runtime_error(_TXT("illegal reference in group list"));
 	groupInstanceMap.erase( group_slot);
@@ -109,7 +109,7 @@ static void removeGroup(
 		mi = group_iter->begin(), me = group_iter->end();
 	for (; mi != me; ++mi)
 	{
-		simGroupMap.remove( *mi, group_id);
+		sampleSimGroupMap.remove( *mi, group_id);
 	}
 	groupIdAllocator.free( group_id);
 	groupInstanceList.erase( group_iter);
@@ -127,12 +127,12 @@ static unsigned int age_mutation_votes( const SimGroup& group, unsigned int maxa
 
 static bool tryAddGroupMember( const FeatureIndex& group_id, SampleIndex newmember,
 				GroupInstanceMap& groupInstanceMap,
-				SimGroupMap& simGroupMap, const std::vector<SimHash>& samplear,
+				SampleSimGroupMap& sampleSimGroupMap, const std::vector<SimHash>& samplear,
 				unsigned int descendants, unsigned int mutations, unsigned int votes,
 				unsigned int maxage)
 {
 	GroupInstanceMap::iterator group_slot = groupInstanceMap.find( group_id);
-	if (group_slot == groupInstanceMap.end()) throw strus::runtime_error(_TXT("illegal reference in group map (tryAddGroupMember): %u"), group_id);
+	if (group_slot == groupInstanceMap.end()) throw strus::runtime_error(_TXT("illegal reference in group map (%s): %u"), "tryAddGroupMember", group_id);
 	GroupInstanceList::iterator group_inst = group_slot->second;
 
 	SimGroup newgroup( *group_inst);
@@ -141,7 +141,7 @@ static bool tryAddGroupMember( const FeatureIndex& group_id, SampleIndex newmemb
 	if (newgroup.fitness( samplear) >= group_inst->fitness( samplear))
 	{
 		*group_inst = newgroup;
-		return simGroupMap.insert( newmember, group_inst->id());
+		return sampleSimGroupMap.insert( newmember, group_inst->id());
 	}
 	else
 	{
@@ -155,17 +155,17 @@ static FeatureIndex getSampleClosestSimGroup(
 				unsigned short min_dist,
 				const GroupInstanceList& groupInstanceList,
 				const GroupInstanceMap& groupInstanceMap,
-				const SimGroupMap& simGroupMap,
+				const SampleSimGroupMap& sampleSimGroupMap,
 				const std::vector<SimHash>& samplear)
 {
 	FeatureIndex rt = 0;
-	SimGroupMap::const_node_iterator gi = simGroupMap.node_begin( main_sampleidx), ge = simGroupMap.node_end( main_sampleidx);
+	SampleSimGroupMap::const_node_iterator gi = sampleSimGroupMap.node_begin( main_sampleidx), ge = sampleSimGroupMap.node_end( main_sampleidx);
 	for (; gi != ge; ++gi)
 	{
 		GroupInstanceMap::const_iterator group_slot = groupInstanceMap.find( *gi);
 		if (group_slot == groupInstanceMap.end())
 		{
-			throw strus::runtime_error(_TXT("illegal reference in group map (getSampleClosestSimGroup): %u"), *gi);
+			throw strus::runtime_error(_TXT("illegal reference in group map (%s): %u"), "getSampleClosestSimGroup", *gi);
 		}
 		GroupInstanceList::const_iterator group_inst = group_slot->second;
 
@@ -180,14 +180,69 @@ static FeatureIndex getSampleClosestSimGroup(
 	return rt;
 }
 
+///\brief Try to find a group with a high age with a low fitness factor and leave it
+static bool tryLeaveUnfitestGroup(
+		SampleIndex sampleidx,
+		unsigned int maxage,
+		GroupIdAllocator& groupIdAllocator,
+		GroupInstanceList& groupInstanceList,
+		GroupInstanceMap& groupInstanceMap,
+		SampleSimGroupMap& sampleSimGroupMap,
+		const std::vector<SimHash>& samplear)
+{
+	double minFitness = std::numeric_limits<double>::max();
+	double maxFitness = 0.0;
+	GroupInstanceList::iterator unfitestGroup = groupInstanceList.end();
+
+	SampleSimGroupMap::const_node_iterator gi = sampleSimGroupMap.node_begin( sampleidx), ge = sampleSimGroupMap.node_end( sampleidx);
+	for (; gi != ge; ++gi)
+	{
+		GroupInstanceMap::iterator group_slot = groupInstanceMap.find( *gi);
+		if (group_slot == groupInstanceMap.end())
+		{
+			throw strus::runtime_error(_TXT("illegal reference in group map (%s): %u"), "tryLeaveUnfitestGroup", *gi);
+		}
+		GroupInstanceList::iterator group_inst = group_slot->second;
+		if (group_inst->id() != *gi)
+		{
+			throw strus::runtime_error(_TXT("illegal reference in group map (%s): %u"), "tryLeaveUnfitestGroup", *gi);
+		}
+		double fitness = group_inst->fitness(samplear);
+		if (fitness > maxFitness)
+		{
+			maxFitness = fitness;
+		}
+		if (group_inst->age() >= ((maxage * STRUS_VECTOR_MAXAGE_MATURE_PERCENTAGE) / 100) && fitness < minFitness)
+		{
+			minFitness = fitness;
+			unfitestGroup = group_inst;
+		}
+	}
+	if (unfitestGroup != groupInstanceList.end() && minFitness < maxFitness * STRUS_VECTOR_BAD_FITNESS_FRACTION)
+	{
+		FeatureIndex group_id = unfitestGroup->id();
+		unfitestGroup->removeMember( sampleidx);
+		sampleSimGroupMap.remove( sampleidx, group_id);
+		if (unfitestGroup->size() < 2)
+		{
+			removeGroup( group_id, groupIdAllocator, groupInstanceList, groupInstanceMap, sampleSimGroupMap);
+		}
+#ifdef STRUS_LOWLEVEL_DEBUG
+		std::cerr << "sample left unfitest group " << sampleidx << " <- " << group_id << std::endl;
+#endif
+		return true;
+	}
+	return false;
+}
+
 /// \brief Find the closest sample to a given sample that is not yet in a group with this sample and can still be assigned to a new group
-static bool findClosestFreeSample( SimRelationMap::Element& res, SampleIndex sampleidx, const SimGroupMap& simGroupMap, const SimRelationMap& simrelmap)
+static bool findClosestFreeSample( SimRelationMap::Element& res, SampleIndex sampleidx, const SampleSimGroupMap& sampleSimGroupMap, const SimRelationMap& simrelmap)
 {
 	SimRelationMap::Row row = simrelmap.row( sampleidx);
 	SimRelationMap::Row::const_iterator ri = row.begin(), re = row.end();
 	for (; ri != re; ++ri)
 	{
-		if (simGroupMap.hasSpace( ri->index) && !simGroupMap.shares( sampleidx, ri->index))
+		if (sampleSimGroupMap.hasSpace( ri->index) && !sampleSimGroupMap.shares( sampleidx, ri->index))
 		{
 			res = *ri;
 			return true;
@@ -202,22 +257,22 @@ typedef std::set<Dependency> DependencyGraph;
 
 /// \brief Build a directed graph of dependencies of groups derived from the map of samples to groups.
 /// \note A group is dependent on another if every of its member is also member of the other group
-static DependencyGraph buildGroupDependencyGraph( std::size_t nofSamples, const SimGroupMap& simGroupMap)
+static DependencyGraph buildGroupDependencyGraph( std::size_t nofSamples, const SampleSimGroupMap& sampleSimGroupMap)
 {
 	DependencyGraph rt;
 	std::vector<unsigned char> independentmark( nofSamples, 0); /*values are 0,1,2*/
 	SampleIndex si=0, se=nofSamples;
 	for (; si < se; ++si)
 	{
-		SimGroupMap::const_node_iterator ni = simGroupMap.node_begin( si), ne = simGroupMap.node_end( si);
-		SimGroupMap::const_node_iterator na = ni;
+		SampleSimGroupMap::const_node_iterator ni = sampleSimGroupMap.node_begin( si), ne = sampleSimGroupMap.node_end( si);
+		SampleSimGroupMap::const_node_iterator na = ni;
 		for (; ni != ne; ++ni)
 		{
 			if (independentmark[ *ni] == 2)
 			{}
 			else if (independentmark[ *ni] == 0)
 			{
-				SimGroupMap::const_node_iterator oni = na, one = ne;
+				SampleSimGroupMap::const_node_iterator oni = na, one = ne;
 				for (; oni != one; ++oni)
 				{
 					if (*oni != *ni)
@@ -234,7 +289,7 @@ static DependencyGraph buildGroupDependencyGraph( std::size_t nofSamples, const 
 				std::set<Dependency>::iterator di = rt.upper_bound( Dependency( *ni, 0));
 				while (di != rt.end() && di->first == *ni)
 				{
-					if (simGroupMap.contains( si, di->second))
+					if (sampleSimGroupMap.contains( si, di->second))
 					{
 						have_found = true;
 						++di;
@@ -309,11 +364,11 @@ static void eliminateCircularReferences( DependencyGraph& graph)
 static void checkSimGroupStructures(
 				const GroupInstanceList& groupInstanceList,
 				const GroupInstanceMap& groupInstanceMap,
-				const SimGroupMap& simGroupMap,
+				const SampleSimGroupMap& sampleSimGroupMap,
 				std::size_t nofSamples)
 {
 	std::cerr << "check structures:" << std::endl;
-	simGroupMap.check();
+	sampleSimGroupMap.check();
 	std::ostringstream errbuf;
 	bool haserr = false;
 
@@ -326,9 +381,9 @@ static void checkSimGroupStructures(
 		{
 			if (midx) std::cerr << ", ";
 			std::cerr << *mi;
-			if (!simGroupMap.contains( *mi, gi->id()))
+			if (!sampleSimGroupMap.contains( *mi, gi->id()))
 			{
-				errbuf << "missing element group relation in simGroupMap: " << *mi << " IN " << gi->id() << std::endl;
+				errbuf << "missing element group relation in sampleSimGroupMap: " << *mi << " IN " << gi->id() << std::endl;
 				haserr = true;
 			}
 		}
@@ -345,7 +400,7 @@ static void checkSimGroupStructures(
 	SampleIndex si=0, se=nofSamples;
 	for (; si != se; ++si)
 	{
-		SimGroupMap::const_node_iterator ni = simGroupMap.node_begin( si), ne = simGroupMap.node_end( si);
+		SampleSimGroupMap::const_node_iterator ni = sampleSimGroupMap.node_begin( si), ne = sampleSimGroupMap.node_end( si);
 		unsigned int nidx=0;
 		if (ni != ne) std::cerr << "sample " << si << " groups = ";
 		for (; ni != ne; ++ni,++nidx)
@@ -401,8 +456,8 @@ std::vector<SimHash> GenModel::run( const std::vector<SimHash>& samplear, const 
 	GroupIdAllocator groupIdAllocator;		// Allocator of group ids
 	GroupInstanceList groupInstanceList;		// list of similarity group representants
 	GroupInstanceMap groupInstanceMap;		// map indices to group representant list iterators
-	SimGroupMap simGroupMap( samplear.size());	// map of sample idx to group idx
-	SimRelationMap simrelmap( getSimRelationMap( samplear, m_simdist, logout)); // similarity relation map of the list of samples
+	SampleSimGroupMap sampleSimGroupMap( samplear.size(), m_assignments);		// map of sample idx to group idx
+	SimRelationMap simrelmap( getSimRelationMap( samplear, m_simdist, logout));	// similarity relation map of the list of samples
 
 	// Do the iterations of creating new individuals
 	unsigned int iteration=0;
@@ -410,26 +465,32 @@ std::vector<SimHash> GenModel::run( const std::vector<SimHash>& samplear, const 
 	{
 		if (logout) (*logout) << _TXT("iteration ") << iteration << ":" << std::endl;
 #ifdef STRUS_LOWLEVEL_DEBUG
-		checkSimGroupStructures( groupInstanceList, groupInstanceMap, simGroupMap, samplear.size());
+		checkSimGroupStructures( groupInstanceList, groupInstanceMap, sampleSimGroupMap, samplear.size());
 #endif
 		if (logout) (*logout) << _TXT("create new individuals") << std::endl;
 		// Go through all elements and try to create new groups with the closest free neighbours:
 		std::vector<SimHash>::const_iterator si = samplear.begin(), se = samplear.end();
 		for (SampleIndex sidx=0; si != se; ++si,++sidx)
 		{
-			if (!simGroupMap.hasSpace( sidx)) continue;
+			if (!sampleSimGroupMap.hasSpace( sidx))
+			{
+				if (!tryLeaveUnfitestGroup( sidx, m_maxage, groupIdAllocator, groupInstanceList, groupInstanceMap, sampleSimGroupMap, samplear))
+				{
+					continue;
+				}
+			}
 
 			// Find the closest neighbour, that is not yet in a group with this sample:
 			SimRelationMap::Element neighbour;
-			if (findClosestFreeSample( neighbour, sidx, simGroupMap, simrelmap))
+			if (findClosestFreeSample( neighbour, sidx, sampleSimGroupMap, simrelmap))
 			{
 				// Try to find a group the visited sample belongs to that is closer to the
 				// found candidate than the visited sample:
-				FeatureIndex bestmatch_simgroup = getSampleClosestSimGroup( sidx, neighbour.index, neighbour.simdist, groupInstanceList, groupInstanceMap, simGroupMap, samplear);
+				FeatureIndex bestmatch_simgroup = getSampleClosestSimGroup( sidx, neighbour.index, neighbour.simdist, groupInstanceList, groupInstanceMap, sampleSimGroupMap, samplear);
 				if (bestmatch_simgroup)
 				{
 					// ...if we found such a group, we try to add the candidate there instead:
-					if (!tryAddGroupMember( bestmatch_simgroup, neighbour.index, groupInstanceMap, simGroupMap, samplear, m_descendants, m_mutations, m_votes, m_maxage))
+					if (!tryAddGroupMember( bestmatch_simgroup, neighbour.index, groupInstanceMap, sampleSimGroupMap, samplear, m_descendants, m_mutations, m_votes, m_maxage))
 					{
 						bestmatch_simgroup = 0;
 					}
@@ -440,8 +501,8 @@ std::vector<SimHash> GenModel::run( const std::vector<SimHash>& samplear, const 
 					// elements as members:
 					SimGroup newgroup( samplear, sidx, neighbour.index, groupIdAllocator.alloc());
 					newgroup.mutate( samplear, m_descendants, age_mutations( newgroup, m_maxage, m_mutations), age_mutation_votes( newgroup, m_maxage, m_votes));
-					simGroupMap.insert( neighbour.index, newgroup.id());
-					simGroupMap.insert( sidx, newgroup.id());
+					sampleSimGroupMap.insert( neighbour.index, newgroup.id());
+					sampleSimGroupMap.insert( sidx, newgroup.id());
 					groupInstanceList.push_back( newgroup);
 					GroupInstanceList::iterator enditr = groupInstanceList.end();
 					groupInstanceMap[ newgroup.id()] = --enditr;
@@ -460,7 +521,7 @@ std::vector<SimHash> GenModel::run( const std::vector<SimHash>& samplear, const 
 			SimGroup::const_iterator mi = gi->begin(), me = gi->end();
 			for (; mi != me; ++mi)
 			{
-				SimGroupMap::const_node_iterator si = simGroupMap.node_begin(*mi), se = simGroupMap.node_end(*mi);
+				SampleSimGroupMap::const_node_iterator si = sampleSimGroupMap.node_begin(*mi), se = sampleSimGroupMap.node_end(*mi);
 				for (; si != se; ++si)
 				{
 					if (*si != gi->id())
@@ -475,7 +536,7 @@ std::vector<SimHash> GenModel::run( const std::vector<SimHash>& samplear, const 
 			for (; ni != ne; ++ni)
 			{
 				GroupInstanceMap::iterator sim_gi_slot = groupInstanceMap.find( *ni);
-				if (sim_gi_slot == groupInstanceMap.end()) throw strus::runtime_error(_TXT("illegal reference in group map (join eqdist groups): %u"), *ni);
+				if (sim_gi_slot == groupInstanceMap.end()) throw strus::runtime_error(_TXT("illegal reference in group map (%s): %u"), "join eqdist groups", *ni);
 				GroupInstanceList::iterator sim_gi = sim_gi_slot->second;
 
 				if (sim_gi->gencode().near( gi->gencode(), m_eqdist))
@@ -487,10 +548,10 @@ std::vector<SimHash> GenModel::run( const std::vector<SimHash>& samplear, const 
 					{
 						if (!gi->isMember( *sim_mi))
 						{
-							if (!simGroupMap.hasSpace( *sim_mi)) break;
+							if (!sampleSimGroupMap.hasSpace( *sim_mi)) break;
 							// Add member of sim_gi to gi:
 							gi->addMember( *sim_mi);
-							simGroupMap.insert( *sim_mi, gi->id());
+							sampleSimGroupMap.insert( *sim_mi, gi->id());
 							gi->mutate( samplear, m_descendants, age_mutations( *gi, m_maxage, m_mutations), age_mutation_votes( *gi, m_maxage, m_votes));
 							if (!sim_gi->gencode().near( gi->gencode(), m_eqdist))
 							{
@@ -504,7 +565,7 @@ std::vector<SimHash> GenModel::run( const std::vector<SimHash>& samplear, const 
 						// can be added to gi and it is still in eqdist:
 						if (sim_gi->fitness( samplear) < gi->fitness( samplear))
 						{
-							removeGroup( sim_gi->id(), groupIdAllocator, groupInstanceList, groupInstanceMap, simGroupMap);
+							removeGroup( sim_gi->id(), groupIdAllocator, groupInstanceList, groupInstanceMap, sampleSimGroupMap);
 						}
 						sim_gi = groupInstanceList.end();
 					}
@@ -517,9 +578,9 @@ std::vector<SimHash> GenModel::run( const std::vector<SimHash>& samplear, const 
 					{
 						if (gi->gencode().near( samplear[*mi], m_simdist) && !gi->isMember( *mi))
 						{
-							if (simGroupMap.hasSpace( *mi))
+							if (sampleSimGroupMap.hasSpace( *mi))
 							{
-								if (tryAddGroupMember( gi->id(), *mi, groupInstanceMap, simGroupMap, samplear, m_descendants, m_mutations, m_votes, m_maxage))
+								if (tryAddGroupMember( gi->id(), *mi, groupInstanceMap, sampleSimGroupMap, samplear, m_descendants, m_mutations, m_votes, m_maxage))
 								{
 									break;
 								}
@@ -532,7 +593,7 @@ std::vector<SimHash> GenModel::run( const std::vector<SimHash>& samplear, const 
 					{
 						if (sim_gi->fitness( samplear) < gi->fitness( samplear))
 						{
-							removeGroup( sim_gi->id(), groupIdAllocator, groupInstanceList, groupInstanceMap, simGroupMap);
+							removeGroup( sim_gi->id(), groupIdAllocator, groupInstanceList, groupInstanceMap, sampleSimGroupMap);
 						}
 						sim_gi = groupInstanceList.end();
 					}
@@ -559,7 +620,7 @@ std::vector<SimHash> GenModel::run( const std::vector<SimHash>& samplear, const 
 					mi = gi->removeMemberItr( mi);
 					--mi;
 					--midx;
-					simGroupMap.remove( member, gi->id());
+					sampleSimGroupMap.remove( member, gi->id());
 					if (gi->size() < 2) break;
 				}
 			}
@@ -568,7 +629,7 @@ std::vector<SimHash> GenModel::run( const std::vector<SimHash>& samplear, const 
 				// Delete group that lost too many members:
 				FeatureIndex gid = gi->id();
 				++gi;
-				removeGroup( gid, groupIdAllocator, groupInstanceList, groupInstanceMap, simGroupMap);
+				removeGroup( gid, groupIdAllocator, groupInstanceList, groupInstanceMap, sampleSimGroupMap);
 				--gi;
 			}
 		}
@@ -576,7 +637,7 @@ std::vector<SimHash> GenModel::run( const std::vector<SimHash>& samplear, const 
 	if (logout) (*logout) << _TXT("eliminate redundant groups") << std::endl;
 	{
 		// Build the dependency graph:
-		DependencyGraph groupDependencyGraph = buildGroupDependencyGraph( samplear.size(), simGroupMap);
+		DependencyGraph groupDependencyGraph = buildGroupDependencyGraph( samplear.size(), sampleSimGroupMap);
 
 		// Eliminate circular references from the graph:
 		eliminateCircularReferences( groupDependencyGraph);
@@ -586,7 +647,7 @@ std::vector<SimHash> GenModel::run( const std::vector<SimHash>& samplear, const 
 		while (di != de)
 		{
 			unsigned int gid = di->first;
-			removeGroup( gid, groupIdAllocator, groupInstanceList, groupInstanceMap, simGroupMap);
+			removeGroup( gid, groupIdAllocator, groupInstanceList, groupInstanceMap, sampleSimGroupMap);
 			for (++di; di != de && gid == di->first; ++di){}
 		}
 	}
@@ -599,7 +660,7 @@ std::vector<SimHash> GenModel::run( const std::vector<SimHash>& samplear, const 
 	unsigned int nofSigletons = 0;
 	for (; si != se; ++si)
 	{
-		if (simGroupMap.nofElements( si) == 0)
+		if (sampleSimGroupMap.nofElements( si) == 0)
 		{
 			++nofSigletons;
 			if (m_with_singletons)

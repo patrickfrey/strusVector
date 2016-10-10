@@ -87,6 +87,22 @@ std::vector<double> createRandomVector( unsigned int dim)
 
 static strus::ErrorBufferInterface* g_errorhnd = 0;
 
+#define DEFAULT_CONFIG \
+	"path=test.vm;"\
+	"logfile='-';"\
+	"dim=300;"\
+	"bit=64;"\
+	"var=32;"\
+	"simdist=340;"\
+	"raddist=250;"\
+	"eqdist=80;"\
+	"mutations=20;"\
+	"votes=5;"\
+	"descendants=5;"\
+	"maxage=20;"\
+	"iterations=20;"\
+	"assignments=7;"\
+	"singletons=no"
 
 int main( int argc, const char** argv)
 {
@@ -96,7 +112,7 @@ int main( int argc, const char** argv)
 		if (!g_errorhnd) throw std::runtime_error("failed to create error buffer structure");
 
 		initRandomNumberGenerator();
-		std::string config( "path=test.vm;dim=300;bit=64;var=32;simdist=340;eqdist=60;mutations=50;votes=13;descendants=10;maxage=20;iterations=50");
+		std::string config( DEFAULT_CONFIG);
 		unsigned int nofSamples = 1000;
 		unsigned int dim = 0;
 
@@ -124,7 +140,7 @@ int main( int argc, const char** argv)
 		}
 		std::cerr << "model config: " << config << std::endl;
 		std::string configsrc = config;
-		(void)extractUIntFromConfigString( dim, configsrc, "dim", g_errorhnd);
+		if (!extractUIntFromConfigString( dim, configsrc, "dim", g_errorhnd)) throw std::runtime_error("configuration parameter 'dim' is not specified");
 
 		std::auto_ptr<strus::VectorSpaceModelInterface> vmodel( createVectorSpaceModel_std( g_errorhnd));
 		if (!vmodel.get()) throw std::runtime_error( g_errorhnd->fetchError());

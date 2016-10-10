@@ -18,15 +18,21 @@
 
 namespace strus {
 
+/// \brief Some constants that are not configurable yet
+#define STRUS_VECTOR_MAXAGE_MATURE_PERCENTAGE 30   // define what precentage of age compared with maxage is considered mature
+#define STRUS_VECTOR_BAD_FITNESS_FRACTION     0.6  // factor of fitness considered bad compared with the best fitness of the group, used to decide wheter a 'mature' group can be left when maximum capacity of releations is reached
+
+
 /// \brief Structure for implementing unsupervised learning of SimHash group representants with help of genetic algorithms
 class GenModel
 {
 public:
 	/// \brief Constructor
-	GenModel( unsigned int simdist_, unsigned int raddist_, unsigned int eqdist_, unsigned int mutations_, unsigned int votes_, unsigned int descendants_, unsigned int maxage_, unsigned int iterations_, bool with_singletons_)
+	GenModel( unsigned int simdist_, unsigned int raddist_, unsigned int eqdist_, unsigned int mutations_, unsigned int votes_, unsigned int descendants_, unsigned int maxage_, unsigned int iterations_, unsigned int assignments_, bool with_singletons_)
 		:m_simdist(simdist_),m_raddist(raddist_),m_eqdist(eqdist_)
 		,m_mutations(mutations_),m_votes(votes_)
 		,m_descendants(descendants_),m_maxage(maxage_),m_iterations(iterations_)
+		,m_assignments(assignments_)
 		,m_with_singletons(with_singletons_)
 		{}
 	/// \brief Copy constructor
@@ -34,6 +40,7 @@ public:
 		:m_simdist(o.m_simdist),m_raddist(o.m_raddist),m_eqdist(o.m_eqdist)
 		,m_mutations(o.m_mutations),m_votes(o.m_votes)
 		,m_descendants(o.m_descendants),m_maxage(o.m_maxage),m_iterations(o.m_iterations)
+		,m_assignments(o.m_assignments)
 		,m_with_singletons(o.m_with_singletons)
 		{}
 
@@ -52,6 +59,7 @@ private:
 	unsigned int m_descendants;		///< number of descendants of which the fittest is selected
 	unsigned int m_maxage;			///< upper bound value used for calculate number of mutations (an older individuum mutates less)
 	unsigned int m_iterations;		///< number of iterations
+	unsigned int m_assignments;		///< maximum number of assignments on a sample to a group
 	bool m_with_singletons;			///< true, if singletons should also get into the result
 };
 

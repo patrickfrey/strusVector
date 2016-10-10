@@ -6,8 +6,8 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 /// \brief Structure for a map of sample indices to similarity groups they are members of
-#ifndef _STRUS_VECTOR_SPACE_MODEL_SIMILAITY_GROUP_MAP_HPP_INCLUDED
-#define _STRUS_VECTOR_SPACE_MODEL_SIMILAITY_GROUP_MAP_HPP_INCLUDED
+#ifndef _STRUS_VECTOR_SPACE_MODEL_SAMPLE_TO_SIM_GROUP_MAP_HPP_INCLUDED
+#define _STRUS_VECTOR_SPACE_MODEL_SAMPLE_TO_SIM_GROUP_MAP_HPP_INCLUDED
 #include "simGroup.hpp"
 #include <map>
 #include <cstring>
@@ -15,18 +15,16 @@
 namespace strus {
 
 /// \brief Structure for storing sample to group relations
-class SimGroupMap
+class SampleSimGroupMap
 {
 public:
-	explicit SimGroupMap( std::size_t nofNodes)
-		:m_nodear( nofNodes, Node())
-	{}
-	SimGroupMap( const SimGroupMap& o)
-		:m_nodear(o.m_nodear){}
+	explicit SampleSimGroupMap( std::size_t nofNodes_, std::size_t maxNodeSize_);
+	SampleSimGroupMap( const SampleSimGroupMap& o);
+	~SampleSimGroupMap();
 
 	void check() const;
 	bool insert( const std::size_t& ndidx, const FeatureIndex& groupidx)
-		{return m_nodear[ndidx].insert( groupidx);}
+		{return m_nodear[ndidx].insert( groupidx, m_maxnodesize);}
 	/// \brief Evaluate if a sample references a group
 	bool contains( const std::size_t& ndidx, const FeatureIndex& groupidx) const
 		{return m_nodear[ndidx].contains( groupidx);}
@@ -37,10 +35,10 @@ public:
 		{return m_nodear[ndidx].remove( groupidx);}
 	/// \brief Evaluate, if there is space left for adding a new relation
 	bool hasSpace( const std::size_t& ndidx) const
-		{return m_nodear[ndidx].size < NofNodeBranches;}
+		{return m_nodear[ndidx].size < m_maxnodesize;}
 	/// \brief Evaluate, how much space is left for adding new relations
 	unsigned int sizeSpace( const std::size_t& ndidx) const
-		{return NofNodeBranches - m_nodear[ndidx].size;}
+		{return m_maxnodesize - m_nodear[ndidx].size;}
 	/// \brief Evaluate, how many relations exist for a node
 	unsigned int nofElements( const std::size_t& ndidx) const
 		{return m_nodear[ndidx].size;}
@@ -71,21 +69,28 @@ public:
 	const_node_iterator node_end( std::size_t ndidx) const		{const Node& nd = m_nodear[ ndidx]; return const_node_iterator( nd.groupidx + nd.size);}
 
 private:
-	enum {NofNodeBranches=15};
+	void init();
+
 	struct Node
 	{
 		FeatureIndex size;
-		FeatureIndex groupidx[ NofNodeBranches];
+		FeatureIndex* groupidx;
 
-		Node( const Node& o);
-		Node();
+		void init( FeatureIndex* groupidx_)
+		{
+			size = 0;
+			groupidx = groupidx_;
+		}
 
-		bool insert( const FeatureIndex& gix);
+		bool insert( const FeatureIndex& gix, std::size_t maxnodesize);
 		bool remove( const FeatureIndex& gix);
 		bool contains( const FeatureIndex& gidx) const;
-		void check() const;
+		void check( std::size_t maxnodesize) const;
 	};
-	std::vector<Node> m_nodear;
+	Node* m_nodear;
+	FeatureIndex* m_refs;
+	std::size_t m_nodearsize;
+	std::size_t m_maxnodesize;
 };
 
 }//namespace

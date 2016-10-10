@@ -10,7 +10,7 @@ set(
 	random.cpp
 	simHash.cpp
 	simGroup.cpp
-	simGroupMap.cpp
+	sampleSimGroupMap.cpp
 	simRelationMap.cpp
 	lshModel.cpp
 	genModel.cpp 
