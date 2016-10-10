@@ -54,7 +54,7 @@ public:
 
 		bool operator==( const const_node_iterator& o) const	{return ref == o.ref;}
 		bool operator!=( const const_node_iterator& o) const	{return ref != o.ref;}
-		bool operator<( const const_node_iterator& o) const	{return ref<o.ref;}
+		bool operator<( const const_node_iterator& o) const	{return ref < o.ref;}
 		bool operator<=( const const_node_iterator& o) const	{return ref <= o.ref;}
 		bool operator>( const const_node_iterator& o) const	{return ref > o.ref;}
 		bool operator>=( const const_node_iterator& o) const	{return ref >= o.ref;}

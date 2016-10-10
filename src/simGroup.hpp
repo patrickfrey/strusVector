@@ -71,6 +71,9 @@ public:
 	/// \param[in] samplear global array of samples the reference system of this individual is based on
 	SimHash kernel( const std::vector<SimHash>& samplear) const;
 
+	/// \brief Check status of this group
+	void check() const;
+
 private:
 	/// \brief Evaluate the fitness of a proposed genom change
 	/// \param[in] samplear global array of samples the reference system of this individual is based on

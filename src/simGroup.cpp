@@ -263,3 +263,12 @@ unsigned int SimGroup::diffMembers( const SimGroup& o, unsigned int maxdiff) con
 	return rt;
 }
 
+void SimGroup::check() const
+{
+	if (m_members.size() != m_nofmembers)
+	{
+		throw strus::runtime_error(_TXT("illegal SimGroup (member set size)"));
+	}
+}
+
+

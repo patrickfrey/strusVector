@@ -18,7 +18,7 @@
 #include <algorithm>
 
 using namespace strus;
-#undef STRUS_LOWLEVEL_DEBUG
+#define STRUS_LOWLEVEL_DEBUG
 
 static Random g_random;
 
@@ -53,6 +53,11 @@ public:
 	unsigned int nofGroupsAllocated() const
 	{
 		return m_cnt - m_freeList.size();
+	}
+
+	unsigned int nofGroupIdsAllocated() const
+	{
+		return m_cnt;
 	}
 
 private:
@@ -227,9 +232,6 @@ static bool tryLeaveUnfitestGroup(
 		{
 			removeGroup( group_id, groupIdAllocator, groupInstanceList, groupInstanceMap, sampleSimGroupMap);
 		}
-#ifdef STRUS_LOWLEVEL_DEBUG
-		std::cerr << "sample left unfitest group " << sampleidx << " <- " << group_id << std::endl;
-#endif
 		return true;
 	}
 	return false;
@@ -257,10 +259,10 @@ typedef std::set<Dependency> DependencyGraph;
 
 /// \brief Build a directed graph of dependencies of groups derived from the map of samples to groups.
 /// \note A group is dependent on another if every of its member is also member of the other group
-static DependencyGraph buildGroupDependencyGraph( std::size_t nofSamples, const SampleSimGroupMap& sampleSimGroupMap)
+static DependencyGraph buildGroupDependencyGraph( std::size_t nofSamples, std::size_t nofGroups, const SampleSimGroupMap& sampleSimGroupMap)
 {
 	DependencyGraph rt;
-	std::vector<unsigned char> independentmark( nofSamples, 0); /*values are 0,1,2*/
+	std::vector<unsigned char> independentmark( nofGroups, 0); /*values are 0,1,2*/
 	SampleIndex si=0, se=nofSamples;
 	for (; si < se; ++si)
 	{
@@ -268,9 +270,9 @@ static DependencyGraph buildGroupDependencyGraph( std::size_t nofSamples, const 
 		SampleSimGroupMap::const_node_iterator na = ni;
 		for (; ni != ne; ++ni)
 		{
-			if (independentmark[ *ni] == 2)
+			if (independentmark[ *ni-1] == 2)
 			{}
-			else if (independentmark[ *ni] == 0)
+			else if (independentmark[ *ni-1] == 0)
 			{
 				SampleSimGroupMap::const_node_iterator oni = na, one = ne;
 				for (; oni != one; ++oni)
@@ -281,9 +283,9 @@ static DependencyGraph buildGroupDependencyGraph( std::size_t nofSamples, const 
 						rt.insert( Dependency( *ni, *oni));
 					}
 				}
-				independentmark[ *ni] = 1;
+				independentmark[ *ni-1] = 1;
 			}
-			else if (independentmark[ *ni] == 1)
+			else if (independentmark[ *ni-1] == 1)
 			{
 				bool have_found = false;
 				std::set<Dependency>::iterator di = rt.upper_bound( Dependency( *ni, 0));
@@ -303,13 +305,13 @@ static DependencyGraph buildGroupDependencyGraph( std::size_t nofSamples, const 
 				}
 				if (!have_found)
 				{
-					independentmark[ *ni] = 2;
+					independentmark[ *ni-1] = 2;
 					continue;
 				}
 			}
 			else
 			{
-				throw strus::runtime_error(_TXT("internal: wrong group dependency status"));
+				throw strus::runtime_error(_TXT("internal: wrong group dependency status: %u [%u]"), independentmark[ *ni-1], *ni);
 			}
 		}
 	}
@@ -367,7 +369,7 @@ static void checkSimGroupStructures(
 				const SampleSimGroupMap& sampleSimGroupMap,
 				std::size_t nofSamples)
 {
-	std::cerr << "check structures:" << std::endl;
+	std::cerr << "check structures ..." << std::endl;
 	sampleSimGroupMap.check();
 	std::ostringstream errbuf;
 	bool haserr = false;
@@ -637,7 +639,7 @@ std::vector<SimHash> GenModel::run( const std::vector<SimHash>& samplear, const 
 	if (logout) (*logout) << _TXT("eliminate redundant groups") << std::endl;
 	{
 		// Build the dependency graph:
-		DependencyGraph groupDependencyGraph = buildGroupDependencyGraph( samplear.size(), sampleSimGroupMap);
+		DependencyGraph groupDependencyGraph = buildGroupDependencyGraph( samplear.size(), groupIdAllocator.nofGroupIdsAllocated(), sampleSimGroupMap);
 
 		// Eliminate circular references from the graph:
 		eliminateCircularReferences( groupDependencyGraph);

@@ -15,13 +15,13 @@ using namespace strus;
 
 void SampleSimGroupMap::init()
 {
-	std::size_t mm = m_nodearsize * m_maxnodesize * sizeof(FeatureIndex);
+	std::size_t mm = m_nodearsize * std::max( m_maxnodesize, sizeof(FeatureIndex));
 	if (mm < m_nodearsize || mm < m_maxnodesize)
 	{
 		throw std::bad_alloc();
 	}
 	m_nodear = (Node*)std::malloc( m_nodearsize * sizeof(Node));
-	m_refs = (FeatureIndex*)std::malloc( m_nodearsize * m_maxnodesize * sizeof(FeatureIndex));
+	m_refs = (FeatureIndex*)std::calloc( m_nodearsize * m_maxnodesize, sizeof(FeatureIndex));
 	if (!m_nodear || !m_refs)
 	{
 		if (m_nodear) std::free(m_nodear);

@@ -89,7 +89,7 @@ static strus::ErrorBufferInterface* g_errorhnd = 0;
 
 #define DEFAULT_CONFIG \
 	"path=test.vm;"\
-	"logfile='-';"\
+	"logfile=-;"\
 	"dim=300;"\
 	"bit=64;"\
 	"var=32;"\
