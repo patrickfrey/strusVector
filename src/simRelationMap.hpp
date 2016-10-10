@@ -77,6 +77,12 @@ public:
 	/// \param[in] ar array of samples with similarity distance related to the element referenced by 'index'
 	void addRow( const SampleIndex& index, const std::vector<Element>& ar);
 
+	/// \brief Get the total number of similarity relations detect until now
+	std::size_t nofRelationsDetected() const
+	{
+		return m_ar.size();
+	}
+
 private:
 	std::vector<Element> m_ar;
 	struct RowDescr

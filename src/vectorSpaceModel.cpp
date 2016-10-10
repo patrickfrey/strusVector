@@ -63,22 +63,26 @@ struct VectorSpaceModelConfig
 		DefaultMutationVotes = 13,
 		DefaultDescendants = 10,
 		DefaultMaxAge = 20,
-		DefaultIterations = 20
+		DefaultIterations = 20,
+		DefaultWithSingletons = 0
 	};
 	VectorSpaceModelConfig( const VectorSpaceModelConfig& o)
 		:path(o.path),logfile(o.logfile),dim(o.dim),bits(o.bits),variations(o.variations)
 		,simdist(o.simdist),raddist(o.raddist),eqdist(o.eqdist),mutations(o.mutations),votes(o.votes)
-		,descendants(o.descendants),maxage(o.maxage),iterations(o.iterations){}
+		,descendants(o.descendants),maxage(o.maxage),iterations(o.iterations)
+		,with_singletons(o.with_singletons){}
 	VectorSpaceModelConfig()
 		:path(),logfile(),dim(DefaultDim),bits(DefaultBits),variations(DefaultVariations)
 		,simdist(DefaultSimDist),raddist(DefaultRadDist),eqdist(DefaultEqDist)
 		,mutations(DefaultMutations),votes(DefaultMutationVotes)
-		,descendants(DefaultDescendants),maxage(DefaultMaxAge),iterations(DefaultIterations){}
+		,descendants(DefaultDescendants),maxage(DefaultMaxAge),iterations(DefaultIterations)
+		,with_singletons((bool)DefaultWithSingletons){}
 	VectorSpaceModelConfig( const std::string& config, ErrorBufferInterface* errorhnd)
 		:path(),logfile(),dim(DefaultDim),bits(DefaultBits),variations(DefaultVariations)
 		,simdist(DefaultSimDist),raddist(DefaultRadDist),eqdist(DefaultEqDist)
 		,mutations(DefaultMutations),votes(DefaultMutationVotes)
 		,descendants(DefaultDescendants),maxage(DefaultMaxAge),iterations(DefaultIterations)
+		,with_singletons((bool)DefaultWithSingletons)
 	{
 		std::string src = config;
 		if (extractStringFromConfigString( path, src, "path", errorhnd)){}
@@ -109,6 +113,8 @@ struct VectorSpaceModelConfig
 			maxage = iterations;
 		}
 		if (extractUIntFromConfigString( maxage, src, "maxage", errorhnd)){}
+		if (extractBooleanFromConfigString( with_singletons, src, "singletons", errorhnd)){}
+
 		if (dim == 0 || bits == 0 || variations == 0 || mutations == 0 || descendants == 0 || maxage == 0 || iterations == 0)
 		{
 			throw strus::runtime_error(_TXT("error in vector space model configuration: dim, bits, var, mutations, descendants, maxage or iterations values must not be zero"));
@@ -138,6 +144,7 @@ struct VectorSpaceModelConfig
 	unsigned int descendants;
 	unsigned int maxage;
 	unsigned int iterations;
+	bool with_singletons;
 };
 
 struct VectorSpaceModelData
@@ -267,7 +274,7 @@ public:
 		try
 		{
 			m_lshmodel = new LshModel( m_config.dim, m_config.bits, m_config.variations);
-			m_genmodel = new GenModel( m_config.simdist, m_config.raddist, m_config.eqdist, m_config.mutations, m_config.votes, m_config.descendants, m_config.maxage, m_config.iterations);
+			m_genmodel = new GenModel( m_config.simdist, m_config.raddist, m_config.eqdist, m_config.mutations, m_config.votes, m_config.descendants, m_config.maxage, m_config.iterations, m_config.with_singletons);
 		}
 		catch (const std::exception& err)
 		{

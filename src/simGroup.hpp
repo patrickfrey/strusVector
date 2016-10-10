@@ -94,8 +94,8 @@ private:
 	unsigned int m_age;			///< virtual value for age of the genom
 	std::set<SampleIndex> m_members;	///< members of the group
 	std::size_t m_nofmembers;		///< number of members in the group
-	mutable double m_fitness;		///< cached fitness value
-	mutable bool m_fitness_valid;		///< true if cached fitness value is valid
+	mutable double m_fitness;		///< memoized fitness value
+	mutable bool m_fitness_valid;		///< true if memoized fitness value is valid
 };
 
 }//namespace

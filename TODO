@@ -1,10 +1,6 @@
-+ cache fitness function value
 + element that gets to maximum group membership leaves the group with the worst fitting factor (1: dist to group sim hash / 10, 2: group fittness)
 + rename SimGroupMap to SampleSimGroupMap
-+ print number of elements in SimGroupMap in log output
 + 95% instead of 90% for Google Data
-+ option for building classes with one element for singletons
-+ print number of singletons detected
 
 
 

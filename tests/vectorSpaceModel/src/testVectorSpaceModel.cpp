@@ -179,15 +179,14 @@ int main( int argc, const char** argv)
 			}
 		}
 		std::cerr << "building model" << std::endl;
-		builder->finalize();
-		if (g_errorhnd->hasError())
+		if (!builder->finalize())
 		{
-			throw std::runtime_error( g_errorhnd->fetchError());
+			throw std::runtime_error( "error in finalize");
 		}
 		std::cerr << "store model" << std::endl;
 		if (!builder->store())
 		{
-			throw std::runtime_error( g_errorhnd->fetchError());
+			throw std::runtime_error( "error storing the model learnt");
 		}
 
 		std::cerr << "load model to categorize vectors" << std::endl;
@@ -286,6 +285,10 @@ int main( int argc, const char** argv)
 					}
 				}
 			}
+		}
+		if (g_errorhnd->hasError())
+		{
+			throw std::runtime_error( "uncaught exception");
 		}
 #ifdef STRUS_LOWLEVEL_DEBUG
 		std::cerr << "output:" << std::endl << outSimMatrix.tostring() << std::endl;

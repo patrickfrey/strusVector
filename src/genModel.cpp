@@ -68,7 +68,7 @@ static SimRelationMap getSimRelationMap( const std::vector<SimHash>& samplear, u
 	std::vector<SimHash>::const_iterator si = samplear.begin(), se = samplear.end();
 	for (SampleIndex sidx=0; si != se; ++si,++sidx)
 	{
-		if (logout && sidx % 10000 == 0) (*logout) << _TXT("\rprocessed lines: ") << sidx << std::endl;
+		if (logout && sidx % 10000 == 0) (*logout) << _TXT("\rprocessed lines: ") << sidx << ", " << _TXT("number of similarities: ") << rt.nofRelationsDetected() << std::endl;
 		std::vector<SimRelationMap::Element> row;
 
 		std::vector<SimHash>::const_iterator pi = samplear.begin();
@@ -85,6 +85,7 @@ static SimRelationMap getSimRelationMap( const std::vector<SimHash>& samplear, u
 		}
 		rt.addRow( sidx, row);
 	}
+	if (logout) (*logout) << _TXT("\rnumber of samples: ") << samplear.size() << ", " << _TXT("number of similarities: ") << rt.nofRelationsDetected() << std::endl;
 	return rt;
 }
 
@@ -407,11 +408,11 @@ std::vector<SimHash> GenModel::run( const std::vector<SimHash>& samplear, const 
 	unsigned int iteration=0;
 	for (; iteration != m_iterations; ++iteration)
 	{
-		if (logout) (*logout) << "iteration " << iteration << ":" << std::endl;
+		if (logout) (*logout) << _TXT("iteration ") << iteration << ":" << std::endl;
 #ifdef STRUS_LOWLEVEL_DEBUG
 		checkSimGroupStructures( groupInstanceList, groupInstanceMap, simGroupMap, samplear.size());
 #endif
-		if (logout) (*logout) << "create new individuals" << std::endl;
+		if (logout) (*logout) << _TXT("create new individuals") << std::endl;
 		// Go through all elements and try to create new groups with the closest free neighbours:
 		std::vector<SimHash>::const_iterator si = samplear.begin(), se = samplear.end();
 		for (SampleIndex sidx=0; si != se; ++si,++sidx)
@@ -447,7 +448,7 @@ std::vector<SimHash> GenModel::run( const std::vector<SimHash>& samplear, const 
 				}
 			}
 		}
-		if (logout) (*logout) << "unify individuals out of " << groupIdAllocator.nofGroupsAllocated() << std::endl;
+		if (logout) (*logout) << _TXT("unify individuals out of ") << groupIdAllocator.nofGroupsAllocated() << std::endl;
 
 		// Go through all groups and try to make elements jump to neighbour groups and try
 		// to unify groups:
@@ -538,7 +539,7 @@ std::vector<SimHash> GenModel::run( const std::vector<SimHash>& samplear, const 
 				}
 			}
 		}
-		if (logout) (*logout) << "start mutation step" << std::endl;
+		if (logout) (*logout) << _TXT("start mutation step") << std::endl;
 
 		// Mutation step for all groups and dropping of elements that got too far away from the
 		// representants genom:
@@ -572,7 +573,7 @@ std::vector<SimHash> GenModel::run( const std::vector<SimHash>& samplear, const 
 			}
 		}
 	}
-	if (logout) (*logout) << "done, eliminate redundant groups" << std::endl;
+	if (logout) (*logout) << _TXT("eliminate redundant groups") << std::endl;
 	{
 		// Build the dependency graph:
 		DependencyGraph groupDependencyGraph = buildGroupDependencyGraph( samplear.size(), simGroupMap);
@@ -589,10 +590,27 @@ std::vector<SimHash> GenModel::run( const std::vector<SimHash>& samplear, const 
 			for (++di; di != de && gid == di->first; ++di){}
 		}
 	}
-	if (logout) (*logout) << "build the result" << std::endl;
-
 	// Build the result:
+	if (logout) (*logout) << _TXT("build the result") << std::endl;
 	std::vector<SimHash> rt;
+
+	// Count the number of singletons and possibly add them to the result:
+	SampleIndex si=0, se=samplear.size();
+	unsigned int nofSigletons = 0;
+	for (; si != se; ++si)
+	{
+		if (simGroupMap.nofElements( si) == 0)
+		{
+			++nofSigletons;
+			if (m_with_singletons)
+			{
+				rt.push_back( samplear[ si]);
+			}
+		}
+	}
+	if (logout) (*logout) << _TXT("number of singletons found: ") << nofSigletons << std::endl;
+
+	// Add the groups to the result:
 	GroupInstanceList::const_iterator gi = groupInstanceList.begin(), ge = groupInstanceList.end();
 	for (; gi != ge; ++gi)
 	{
@@ -613,7 +631,7 @@ std::vector<SimHash> GenModel::run( const std::vector<SimHash>& samplear, const 
 		std::cerr << std::endl;
 	}
 #endif
-	if (logout) (*logout) << "done, got " << rt.size() << " categories"<< std::endl;
+	if (logout) (*logout) << _TXT("done, got categories ") << rt.size() << std::endl;
 	return rt;
 }
 

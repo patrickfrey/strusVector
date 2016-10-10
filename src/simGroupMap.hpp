@@ -41,6 +41,9 @@ public:
 	/// \brief Evaluate, how much space is left for adding new relations
 	unsigned int sizeSpace( const std::size_t& ndidx) const
 		{return NofNodeBranches - m_nodear[ndidx].size;}
+	/// \brief Evaluate, how many relations exist for a node
+	unsigned int nofElements( const std::size_t& ndidx) const
+		{return m_nodear[ndidx].size;}
 
 	class const_node_iterator
 	{

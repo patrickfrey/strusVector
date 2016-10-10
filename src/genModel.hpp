@@ -23,15 +23,19 @@ class GenModel
 {
 public:
 	/// \brief Constructor
-	GenModel( unsigned int simdist_, unsigned int raddist_, unsigned int eqdist_, unsigned int mutations_, unsigned int votes_, unsigned int descendants_, unsigned int maxage_, unsigned int iterations_)
+	GenModel( unsigned int simdist_, unsigned int raddist_, unsigned int eqdist_, unsigned int mutations_, unsigned int votes_, unsigned int descendants_, unsigned int maxage_, unsigned int iterations_, bool with_singletons_)
 		:m_simdist(simdist_),m_raddist(raddist_),m_eqdist(eqdist_)
 		,m_mutations(mutations_),m_votes(votes_)
-		,m_descendants(descendants_),m_maxage(maxage_),m_iterations(iterations_){}
+		,m_descendants(descendants_),m_maxage(maxage_),m_iterations(iterations_)
+		,m_with_singletons(with_singletons_)
+		{}
 	/// \brief Copy constructor
 	GenModel( const GenModel& o)
 		:m_simdist(o.m_simdist),m_raddist(o.m_raddist),m_eqdist(o.m_eqdist)
 		,m_mutations(o.m_mutations),m_votes(o.m_votes)
-		,m_descendants(o.m_descendants),m_maxage(o.m_maxage),m_iterations(o.m_iterations){}
+		,m_descendants(o.m_descendants),m_maxage(o.m_maxage),m_iterations(o.m_iterations)
+		,m_with_singletons(o.m_with_singletons)
+		{}
 
 	/// \brief map contents to string in readable form
 	std::string tostring() const;
@@ -48,6 +52,7 @@ private:
 	unsigned int m_descendants;		///< number of descendants of which the fittest is selected
 	unsigned int m_maxage;			///< upper bound value used for calculate number of mutations (an older individuum mutates less)
 	unsigned int m_iterations;		///< number of iterations
+	bool m_with_singletons;			///< true, if singletons should also get into the result
 };
 
 }//namespace
