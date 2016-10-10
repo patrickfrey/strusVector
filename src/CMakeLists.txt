@@ -20,14 +20,14 @@ set(
 include_directories(
 	"${Boost_INCLUDE_DIRS}"
 	"${Intl_INCLUDE_DIRS}"
-	"${PROJECT_SOURCE_DIR}/3rdParty/armadillo/include/"
+	"${PROJECT_BINARY_DIR}/3rdParty/armadillo/include/"
 	"${PROJECT_SOURCE_DIR}/include"
 	"${strusbase_INCLUDE_DIRS}"
 )
 link_directories(
 	"${Boost_LIBRARY_DIRS}"
 	"${PROJECT_SOURCE_DIR}/src"
-	"${PROJECT_SOURCE_DIR}/3rdParty/armadillo"
+	"${PROJECT_BINARY_DIR}/3rdParty/armadillo"
 	"${strusbase_LIBRARY_DIRS}"
 )
 

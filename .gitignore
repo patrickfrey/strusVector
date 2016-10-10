@@ -49,6 +49,7 @@ dist/redhat/strusvector.spec
 3rdParty/armadillo/libstrus_armadillo.so.7
 3rdParty/armadillo/libstrus_armadillo.so.7.400.2
 3rdParty/armadillo/tmp/
+3rdParty/armadillo/include/armadillo_bits/config.hpp
 
 # Compiled Programs
 tests/armadillo/src/testArmadillo
