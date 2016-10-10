@@ -73,7 +73,15 @@ bool SimGroup::isMember( const SampleIndex& idx) const
 
 double SimGroup::fitness( const std::vector<SimHash>& samplear) const
 {
-	return m_fitness_valid?m_fitness:fitness( samplear, gencode());
+	if (m_fitness_valid)
+	{
+		return m_fitness;
+	}
+	else
+	{
+		m_fitness = fitness( samplear, gencode());
+		m_fitness_valid = true;
+	}
 }
 
 double pow_uint( double value, unsigned int exp)
