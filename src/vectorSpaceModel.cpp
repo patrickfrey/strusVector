@@ -13,16 +13,25 @@
 #include "internationalization.hpp"
 #include "errorUtils.hpp"
 #include "simHash.hpp"
+#include "simRelationMap.hpp"
 #include "lshModel.hpp"
 #include "genModel.hpp"
 #include "strus/base/fileio.hpp"
 #include "strus/base/configParser.hpp"
 #include "strus/versionVector.hpp"
+#include "strus/base/hton.hpp"
 #include <armadillo>
 #include <memory>
 
 using namespace strus;
-#define MODULENAME "standard vector space model"
+#define MODULENAME   "standard vector space model"
+#define MATRIXFILE   "model.mat"
+#define SIMRELFILE   "simrel.mat"
+#define RESVECFILE   "result.lsh"
+#define INPVECFILE   "input.lsh"
+#define CONFIGFILE   "config.txt"
+#define VERSIONFILE  "version.hdr"
+#define DUMPFILE     "dump.txt"
 
 #undef STRUS_LOWLEVEL_DEBUG
 
@@ -48,6 +57,20 @@ struct VectorSpaceModelHdr
 		if (version_major != STRUS_VECTOR_VERSION_MAJOR) throw strus::runtime_error(_TXT("major version (%u) of loaded strus standard vector space model binary file does not match"), version_major);
 		if (version_minor > STRUS_VECTOR_VERSION_MINOR) throw strus::runtime_error(_TXT("minor version (%u) of loaded strus standard vector space model binary file does not match (newer than your version of strus)"), version_minor);
 	}
+
+	void hton()
+	{
+		_id = ByteOrder<unsigned short>::hton( _id);
+		version_major = ByteOrder<unsigned short>::hton( version_major);
+		version_minor = ByteOrder<unsigned short>::hton( version_minor);
+	}
+
+	void ntoh()
+	{
+		_id = ByteOrder<unsigned short>::ntoh( _id);
+		version_major = ByteOrder<unsigned short>::ntoh( version_major);
+		version_minor = ByteOrder<unsigned short>::ntoh( version_minor);
+	}
 };
 
 struct VectorSpaceModelConfig
@@ -72,14 +95,16 @@ struct VectorSpaceModelConfig
 		,simdist(o.simdist),raddist(o.raddist),eqdist(o.eqdist),mutations(o.mutations),votes(o.votes)
 		,descendants(o.descendants),maxage(o.maxage),iterations(o.iterations)
 		,assignments(o.assignments)
-		,with_singletons(o.with_singletons){}
+		,with_singletons(o.with_singletons)
+		{}
 	VectorSpaceModelConfig()
 		:path(),logfile(),dim(DefaultDim),bits(DefaultBits),variations(DefaultVariations)
 		,simdist(DefaultSimDist),raddist(DefaultRadDist),eqdist(DefaultEqDist)
 		,mutations(DefaultMutations),votes(DefaultMutationVotes)
 		,descendants(DefaultDescendants),maxage(DefaultMaxAge),iterations(DefaultIterations)
 		,assignments(DefaultAssignments)
-		,with_singletons((bool)DefaultWithSingletons){}
+		,with_singletons((bool)DefaultWithSingletons)
+		{}
 	VectorSpaceModelConfig( const std::string& config, ErrorBufferInterface* errorhnd)
 		:path(),logfile(),dim(DefaultDim),bits(DefaultBits),variations(DefaultVariations)
 		,simdist(DefaultSimDist),raddist(DefaultRadDist),eqdist(DefaultEqDist)
@@ -136,6 +161,27 @@ struct VectorSpaceModelConfig
 		}
 	}
 
+	std::string tostring() const
+	{
+		std::ostringstream buf;
+		buf << "path=" << path << ";" << std::endl;
+		buf << "logfile=" << logfile << ";" << std::endl;
+		buf << "dim=" << dim << ";" << std::endl;
+		buf << "bits=" << bits << ";" << std::endl;
+		buf << "var=" << variations << ";" << std::endl;
+		buf << "simdist=" << simdist << ";" << std::endl;
+		buf << "raddist=" << raddist << ";" << std::endl;
+		buf << "eqdist=" << eqdist << ";" << std::endl;
+		buf << "mutations=" << mutations << ";" << std::endl;
+		buf << "votes=" << votes << ";" << std::endl;
+		buf << "descendants=" << descendants << ";" << std::endl;
+		buf << "maxage=" << maxage << ";" << std::endl;
+		buf << "iterations=" << iterations << ";" << std::endl;
+		buf << "assignments=" << assignments << ";" << std::endl;
+		buf << "singletons=" << (with_singletons?"yes":"no") << ";" << std::endl;
+		return buf.str();
+	}
+
 	std::string path;
 	std::string logfile;
 	unsigned int dim;
@@ -161,12 +207,25 @@ struct VectorSpaceModelData
 	VectorSpaceModelConfig config;
 };
 
+static void checkVectorSpaceModelVersion( const std::string& path)
+{
+	std::string versionfile( path + dirSeparator() + VERSIONFILE);
+	std::string versionblob;
+	unsigned int ec = readFile( versionfile, versionblob);
+	if (ec) throw strus::runtime_error(_TXT("failed to load model version from file '%s' (errno %u): %s"), versionfile.c_str(), ec, ::strerror(ec));
+	VectorSpaceModelHdr hdr;
+	if (versionblob.size() != sizeof(hdr)) throw strus::runtime_error(_TXT("unknown file format"));
+	std::memcpy( &hdr, versionblob.c_str(), sizeof(hdr));
+	hdr.ntoh();
+	hdr.check();
+}
+
 class VectorSpaceModelInstance
 	:public VectorSpaceModelInstanceInterface
 {
 public:
 	VectorSpaceModelInstance( const std::string& config_, ErrorBufferInterface* errorhnd_)
-		:m_errorhnd(errorhnd_),m_config(config_,errorhnd_),m_configstr(config_),m_lshmodel(0)
+		:m_errorhnd(errorhnd_),m_config(config_,errorhnd_),m_lshmodel(0)
 	{
 		loadModelFromFile( m_config.path);
 	}
@@ -202,11 +261,12 @@ public:
 
 	virtual std::string config() const
 	{
-		return m_configstr;
+		return m_config.tostring();
 	}
 
 private:
 	void loadModelFromFile( const std::string& path);
+
 #ifdef STRUS_LOWLEVEL_DEBUG
 	std::string tostring() const;
 #endif
@@ -214,44 +274,52 @@ private:
 private:
 	ErrorBufferInterface* m_errorhnd;
 	VectorSpaceModelConfig m_config;
-	std::string m_configstr;
 	LshModel* m_lshmodel;
 	std::vector<SimHash> m_individuals;
 };
 
-
 void VectorSpaceModelInstance::loadModelFromFile( const std::string& path)
 {
 	if (path.empty()) throw strus::runtime_error(_TXT("no 'path' configuration variable defined, cannot load model"));
-	std::string dump;
-	unsigned int ec = readFile( path, dump);
-	if (ec) throw strus::runtime_error(_TXT("failed to load model from file (errno %u): %s"), ec, ::strerror(ec));
-	VectorSpaceModelHdr hdr;
-	if (dump.size() < sizeof(hdr)) throw strus::runtime_error(_TXT("unknown file format"));
-	std::memcpy( &hdr, dump.c_str(), sizeof(hdr));
-	hdr.check();
-	std::size_t itr = sizeof(hdr);
-	std::auto_ptr<LshModel> lshmodel( LshModel::createFromSerialization( dump, itr));
-	m_individuals = SimHash::createFromSerialization( dump, itr);
-	m_configstr = std::string( dump.c_str() + itr);
+	// Read and check version:
+	checkVectorSpaceModelVersion( path);
+	unsigned int ec;
+
+	// Read configuration:
+	std::string configfile( path + dirSeparator() + CONFIGFILE);
+	std::string configblob;
+	ec = readFile( configfile, configblob);
+	if (ec) throw strus::runtime_error(_TXT("failed to load config from file '%s' (errno %u): %s"), configfile.c_str(), ec, ::strerror(ec));
 	try
 	{
-		m_config = VectorSpaceModelConfig( m_configstr, m_errorhnd);
+		m_config = VectorSpaceModelConfig( configblob, m_errorhnd);
 	}
 	catch (const std::runtime_error& err)
 	{
 		throw strus::runtime_error(_TXT("vector space model is corrupt or has different version (%s)"), err.what());
 	}
 	m_config.path = path;
-	m_lshmodel = lshmodel.release();
+
+	// Read LSH model matrices:
+	std::string lshmodelfile( path + dirSeparator() + MATRIXFILE);
+	std::string lshmodelblob;
+	ec = readFile( lshmodelfile, lshmodelblob);
+	if (ec) throw strus::runtime_error(_TXT("failed to load model from file '%s' (errno %u): %s"), lshmodelfile.c_str(), ec, ::strerror(ec));
+	std::auto_ptr<LshModel> lshmodel( LshModel::createFromSerialization( lshmodelblob));
+
+	// Read learnt centroid vectors:
+	std::string veclshfile( path + dirSeparator() + RESVECFILE);
+	std::string veclshblob;
+	ec = readFile( veclshfile, veclshblob);
+	if (ec) throw strus::runtime_error(_TXT("failed to load lsh values from file '%s' (errno %u): %s"), veclshfile.c_str(), ec, ::strerror(ec));
+	m_individuals = SimHash::createFromSerialization( veclshblob);
+
 #ifdef STRUS_LOWLEVEL_DEBUG
-	std::string txtfilename( path + ".in.txt");
-	ec = writeFile( txtfilename, tostring());
-	if (ec)
-	{
-		throw strus::runtime_error(_TXT("failed to store debug text dump of instance loaded (system error %u: %s)"), ec, ::strerror(ec));
-	}
+	std::string txtdumpfile( path + dirSeparator() + DUMPFILE);
+	ec = writeFile( txtdumpfile, tostring());
+	if (ec) throw strus::runtime_error(_TXT("failed to store debug text dump of instance loaded to file '%s' (system error %u: %s)"), txtdumpfile.c_str(), ec, ::strerror(ec));
 #endif
+	m_lshmodel = lshmodel.release();
 }
 
 #ifdef STRUS_LOWLEVEL_DEBUG
@@ -284,10 +352,16 @@ public:
 		}
 		catch (const std::exception& err)
 		{
-			if (m_lshmodel) delete m_lshmodel;
-			if (m_genmodel) delete m_genmodel;
-			m_lshmodel = 0;
-			m_genmodel = 0;
+			if (m_lshmodel)
+			{
+				delete m_lshmodel;
+				m_lshmodel = 0;
+			}
+			if (m_genmodel)
+			{
+				delete m_genmodel;
+				m_genmodel = 0;
+			}
 			throw strus::runtime_error( err.what());
 		}
 	}
@@ -314,7 +388,22 @@ public:
 		try
 		{
 			const char* logfile = m_config.logfile.empty()?0:m_config.logfile.c_str();
-			m_resultar = m_genmodel->run( m_samplear, logfile);
+
+			SimRelationMap simrelmap;
+			std::string simrelfile( m_config.path + dirSeparator() + SIMRELFILE);
+			if (isFile( simrelfile))
+			{
+				checkVectorSpaceModelVersion( m_config.path);
+				std::string simrelblob;
+				unsigned int ec = readFile( simrelfile, simrelblob);
+				if (ec) throw strus::runtime_error(_TXT("failed to load precalculated similarity relation matrix from file '%s' (errno %u): %s"), simrelfile.c_str(), ec, ::strerror(ec));
+				m_simrelmap = SimRelationMap::fromSerialization( simrelblob);
+			}
+			else
+			{
+				m_simrelmap = m_genmodel->getSimRelationMap( m_samplear, logfile);
+			}
+			m_resultar = m_genmodel->run( m_samplear, m_simrelmap, logfile);
 			return true;
 		}
 		CATCH_ERROR_ARG1_MAP_RETURN( _TXT("error finalizing '%s' builder: %s"), MODULENAME, *m_errorhnd, false);
@@ -325,25 +414,55 @@ public:
 		try
 		{
 			unsigned int ec;
+			// Create directory for model files:
+			if (m_config.path.empty()) throw strus::runtime_error(_TXT("failed to store built instance (no file configured)"));
+			ec = createDir( m_config.path, true);
+			if (ec) throw strus::runtime_error(_TXT( "failed to create directory '%s' to store model built (system error %u: %s)"), m_config.path.c_str(), ec, ::strerror(ec));
 #ifdef STRUS_LOWLEVEL_DEBUG
-			std::string txtfilename( m_config.path + ".out.txt");
-			ec = writeFile( txtfilename, tostring());
+			std::string txtdumpfile( path + dirSeparator() + DUMPFILE);
+			ec = writeFile( txtdumpfile, tostring());
 			if (ec)
 			{
 				throw strus::runtime_error(_TXT("failed to store debug text dump of instance built (system error %u: %s)"), ec, ::strerror(ec));
 			}
 #endif
-			if (m_config.path.empty()) throw strus::runtime_error(_TXT("failed to store built instance (no file configured)"));
-			std::string dump;
+			// Write version:
+			std::string versionfile( m_config.path + dirSeparator() + VERSIONFILE);
+			std::string versionblob;
 			VectorSpaceModelHdr hdr;
-			dump.append( (const char*)&hdr, sizeof( hdr));
-			m_lshmodel->printSerialization( dump);
-			SimHash::printSerialization( dump, m_resultar);
-			ec = writeFile( m_config.path, dump);
-			if (ec)
+			hdr.hton();
+			versionblob.append( (const char*)&hdr, sizeof(hdr));
+			ec = writeFile( versionfile, versionblob);
+			if (ec) throw strus::runtime_error(_TXT("failed to write model version to file '%s' (errno %u): %s"), versionfile.c_str(), ec, ::strerror(ec));
+
+			// Write configuration:
+			std::string configfile( m_config.path + dirSeparator() + CONFIGFILE);
+			ec = writeFile( configfile, m_config.tostring());
+			if (ec) throw strus::runtime_error(_TXT("failed to write config to file '%s' (errno %u): %s"), configfile.c_str(), ec, ::strerror(ec));
+
+			// Write similarity relation file if not yet written:
+			std::string simrelfile( m_config.path + dirSeparator() + SIMRELFILE);
+			if (!isFile( simrelfile))
 			{
-				throw strus::runtime_error(_TXT("failed to store built instance (system error %u: %s)"), ec, ::strerror(ec));
+				ec = writeFile( simrelfile, m_simrelmap.serialization());
+				if (ec) throw strus::runtime_error(_TXT("failed to write similarity relation matrix to file '%s' (errno %u): %s"), simrelfile.c_str(), ec, ::strerror(ec));
 			}
+
+			// Write LSH model matrices:
+			std::string lshmodelfile( m_config.path + dirSeparator() + MATRIXFILE);
+			ec = writeFile( lshmodelfile, m_lshmodel->serialization());
+			if (ec) throw strus::runtime_error(_TXT("failed to store lhs model to file '%s' (errno %u): %s"), lshmodelfile.c_str(), ec, ::strerror(ec));
+
+			// Write learnt centroid vectors:
+			std::string veclshfile( m_config.path + dirSeparator() + RESVECFILE);
+			ec = writeFile( veclshfile, SimHash::serialization( m_resultar));
+			if (ec) throw strus::runtime_error(_TXT("failed to write learnt lsh values to file '%s' (errno %u): %s"), veclshfile.c_str(), ec, ::strerror(ec));
+
+			// Write input sample vectors:
+			std::string samplefile( m_config.path + dirSeparator() + INPVECFILE);
+			ec = writeFile( samplefile, SimHash::serialization( m_samplear));
+			if (ec) throw strus::runtime_error(_TXT("failed to write sample lsh values to file '%s' (errno %u): %s"), samplefile.c_str(), ec, ::strerror(ec));
+
 			return true;
 		}
 		CATCH_ERROR_ARG1_MAP_RETURN( _TXT("error storing '%s' builder: %s"), MODULENAME, *m_errorhnd, false);
@@ -386,6 +505,7 @@ private:
 private:
 	ErrorBufferInterface* m_errorhnd;
 	VectorSpaceModelConfig m_config;
+	SimRelationMap m_simrelmap;
 	LshModel* m_lshmodel;
 	GenModel* m_genmodel;
 #ifdef STRUS_LOWLEVEL_DEBUG
@@ -418,4 +538,31 @@ VectorSpaceModelBuilderInterface* VectorSpaceModel::createBuilder( const std::st
 	CATCH_ERROR_ARG1_MAP_RETURN( _TXT("error creating '%s' builder: %s"), MODULENAME, *m_errorhnd, 0);
 }
 
+bool VectorSpaceModel::destroyModel( const std::string& configstr) const
+{
+	try
+	{
+		VectorSpaceModelConfig config( configstr, m_errorhnd);
+		if (config.path.empty()) throw strus::runtime_error(_TXT("no path defined, cannot remove model"));
+		unsigned int ec;
+		ec = removeFile( std::string( config.path + dirSeparator() + MATRIXFILE));
+		if (ec) throw strus::runtime_error(_TXT("failed to remove file '%s': %s (%u)"), MATRIXFILE, ::strerror(ec), ec);
+		ec = removeFile( std::string( config.path + dirSeparator() + SIMRELFILE));
+		if (ec) throw strus::runtime_error(_TXT("failed to remove file '%s': %s (%u)"), SIMRELFILE, ::strerror(ec), ec);
+		ec = removeFile( std::string( config.path + dirSeparator() + RESVECFILE));
+		if (ec) throw strus::runtime_error(_TXT("failed to remove file '%s': %s (%u)"), RESVECFILE, ::strerror(ec), ec);
+		ec = removeFile( std::string( config.path + dirSeparator() + INPVECFILE));
+		if (ec) throw strus::runtime_error(_TXT("failed to remove file '%s': %s (%u)"), INPVECFILE, ::strerror(ec), ec);
+		ec = removeFile( std::string( config.path + dirSeparator() + CONFIGFILE));
+		if (ec) throw strus::runtime_error(_TXT("failed to remove file '%s': %s (%u)"), CONFIGFILE, ::strerror(ec), ec);
+		ec = removeFile( std::string( config.path + dirSeparator() + VERSIONFILE));
+		if (ec) throw strus::runtime_error(_TXT("failed to remove file '%s': %s (%u)"), VERSIONFILE, ::strerror(ec), ec);
+		ec = removeFile( std::string( config.path + dirSeparator() + DUMPFILE));
+		if (ec) throw strus::runtime_error(_TXT("failed to remove file '%s': %s (%u)"), DUMPFILE, ::strerror(ec), ec);
+		ec = removeDir( config.path);
+		if (ec) throw strus::runtime_error(_TXT("failed to remove directory '%s': %s (%u)"), config.path.c_str(), ::strerror(ec), ec);
+		return true;
+	}
+	CATCH_ERROR_ARG1_MAP_RETURN( _TXT("error destroying a '%s' model: %s"), MODULENAME, *m_errorhnd, false);
+}
 

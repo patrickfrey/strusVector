@@ -65,9 +65,29 @@ private:
 	std::vector<FeatureIndex> m_freeList;
 };
 
-
-static SimRelationMap getSimRelationMap( const std::vector<SimHash>& samplear, unsigned int simdist, std::ostream* logout)
+SimRelationMap GenModel::getSimRelationMap( const std::vector<SimHash>& samplear, const char* logfile) const
 {
+	std::ostream* logout = 0;
+	std::ofstream logfilestream;
+	if (logfile)
+	{
+		if (logfile[0] != '-' || logfile[1])
+		{
+			try
+			{
+				logfilestream.open( logfile, std::ofstream::out);
+				logout = &logfilestream;
+			}
+			catch (const std::exception& err)
+			{
+				throw strus::runtime_error(_TXT("failed to open logfile '%s': %s"), logfile, err.what());
+			}
+		}
+		else
+		{
+			logout = &std::cerr;
+		}
+	}
 	SimRelationMap rt;
 	if (logout) (*logout) << _TXT("calculate similarity relation map") << std::endl << std::endl;
 	std::vector<SimHash>::const_iterator si = samplear.begin(), se = samplear.end();
@@ -79,7 +99,7 @@ static SimRelationMap getSimRelationMap( const std::vector<SimHash>& samplear, u
 		std::vector<SimHash>::const_iterator pi = samplear.begin();
 		for (SampleIndex pidx=0; pi != si; ++pi,++pidx)
 		{
-			if (pidx != sidx && si->near( *pi, simdist))
+			if (pidx != sidx && si->near( *pi, m_simdist))
 			{
 				unsigned short dist = si->dist( *pi);
 #ifdef STRUS_LOWLEVEL_DEBUG
@@ -91,7 +111,7 @@ static SimRelationMap getSimRelationMap( const std::vector<SimHash>& samplear, u
 		rt.addRow( sidx, row);
 	}
 	if (logout) (*logout) << _TXT("\rnumber of samples: ") << samplear.size() << ", " << _TXT("number of similarities: ") << rt.nofRelationsDetected() << std::endl;
-	return rt;
+	return rt.mirror();
 }
 
 typedef std::list<SimGroup> GroupInstanceList;
@@ -432,7 +452,10 @@ static void checkSimGroupStructures(
 }
 #endif
 
-std::vector<SimHash> GenModel::run( const std::vector<SimHash>& samplear, const char* logfile) const
+std::vector<SimHash> GenModel::run(
+		const std::vector<SimHash>& samplear,
+		const SimRelationMap& simrelmap,
+		const char* logfile) const
 {
 	std::ostream* logout = 0;
 	std::ofstream logfilestream;
@@ -458,8 +481,7 @@ std::vector<SimHash> GenModel::run( const std::vector<SimHash>& samplear, const 
 	GroupIdAllocator groupIdAllocator;		// Allocator of group ids
 	GroupInstanceList groupInstanceList;		// list of similarity group representants
 	GroupInstanceMap groupInstanceMap;		// map indices to group representant list iterators
-	SampleSimGroupMap sampleSimGroupMap( samplear.size(), m_assignments);		// map of sample idx to group idx
-	SimRelationMap simrelmap( getSimRelationMap( samplear, m_simdist, logout));	// similarity relation map of the list of samples
+	SampleSimGroupMap sampleSimGroupMap( samplear.size(), m_assignments);	// map of sample idx to group idx
 
 	// Do the iterations of creating new individuals
 	unsigned int iteration=0;

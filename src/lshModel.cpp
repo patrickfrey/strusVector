@@ -9,7 +9,7 @@
 #include "lshModel.hpp"
 #include "internationalization.hpp"
 #include "strus/base/stdint.h"
-#include <arpa/inet.h>
+#include "strus/base/hton.hpp"
 #include <cstdlib>
 
 using namespace strus;
@@ -129,16 +129,16 @@ struct DumpStructHeader
 
 	void conv_hton()
 	{
-		dim = htonl(dim);
-		nofbits = htonl(nofbits);
-		variations = htonl(variations);
+		dim = ByteOrder<uint32_t>::hton(dim);
+		nofbits = ByteOrder<uint32_t>::hton(nofbits);
+		variations = ByteOrder<uint32_t>::hton(variations);
 	}
 
 	void conv_ntoh()
 	{
-		dim = ntohl(dim);
-		nofbits = ntohl(nofbits);
-		variations = ntohl(variations);
+		dim = ByteOrder<uint32_t>::ntoh(dim);
+		nofbits = ByteOrder<uint32_t>::ntoh(nofbits);
+		variations = ByteOrder<uint32_t>::ntoh(variations);
 	}
 };
 
@@ -186,7 +186,7 @@ struct DumpStruct
 		std::size_t ai=0, ae=arsize;
 		for (; ai != ae; ++ai)
 		{
-			ar[ ai] = ntohl( ua[ ai]);
+			ar[ ai] = ByteOrder<uint32_t>::ntoh( ua[ ai]);
 		}
 	}
 
@@ -201,7 +201,7 @@ struct DumpStruct
 		DumpStructHeader::conv_hton();
 		for (; ai != ae; ++ai)
 		{
-			ar[ ai] = htonl( ar[ ai]);
+			ar[ ai] = ByteOrder<uint32_t>::hton( ar[ ai]);
 		}
 	}
 
@@ -211,7 +211,7 @@ struct DumpStruct
 		std::size_t ai=0, ae=arsize;
 		for (; ai != ae; ++ai)
 		{
-			ar[ ai] = ntohl( ar[ ai]);
+			ar[ ai] = ByteOrder<uint32_t>::ntoh( ar[ ai]);
 		}
 	}
 
@@ -235,8 +235,9 @@ private:
 };
 
 
-void LshModel::printSerialization( std::string& out) const
+std::string LshModel::serialization() const
 {
+	std::string rt;
 	DumpStruct st( m_dim, m_nofbits, m_variations);
 
 	std::size_t aidx = 0;
@@ -256,24 +257,27 @@ void LshModel::printSerialization( std::string& out) const
 	}
 	std::size_t valuePtrSize = st.getValuePtrSize();
 	st.conv_hton();
-	out.append( (const char*)(const void*)&st, sizeof( DumpStructHeader));
-	out.append( (const char*)(const void*)st.getValuePtr(), valuePtrSize);
+	rt.append( (const char*)(const void*)&st, sizeof( DumpStructHeader));
+	rt.append( (const char*)(const void*)st.getValuePtr(), valuePtrSize);
+	return rt;
 }
 
-LshModel* LshModel::createFromSerialization( const std::string& in, std::size_t& itr)
+LshModel* LshModel::createFromSerialization( const std::string& dump)
 {
 	DumpStructHeader hdr;
-	char const* dump = in.c_str() + itr;
-	if (in.size() - itr < sizeof( DumpStructHeader)) throw strus::runtime_error(_TXT("lsh model dump is corrupt (dump header too small)"));
-	std::memcpy( &hdr, dump, sizeof( DumpStructHeader));
-	itr += sizeof( DumpStructHeader);
-	dump += sizeof( DumpStructHeader);
+	char const* src = dump.c_str();
+	if (dump.size() < sizeof( DumpStructHeader)) throw strus::runtime_error(_TXT("lsh model dump is corrupt (dump header too small)"));
+	std::memcpy( &hdr, src, sizeof( DumpStructHeader));
+	src += sizeof( DumpStructHeader);
 	hdr.conv_ntoh();
 
 	DumpStruct st( hdr.dim, hdr.nofbits, hdr.variations);
-	if (st.contentAllocSize() > (in.size() - itr)) throw strus::runtime_error(_TXT("lsh model dump is corrupt (dump too small)"));
-	st.loadValues( dump);
-	itr += st.contentAllocSize();
+	if (st.contentAllocSize() > (dump.size() - (src - dump.c_str())))
+	{
+		throw strus::runtime_error(_TXT("lsh model dump is corrupt (dump too small)"));
+	}
+	st.loadValues( src);
+	src += st.contentAllocSize();
 	std::size_t ai=0, ae=st.nofValues();
 
 	arma::mat modelMatrix( hdr.nofbits, hdr.dim);

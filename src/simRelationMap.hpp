@@ -41,9 +41,9 @@ public:
 
 public:
 	SimRelationMap()
-		:m_ar(),m_rowdescrmap(){}
+		:m_ar(),m_rowdescrmap(),m_nofSamples(0){}
 	SimRelationMap( const SimRelationMap& o)
-		:m_ar(o.m_ar),m_rowdescrmap(o.m_rowdescrmap){}
+		:m_ar(o.m_ar),m_rowdescrmap(o.m_rowdescrmap),m_nofSamples(o.m_nofSamples){}
 
 	class Row
 	{
@@ -83,8 +83,21 @@ public:
 		return m_ar.size();
 	}
 
+	SampleIndex nofSamples() const
+	{
+		return m_nofSamples;
+	}
+
+	/// \brief Get a similarity relation map containing all elements (b,a) for this containing (a,b)
+	/// \remark Absolutely necessary to call this function after building a similarity relation map with (a,b) for a > b !
+	SimRelationMap mirror() const;
+
+	/// \brief Serialize
+	std::string serialization() const;
+	/// \brief Deserialize
+	static SimRelationMap fromSerialization( const std::string& blob);
+
 private:
-	std::vector<Element> m_ar;
 	struct RowDescr
 	{
 		std::size_t aridx;
@@ -98,7 +111,11 @@ private:
 			:aridx(o.aridx),size(o.size){}
 	};
 	typedef std::map<SampleIndex,RowDescr> RowDescrMap;
+
+private:
+	std::vector<Element> m_ar;
 	RowDescrMap m_rowdescrmap;
+	SampleIndex m_nofSamples;
 };
 
 }//namespace

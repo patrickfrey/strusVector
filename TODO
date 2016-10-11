@@ -1,4 +1,6 @@
 + 95% instead of 90% for Google Data
++ vectors must be in the range of -1.0 to 0.1 and not of 0.0 to 0.1 (this may change the size of the bit vectors)
+
 
 
 

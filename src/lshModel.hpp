@@ -28,9 +28,9 @@ public:
 	std::string tostring() const;
 
 	/// \brief Serialize
-	void printSerialization( std::string& out) const;
+	std::string serialization() const;
 	/// \brief Deserialize
-	static LshModel* createFromSerialization( const std::string& in, std::size_t& itr);
+	static LshModel* createFromSerialization( const std::string& blob);
 
 	/// \brief Calculate similarity hash of a vector
 	/// \param[in] vec input vector

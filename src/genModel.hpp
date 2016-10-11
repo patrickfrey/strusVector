@@ -47,8 +47,16 @@ public:
 	/// \brief map contents to string in readable form
 	std::string tostring() const;
 
+	/// \brief Collecting all similar sample relations in a sparse matrix
+	SimRelationMap getSimRelationMap(
+			const std::vector<SimHash>& samples,
+			const char* logfile) const;
+
 	/// \brief Unsupervised learning of a good group representantion of the sample set passed as argument
-	std::vector<SimHash> run( const std::vector<SimHash>& samples, const char* logfile) const;
+	std::vector<SimHash> run(
+			const std::vector<SimHash>& samples,
+			const SimRelationMap& simrelmap,
+			const char* logfile) const;
 
 private:
 	unsigned int m_simdist;			///< maximal distance to be considered similar

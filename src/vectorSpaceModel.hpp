@@ -28,6 +28,7 @@ public:
 
 	explicit VectorSpaceModel( ErrorBufferInterface* errorhnd_);
 
+	virtual bool destroyModel( const std::string& config) const;
 	virtual VectorSpaceModelInstanceInterface* createInstance( const std::string& config) const;
 	virtual VectorSpaceModelBuilderInterface* createBuilder( const std::string& config) const;
 

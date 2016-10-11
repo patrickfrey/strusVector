@@ -9,13 +9,12 @@
 #include "simHash.hpp"
 #include "strus/base/bitOperations.hpp"
 #include "internationalization.hpp"
+#include "strus/base/hton.hpp"
 #include <string>
 #include <cstring>
 #include <iostream>
 #include <sstream>
 #include <limits>
-#include <arpa/inet.h>
-#include <netinet/in.h>
 
 using namespace strus;
 
@@ -240,8 +239,9 @@ std::string SimHash::tostring() const
 	return rt.str();
 }
 
-void SimHash::printSerialization( std::string& out, const std::vector<SimHash>& ar)
+std::string SimHash::serialization( const std::vector<SimHash>& ar)
 {
+	std::string rt;
 	std::size_t vecsize = 0;
 	std::vector<SimHash>::const_iterator vi = ar.begin(), ve = ar.end();
 	for (; vi != ve; ++vi)
@@ -259,41 +259,46 @@ void SimHash::printSerialization( std::string& out, const std::vector<SimHash>& 
 	if (ar.size() > std::numeric_limits<uint32_t>::max()) throw strus::runtime_error(_TXT("sim hash vector too big to serialize"));
 
 	uint32_t nw;
-	nw = htonl( (uint32_t)vecsize);   out.append( (const char*)&nw, sizeof(nw));
-	nw = htonl( (uint32_t)ar.size()); out.append( (const char*)&nw, sizeof(nw));
+	nw = ByteOrder<uint32_t>::hton( (uint32_t)vecsize);   rt.append( (const char*)&nw, sizeof(nw));
+	nw = ByteOrder<uint32_t>::hton( (uint32_t)ar.size()); rt.append( (const char*)&nw, sizeof(nw));
 	for (vi = ar.begin(); vi != ve; ++vi)
 	{
 		uint64_t const* ai = vi->m_ar;
 		const uint64_t* ae = vi->m_ar + vi->arsize();
 		for (; ai != ae; ++ai)
 		{
-			nw = htonl( *ai >> 32);		out.append( (const char*)&nw, sizeof(nw));
-			nw = htonl( *ai & 0xFFffFFffU);	out.append( (const char*)&nw, sizeof(nw));
+			uint64_t val = ByteOrder<uint64_t>::hton( *ai);
+			rt.append( (const char*)&val, sizeof(val));
 		}
 	}
+	return rt;
 }
 
-std::vector<SimHash> SimHash::createFromSerialization( const std::string& in, std::size_t& itr)
+std::vector<SimHash> SimHash::createFromSerialization( const std::string& in)
 {
 	std::vector<SimHash> rt;
-	uint32_t const* nw = (const uint32_t*)(void*)(in.c_str() + itr);
+	uint32_t const* nw = (const uint32_t*)(void*)(in.c_str());
 	const uint32_t* start = nw;
-	std::size_t vecsize = ntohl( *nw++);
-	std::size_t vi=0,ve = ntohl( *nw++);
+	std::size_t vecsize = ByteOrder<uint32_t>::ntoh( *nw++);
+	std::size_t vi=0,ve = ByteOrder<uint32_t>::ntoh( *nw++);
 	for (; vi < ve; ++vi)
 	{
 		SimHash elem( vecsize, false);
 		std::size_t ai=0,ae=elem.arsize();
 		for (; ai != ae; ++ai)
 		{
-			uint64_t val = ntohl( *nw++);
-			val = (val << 32) | ntohl( *nw++);
+			uint64_t const* nw64 = (const uint64_t*)nw;
+			uint64_t val = ByteOrder<uint64_t>::ntoh( *nw64);
+			nw += 2;
 			elem.m_ar[ ai] = val;
 		}
 		elem.m_size = vecsize;
 		rt.push_back( elem);
 	}
-	itr += (nw - start) * sizeof(uint32_t);
+	if ((nw - start) * sizeof(uint32_t) != in.size())
+	{
+		throw strus::runtime_error(_TXT("illegal blob passed as vector list serialization"));
+	}
 	return rt;
 }
 
