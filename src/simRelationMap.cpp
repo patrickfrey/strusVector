@@ -108,7 +108,7 @@ std::string SimRelationMap::serialization() const
 {
 	std::string rt;
 	SampleIndex si=0, se=m_nofSamples;
-	while (si != se)
+	for (; si != se; ++si)
 	{
 		Row rw = row( si);
 		Row::const_iterator ri = rw.begin(), re = rw.end();
