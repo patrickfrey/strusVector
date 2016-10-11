@@ -140,7 +140,7 @@ SimRelationMap SimRelationMap::fromSerialization( const std::string& blob)
 		{
 			SerializeElement elem( *si);
 			elem.ntoh();
-			elemlist.push_back( Element( si->col, si->simdist));
+			elemlist.push_back( Element( elem.col, elem.simdist));
 		}
 		rt.addRow( ByteOrder<SampleIndex>::ntoh(ridx_n), elemlist);
 	}

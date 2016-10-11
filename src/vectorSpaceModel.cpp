@@ -167,7 +167,7 @@ struct VectorSpaceModelConfig
 		buf << "path=" << path << ";" << std::endl;
 		buf << "logfile=" << logfile << ";" << std::endl;
 		buf << "dim=" << dim << ";" << std::endl;
-		buf << "bits=" << bits << ";" << std::endl;
+		buf << "bit=" << bits << ";" << std::endl;
 		buf << "var=" << variations << ";" << std::endl;
 		buf << "simdist=" << simdist << ";" << std::endl;
 		buf << "raddist=" << raddist << ";" << std::endl;
