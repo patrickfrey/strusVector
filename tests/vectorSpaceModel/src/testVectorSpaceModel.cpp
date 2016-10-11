@@ -88,7 +88,7 @@ std::vector<double> createRandomVector( unsigned int dim)
 static strus::ErrorBufferInterface* g_errorhnd = 0;
 
 #define DEFAULT_CONFIG \
-	"path=test.vm;"\
+	"path=vsmodel;"\
 	"logfile=-;"\
 	"dim=300;"\
 	"bit=64;"\
