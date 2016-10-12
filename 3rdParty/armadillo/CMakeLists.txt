@@ -348,7 +348,13 @@ message(STATUS "CMAKE_REQUIRED_INCLUDES   = ${CMAKE_REQUIRED_INCLUDES}"  )
 
 add_library( strus_armadillo ${PROJECT_SOURCE_DIR}/src/wrapper.cpp )
 target_link_libraries( strus_armadillo ${ARMA_LIBS} )
-set_target_properties( strus_armadillo PROPERTIES VERSION ${ARMA_MAJOR}.${ARMA_MINOR_ALT}.${ARMA_PATCH} SOVERSION ${ARMA_MAJOR})
+set_target_properties(
+    strus_armadillo
+    PROPERTIES
+    DEBUG_POSTFIX "_d"
+    SOVERSION "${STRUS_MAJOR_VERSION}.${STRUS_MINOR_VERSION}"
+    VERSION ${STRUS_VERSION}
+)
 
 install(DIRECTORY include/armadillo_bits
           DESTINATION include/strus
