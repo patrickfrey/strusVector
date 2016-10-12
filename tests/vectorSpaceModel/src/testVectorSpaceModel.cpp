@@ -15,7 +15,7 @@
 #include "strus/base/configParser.hpp"
 #include "strus/base/stdint.h"
 #include "sparseDim2Field.hpp"
-#include <armadillo>
+#include "armadillo"
 #include <iostream>
 #include <sstream>
 #include <vector>

@@ -20,7 +20,7 @@
 #include "strus/base/configParser.hpp"
 #include "strus/versionVector.hpp"
 #include "strus/base/hton.hpp"
-#include <armadillo>
+#include "armadillo"
 #include <memory>
 
 using namespace strus;

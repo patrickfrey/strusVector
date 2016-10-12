@@ -10,9 +10,8 @@
 #define _STRUS_VECTOR_SPACE_MODEL_LSHMODEL_HPP_INCLUDED
 #include "strus/base/stdint.h"
 #include "simHash.hpp"
+#include "armadillo"
 #include <vector>
-#include <string>
-#include <armadillo>
 #include <string>
 
 namespace strus {
