@@ -455,6 +455,12 @@ public:
 	{
 		try
 		{
+			if (!m_modelLoadedFromFile && m_simrelmap.nofSamples() == 0 && m_samplear.size() > 0)
+			{
+				// If we did not call finalize(), we build some structures like similarity relation map for future use to store.
+				const char* logfile = m_config.logfile.empty()?0:m_config.logfile.c_str();
+				m_simrelmap = m_genmodel.getSimRelationMap( m_samplear, logfile);
+			}
 			if (m_config.path.empty())
 			{
 				throw strus::runtime_error(_TXT("failed to store built instance (no file configured)"));
