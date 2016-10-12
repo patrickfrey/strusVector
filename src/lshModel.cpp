@@ -31,7 +31,7 @@ LshModel::LshModel( std::size_t dim_, std::size_t nofbits_, std::size_t variatio
 	std::size_t wi=0, we=variations_;
 	for (; wi != we; ++wi)
 	{
-		arma::mat rot( arma::randu<arma::mat>( m_dim, m_dim));
+		arma::mat rot( (arma::randu<arma::mat>( m_dim, m_dim) -0.5) * 2.0);
 		if (arma::rank( rot, std::numeric_limits<float>::epsilon()) < m_dim)
 		{
 			--wi;

@@ -93,7 +93,7 @@ struct VectorSpaceModelConfig
 		DefaultLoadModel = 0
 	};
 	VectorSpaceModelConfig( const VectorSpaceModelConfig& o)
-		:path(o.path),preppath(o.preppath),logfile(o.logfile)
+		:path(o.path),prepath(o.prepath),logfile(o.logfile)
 		,dim(o.dim),bits(o.bits),variations(o.variations)
 		,simdist(o.simdist),raddist(o.raddist),eqdist(o.eqdist),mutations(o.mutations),votes(o.votes)
 		,descendants(o.descendants),maxage(o.maxage),iterations(o.iterations)
@@ -101,7 +101,7 @@ struct VectorSpaceModelConfig
 		,with_singletons(o.with_singletons)
 		{}
 	VectorSpaceModelConfig()
-		:path(),preppath(),logfile()
+		:path(),prepath(),logfile()
 		,dim(DefaultDim),bits(DefaultBits),variations(DefaultVariations)
 		,simdist(DefaultSimDist),raddist(DefaultRadDist),eqdist(DefaultEqDist)
 		,mutations(DefaultMutations),votes(DefaultMutationVotes)
@@ -110,7 +110,7 @@ struct VectorSpaceModelConfig
 		,with_singletons((bool)DefaultWithSingletons)
 		{}
 	VectorSpaceModelConfig( const std::string& config, ErrorBufferInterface* errorhnd)
-		:path(),preppath(),logfile()
+		:path(),prepath(),logfile()
 		,dim(DefaultDim),bits(DefaultBits),variations(DefaultVariations)
 		,simdist(DefaultSimDist),raddist(DefaultRadDist),eqdist(DefaultEqDist)
 		,mutations(DefaultMutations),votes(DefaultMutationVotes)
@@ -120,7 +120,7 @@ struct VectorSpaceModelConfig
 	{
 		std::string src = config;
 		if (extractStringFromConfigString( path, src, "path", errorhnd)){}
-		if (extractStringFromConfigString( preppath, src, "preppath", errorhnd)){}
+		if (extractStringFromConfigString( prepath, src, "prepath", errorhnd)){}
 		if (extractStringFromConfigString( logfile, src, "logfile", errorhnd)){}
 		if (extractUIntFromConfigString( dim, src, "dim", errorhnd)){}
 		if (extractUIntFromConfigString( bits, src, "bit", errorhnd)){}
@@ -171,7 +171,7 @@ struct VectorSpaceModelConfig
 	{
 		std::ostringstream buf;
 		buf << "path=" << path << ";" << std::endl;
-		buf << "preppath=" << preppath << ";" << std::endl;
+		buf << "prepath=" << prepath << ";" << std::endl;
 		buf << "logfile=" << logfile << ";" << std::endl;
 		buf << "dim=" << dim << ";" << std::endl;
 		buf << "bit=" << bits << ";" << std::endl;
@@ -190,7 +190,7 @@ struct VectorSpaceModelConfig
 	}
 
 	std::string path;		///< path of model
-	std::string preppath;		///< for builder: path with preprocessed model (similarity relation map and input LSH values are precalculated)
+	std::string prepath;		///< for builder: path with preprocessed model (similarity relation map and input LSH values are precalculated)
 	std::string logfile;		///< file where to log some status data
 	unsigned int dim;		///< input vector dimension
 	unsigned int bits;		///< number of bits to calculate for an LSH per variation
@@ -393,17 +393,18 @@ public:
 		,m_simrelmap(),m_lshmodel(),m_genmodel()
 		,m_samplear(),m_resultar(),m_modelLoadedFromFile(false)
 	{
-		if (!m_config.preppath.empty())
+		if (!m_config.prepath.empty())
 		{
-			// If 'preppath' is configured then all prepared data from a previous run is loaded from there
-			checkVersionFile( m_config.preppath + dirSeparator() + VERSIONFILE);
-			m_simrelmap = readSimRelationMapFromFile( m_config.preppath + dirSeparator() + SIMRELFILE);
-			m_lshmodel = readLshModelFromFile( m_config.preppath + dirSeparator() + MATRIXFILE);
+			// If 'prepath' is configured then all prepared data from a previous run is loaded from there
+			checkVersionFile( m_config.prepath + dirSeparator() + VERSIONFILE);
+			m_simrelmap = readSimRelationMapFromFile( m_config.prepath + dirSeparator() + SIMRELFILE);
+			m_lshmodel = readLshModelFromFile( m_config.prepath + dirSeparator() + MATRIXFILE);
 			m_genmodel = GenModel( m_config.simdist, m_config.raddist, m_config.eqdist, m_config.mutations, m_config.votes, m_config.descendants, m_config.maxage, m_config.iterations, m_config.assignments, m_config.with_singletons);
-			m_samplear = readSimHashVectorFromFile( m_config.preppath + dirSeparator() + INPVECFILE);
+			m_samplear = readSimHashVectorFromFile( m_config.prepath + dirSeparator() + INPVECFILE);
 			m_modelLoadedFromFile = true;
+
 			std::string path = m_config.path;
-			m_config = readConfigurationFromFile( m_config.preppath + dirSeparator() + CONFIGFILE, m_errorhnd);
+			m_config = readConfigurationFromFile( m_config.prepath + dirSeparator() + CONFIGFILE, m_errorhnd);
 			m_config.path = path;
 		}
 		else

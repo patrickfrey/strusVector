@@ -82,7 +82,7 @@ static std::vector<double> createSimilarVector( const std::vector<double>& vec_,
 
 std::vector<double> createRandomVector( unsigned int dim)
 {
-	return convertVectorStd( arma::randu<arma::vec>( dim));
+	return convertVectorStd( (arma::randu<arma::vec>( dim) - 0.5) * 2.0); // values between -1.0 and 1.0
 }
 
 static strus::ErrorBufferInterface* g_errorhnd = 0;
@@ -115,6 +115,7 @@ int main( int argc, const char** argv)
 		std::string config( DEFAULT_CONFIG);
 		unsigned int nofSamples = 1000;
 		unsigned int dim = 0;
+		bool use_prepared_model = false;
 
 		if (argc > 3)
 		{
@@ -140,35 +141,41 @@ int main( int argc, const char** argv)
 		}
 		std::cerr << "model config: " << config << std::endl;
 		std::string configsrc = config;
+		std::string prepath;
 		if (!extractUIntFromConfigString( dim, configsrc, "dim", g_errorhnd)) throw std::runtime_error("configuration parameter 'dim' is not specified");
-
+		if (extractStringFromConfigString( prepath, configsrc, "prepath", g_errorhnd))
+		{
+			use_prepared_model = true;
+		}
 		std::auto_ptr<strus::VectorSpaceModelInterface> vmodel( createVectorSpaceModel_std( g_errorhnd));
 		if (!vmodel.get() || g_errorhnd->hasError()) throw std::runtime_error( g_errorhnd->fetchError());
-//		if (!vmodel->destroyModel( config))
-//		{
-//			(void)g_errorhnd->fetchError();
-//		}
+		if (!vmodel->destroyModel( config))
+		{
+			(void)g_errorhnd->fetchError();
+		}
 		std::auto_ptr<strus::VectorSpaceModelBuilderInterface> builder( vmodel->createBuilder( config));
 		if (!builder.get()) throw std::runtime_error( g_errorhnd->fetchError());
 
-		std::cerr << "create " << nofSamples << " sample vectors" << std::endl;
 		std::vector<std::vector<double> > samplear;
-		std::size_t sidx = 0;
-		for (; sidx != nofSamples; ++sidx)
+		if (!use_prepared_model)
 		{
-			std::vector<double> vec;
-			if (!sidx || rand() % 3 < 2)
+			std::cerr << "create " << nofSamples << " sample vectors" << std::endl;
+			for (std::size_t sidx = 0; sidx != nofSamples; ++sidx)
 			{
-				vec = createRandomVector( dim);
+				std::vector<double> vec;
+				if (!sidx || rand() % 3 < 2)
+				{
+					vec = createRandomVector( dim);
+				}
+				else
+				{
+					std::size_t idx = rand() % sidx;
+					double sim = 0.90 + (rand() % 100) * 0.001;
+					vec = createSimilarVector( samplear[ idx], sim);
+				}
+				samplear.push_back( vec);
+				builder->addSampleVector( vec);
 			}
-			else
-			{
-				std::size_t idx = rand() % sidx;
-				double sim = 0.90 + (rand() % 100) * 0.001;
-				vec = createSimilarVector( samplear[ idx], sim);
-			}
-			samplear.push_back( vec);
-			builder->addSampleVector( vec);
 		}
 		std::cerr << "create similarity matrix" << std::endl;
 		unsigned int nofSimilarities = 0;
@@ -176,7 +183,8 @@ int main( int argc, const char** argv)
 		strus::SparseDim2Field<double> simMatrix;
 		{
 			std::vector<arma::vec> samplevecar;
-			for (sidx=0; sidx != nofSamples; ++sidx)
+
+			for (std::size_t sidx = 0; sidx != nofSamples; ++sidx)
 			{
 				samplevecar.push_back( arma::vec( samplear[ sidx]));
 
@@ -224,7 +232,7 @@ int main( int argc, const char** argv)
 		ClassesMap classesmap;
 
 		std::vector<std::vector<double> >::const_iterator si = samplear.begin(), se = samplear.end();
-		for (sidx=0; si != se; ++si,++sidx)
+		for (std::size_t sidx=0; si != se; ++si,++sidx)
 		{
 			std::vector<unsigned int> ctgar( categorizer->mapVectorToFeatures( *si));
 			std::vector<unsigned int>::const_iterator ci = ctgar.begin(), ce = ctgar.end();
@@ -274,7 +282,7 @@ int main( int argc, const char** argv)
 		unsigned int nofMisses = 0;
 		unsigned int nofFalsePositives = 0;
 		unsigned int nofBadFalsePositives = 0;
-		for (sidx=0; sidx != nofSamples; ++sidx)
+		for (std::size_t sidx=0; sidx != nofSamples; ++sidx)
 		{
 			for (std::size_t oidx=0; oidx != nofSamples; ++oidx)
 			{

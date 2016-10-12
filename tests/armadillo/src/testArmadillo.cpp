@@ -30,6 +30,8 @@ int main()
 		arma::mat B = arma::randu<arma::mat>(5,5);
 		arma::mat C = 2.0 * arma::randu<arma::mat>( 5, 5) - arma::mat( 5, 5).ones();
 
+		std::cout << "(A - 0.5) * 2.0:" << std::endl;
+		std::cout << ((A - 0.5) * 2.0) << std::endl;
 		std::cout << "A:" << std::endl;
 		std::cout << A << std::endl;
 		std::cout << "B:" << std::endl;
