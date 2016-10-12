@@ -18,7 +18,7 @@
 #include <algorithm>
 
 using namespace strus;
-#define STRUS_LOWLEVEL_DEBUG
+#undef STRUS_LOWLEVEL_DEBUG
 
 static Random g_random;
 
