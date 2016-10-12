@@ -466,6 +466,9 @@ public:
 #endif
 			if (m_modelLoadedFromFile)
 			{
+				writeVersionToFile( m_config.path + dirSeparator() + VERSIONFILE);
+				writeConfigurationToFile( m_config, m_config.path + dirSeparator() + CONFIGFILE);
+				writeLshModelToFile( m_lshmodel, m_config.path + dirSeparator() + MATRIXFILE);
 				writeSimHashVectorToFile( m_resultar, std::string( m_config.path + dirSeparator() + RESVECFILE));
 			}
 			else
