@@ -18,7 +18,7 @@
 #include <algorithm>
 
 using namespace strus;
-#undef STRUS_LOWLEVEL_DEBUG
+#define STRUS_LOWLEVEL_DEBUG
 
 static Random g_random;
 
@@ -117,6 +117,29 @@ SimRelationMap GenModel::getSimRelationMap( const std::vector<SimHash>& samplear
 typedef std::list<SimGroup> GroupInstanceList;
 typedef std::map<FeatureIndex,GroupInstanceList::iterator> GroupInstanceMap;
 
+#ifdef STRUS_LOWLEVEL_DEBUG
+static std::string groupMembersString(
+		const FeatureIndex& group_id,
+		const GroupInstanceList& groupInstanceList,
+		const GroupInstanceMap& groupInstanceMap)
+{
+	std::ostringstream rt;
+	GroupInstanceMap::const_iterator group_slot = groupInstanceMap.find( group_id);
+	if (group_slot == groupInstanceMap.end())
+	{
+		throw strus::runtime_error(_TXT("illegal reference in group map (%s): %u"), "tryLeaveUnfitestGroup", group_id);
+	}
+	GroupInstanceList::const_iterator group_inst = group_slot->second;
+	SimGroup::const_iterator mi = group_inst->begin(), me = group_inst->end();
+	for (unsigned int midx=0; mi != me; ++mi,++midx)
+	{
+		if (midx) rt << ", ";
+		rt << *mi;
+	}
+	return rt.str();
+}
+#endif
+
 static void removeGroup(
 		const FeatureIndex& group_id,
 		GroupIdAllocator& groupIdAllocator,
@@ -124,6 +147,9 @@ static void removeGroup(
 		GroupInstanceMap& groupInstanceMap,
 		SampleSimGroupMap& sampleSimGroupMap)
 {
+#ifdef STRUS_LOWLEVEL_DEBUG
+	std::cerr << "remove group " << group_id << " {" << groupMembersString( group_id, groupInstanceList, groupInstanceMap) << "}" << std::endl;
+#endif
 	GroupInstanceMap::iterator group_slot = groupInstanceMap.find( group_id);
 	if (group_slot == groupInstanceMap.end()) throw strus::runtime_error(_TXT("illegal reference in group map (%s): %u"), "removeGroup", group_id);
 	GroupInstanceList::iterator group_iter = group_slot->second;
@@ -349,7 +375,7 @@ static void eliminateCircularReferences( DependencyGraph& graph)
 		std::size_t qidx = 0;			// iterator in the candidate queue
 		unsigned int gid = hi->first;		// current node visited
 		// Iterate through all vertices pointed to by arcs rooted in the current node visited:
-		for (++hi; hi != he && gid == hi->first; ++hi)
+		for (; hi != he && gid == hi->first; ++hi)
 		{
 			// Insert the visited vertex into the queue of nodes to process:
 			if (visited.insert( hi->second).second)
@@ -366,7 +392,16 @@ static void eliminateCircularReferences( DependencyGraph& graph)
 			if (dep_hi != graph.end())
 			{
 				// Found a circular reference, eliminate the dependency to the current node:
-				graph.erase( dep_hi);
+				if (hi == dep_hi)
+				{
+					unsigned int gid = hi->first;
+					graph.erase( dep_hi);
+					hi = graph.upper_bound( Dependency(gid,0));
+				}
+				else
+				{
+					graph.erase( dep_hi);
+				}
 			}
 			// Expand the set of vertices directed to from the follow arcs of the processed edge:
 			std::set<Dependency>::iterator
@@ -662,10 +697,28 @@ std::vector<SimHash> GenModel::run(
 	{
 		// Build the dependency graph:
 		DependencyGraph groupDependencyGraph = buildGroupDependencyGraph( samplear.size(), groupIdAllocator.nofGroupIdsAllocated(), sampleSimGroupMap);
-
+#ifdef STRUS_LOWLEVEL_DEBUG
+		std::cerr << "dependencies before elimination:" << std::endl;
+		{
+			DependencyGraph::const_iterator di = groupDependencyGraph.begin(), de = groupDependencyGraph.end();
+			for (; di != de; ++di)
+			{
+				std::cerr << "(" << di->first << "," << di->second << ") {" << groupMembersString(di->first,groupInstanceList,groupInstanceMap) << "}" << std::endl;
+			}
+		}
+#endif
 		// Eliminate circular references from the graph:
 		eliminateCircularReferences( groupDependencyGraph);
-
+#ifdef STRUS_LOWLEVEL_DEBUG
+		std::cerr << "dependencies after elimination:" << std::endl;
+		{
+			DependencyGraph::const_iterator di = groupDependencyGraph.begin(), de = groupDependencyGraph.end();
+			for (; di != de; ++di)
+			{
+				std::cerr << "(" << di->first << "," << di->second << ") {" << groupMembersString(di->first,groupInstanceList,groupInstanceMap) << "}" << std::endl;
+			}
+		}
+#endif
 		// Eliminate the groups dependent of others:
 		DependencyGraph::const_iterator di = groupDependencyGraph.begin(), de = groupDependencyGraph.end();
 		while (di != de)
