@@ -21,6 +21,7 @@ include_directories(
 	"${Boost_INCLUDE_DIRS}"
 	"${Intl_INCLUDE_DIRS}"
 	"${PROJECT_BINARY_DIR}/3rdParty/armadillo/include/"
+	"${PROJECT_SOURCE_DIR}/3rdParty/armadillo/include/"
 	"${PROJECT_SOURCE_DIR}/include"
 	"${strusbase_INCLUDE_DIRS}"
 )
