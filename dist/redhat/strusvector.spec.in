@@ -302,6 +302,9 @@ make test
 %{_libdir}/strus/libstrus_vectorspace.so
 %dir %{_includedir}/strus
 %{_includedir}/strus/*.hpp
+%{_includedir}/strus/armadillo
+%dir %{_includedir}/strus/armadillo_bits
+%{_includedir}/strus/armadillo_bits/*.hpp
 %dir %{_includedir}/strus/lib
 %{_includedir}/strus/lib/*.hpp
 
