@@ -393,15 +393,18 @@ public:
 		,m_simrelmap(),m_lshmodel(),m_genmodel()
 		,m_samplear(),m_resultar(),m_modelLoadedFromFile(false)
 	{
-		if (isDir( m_config.path))
+		if (!m_config.preppath.empty())
 		{
-			checkVersionFile( m_config.path + dirSeparator() + VERSIONFILE);
-			m_config = readConfigurationFromFile( m_config.path + dirSeparator() + CONFIGFILE, m_errorhnd);
-			m_simrelmap = readSimRelationMapFromFile( m_config.path + dirSeparator() + SIMRELFILE);
-			m_lshmodel = readLshModelFromFile( m_config.path + dirSeparator() + MATRIXFILE);
+			// If 'preppath' is configured then all prepared data from a previous run is loaded from there
+			checkVersionFile( m_config.preppath + dirSeparator() + VERSIONFILE);
+			m_simrelmap = readSimRelationMapFromFile( m_config.preppath + dirSeparator() + SIMRELFILE);
+			m_lshmodel = readLshModelFromFile( m_config.preppath + dirSeparator() + MATRIXFILE);
 			m_genmodel = GenModel( m_config.simdist, m_config.raddist, m_config.eqdist, m_config.mutations, m_config.votes, m_config.descendants, m_config.maxage, m_config.iterations, m_config.assignments, m_config.with_singletons);
-			m_samplear = readSimHashVectorFromFile( m_config.path + dirSeparator() + INPVECFILE);
+			m_samplear = readSimHashVectorFromFile( m_config.preppath + dirSeparator() + INPVECFILE);
 			m_modelLoadedFromFile = true;
+			std::string path = m_config.path;
+			m_config = readConfigurationFromFile( m_config.preppath + dirSeparator() + CONFIGFILE, m_errorhnd);
+			m_config.path = path;
 		}
 		else
 		{
