@@ -228,6 +228,15 @@ BuildRequires: leveldb-devel
 Requires: leveldb
 %endif
 
+%if %{rhel} || %{centos} || %{scilin} || %{fedora} || %{suse} || %{sles}
+BuildRequires: blas-devel
+BuildRequires: lapack-devel
+BuildRequires: atlas-devel
+Requires: blas
+Requires: lapack
+Requires: atlas
+%endif
+
 # Check if 'Distribution' is really set by OBS (as mentioned in bacula)
 %if ! 0%{?opensuse_bs}
 Distribution: %{dist}
