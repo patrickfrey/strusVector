@@ -314,7 +314,7 @@ endif()
 set( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fvisibility=default")
 
 message(STATUS "Generating ${PROJECT_BINARY_DIR}/include/config.hpp")
-configure_file(${PROJECT_SOURCE_DIR}/include/armadillo_bits/config.hpp.cmake ${PROJECT_BINARY_DIR}/include/armadillo_bits/config.hpp)
+configure_file(${PROJECT_SOURCE_DIR}/include/armadillo_bits/config.hpp.cmake  ${PROJECT_BINARY_DIR}/include/armadillo_bits/config.hpp)
 
 include_directories( ${PROJECT_SOURCE_DIR}/include ${CMAKE_REQUIRED_INCLUDES})
 
