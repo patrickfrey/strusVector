@@ -14,9 +14,19 @@
 
 using namespace strus;
 
+LshModel::LshModel()
+	:m_dim(0),m_nofbits(0),m_variations(0)
+	,m_modelMatrix(),m_rotations()
+{}
+
+LshModel::LshModel( const LshModel& o)
+	:m_dim(o.m_dim),m_nofbits(o.m_nofbits),m_variations(o.m_variations)
+	,m_modelMatrix(o.m_modelMatrix),m_rotations(o.m_rotations)
+{}
+
 LshModel::LshModel( std::size_t dim_, std::size_t nofbits_, std::size_t variations_)
 	:m_dim(dim_),m_nofbits(nofbits_),m_variations(variations_)
-	,m_modelMatrix( createModelMatrix( dim_, nofbits_))
+	,m_modelMatrix( createModelMatrix( dim_, nofbits_)),m_rotations()
 {
 	std::size_t wi=0, we=variations_;
 	for (; wi != we; ++wi)
@@ -262,7 +272,7 @@ std::string LshModel::serialization() const
 	return rt;
 }
 
-LshModel* LshModel::createFromSerialization( const std::string& dump)
+LshModel LshModel::fromSerialization( const std::string& dump)
 {
 	DumpStructHeader hdr;
 	char const* src = dump.c_str();
@@ -304,7 +314,7 @@ LshModel* LshModel::createFromSerialization( const std::string& dump)
 	{
 		throw strus::runtime_error( _TXT( "lsh model dump is corrupt"));
 	}
-	return new LshModel( hdr.dim, hdr.nofbits, hdr.variations, modelMatrix, rotations);
+	return LshModel( hdr.dim, hdr.nofbits, hdr.variations, modelMatrix, rotations);
 }
 
 

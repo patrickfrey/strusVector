@@ -22,7 +22,9 @@ class LshModel
 {
 public:
 	/// \brief Constructor
+	LshModel();
 	LshModel( std::size_t dim_, std::size_t nofbits_, std::size_t variations_);
+	LshModel( const LshModel& o);
 
 	/// \brief map contents to string in readable form
 	std::string tostring() const;
@@ -30,7 +32,7 @@ public:
 	/// \brief Serialize
 	std::string serialization() const;
 	/// \brief Deserialize
-	static LshModel* createFromSerialization( const std::string& blob);
+	static LshModel fromSerialization( const std::string& blob);
 
 	/// \brief Calculate similarity hash of a vector
 	/// \param[in] vec input vector

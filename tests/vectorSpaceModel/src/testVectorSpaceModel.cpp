@@ -144,10 +144,10 @@ int main( int argc, const char** argv)
 
 		std::auto_ptr<strus::VectorSpaceModelInterface> vmodel( createVectorSpaceModel_std( g_errorhnd));
 		if (!vmodel.get() || g_errorhnd->hasError()) throw std::runtime_error( g_errorhnd->fetchError());
-		if (!vmodel->destroyModel( config))
-		{
-			(void)g_errorhnd->fetchError();
-		}
+//		if (!vmodel->destroyModel( config))
+//		{
+//			(void)g_errorhnd->fetchError();
+//		}
 		std::auto_ptr<strus::VectorSpaceModelBuilderInterface> builder( vmodel->createBuilder( config));
 		if (!builder.get()) throw std::runtime_error( g_errorhnd->fetchError());
 
