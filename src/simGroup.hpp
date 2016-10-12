@@ -9,10 +9,10 @@
 #ifndef _STRUS_VECTOR_SPACE_MODEL_SIMILAITY_GROUP_HPP_INCLUDED
 #define _STRUS_VECTOR_SPACE_MODEL_SIMILAITY_GROUP_HPP_INCLUDED
 #include "simHash.hpp"
+#include "armadillo"
 #include "strus/base/stdint.h"
 #include <vector>
 #include <set>
-#include <armadillo>
 
 namespace strus {
 

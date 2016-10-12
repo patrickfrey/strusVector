@@ -7,7 +7,7 @@
  */
 /// \brief Test program
 #include "strus/base/bitOperations.hpp"
-#include <armadillo>
+#include "armadillo"
 #include <iostream>
 #include <sstream>
 #include <vector>
