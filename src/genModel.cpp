@@ -364,6 +364,30 @@ static DependencyGraph buildGroupDependencyGraph( std::size_t nofSamples, std::s
 	return rt;
 }
 
+static DependencyGraph reduceGroupDependencyGraphToIsa( DependencyGraph& graph, const GroupInstanceMap& groupInstanceMap, float isaf)
+{
+	DependencyGraph rt;
+	std::set<Dependency>::iterator hi = graph.begin(), he = graph.end();
+	for (; hi != he; ++hi)
+	{
+		GroupInstanceMap::const_iterator gi1 = groupInstanceMap.find( hi->first);
+		GroupInstanceMap::const_iterator gi2 = groupInstanceMap.find( hi->second);
+		if (gi1 == groupInstanceMap.end())
+		{
+			throw strus::runtime_error(_TXT("missing entry in sim group map (reduce dependencyGraph to isa): %u"), hi->first);
+		}
+		if (gi2 == groupInstanceMap.end())
+		{
+			throw strus::runtime_error(_TXT("missing entry in sim group map (reduce dependencyGraph to isa): %u"), hi->second);
+		}
+		if ((float)gi1->second->size() > (float)gi2->second->size() * isaf)
+		{
+			rt.insert( *hi);
+		}
+	}
+	return rt;
+}
+
 /// \brief Eliminate circular dependencies from a directed graph represented as set
 static void eliminateCircularReferences( DependencyGraph& graph)
 {
@@ -440,7 +464,7 @@ static void checkSimGroupStructures(
 			std::cerr << *mi;
 			if (!sampleSimGroupMap.contains( *mi, gi->id()))
 			{
-				errbuf << "missing element group relation in sampleSimGroupMap: " << *mi << " IN " << gi->id() << std::endl;
+				errbuf << _TXT("missing element group relation in sampleSimGroupMap: ") << *mi << " IN " << gi->id() << std::endl;
 				haserr = true;
 			}
 		}
@@ -450,7 +474,7 @@ static void checkSimGroupStructures(
 		GroupInstanceMap::const_iterator gi_slot = groupInstanceMap.find( gi->id());
 		if (gi_slot == groupInstanceMap.end())
 		{
-			errbuf << "missing entry in sim group map (check structures): " << gi->id() << std::endl;
+			errbuf << _TXT("missing entry in sim group map (check structures): ") << gi->id() << std::endl;
 			haserr = true;
 		}
 	}
@@ -468,13 +492,13 @@ static void checkSimGroupStructures(
 			GroupInstanceMap::const_iterator gi_slot = groupInstanceMap.find( *ni);
 			if (gi_slot == groupInstanceMap.end())
 			{
-				errbuf << "entry not found in group instance map (check structures): " << *ni << std::endl;
+				errbuf << _TXT("entry not found in group instance map (check structures): ") << *ni << std::endl;
 				haserr = true;
 			}
 			GroupInstanceList::const_iterator gi = gi_slot->second;
 			if (!gi->isMember( si))
 			{
-				errbuf << "illegal entry in sim group map (check structures): expected " << si << " to be member of group " << gi->id() << std::endl;
+				errbuf << _TXT("illegal entry in sim group map (check structures): expected to be member of group: ") << si << " -> " << gi->id() << std::endl;
 				haserr = true;
 			}
 		}
@@ -697,6 +721,7 @@ std::vector<SimHash> GenModel::run(
 	{
 		// Build the dependency graph:
 		DependencyGraph groupDependencyGraph = buildGroupDependencyGraph( samplear.size(), groupIdAllocator.nofGroupIdsAllocated(), sampleSimGroupMap);
+		groupDependencyGraph = reduceGroupDependencyGraphToIsa( groupDependencyGraph, groupInstanceMap, m_isaf);
 #ifdef STRUS_LOWLEVEL_DEBUG
 		std::cerr << "dependencies before elimination:" << std::endl;
 		{
@@ -777,12 +802,17 @@ std::string GenModel::tostring() const
 {
 	std::ostringstream rt;
 	rt << "simdist=" << m_simdist << std::endl
+		<< ", raddist=" << m_eqdist << std::endl
 		<< ", eqdist=" << m_eqdist << std::endl
 		<< ", mutations=" << m_mutations << std::endl
 		<< ", votes=" << m_votes << std::endl
 		<< ", descendants=" << m_descendants << std::endl
 		<< ", maxage=" << m_maxage << std::endl
-		<< ", iterations=" << m_iterations << std::endl;
+		<< ", iterations=" << m_iterations << std::endl
+		<< ", assignments=" << m_assignments << std::endl
+		<< ", isaf=" << m_isaf << std::endl
+		<< ", singletons=" << (m_with_singletons?"yes":"no") << std::endl;
 	return rt.str();
 }
+
 

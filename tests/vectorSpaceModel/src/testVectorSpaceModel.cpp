@@ -157,23 +157,23 @@ int main( int argc, const char** argv)
 		if (!builder.get()) throw std::runtime_error( g_errorhnd->fetchError());
 
 		std::vector<std::vector<double> > samplear;
-		if (!use_prepared_model)
+		std::cerr << "create " << nofSamples << " sample vectors" << std::endl;
+		for (std::size_t sidx = 0; sidx != nofSamples; ++sidx)
 		{
-			std::cerr << "create " << nofSamples << " sample vectors" << std::endl;
-			for (std::size_t sidx = 0; sidx != nofSamples; ++sidx)
+			std::vector<double> vec;
+			if (!sidx || rand() % 3 < 2)
 			{
-				std::vector<double> vec;
-				if (!sidx || rand() % 3 < 2)
-				{
-					vec = createRandomVector( dim);
-				}
-				else
-				{
-					std::size_t idx = rand() % sidx;
-					double sim = 0.90 + (rand() % 100) * 0.001;
-					vec = createSimilarVector( samplear[ idx], sim);
-				}
-				samplear.push_back( vec);
+				vec = createRandomVector( dim);
+			}
+			else
+			{
+				std::size_t idx = rand() % sidx;
+				double sim = 0.90 + (rand() % 100) * 0.001;
+				vec = createSimilarVector( samplear[ idx], sim);
+			}
+			samplear.push_back( vec);
+			if (!use_prepared_model)
+			{
 				builder->addSampleVector( vec);
 			}
 		}
