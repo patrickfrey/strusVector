@@ -121,6 +121,7 @@ int main( int argc, const char** argv)
 		std::string prepath;
 		bool use_prepared_model = false;
 
+		// Parse parameters:
 		if (argc > 3)
 		{
 			std::cerr << "Usage: " << argv[0] << " [<config>] [<number of sample vectors>]" << std::endl;
@@ -151,8 +152,13 @@ int main( int argc, const char** argv)
 		{
 			use_prepared_model = true;
 		}
+
+		// Build all objects:
 		std::auto_ptr<strus::VectorSpaceModelInterface> vmodel( createVectorSpaceModel_std( g_errorhnd));
 		if (!vmodel.get() || g_errorhnd->hasError()) throw std::runtime_error( g_errorhnd->fetchError());
+
+		// Remove traces of old test model before creating a new one:
+		(void)strus::removeFile( path + strus::dirSeparator() + SAMPLESFILE);
 		if (!vmodel->destroyModel( config))
 		{
 			(void)g_errorhnd->fetchError();
@@ -160,6 +166,7 @@ int main( int argc, const char** argv)
 		std::auto_ptr<strus::VectorSpaceModelBuilderInterface> builder( vmodel->createBuilder( config));
 		if (!builder.get()) throw std::runtime_error( g_errorhnd->fetchError());
 
+		// Build the test vectors:
 		std::vector<std::vector<double> > samplear;
 		if (use_prepared_model)
 		{
@@ -201,6 +208,8 @@ int main( int argc, const char** argv)
 				builder->addSampleVector( vec);
 			}
 		}
+
+		// Create the real similarity matrix based on cosine distance of the sample vectors to verify the results:
 		std::cerr << "create similarity matrix" << std::endl;
 		unsigned int nofSimilarities = 0;
 		strus::SparseDim2Field<unsigned char> expSimMatrix;
@@ -230,6 +239,7 @@ int main( int argc, const char** argv)
 				}
 			}
 		}
+		// Build the model:
 		std::cerr << "building model" << std::endl;
 		if (!builder->finalize())
 		{
@@ -251,6 +261,7 @@ int main( int argc, const char** argv)
 			unsigned int ec = strus::writeFile( path + strus::dirSeparator() + SAMPLESFILE, content);
 			if (ec) throw std::runtime_error("failed to write samples file");
 		}
+		// Categorize the input vectors and build some maps out of the assignments of features:
 		std::cerr << "load model to categorize vectors" << std::endl;
 		std::auto_ptr<strus::VectorSpaceModelInstanceInterface> categorizer( vmodel->createInstance( config));
 		if (!categorizer.get())
@@ -293,6 +304,7 @@ int main( int argc, const char** argv)
 			}
 			std::cout << std::endl;
 		}
+		// Build a similarity matrix defined by features shared between input vectors:
 		std::cerr << "build sample to sample feature relation matrix:" << std::endl;
 		strus::SparseDim2Field<unsigned char> outSimMatrix;
 		unsigned int fi=0, fe=categorizer->nofFeatures();
@@ -312,6 +324,7 @@ int main( int argc, const char** argv)
 				featureMembers.push_back( ri.col());
 			}
 		}
+		// Compare the similarity matrix defined by feature assignments and the one defined by the cosine measure of the sample vectors and accumulate the results:
 		std::cerr << "test calculated feature assignments:" << std::endl;
 		unsigned int nofMisses = 0;
 		unsigned int nofFalsePositives = 0;
