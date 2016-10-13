@@ -427,7 +427,7 @@ public:
 	virtual ~VectorSpaceModelBuilder()
 	{}
 
-	virtual void addSampleVector( const std::vector<double>& vec)
+	virtual void addVector( const std::vector<double>& vec)
 	{
 		try
 		{
