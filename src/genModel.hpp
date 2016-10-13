@@ -29,15 +29,17 @@ class GenModel
 public:
 	/// \brief Default constructor
 	GenModel()
-		:m_simdist(0),m_raddist(0),m_eqdist(0)
+		:m_threads(0)
+		,m_simdist(0),m_raddist(0),m_eqdist(0)
 		,m_mutations(0),m_votes(0)
 		,m_descendants(0),m_maxage(0),m_iterations(0)
 		,m_assignments(0),m_isaf(0.0)
 		,m_with_singletons(0)
 		{}
 	/// \brief Constructor
-	GenModel( unsigned int simdist_, unsigned int raddist_, unsigned int eqdist_, unsigned int mutations_, unsigned int votes_, unsigned int descendants_, unsigned int maxage_, unsigned int iterations_, unsigned int assignments_, float isaf_, bool with_singletons_)
-		:m_simdist(simdist_),m_raddist(raddist_),m_eqdist(eqdist_)
+	GenModel( unsigned int threads_, unsigned int simdist_, unsigned int raddist_, unsigned int eqdist_, unsigned int mutations_, unsigned int votes_, unsigned int descendants_, unsigned int maxage_, unsigned int iterations_, unsigned int assignments_, float isaf_, bool with_singletons_)
+		:m_threads(threads_)
+		,m_simdist(simdist_),m_raddist(raddist_),m_eqdist(eqdist_)
 		,m_mutations(mutations_),m_votes(votes_)
 		,m_descendants(descendants_),m_maxage(maxage_),m_iterations(iterations_)
 		,m_assignments(assignments_),m_isaf(isaf_)
@@ -45,7 +47,8 @@ public:
 		{}
 	/// \brief Copy constructor
 	GenModel( const GenModel& o)
-		:m_simdist(o.m_simdist),m_raddist(o.m_raddist),m_eqdist(o.m_eqdist)
+		:m_threads(o.m_threads)
+		,m_simdist(o.m_simdist),m_raddist(o.m_raddist),m_eqdist(o.m_eqdist)
 		,m_mutations(o.m_mutations),m_votes(o.m_votes)
 		,m_descendants(o.m_descendants),m_maxage(o.m_maxage),m_iterations(o.m_iterations)
 		,m_assignments(o.m_assignments),m_isaf(o.m_isaf)
@@ -67,6 +70,7 @@ public:
 			const char* logfile) const;
 
 private:
+	unsigned int m_threads;			///< maximum number of threads to use (0 = no threading)
 	unsigned int m_simdist;			///< maximal distance to be considered similar
 	unsigned int m_raddist;			///< maximal radius distance of group elements to centroid
 	unsigned int m_eqdist;			///< maximum distance to be considered equal

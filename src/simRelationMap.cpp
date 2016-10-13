@@ -20,14 +20,20 @@
 
 using namespace strus;
 
-void SimRelationMap::addRow( const SampleIndex& index, const std::vector<Element>& ar)
+void SimRelationMap::addRow( const SampleIndex& index, std::vector<Element>::const_iterator ai, const std::vector<Element>::const_iterator& ae)
 {
 	if (index >= m_nofSamples) m_nofSamples = index+1;
 	std::size_t aridx = m_ar.size();
 	if (m_rowdescrmap.find( index) != m_rowdescrmap.end()) throw strus::runtime_error(_TXT("sim relation map row defined twice"));
-	m_rowdescrmap[ index] = RowDescr( aridx, ar.size());
-	m_ar.insert( m_ar.end(), ar.begin(), ar.end());
-	std::sort( m_ar.begin() + aridx, m_ar.begin() + aridx + ar.size());
+	std::size_t asize = ae - ai;
+	m_rowdescrmap[ index] = RowDescr( aridx, asize);
+	m_ar.insert( m_ar.end(), ai, ae);
+	std::sort( m_ar.begin() + aridx, m_ar.begin() + aridx + asize);
+}
+
+void SimRelationMap::addRow( const SampleIndex& index, const std::vector<Element>& ar)
+{
+	addRow( index, ar.begin(), ar.end());
 }
 
 std::string SimRelationMap::tostring() const
@@ -146,4 +152,15 @@ SimRelationMap SimRelationMap::fromSerialization( const std::string& blob)
 	}
 	return rt;
 }
+
+void SimRelationMap::join( const SimRelationMap& o)
+{
+	RowDescrMap::const_iterator oi = o.m_rowdescrmap.begin(), oe = o.m_rowdescrmap.end();
+	for (; oi != oe; ++oi)
+	{
+		addRow( oi->first, o.m_ar.begin() + oi->second.aridx, o.m_ar.begin() + oi->second.aridx + oi->second.size);
+	}
+}
+
+
 

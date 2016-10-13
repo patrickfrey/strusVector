@@ -53,10 +53,59 @@ public:
 		:boost::shared_ptr<X>(){}
 };
 
-#define STRUS_STATIC_ASSERT( cond ) BOOST_STATIC_ASSERT((cond))
-#define CACHELINE_SIZE 64
+template <typename IntegralCounterType>
+class AtomicCounter
+	:public boost::atomic<IntegralCounterType>
+{
+public:
+	///\brief Constructor
+	AtomicCounter( IntegralCounterType initialValue_=0)
+		:boost::atomic<IntegralCounterType>(initialValue_)
+	{}
 
-typedef boost::atomic<bool> AtomicBool;
+	///\brief Increment of the counter
+	void increment( IntegralCounterType val = 1)
+	{
+		boost::atomic<IntegralCounterType>::fetch_add( val, boost::memory_order_acquire);
+	}
+
+	///\brief Decrement of the counter
+	void decrement( IntegralCounterType val = 1)
+	{
+		boost::atomic<IntegralCounterType>::fetch_sub( val, boost::memory_order_acquire);
+	}
+
+	///\brief Increment of the counter
+	///\return the new value of the counter after the increment operation
+	IntegralCounterType allocIncrement( IntegralCounterType val = 1)
+	{
+		return boost::atomic<IntegralCounterType>::fetch_add( val, boost::memory_order_acquire);
+	}
+
+	///\brief Increment of the counter
+	///\return the current value of the counter
+	IntegralCounterType value() const
+	{
+		return boost::atomic<IntegralCounterType>::load( boost::memory_order_acquire);
+	}
+
+	///\brief Initialization of the counter
+	///\param[in] val the value of the counter
+	void set( const IntegralCounterType& val)
+	{
+		boost::atomic<IntegralCounterType>::store( val);
+	}
+
+	///\brief Compare current value with 'testval', change it to 'newval' if matches
+	///\param[in] testval the value of the counter
+	///\param[in] newval the value of the counter
+	///\return true on success
+	bool test_and_set( IntegralCounterType testval, IntegralCounterType newval)
+	{
+		return boost::atomic<IntegralCounterType>::compare_exchange_strong( testval, newval, boost::memory_order_acquire, boost::memory_order_acquire);
+	}
+};
+
 typedef boost::mutex Mutex;
 typedef boost::mutex::scoped_lock ScopedLock;
 typedef boost::unique_lock<boost::mutex> UniqueLock;

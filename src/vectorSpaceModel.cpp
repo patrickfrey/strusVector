@@ -201,7 +201,7 @@ struct VectorSpaceModelConfig
 	std::string path;		///< path of model
 	std::string prepath;		///< for builder: path with preprocessed model (similarity relation map and input LSH values are precalculated)
 	std::string logfile;		///< file where to log some status data
-	unsigned int threads;
+	unsigned int threads;		///< maximum number of threads to use (0 = no threading)
 	unsigned int dim;		///< input vector dimension
 	unsigned int bits;		///< number of bits to calculate for an LSH per variation
 	unsigned int variations;	///< number of variations
@@ -410,7 +410,7 @@ public:
 			checkVersionFile( m_config.prepath + dirSeparator() + VERSIONFILE);
 			m_simrelmap = readSimRelationMapFromFile( m_config.prepath + dirSeparator() + SIMRELFILE);
 			m_lshmodel = readLshModelFromFile( m_config.prepath + dirSeparator() + MATRIXFILE);
-			m_genmodel = GenModel( m_config.simdist, m_config.raddist, m_config.eqdist, m_config.mutations, m_config.votes, m_config.descendants, m_config.maxage, m_config.iterations, m_config.assignments, m_config.isaf, m_config.with_singletons);
+			m_genmodel = GenModel( m_config.threads, m_config.simdist, m_config.raddist, m_config.eqdist, m_config.mutations, m_config.votes, m_config.descendants, m_config.maxage, m_config.iterations, m_config.assignments, m_config.isaf, m_config.with_singletons);
 			m_samplear = readSimHashVectorFromFile( m_config.prepath + dirSeparator() + INPVECFILE);
 			m_modelLoadedFromFile = true;
 
@@ -421,7 +421,7 @@ public:
 		else
 		{
 			m_lshmodel = LshModel( m_config.dim, m_config.bits, m_config.variations);
-			m_genmodel = GenModel( m_config.simdist, m_config.raddist, m_config.eqdist, m_config.mutations, m_config.votes, m_config.descendants, m_config.maxage, m_config.iterations, m_config.assignments, m_config.isaf, m_config.with_singletons);
+			m_genmodel = GenModel( m_config.threads, m_config.simdist, m_config.raddist, m_config.eqdist, m_config.mutations, m_config.votes, m_config.descendants, m_config.maxage, m_config.iterations, m_config.assignments, m_config.isaf, m_config.with_singletons);
 		}
 	}
 	virtual ~VectorSpaceModelBuilder()
