@@ -7,9 +7,12 @@
  */
 /// \brief Structure for breeding good representants of similarity classes with help of genetic algorithms
 #include "genModel.hpp"
+#include "logger.hpp"
 #include "sampleSimGroupMap.hpp"
+#include "getSimRelationMap.hpp"
 #include "random.hpp"
 #include "internationalization.hpp"
+#include "strus/base/string_format.hpp"
 #include <ctime>
 #include <cmath>
 #include <iostream>
@@ -67,51 +70,7 @@ private:
 
 SimRelationMap GenModel::getSimRelationMap( const std::vector<SimHash>& samplear, const char* logfile) const
 {
-	std::ostream* logout = 0;
-	std::ofstream logfilestream;
-	if (logfile)
-	{
-		if (logfile[0] != '-' || logfile[1])
-		{
-			try
-			{
-				logfilestream.open( logfile, std::ofstream::out);
-				logout = &logfilestream;
-			}
-			catch (const std::exception& err)
-			{
-				throw strus::runtime_error(_TXT("failed to open logfile '%s': %s"), logfile, err.what());
-			}
-		}
-		else
-		{
-			logout = &std::cerr;
-		}
-	}
-	SimRelationMap rt;
-	if (logout) (*logout) << _TXT("calculate similarity relation map") << std::endl << std::endl;
-	std::vector<SimHash>::const_iterator si = samplear.begin(), se = samplear.end();
-	for (SampleIndex sidx=0; si != se; ++si,++sidx)
-	{
-		if (logout && sidx % 10000 == 0) (*logout) << _TXT("\rprocessed lines: ") << sidx << ", " << _TXT("number of similarities: ") << rt.nofRelationsDetected() << std::endl;
-		std::vector<SimRelationMap::Element> row;
-
-		std::vector<SimHash>::const_iterator pi = samplear.begin();
-		for (SampleIndex pidx=0; pi != si; ++pi,++pidx)
-		{
-			if (pidx != sidx && si->near( *pi, m_simdist))
-			{
-				unsigned short dist = si->dist( *pi);
-#ifdef STRUS_LOWLEVEL_DEBUG
-				std::cerr << "declare similarity " << sidx << " ~ " << pidx << " by " << dist << std::endl;
-#endif
-				row.push_back( SimRelationMap::Element( pidx, dist));
-			}
-		}
-		rt.addRow( sidx, row);
-	}
-	if (logout) (*logout) << _TXT("\rnumber of samples: ") << samplear.size() << ", " << _TXT("number of similarities: ") << rt.nofRelationsDetected() << std::endl;
-	return rt.mirror();
+	return strus::getSimRelationMap( samplear, m_simdist, logfile);
 }
 
 typedef std::list<SimGroup> GroupInstanceList;
@@ -148,7 +107,7 @@ static void removeGroup(
 		SampleSimGroupMap& sampleSimGroupMap)
 {
 #ifdef STRUS_LOWLEVEL_DEBUG
-	std::cerr << "remove group " << group_id << " {" << groupMembersString( group_id, groupInstanceList, groupInstanceMap) << "}" << std::endl;
+	std::cerr << string_format( _TXT("remove group %u"), group_id) << " {" << groupMembersString( group_id, groupInstanceList, groupInstanceMap) << "}" << std::endl;
 #endif
 	GroupInstanceMap::iterator group_slot = groupInstanceMap.find( group_id);
 	if (group_slot == groupInstanceMap.end()) throw strus::runtime_error(_TXT("illegal reference in group map (%s): %u"), "removeGroup", group_id);
@@ -448,7 +407,7 @@ static void checkSimGroupStructures(
 				const SampleSimGroupMap& sampleSimGroupMap,
 				std::size_t nofSamples)
 {
-	std::cerr << "check structures ..." << std::endl;
+	std::cerr << _TXT( "check structures ...") << std::endl;
 	sampleSimGroupMap.check();
 	std::ostringstream errbuf;
 	bool haserr = false;
@@ -456,7 +415,7 @@ static void checkSimGroupStructures(
 	GroupInstanceList::const_iterator gi = groupInstanceList.begin(), ge = groupInstanceList.end();
 	for (; gi != ge; ++gi)
 	{
-		std::cerr << "group " << gi->id() << " members = ";
+		std::cerr << string_format( _TXT( "group %u has members "), gi->id());
 		SimGroup::const_iterator mi = gi->begin(), me = gi->end();
 		for (unsigned int midx=0; mi != me; ++mi,++midx)
 		{
@@ -464,7 +423,7 @@ static void checkSimGroupStructures(
 			std::cerr << *mi;
 			if (!sampleSimGroupMap.contains( *mi, gi->id()))
 			{
-				errbuf << _TXT("missing element group relation in sampleSimGroupMap: ") << *mi << " IN " << gi->id() << std::endl;
+				errbuf << string_format( _TXT("missing element group relation in sampleSimGroupMap %u in group %u"), *mi, gi->id()) << std::endl;
 				haserr = true;
 			}
 		}
@@ -474,7 +433,7 @@ static void checkSimGroupStructures(
 		GroupInstanceMap::const_iterator gi_slot = groupInstanceMap.find( gi->id());
 		if (gi_slot == groupInstanceMap.end())
 		{
-			errbuf << _TXT("missing entry in sim group map (check structures): ") << gi->id() << std::endl;
+			errbuf << string_format( _TXT("missing entry %u in sim group map (check structures)"), gi->id()) << std::endl;
 			haserr = true;
 		}
 	}
@@ -483,7 +442,7 @@ static void checkSimGroupStructures(
 	{
 		SampleSimGroupMap::const_node_iterator ni = sampleSimGroupMap.node_begin( si), ne = sampleSimGroupMap.node_end( si);
 		unsigned int nidx=0;
-		if (ni != ne) std::cerr << "sample " << si << " groups = ";
+		if (ni != ne) std::cerr << string_format( _TXT("sample %u is in groups: "), si);
 		for (; ni != ne; ++ni,++nidx)
 		{
 			if (nidx) std::cerr << ", ";
@@ -492,13 +451,13 @@ static void checkSimGroupStructures(
 			GroupInstanceMap::const_iterator gi_slot = groupInstanceMap.find( *ni);
 			if (gi_slot == groupInstanceMap.end())
 			{
-				errbuf << _TXT("entry not found in group instance map (check structures): ") << *ni << std::endl;
+				errbuf << string_format( _TXT("entry not found for group %u in group instance map (check structures)"), *ni) << std::endl;
 				haserr = true;
 			}
 			GroupInstanceList::const_iterator gi = gi_slot->second;
 			if (!gi->isMember( si))
 			{
-				errbuf << _TXT("illegal entry in sim group map (check structures): expected to be member of group: ") << si << " -> " << gi->id() << std::endl;
+				errbuf << string_format( _TXT("illegal entry %u in sim group map (check structures), expected to be member of group %u"), si, gi->id()) << std::endl;
 				haserr = true;
 			}
 		}
@@ -516,27 +475,7 @@ std::vector<SimHash> GenModel::run(
 		const SimRelationMap& simrelmap,
 		const char* logfile) const
 {
-	std::ostream* logout = 0;
-	std::ofstream logfilestream;
-	if (logfile)
-	{
-		if (logfile[0] != '-' || logfile[1])
-		{
-			try
-			{
-				logfilestream.open( logfile, std::ofstream::out);
-				logout = &logfilestream;
-			}
-			catch (const std::exception& err)
-			{
-				throw strus::runtime_error(_TXT("failed to open logfile '%s': %s"), logfile, err.what());
-			}
-		}
-		else
-		{
-			logout = &std::cerr;
-		}
-	}
+	Logger logout( logfile);
 	GroupIdAllocator groupIdAllocator;		// Allocator of group ids
 	GroupInstanceList groupInstanceList;		// list of similarity group representants
 	GroupInstanceMap groupInstanceMap;		// map indices to group representant list iterators
@@ -546,11 +485,11 @@ std::vector<SimHash> GenModel::run(
 	unsigned int iteration=0;
 	for (; iteration != m_iterations; ++iteration)
 	{
-		if (logout) (*logout) << _TXT("iteration ") << iteration << ":" << std::endl;
+		if (logout) logout << string_format( _TXT("starting iteration %u"), iteration);
 #ifdef STRUS_LOWLEVEL_DEBUG
 		checkSimGroupStructures( groupInstanceList, groupInstanceMap, sampleSimGroupMap, samplear.size());
 #endif
-		if (logout) (*logout) << _TXT("create new individuals") << std::endl;
+		if (logout) logout << _TXT("create new individuals");
 		// Go through all elements and try to create new groups with the closest free neighbours:
 		std::vector<SimHash>::const_iterator si = samplear.begin(), se = samplear.end();
 		for (SampleIndex sidx=0; si != se; ++si,++sidx)
@@ -592,7 +531,7 @@ std::vector<SimHash> GenModel::run(
 				}
 			}
 		}
-		if (logout) (*logout) << _TXT("unify individuals out of ") << groupIdAllocator.nofGroupsAllocated() << std::endl;
+		if (logout) logout << string_format( _TXT("unify individuals out of %u"), groupIdAllocator.nofGroupsAllocated());
 
 		// Go through all groups and try to make elements jump to neighbour groups and try
 		// to unify groups:
@@ -683,7 +622,7 @@ std::vector<SimHash> GenModel::run(
 				}
 			}
 		}
-		if (logout) (*logout) << _TXT("start mutation step") << std::endl;
+		if (logout) logout << _TXT("starting mutation step");
 
 		// Mutation step for all groups and dropping of elements that got too far away from the
 		// representants genom:
@@ -717,13 +656,13 @@ std::vector<SimHash> GenModel::run(
 			}
 		}
 	}
-	if (logout) (*logout) << _TXT("eliminate redundant groups") << std::endl;
+	if (logout) logout << _TXT("eliminating redundant groups");
 	{
 		// Build the dependency graph:
 		DependencyGraph groupDependencyGraph = buildGroupDependencyGraph( samplear.size(), groupIdAllocator.nofGroupIdsAllocated(), sampleSimGroupMap);
 		groupDependencyGraph = reduceGroupDependencyGraphToIsa( groupDependencyGraph, groupInstanceMap, m_isaf);
 #ifdef STRUS_LOWLEVEL_DEBUG
-		std::cerr << "dependencies before elimination:" << std::endl;
+		std::cerr << _TXT("dependencies before elimination:") << std::endl;
 		{
 			DependencyGraph::const_iterator di = groupDependencyGraph.begin(), de = groupDependencyGraph.end();
 			for (; di != de; ++di)
@@ -735,7 +674,7 @@ std::vector<SimHash> GenModel::run(
 		// Eliminate circular references from the graph:
 		eliminateCircularReferences( groupDependencyGraph);
 #ifdef STRUS_LOWLEVEL_DEBUG
-		std::cerr << "dependencies after elimination:" << std::endl;
+		std::cerr << _TXT("dependencies after elimination:") << std::endl;
 		{
 			DependencyGraph::const_iterator di = groupDependencyGraph.begin(), de = groupDependencyGraph.end();
 			for (; di != de; ++di)
@@ -754,7 +693,7 @@ std::vector<SimHash> GenModel::run(
 		}
 	}
 	// Build the result:
-	if (logout) (*logout) << _TXT("build the result") << std::endl;
+	if (logout) logout << _TXT("building the result");
 	std::vector<SimHash> rt;
 
 	// Count the number of singletons and possibly add them to the result:
@@ -771,7 +710,7 @@ std::vector<SimHash> GenModel::run(
 			}
 		}
 	}
-	if (logout) (*logout) << _TXT("number of singletons found: ") << nofSigletons << std::endl;
+	if (logout) logout << string_format( _TXT("found %u singletons"), nofSigletons);
 
 	// Add the groups to the result:
 	GroupInstanceList::const_iterator gi = groupInstanceList.begin(), ge = groupInstanceList.end();
@@ -780,11 +719,11 @@ std::vector<SimHash> GenModel::run(
 		rt.push_back( gi->gencode());
 	}
 #ifdef STRUS_LOWLEVEL_DEBUG
-	std::cerr << "got " << rt.size() << " categories" << std::endl;
+	std::cerr << string_format( _TXT("got %u categories"), rt.size()) << std::endl;
 	gi = groupInstanceList.begin(), ge = groupInstanceList.end();
 	for (; gi != ge; ++gi)
 	{
-		std::cerr << "category " << gi->id() << ": ";
+		std::cerr << string_format( _TXT("category %u: "), gi->id());
 		SimGroup::const_iterator mi = gi->begin(), me = gi->end();
 		for (unsigned int midx=0; mi != me; ++mi,++midx)
 		{
@@ -794,7 +733,7 @@ std::vector<SimHash> GenModel::run(
 		std::cerr << std::endl;
 	}
 #endif
-	if (logout) (*logout) << _TXT("done, got categories ") << rt.size() << std::endl;
+	if (logout) logout << string_format( _TXT("done, got %u categories"), rt.size());
 	return rt;
 }
 

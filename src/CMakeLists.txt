@@ -6,12 +6,14 @@ cmake_minimum_required(VERSION 2.6 FATAL_ERROR)
 set(
 	libstrus_vectorspace_source_files
 	utils.cpp
+	logger.cpp
 	internationalization.cpp
 	random.cpp
 	simHash.cpp
 	simGroup.cpp
 	sampleSimGroupMap.cpp
 	simRelationMap.cpp
+	getSimRelationMap.cpp
 	lshModel.cpp
 	genModel.cpp 
 	vectorSpaceModel.cpp

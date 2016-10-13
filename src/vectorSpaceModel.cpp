@@ -77,6 +77,7 @@ struct VectorSpaceModelHdr
 struct VectorSpaceModelConfig
 {
 	enum Defaults {
+		DefaultThreads = 0,
 		DefaultDim = 300,
 		DefaultBits = 64,
 		DefaultVariations = 32,
@@ -93,7 +94,7 @@ struct VectorSpaceModelConfig
 		DefaultWithSingletons = 0
 	};
 	VectorSpaceModelConfig( const VectorSpaceModelConfig& o)
-		:path(o.path),prepath(o.prepath),logfile(o.logfile)
+		:path(o.path),prepath(o.prepath),logfile(o.logfile),threads(o.threads)
 		,dim(o.dim),bits(o.bits),variations(o.variations)
 		,simdist(o.simdist),raddist(o.raddist),eqdist(o.eqdist),mutations(o.mutations),votes(o.votes)
 		,descendants(o.descendants),maxage(o.maxage),iterations(o.iterations)
@@ -102,7 +103,7 @@ struct VectorSpaceModelConfig
 		,with_singletons(o.with_singletons)
 		{}
 	VectorSpaceModelConfig()
-		:path(),prepath(),logfile()
+		:path(),prepath(),logfile(),threads(DefaultThreads)
 		,dim(DefaultDim),bits(DefaultBits),variations(DefaultVariations)
 		,simdist(DefaultSimDist),raddist(DefaultRadDist),eqdist(DefaultEqDist)
 		,mutations(DefaultMutations),votes(DefaultMutationVotes)
@@ -112,7 +113,7 @@ struct VectorSpaceModelConfig
 		,with_singletons((bool)DefaultWithSingletons)
 		{}
 	VectorSpaceModelConfig( const std::string& config, ErrorBufferInterface* errorhnd)
-		:path(),prepath(),logfile()
+		:path(),prepath(),logfile(),threads(DefaultThreads)
 		,dim(DefaultDim),bits(DefaultBits),variations(DefaultVariations)
 		,simdist(DefaultSimDist),raddist(DefaultRadDist),eqdist(DefaultEqDist)
 		,mutations(DefaultMutations),votes(DefaultMutationVotes)
@@ -125,6 +126,7 @@ struct VectorSpaceModelConfig
 		if (extractStringFromConfigString( path, src, "path", errorhnd)){}
 		if (extractStringFromConfigString( prepath, src, "prepath", errorhnd)){}
 		if (extractStringFromConfigString( logfile, src, "logfile", errorhnd)){}
+		if (extractUIntFromConfigString( threads, src, "threads", errorhnd)){}
 		if (extractUIntFromConfigString( dim, src, "dim", errorhnd)){}
 		if (extractUIntFromConfigString( bits, src, "bit", errorhnd)){}
 		if (extractUIntFromConfigString( variations, src, "var", errorhnd)){}
@@ -178,6 +180,7 @@ struct VectorSpaceModelConfig
 		buf << "path=" << path << ";" << std::endl;
 		buf << "prepath=" << prepath << ";" << std::endl;
 		buf << "logfile=" << logfile << ";" << std::endl;
+		buf << "threads=" << threads << ";" << std::endl;
 		buf << "dim=" << dim << ";" << std::endl;
 		buf << "bit=" << bits << ";" << std::endl;
 		buf << "var=" << variations << ";" << std::endl;
@@ -198,6 +201,7 @@ struct VectorSpaceModelConfig
 	std::string path;		///< path of model
 	std::string prepath;		///< for builder: path with preprocessed model (similarity relation map and input LSH values are precalculated)
 	std::string logfile;		///< file where to log some status data
+	unsigned int threads;
 	unsigned int dim;		///< input vector dimension
 	unsigned int bits;		///< number of bits to calculate for an LSH per variation
 	unsigned int variations;	///< number of variations
