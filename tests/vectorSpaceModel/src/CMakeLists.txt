@@ -11,7 +11,7 @@ include_directories(
 )
 link_directories(
 	"${PROJECT_SOURCE_DIR}/src"
-	"${PROJECT_SOURCE_DIR}/3rdParty/armadillo"
+	"${PROJECT_BINARY_DIR}/3rdParty/armadillo"
 	"${Boost_LIBRARY_DIRS}"
 	"${strusbase_LIBRARY_DIRS}"
 )

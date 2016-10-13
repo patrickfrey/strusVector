@@ -89,8 +89,8 @@ struct VectorSpaceModelConfig
 		DefaultMaxAge = 20,
 		DefaultIterations = 20,
 		DefaultAssignments = 7,
-		DefaultWithSingletons = 0,
-		DefaultLoadModel = 0
+		DefaultIsaf = 60,
+		DefaultWithSingletons = 0
 	};
 	VectorSpaceModelConfig( const VectorSpaceModelConfig& o)
 		:path(o.path),prepath(o.prepath),logfile(o.logfile)
@@ -98,6 +98,7 @@ struct VectorSpaceModelConfig
 		,simdist(o.simdist),raddist(o.raddist),eqdist(o.eqdist),mutations(o.mutations),votes(o.votes)
 		,descendants(o.descendants),maxage(o.maxage),iterations(o.iterations)
 		,assignments(o.assignments)
+		,isaf(o.isaf)
 		,with_singletons(o.with_singletons)
 		{}
 	VectorSpaceModelConfig()
@@ -107,6 +108,7 @@ struct VectorSpaceModelConfig
 		,mutations(DefaultMutations),votes(DefaultMutationVotes)
 		,descendants(DefaultDescendants),maxage(DefaultMaxAge),iterations(DefaultIterations)
 		,assignments(DefaultAssignments)
+		,isaf((float)DefaultIsaf / 100)
 		,with_singletons((bool)DefaultWithSingletons)
 		{}
 	VectorSpaceModelConfig( const std::string& config, ErrorBufferInterface* errorhnd)
@@ -116,6 +118,7 @@ struct VectorSpaceModelConfig
 		,mutations(DefaultMutations),votes(DefaultMutationVotes)
 		,descendants(DefaultDescendants),maxage(DefaultMaxAge),iterations(DefaultIterations)
 		,assignments(DefaultAssignments)
+		,isaf((float)DefaultIsaf / 100)
 		,with_singletons((bool)DefaultWithSingletons)
 	{
 		std::string src = config;
@@ -149,6 +152,8 @@ struct VectorSpaceModelConfig
 		}
 		if (extractUIntFromConfigString( maxage, src, "maxage", errorhnd)){}
 		if (extractUIntFromConfigString( assignments, src, "assignments", errorhnd)){}
+		double val;
+		if (extractFloatFromConfigString( val, src, "isaf", errorhnd)){isaf=(float)val;}
 		if (extractBooleanFromConfigString( with_singletons, src, "singletons", errorhnd)){}
 
 		if (dim == 0 || bits == 0 || variations == 0 || mutations == 0 || descendants == 0 || maxage == 0 || iterations == 0)
@@ -185,6 +190,7 @@ struct VectorSpaceModelConfig
 		buf << "maxage=" << maxage << ";" << std::endl;
 		buf << "iterations=" << iterations << ";" << std::endl;
 		buf << "assignments=" << assignments << ";" << std::endl;
+		buf << "isaf=" << isaf << ";" << std::endl;
 		buf << "singletons=" << (with_singletons?"yes":"no") << ";" << std::endl;
 		return buf.str();
 	}
@@ -204,6 +210,7 @@ struct VectorSpaceModelConfig
 	unsigned int maxage;		///< a factor used to slow down mutation rate
 	unsigned int iterations;	///< number of iterations in the loop
 	unsigned int assignments;	///< maximum number of group assignments for each input vector
+	float isaf;			///< fraction of elements of a superset that has to be in a subset for declaring the subset as dependent (is a) of the superset
 	bool with_singletons;		///< true, if singleton vectors thould also get into the result
 };
 
@@ -399,7 +406,7 @@ public:
 			checkVersionFile( m_config.prepath + dirSeparator() + VERSIONFILE);
 			m_simrelmap = readSimRelationMapFromFile( m_config.prepath + dirSeparator() + SIMRELFILE);
 			m_lshmodel = readLshModelFromFile( m_config.prepath + dirSeparator() + MATRIXFILE);
-			m_genmodel = GenModel( m_config.simdist, m_config.raddist, m_config.eqdist, m_config.mutations, m_config.votes, m_config.descendants, m_config.maxage, m_config.iterations, m_config.assignments, m_config.with_singletons);
+			m_genmodel = GenModel( m_config.simdist, m_config.raddist, m_config.eqdist, m_config.mutations, m_config.votes, m_config.descendants, m_config.maxage, m_config.iterations, m_config.assignments, m_config.isaf, m_config.with_singletons);
 			m_samplear = readSimHashVectorFromFile( m_config.prepath + dirSeparator() + INPVECFILE);
 			m_modelLoadedFromFile = true;
 
@@ -410,7 +417,7 @@ public:
 		else
 		{
 			m_lshmodel = LshModel( m_config.dim, m_config.bits, m_config.variations);
-			m_genmodel = GenModel( m_config.simdist, m_config.raddist, m_config.eqdist, m_config.mutations, m_config.votes, m_config.descendants, m_config.maxage, m_config.iterations, m_config.assignments, m_config.with_singletons);
+			m_genmodel = GenModel( m_config.simdist, m_config.raddist, m_config.eqdist, m_config.mutations, m_config.votes, m_config.descendants, m_config.maxage, m_config.iterations, m_config.assignments, m_config.isaf, m_config.with_singletons);
 		}
 	}
 	virtual ~VectorSpaceModelBuilder()
@@ -448,18 +455,30 @@ public:
 	{
 		try
 		{
-			if (m_config.path.empty()) throw strus::runtime_error(_TXT("failed to store built instance (no file configured)"));
+			if (!m_modelLoadedFromFile && m_simrelmap.nofSamples() == 0 && m_samplear.size() > 0)
+			{
+				// If we did not call finalize(), we build some structures like similarity relation map for future use to store.
+				const char* logfile = m_config.logfile.empty()?0:m_config.logfile.c_str();
+				m_simrelmap = m_genmodel.getSimRelationMap( m_samplear, logfile);
+			}
+			if (m_config.path.empty())
+			{
+				throw strus::runtime_error(_TXT("failed to store built instance (no file configured)"));
+			}
+			unsigned int ec = createDir( m_config.path, true);
+			if (ec) throw strus::runtime_error(_TXT( "failed to create vector space model directory '%s' (system error %u: %s)"), m_config.path.c_str(), ec, ::strerror(ec));
+#ifdef STRUS_LOWLEVEL_DEBUG
+				writeDumpToFile( tostring(), path + dirSeparator() + DUMPFILE);
+#endif
 			if (m_modelLoadedFromFile)
 			{
+				writeVersionToFile( m_config.path + dirSeparator() + VERSIONFILE);
+				writeConfigurationToFile( m_config, m_config.path + dirSeparator() + CONFIGFILE);
+				writeLshModelToFile( m_lshmodel, m_config.path + dirSeparator() + MATRIXFILE);
 				writeSimHashVectorToFile( m_resultar, std::string( m_config.path + dirSeparator() + RESVECFILE));
 			}
 			else
 			{
-				unsigned int ec = createDir( m_config.path, true);
-				if (ec) throw strus::runtime_error(_TXT( "failed to create vector space model directory '%s' (system error %u: %s)"), m_config.path.c_str(), ec, ::strerror(ec));
-#ifdef STRUS_LOWLEVEL_DEBUG
-				writeDumpToFile( tostring(), path + dirSeparator() + DUMPFILE);
-#endif
 				writeVersionToFile( m_config.path + dirSeparator() + VERSIONFILE);
 				writeConfigurationToFile( m_config, m_config.path + dirSeparator() + CONFIGFILE);
 				writeSimRelationMapToFile( m_simrelmap, m_config.path + dirSeparator() + SIMRELFILE);

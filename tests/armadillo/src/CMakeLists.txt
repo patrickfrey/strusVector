@@ -7,7 +7,7 @@ include_directories(
 	"${PROJECT_BINARY_DIR}/include"
 )
 link_directories(
-	"${PROJECT_SOURCE_DIR}/3rdParty/armadillo"
+	"${PROJECT_BINARY_DIR}/3rdParty/armadillo"
 )
 
 add_executable( testArmadillo testArmadillo.cpp)

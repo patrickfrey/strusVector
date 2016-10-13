@@ -14,6 +14,7 @@
 #include "strus/errorBufferInterface.hpp"
 #include "strus/base/configParser.hpp"
 #include "strus/base/stdint.h"
+#include "strus/base/fileio.hpp"
 #include "sparseDim2Field.hpp"
 #include "armadillo"
 #include <iostream>
@@ -27,6 +28,7 @@
 #include <limits>
 
 #undef STRUS_LOWLEVEL_DEBUG
+#define SAMPLESFILE "samples.bin"
 
 static void initRandomNumberGenerator()
 {
@@ -115,6 +117,8 @@ int main( int argc, const char** argv)
 		std::string config( DEFAULT_CONFIG);
 		unsigned int nofSamples = 1000;
 		unsigned int dim = 0;
+		std::string path;
+		std::string prepath;
 		bool use_prepared_model = false;
 
 		if (argc > 3)
@@ -141,8 +145,8 @@ int main( int argc, const char** argv)
 		}
 		std::cerr << "model config: " << config << std::endl;
 		std::string configsrc = config;
-		std::string prepath;
 		if (!extractUIntFromConfigString( dim, configsrc, "dim", g_errorhnd)) throw std::runtime_error("configuration parameter 'dim' is not specified");
+		if (!extractStringFromConfigString( path, configsrc, "path", g_errorhnd)) throw std::runtime_error("configuration parameter 'path' is not specified");
 		if (extractStringFromConfigString( prepath, configsrc, "prepath", g_errorhnd))
 		{
 			use_prepared_model = true;
@@ -157,7 +161,27 @@ int main( int argc, const char** argv)
 		if (!builder.get()) throw std::runtime_error( g_errorhnd->fetchError());
 
 		std::vector<std::vector<double> > samplear;
-		if (!use_prepared_model)
+		if (use_prepared_model)
+		{
+			std::string content;
+			unsigned int ec = strus::readFile( prepath + strus::dirSeparator() + SAMPLESFILE, content);
+			if (ec) throw std::runtime_error("could not load prepared sample vectors");
+			double const* vi = (const double*)content.c_str();
+			const double* ve = vi + (content.size() / sizeof(double));
+			while (vi < ve)
+			{
+				std::vector<double> elem;
+				unsigned int di = 0, de = dim;
+				for (; di != de && vi != ve; ++di)
+				{
+					elem.push_back( *vi++);
+				}
+				if (di != de) throw std::runtime_error("file with sample vectors does not match in size");
+				samplear.push_back( elem);
+			}
+			if (vi != ve) throw std::runtime_error("file with sample vectors does not match in size");
+		}
+		else
 		{
 			std::cerr << "create " << nofSamples << " sample vectors" << std::endl;
 			for (std::size_t sidx = 0; sidx != nofSamples; ++sidx)
@@ -216,7 +240,17 @@ int main( int argc, const char** argv)
 		{
 			throw std::runtime_error( "error storing the model learnt");
 		}
-
+		std::cerr << "write samples to file" << std::endl;
+		std::string content;
+		{
+			std::vector<std::vector<double> >::const_iterator si = samplear.begin(), se = samplear.end();
+			for (; si != se; ++si)
+			{
+				content.append( (const char*)si->data(), si->size() * sizeof(double));
+			}
+			unsigned int ec = strus::writeFile( path + strus::dirSeparator() + SAMPLESFILE, content);
+			if (ec) throw std::runtime_error("failed to write samples file");
+		}
 		std::cerr << "load model to categorize vectors" << std::endl;
 		std::auto_ptr<strus::VectorSpaceModelInstanceInterface> categorizer( vmodel->createInstance( config));
 		if (!categorizer.get())
