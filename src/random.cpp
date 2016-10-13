@@ -38,7 +38,7 @@ Random::Random()
 
 	m_value = uint32_hash( ((now->tm_year+1)
 				* (now->tm_mon+100)
-				* 13/*[+](now->tm_mday+1)*/));
+				* (now->tm_mday+1)));
 	m_incr = m_value * KnuthIntegerHashFactor;
 }
 
