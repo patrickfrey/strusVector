@@ -65,16 +65,16 @@
 %endif
 
 %define fedora 0
-%define fc22 0
 %define fc23 0
-%if 0%{?fedora_version} == 22
-%define dist fc22
-%define fc22 1
-%define fedora 1
-%endif
+%define fc24 0
 %if 0%{?fedora_version} == 23
 %define dist fc23
 %define fc23 1
+%define fedora 1
+%endif
+%if 0%{?fedora_version} == 24
+%define dist fc24
+%define fc24 1
 %define fedora 1
 %endif
 
@@ -228,6 +228,15 @@ BuildRequires: leveldb-devel
 Requires: leveldb
 %endif
 
+%if %{rhel} || %{centos} || %{scilin} || %{fedora} || %{suse} || %{sles}
+BuildRequires: blas-devel
+BuildRequires: lapack-devel
+BuildRequires: atlas-devel
+Requires: blas
+Requires: lapack
+Requires: atlas
+%endif
+
 # Check if 'Distribution' is really set by OBS (as mentioned in bacula)
 %if ! 0%{?opensuse_bs}
 Distribution: %{dist}
@@ -267,11 +276,6 @@ make DESTDIR=$RPM_BUILD_ROOT install
 rm -rf $RPM_BUILD_ROOT%{_libdir}/debug
 rm -rf $RPM_BUILD_ROOT%{_prefix}/src/debug
 
-# add ldconfig configuration for strusvector library directory
-mkdir -p $RPM_BUILD_ROOT%{_sysconfdir}/ld.so.conf.d
-printf "%{_libdir}/%{name}\n" > $RPM_BUILD_ROOT%{_sysconfdir}/ld.so.conf.d/%{name}.conf
-chmod 644 $RPM_BUILD_ROOT%{_sysconfdir}/ld.so.conf.d/%{name}.conf
-
 %clean
 rm -rf $RPM_BUILD_ROOT
 
@@ -290,16 +294,19 @@ make test
 %{_libdir}/strus/libstrus_armadillo.so.@STRUS_MAJOR_VERSION@.@STRUS_MINOR_VERSION@.@STRUS_PATCH_VERSION@
 %{_libdir}/strus/libstrus_vectorspace.so.@STRUS_MAJOR_VERSION@.@STRUS_MINOR_VERSION@
 %{_libdir}/strus/libstrus_vectorspace.so.@STRUS_MAJOR_VERSION@.@STRUS_MINOR_VERSION@.@STRUS_PATCH_VERSION@
-%{_libdir}/strus/modules/modstrus_analyzer_pattern.so
+%{_libdir}/strus/modules/modstrus_storage_vectorspace.so
 
 %files devel
 %defattr( -, root, root )
-%{_libdir}/name/libstrus_armadillo.so
-%{_libdir}/name/libstrus_vectorspace.so
-%dir %{_includedir}/name
-%{_includedir}/name/*.hpp
-%dir %{_includedir}/name/lib
-%{_includedir}/name/lib/*.hpp
+%{_libdir}/strus/libstrus_armadillo.so
+%{_libdir}/strus/libstrus_vectorspace.so
+%dir %{_includedir}/strus
+%{_includedir}/strus/*.hpp
+%{_includedir}/strus/armadillo
+%dir %{_includedir}/strus/armadillo_bits
+%{_includedir}/strus/armadillo_bits/*.hpp
+%dir %{_includedir}/strus/lib
+%{_includedir}/strus/lib/*.hpp
 
 %changelog
 * Sat Oct 1 2016 Patrick Frey <patrickpfrey@yahoo.com> 0.12.0-0.1
