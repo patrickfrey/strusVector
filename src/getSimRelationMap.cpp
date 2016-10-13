@@ -157,6 +157,7 @@ public:
 				if (cnt % 10000 == 0) m_ctx->logmsg( string_format( _TXT("processed %u lines"), m_ctx->current()));
 			}
 			m_ctx->logmsg( string_format( _TXT("processed %u lines"), m_ctx->current()));
+			m_ctx->pushResult( m_simrelmap);
 		}
 		catch (const std::runtime_error& err)
 		{
