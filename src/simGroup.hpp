@@ -62,7 +62,7 @@ public:
 
 	/// \brief Do a mutation step
 	/// \param[in] samplear global array of samples the reference system of this individual is based on
-	void mutate( const std::vector<SimHash>& samplear,
+	bool mutate( const std::vector<SimHash>& samplear,
 			unsigned int descendants,
 			unsigned int maxNofMutations,
 			unsigned int maxNofVotes);
