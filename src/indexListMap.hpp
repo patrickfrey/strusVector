@@ -38,6 +38,12 @@ public:
 	IndexListMap( const IndexListMap& o)
 		:m_listmap(o.m_listmap),m_list(o.m_list){}
 
+	void clear()
+	{
+		m_listmap.clear();
+		m_list.clear();
+	}
+
 	void add( const KeyType& key, const std::vector<ValueType>& values)
 	{
 		typename ListMap::const_iterator li = m_listmap.find( key);
@@ -62,15 +68,15 @@ public:
 	std::string serialization() const
 	{
 		std::string rt;
-		std::size_t mapsize_n = ByteOrder<std::size_t>::hton( m_listmap.size());
+		unsigned int mapsize_n = ByteOrder<unsigned int>::hton( m_listmap.size());
 		rt.append( (const char*)&mapsize_n, sizeof(mapsize_n));
 
 		typename ListMap::const_iterator li = m_listmap.begin(), le = m_listmap.end();
 		for (; li != le; ++li)
 		{
 			KeyType key_n = ByteOrder<KeyType>::hton( li->first);
-			std::size_t start_n = ByteOrder<std::size_t>::hton( li->second.start);
-			std::size_t size_n = ByteOrder<std::size_t>::hton( li->second.size);
+			uint64_t start_n = ByteOrder<uint64_t>::hton( li->second.start);
+			uint32_t size_n = ByteOrder<uint32_t>::hton( li->second.size);
 
 			rt.append( (const char*)&key_n, sizeof(key_n));
 			rt.append( (const char*)&start_n, sizeof(start_n));
@@ -90,16 +96,16 @@ public:
 		IndexListMap rt;
 		char const* si = content.c_str();
 		const char* se = content.c_str() + content.size();
-		std::size_t mapsize_n;
+		unsigned int mapsize_n;
 		std::memcpy( &mapsize_n, si, sizeof( mapsize_n));
 		si += sizeof(mapsize_n);
-		std::size_t mapsize = ByteOrder<std::size_t>::ntoh( mapsize_n);
-		std::size_t mi = 0;
-		while (si < se && mi < mapsize)
+		unsigned int mapsize = ByteOrder<unsigned int>::ntoh( mapsize_n);
+
+		for (unsigned int mi = 0; si < se && mi < mapsize; ++mi)
 		{
 			KeyType key = parseElem<KeyType>( si, se);
-			std::size_t start = parseElem<std::size_t>( si, se);
-			std::size_t size = parseElem<std::size_t>( si, se);
+			uint64_t start = parseElem<uint64_t>( si, se);
+			uint32_t size = parseElem<uint32_t>( si, se);
 			rt.m_listmap[ key] = IndexListRef( start, size);
 		}
 		while (si < se)

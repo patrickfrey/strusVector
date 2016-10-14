@@ -471,6 +471,8 @@ static void checkSimGroupStructures(
 #endif
 
 std::vector<SimHash> GenModel::run(
+		SampleFeatureIndexMap& sampleFeatureIndexMap,
+		FeatureSampleIndexMap& featureSampleIndexMap,
 		const std::vector<SimHash>& samplear,
 		const SimRelationMap& simrelmap,
 		const char* logfile) const
@@ -705,6 +707,7 @@ std::vector<SimHash> GenModel::run(
 	std::vector<SimHash> rt;
 
 	// Count the number of singletons and possibly add them to the result:
+	featureSampleIndexMap.clear();
 	SampleIndex si=0, se=samplear.size();
 	unsigned int nofSigletons = 0;
 	for (; si != se; ++si)
@@ -714,18 +717,51 @@ std::vector<SimHash> GenModel::run(
 			++nofSigletons;
 			if (m_with_singletons)
 			{
+				// Add singleton to result:
 				rt.push_back( samplear[ si]);
+				// Collect si as group member into featureSampleIndexMap:
+				std::vector<SampleIndex> members;
+				members.push_back( si);
+				featureSampleIndexMap.add( rt.size(), members);
 			}
 		}
 	}
 	if (logout) logout << string_format( _TXT("found %u singletons"), nofSigletons);
 
-	// Add the groups to the result:
+	// Add the groups to the result and collect group members into featureSampleIndexMap:
+	std::vector<FeatureIndex> gidmap( groupIdAllocator.nofGroupIdsAllocated(), 0);
 	GroupInstanceList::const_iterator gi = groupInstanceList.begin(), ge = groupInstanceList.end();
 	for (; gi != ge; ++gi)
 	{
 		rt.push_back( gi->gencode());
+		gidmap[ gi->id()-1] = rt.size();
+		std::vector<SampleIndex> members;
+		SimGroup::const_iterator mi = gi->begin(), me = gi->end();
+		for (; mi != me; ++mi)
+		{
+			members.push_back( *mi);
+		}
+		featureSampleIndexMap.add( rt.size(), members);
 	}
+	// Collect the group membership for every sample into sampleFeatureIndexMap:
+	sampleFeatureIndexMap.clear();
+	for (si=0; si != se; ++si)
+	{
+		std::vector<FeatureIndex> groups;
+		SampleSimGroupMap::const_node_iterator
+			ni = sampleSimGroupMap.node_begin(si),
+			ne = sampleSimGroupMap.node_end(si);
+		for (; ni != ne; ++ni)
+		{
+			if (*ni == 0 || *ni > gidmap.size() || gidmap[*ni-1] == 0) throw strus::runtime_error(_TXT("illegal group id found: %u"), *ni);
+			groups.push_back( gidmap[*ni-1]);
+		}
+		if (!groups.empty())
+		{
+			sampleFeatureIndexMap.add( si, groups);
+		}
+	}
+
 #ifdef STRUS_LOWLEVEL_DEBUG
 	std::cerr << string_format( _TXT("got %u categories"), rt.size()) << std::endl;
 	gi = groupInstanceList.begin(), ge = groupInstanceList.end();
