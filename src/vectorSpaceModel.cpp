@@ -16,6 +16,7 @@
 #include "simRelationMap.hpp"
 #include "lshModel.hpp"
 #include "genModel.hpp"
+#include "indexListMap.hpp"
 #include "strus/base/fileio.hpp"
 #include "strus/base/configParser.hpp"
 #include "strus/versionVector.hpp"
@@ -26,13 +27,16 @@
 using namespace strus;
 #define MODULENAME   "standard vector space model"
 
-#define MATRIXFILE   "model.mat"	// Matrices for LSH calculation
-#define SIMRELFILE   "simrel.mat"	// Sparse matrix of imilarity relation map
-#define RESVECFILE   "result.lsh"	// Result LSH values
-#define INPVECFILE   "input.lsh"	// Input sample LSH values
-#define CONFIGFILE   "config.txt"	// Configuration as text
-#define VERSIONFILE  "version.hdr"	// Version for checking compatibility
-#define DUMPFILE     "dump.txt"		// Textdump output of structures if used with LOWLEVEL DEBUG defined
+#define MATRIXFILE   "model.mat"		// Matrices for LSH calculation
+#define SIMRELFILE   "simrel.mat"		// Sparse matrix of imilarity relation map
+#define RESVECFILE   "result.lsh"		// Result LSH values
+#define INPVECFILE   "input.lsh"		// Input sample LSH values
+#define CONFIGFILE   "config.txt"		// Configuration as text
+#define VERSIONFILE  "version.hdr"		// Version for checking compatibility
+#define DUMPFILE     "dump.txt"			// Textdump output of structures if used with LOWLEVEL DEBUG defined
+#define FEATIDXFILE  "featsampleindex.fsi"	// map feature number to sample indices
+#define IDXFEATFILE  "samplefeatindex.sfi"	// map sample index to feature numbers
+
 
 #undef STRUS_LOWLEVEL_DEBUG
 
@@ -321,6 +325,37 @@ static void writeSimRelationMapToFile( const SimRelationMap& simrelmap, const st
 	if (ec) throw strus::runtime_error(_TXT("failed to write similarity relation map to file '%s' (errno %u): %s"), filename.c_str(), ec, ::strerror(ec));
 }
 
+typedef IndexListMap<FeatureIndex,SampleIndex> FeatureSampleIndexMap;
+typedef IndexListMap<SampleIndex,FeatureIndex> SampleFeatureIndexMap;
+#if 0
+static SampleFeatureIndexMap readSampleFeatureIndexMapFromFile( const std::string& filename)
+{
+	std::string content;
+	unsigned int ec = readFile( filename, content);
+	if (ec) throw strus::runtime_error(_TXT("failed to read sample feature index map from file '%s' (errno %u): %s"), filename.c_str(), ec, ::strerror(ec));
+	return SampleFeatureIndexMap::fromSerialization( content);
+}
+
+static void writeSampleFeatureIndexMapToFile( const SampleFeatureIndexMap& map, const std::string& filename)
+{
+	unsigned int ec = writeFile( filename, map.serialization());
+	if (ec) throw strus::runtime_error(_TXT("failed to write sample feature index map to file '%s' (errno %u): %s"), filename.c_str(), ec, ::strerror(ec));
+}
+
+static FeatureSampleIndexMap readFeatureSampleIndexMapFromFile( const std::string& filename)
+{
+	std::string content;
+	unsigned int ec = readFile( filename, content);
+	if (ec) throw strus::runtime_error(_TXT("failed to read sample feature index map from file '%s' (errno %u): %s"), filename.c_str(), ec, ::strerror(ec));
+	return FeatureSampleIndexMap::fromSerialization( content);
+}
+
+static void writeFeatureSampleIndexMapToFile( const FeatureSampleIndexMap& map, const std::string& filename)
+{
+	unsigned int ec = writeFile( filename, map.serialization());
+	if (ec) throw strus::runtime_error(_TXT("failed to write sample feature index map to file '%s' (errno %u): %s"), filename.c_str(), ec, ::strerror(ec));
+}
+#endif
 
 class VectorSpaceModelInstance
 	:public VectorSpaceModelInstanceInterface
@@ -338,6 +373,9 @@ public:
 		writeDumpToFile( tostring(), m_config.path + dirSeparator() + DUMPFILE);
 #endif
 	}
+
+	VectorSpaceModelInstance( const VectorSpaceModelInstance& o)
+		:m_errorhnd(o.m_errorhnd),m_config(o.m_config),m_lshmodel(o.m_lshmodel),m_sampleFeatureIndexMap(o.m_sampleFeatureIndexMap),m_featureSampleIndexMap(o.m_featureSampleIndexMap){}
 
 	virtual ~VectorSpaceModelInstance()
 	{}
@@ -361,14 +399,14 @@ public:
 		CATCH_ERROR_ARG1_MAP_RETURN( _TXT("error in instance of '%s' mapping vector to features: %s"), MODULENAME, *m_errorhnd, std::vector<unsigned int>());
 	}
 
-	virtual std::vector<unsigned int> mapFeatureToIndices( unsigned int feature) const
+	virtual std::vector<unsigned int> mapFeatureToIndices( unsigned int /*feature*/) const
 	{
-		
+		return std::vector<unsigned int>();
 	}
 
-	virtual std::vector<unsigned int> mapIndexToFeatures( unsigned int index) const
+	virtual std::vector<unsigned int> mapIndexToFeatures( unsigned int /*index*/) const
 	{
-		
+		return std::vector<unsigned int>();
 	}
 
 	virtual unsigned int nofFeatures() const
@@ -402,6 +440,8 @@ private:
 	VectorSpaceModelConfig m_config;
 	LshModel m_lshmodel;
 	std::vector<SimHash> m_individuals;
+	SampleFeatureIndexMap m_sampleFeatureIndexMap;
+	FeatureSampleIndexMap m_featureSampleIndexMap;
 };
 
 
