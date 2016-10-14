@@ -485,6 +485,7 @@ std::vector<SimHash> GenModel::run(
 	unsigned int iteration=0;
 	for (; iteration != m_iterations; ++iteration)
 	{
+		unsigned int mutationcnt = 0;
 		if (logout) logout << string_format( _TXT("starting iteration %u"), iteration);
 #ifdef STRUS_LOWLEVEL_DEBUG
 		checkSimGroupStructures( groupInstanceList, groupInstanceMap, sampleSimGroupMap, samplear.size());
@@ -522,7 +523,10 @@ std::vector<SimHash> GenModel::run(
 					// ...if we did not find such a group we found a new one with the two
 					// elements as members:
 					SimGroup newgroup( samplear, sidx, neighbour.index, groupIdAllocator.alloc());
-					newgroup.mutate( samplear, m_descendants, age_mutations( newgroup, m_maxage, m_mutations), age_mutation_votes( newgroup, m_maxage, m_votes));
+					if (newgroup.mutate( samplear, m_descendants, age_mutations( newgroup, m_maxage, m_mutations), age_mutation_votes( newgroup, m_maxage, m_votes)))
+					{
+						++mutationcnt;
+					}
 					sampleSimGroupMap.insert( neighbour.index, newgroup.id());
 					sampleSimGroupMap.insert( sidx, newgroup.id());
 					groupInstanceList.push_back( newgroup);
@@ -574,7 +578,10 @@ std::vector<SimHash> GenModel::run(
 							// Add member of sim_gi to gi:
 							gi->addMember( *sim_mi);
 							sampleSimGroupMap.insert( *sim_mi, gi->id());
-							gi->mutate( samplear, m_descendants, age_mutations( *gi, m_maxage, m_mutations), age_mutation_votes( *gi, m_maxage, m_votes));
+							if (gi->mutate( samplear, m_descendants, age_mutations( *gi, m_maxage, m_mutations), age_mutation_votes( *gi, m_maxage, m_votes)))
+							{
+								++mutationcnt;
+							}
 							if (!sim_gi->gencode().near( gi->gencode(), m_eqdist))
 							{
 								break;
@@ -655,7 +662,8 @@ std::vector<SimHash> GenModel::run(
 				--gi;
 			}
 		}
-	}
+		if (logout) logout << string_format(_TXT("number of mutations: %u"), mutationcnt);
+	}/*for (; iteration...*/
 	if (logout) logout << _TXT("eliminating redundant groups");
 	{
 		// Build the dependency graph:

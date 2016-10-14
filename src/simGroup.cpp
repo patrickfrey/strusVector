@@ -200,8 +200,9 @@ SimHash SimGroup::inithash( const std::vector<SimHash>& samplear) const
 	return rt;
 }
 
-void SimGroup::mutate( const std::vector<SimHash>& samplear, unsigned int descendants, unsigned int maxNofMutations, unsigned int maxNofVotes)
+bool SimGroup::mutate( const std::vector<SimHash>& samplear, unsigned int descendants, unsigned int maxNofMutations, unsigned int maxNofVotes)
 {
+	bool rt = false;
 	std::vector<SimHash> descendantlist;
 	descendantlist.reserve( descendants);
 
@@ -223,7 +224,9 @@ void SimGroup::mutate( const std::vector<SimHash>& samplear, unsigned int descen
 		setGencode( descendantlist[ selected]);
 		m_fitness_valid = true;
 		m_fitness = max_fitness;
+		rt = true;
 	}
+	return rt;
 }
 
 unsigned int SimGroup::diffMembers( const SimGroup& o, unsigned int maxdiff) const

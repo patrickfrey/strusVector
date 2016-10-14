@@ -79,6 +79,7 @@ SimRelationMap SimRelationMap::mirror() const
 	return rt;
 }
 
+enum {SerializeElementSize=(sizeof(SampleIndex)+sizeof(SampleIndex)+sizeof(unsigned short))};
 struct SerializeElement
 {
 	SampleIndex row;
@@ -122,7 +123,9 @@ std::string SimRelationMap::serialization() const
 		{
 			SerializeElement elem( si, ri->index, ri->simdist);
 			elem.hton();
-			rt.append( (const char*)&elem, sizeof(elem));
+			rt.append( (const char*)&elem.row, sizeof(elem.row));
+			rt.append( (const char*)&elem.col, sizeof(elem.col));
+			rt.append( (const char*)&elem.simdist, sizeof(elem.simdist));
 		}
 	}
 	return rt;
@@ -131,22 +134,29 @@ std::string SimRelationMap::serialization() const
 SimRelationMap SimRelationMap::fromSerialization( const std::string& blob)
 {
 	SimRelationMap rt;
-	SerializeElement const* si = (const SerializeElement*)blob.c_str();
-	std::size_t arsize = blob.size() / sizeof(SerializeElement);
-	if (blob.size() % sizeof(SerializeElement) != 0)
+	char const* si = blob.c_str();
+	if (blob.size() % SerializeElementSize != 0)
 	{
 		throw strus::runtime_error(_TXT("incompatible data structure serialization"));
 	}
-	const SerializeElement* se = si + arsize;
-	while (si != se)
+	const char* se = si + blob.size();
+	while (si < se)
 	{
-		SampleIndex ridx_n = si->row;
+		SampleIndex* row = (SampleIndex*)si; si += sizeof(SampleIndex);
+		SampleIndex* col = (SampleIndex*)si; si += sizeof(SampleIndex);
+		unsigned short* simdist = (unsigned short*)si; si += sizeof(unsigned short);
+
+		SampleIndex ridx_n = *row;
 		std::vector<Element> elemlist;
-		for (; si != se && si->row == ridx_n; ++si)
+		while (si != se && *row == ridx_n)
 		{
-			SerializeElement elem( *si);
+			SerializeElement elem( *row, *col, *simdist);
 			elem.ntoh();
 			elemlist.push_back( Element( elem.col, elem.simdist));
+
+			row = (SampleIndex*)si; si += sizeof(SampleIndex);
+			col = (SampleIndex*)si; si += sizeof(SampleIndex);
+			simdist = (unsigned short*)si; si += sizeof(unsigned short);
 		}
 		rt.addRow( ByteOrder<SampleIndex>::ntoh(ridx_n), elemlist);
 	}
