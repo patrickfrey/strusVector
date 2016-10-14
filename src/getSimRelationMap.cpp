@@ -112,11 +112,6 @@ public:
 		m_simrelmap.join( result);
 	}
 
-	void signalStop()
-	{
-		m_sampleIndex.set( m_samplear->size());
-	}
-
 	const SimRelationMap& result()
 	{
 		return m_simrelmap;

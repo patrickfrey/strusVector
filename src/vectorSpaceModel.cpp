@@ -361,6 +361,16 @@ public:
 		CATCH_ERROR_ARG1_MAP_RETURN( _TXT("error in instance of '%s' mapping vector to features: %s"), MODULENAME, *m_errorhnd, std::vector<unsigned int>());
 	}
 
+	virtual std::vector<unsigned int> mapFeatureToIndices( unsigned int feature) const
+	{
+		
+	}
+
+	virtual std::vector<unsigned int> mapIndexToFeatures( unsigned int index) const
+	{
+		
+	}
+
 	virtual unsigned int nofFeatures() const
 	{
 		return m_individuals.size();

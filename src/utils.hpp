@@ -12,7 +12,6 @@
 #include <boost/scoped_array.hpp>
 #include <boost/unordered_map.hpp>
 #include <boost/atomic.hpp>
-#include <boost/thread.hpp>
 #include <boost/thread/mutex.hpp>
 #include <boost/thread/condition_variable.hpp> 
 
@@ -110,18 +109,6 @@ typedef boost::mutex Mutex;
 typedef boost::mutex::scoped_lock ScopedLock;
 typedef boost::unique_lock<boost::mutex> UniqueLock;
 typedef boost::condition_variable ConditionVariable;
-
-template <class Task>
-class Thread
-	:public boost::thread
-{
-public:
-	explicit Thread( Task* task)
-		:boost::thread( boost::bind( &Task::run, task))
-	{}
-};
-
-typedef boost::thread_group ThreadGroup;
 
 }} //namespace
 #endif
