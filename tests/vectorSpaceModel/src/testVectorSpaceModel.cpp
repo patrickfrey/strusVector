@@ -205,7 +205,7 @@ int main( int argc, const char** argv)
 					vec = createSimilarVector( samplear[ idx], sim);
 				}
 				samplear.push_back( vec);
-				builder->addSampleVector( vec);
+				builder->addVector( vec);
 			}
 		}
 

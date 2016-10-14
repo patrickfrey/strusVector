@@ -7,7 +7,7 @@
  */
 #ifndef _STRUS_THREAD_HPP_INCLUDED
 #define _STRUS_THREAD_HPP_INCLUDED
-#include "private/utils.hpp"
+#include "utils.hpp"
 
 namespace strus {
 

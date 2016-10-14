@@ -70,7 +70,7 @@ private:
 
 SimRelationMap GenModel::getSimRelationMap( const std::vector<SimHash>& samplear, const char* logfile) const
 {
-	return strus::getSimRelationMap( samplear, m_simdist, logfile);
+	return strus::getSimRelationMap( samplear, m_simdist, logfile, m_threads);
 }
 
 typedef std::list<SimGroup> GroupInstanceList;

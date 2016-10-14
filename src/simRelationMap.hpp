@@ -20,18 +20,23 @@ namespace strus {
 class SimRelationMap
 {
 public:
+	/// \brief One column element in the sparse matrix of similarity relations
 	struct Element
 	{
-		SampleIndex index;
-		unsigned short simdist;
+		SampleIndex index;		///> index of the similar object
+		unsigned short simdist;		///> edit distance describing similarity
 
+		/// \brief Default constructor
 		Element()
 			:index(0),simdist(0){}
+		/// \brief Constructor
 		Element( SampleIndex index_, unsigned short simdist_)
 			:index(index_),simdist(simdist_){}
+		/// \brief Copy constructor
 		Element( const Element& o)
 			:index(o.index),simdist(o.simdist){}
 
+		/// \brief Order with ascending similarity (closest first)
 		bool operator < (const Element& o) const
 		{
 			if (simdist == o.simdist) return index < o.index;
@@ -40,16 +45,20 @@ public:
 	};
 
 public:
+	/// \brief Default constructor
 	SimRelationMap()
 		:m_ar(),m_rowdescrmap(),m_nofSamples(0){}
+	/// \brief Copy constructor
 	SimRelationMap( const SimRelationMap& o)
 		:m_ar(o.m_ar),m_rowdescrmap(o.m_rowdescrmap),m_nofSamples(o.m_nofSamples){}
 
+	/// \brief Access structure for iterating on a row
 	class Row
 	{
 	public:
 		typedef std::vector<Element>::const_iterator const_iterator;
 
+		/// \brief Constructor
 		Row( const const_iterator& begin_, const const_iterator& end_)
 			:m_begin(begin_),m_end(end_){}
 
@@ -62,6 +71,7 @@ public:
 	};
 
 	/// \brief Get a row declared by index
+	/// \param[in] index index of the row to access
 	Row row( const SampleIndex& index) const
 	{
 		RowDescrMap::const_iterator ri = m_rowdescrmap.find( index);
@@ -76,6 +86,7 @@ public:
 	/// \param[in] index index of sample to declare related elements of
 	/// \param[in] ar array of samples with similarity distance related to the element referenced by 'index'
 	void addRow( const SampleIndex& index, const std::vector<Element>& ar);
+	void addRow( const SampleIndex& index, std::vector<Element>::const_iterator ai, const std::vector<Element>::const_iterator& ae);
 
 	/// \brief Get the total number of similarity relations detect until now
 	std::size_t nofRelationsDetected() const
@@ -83,6 +94,7 @@ public:
 		return m_ar.size();
 	}
 
+	/// \brief Get one more than the maximum number of a sample inserted
 	SampleIndex nofSamples() const
 	{
 		return m_nofSamples;
@@ -95,7 +107,14 @@ public:
 	/// \brief Serialize
 	std::string serialization() const;
 	/// \brief Deserialize
+	/// \param[in] blob the content with the serialization to build the object from
+	/// \return the deserialized object
 	static SimRelationMap fromSerialization( const std::string& blob);
+
+	/// \brief Join two similarity relation maps to one without overlapping rows
+	/// \param[in] o similarity relation map to join with
+	/// \remark throws when rows of the two maps are not disjoint
+	void join( const SimRelationMap& o);
 
 private:
 	struct RowDescr
