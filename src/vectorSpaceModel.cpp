@@ -34,8 +34,8 @@ using namespace strus;
 #define CONFIGFILE   "config.txt"		// Configuration as text
 #define VERSIONFILE  "version.hdr"		// Version for checking compatibility
 #define DUMPFILE     "dump.txt"			// Textdump output of structures if used with LOWLEVEL DEBUG defined
-#define FEATIDXFILE  "featsampleindex.fsi"	// map feature number to sample indices
-#define IDXFEATFILE  "samplefeatindex.sfi"	// map sample index to feature numbers
+#define FEATIDXFILE  "featsampleindex.fsi"	// map feature number to sample indices [FeatureSampleIndexMap]
+#define IDXFEATFILE  "samplefeatindex.sfi"	// map sample index to feature numbers [SampleFeatureIndexMap]
 
 
 #undef STRUS_LOWLEVEL_DEBUG
@@ -325,9 +325,6 @@ static void writeSimRelationMapToFile( const SimRelationMap& simrelmap, const st
 	if (ec) throw strus::runtime_error(_TXT("failed to write similarity relation map to file '%s' (errno %u): %s"), filename.c_str(), ec, ::strerror(ec));
 }
 
-typedef IndexListMap<FeatureIndex,SampleIndex> FeatureSampleIndexMap;
-typedef IndexListMap<SampleIndex,FeatureIndex> SampleFeatureIndexMap;
-#if 0
 static SampleFeatureIndexMap readSampleFeatureIndexMapFromFile( const std::string& filename)
 {
 	std::string content;
@@ -355,7 +352,7 @@ static void writeFeatureSampleIndexMapToFile( const FeatureSampleIndexMap& map, 
 	unsigned int ec = writeFile( filename, map.serialization());
 	if (ec) throw strus::runtime_error(_TXT("failed to write sample feature index map to file '%s' (errno %u): %s"), filename.c_str(), ec, ::strerror(ec));
 }
-#endif
+
 
 class VectorSpaceModelInstance
 	:public VectorSpaceModelInstanceInterface
@@ -369,6 +366,8 @@ public:
 		m_config = readConfigurationFromFile( m_config.path + dirSeparator() + CONFIGFILE, m_errorhnd);
 		m_lshmodel = readLshModelFromFile( m_config.path + dirSeparator() + MATRIXFILE);
 		m_individuals = readSimHashVectorFromFile( m_config.path + dirSeparator() + RESVECFILE);
+		m_sampleFeatureIndexMap = readSampleFeatureIndexMapFromFile( m_config.path + dirSeparator() + IDXFEATFILE);
+		m_featureSampleIndexMap = readFeatureSampleIndexMapFromFile( m_config.path + dirSeparator() + FEATIDXFILE);
 #ifdef STRUS_LOWLEVEL_DEBUG
 		writeDumpToFile( tostring(), m_config.path + dirSeparator() + DUMPFILE);
 #endif
@@ -399,14 +398,24 @@ public:
 		CATCH_ERROR_ARG1_MAP_RETURN( _TXT("error in instance of '%s' mapping vector to features: %s"), MODULENAME, *m_errorhnd, std::vector<unsigned int>());
 	}
 
-	virtual std::vector<unsigned int> mapFeatureToIndices( unsigned int /*feature*/) const
+	virtual std::vector<unsigned int> mapIndexToFeatures( unsigned int index) const
 	{
-		return std::vector<unsigned int>();
+		std::vector<unsigned int> rt;
+		std::vector<FeatureIndex> res = m_sampleFeatureIndexMap.getValues( index);
+		rt.reserve( res.size());
+		std::vector<FeatureIndex>::const_iterator ri = res.begin(), re =  res.end();
+		for (; ri != re; ++ri) rt.push_back( *ri);
+		return rt;
 	}
 
-	virtual std::vector<unsigned int> mapIndexToFeatures( unsigned int /*index*/) const
+	virtual std::vector<unsigned int> mapFeatureToIndices( unsigned int feature) const
 	{
-		return std::vector<unsigned int>();
+		std::vector<unsigned int> rt;
+		std::vector<FeatureIndex> res = m_featureSampleIndexMap.getValues( feature);
+		rt.reserve( res.size());
+		std::vector<SampleIndex>::const_iterator ri = res.begin(), re =  res.end();
+		for (; ri != re; ++ri) rt.push_back( *ri);
+		return rt;
 	}
 
 	virtual unsigned int nofFeatures() const
@@ -427,9 +436,18 @@ private:
 		txtdump << "lsh model: " << std::endl << m_lshmodel.tostring() << std::endl;
 		txtdump << "individuals: " << std::endl;
 		std::vector<SimHash>::const_iterator ii = m_individuals.begin(), ie = m_individuals.end();
-		for (; ii != ie; ++ii)
+		FeatureIndex fidx = 1;
+		for (; ii != ie; ++ii,++fidx)
 		{
-			txtdump << ii->tostring() << std::endl;
+			std::vector<SampleIndex> members = m_featureSampleIndexMap.getValues( fidx);
+			txtdump << ii->tostring() << ": {";
+			std::vector<SampleIndex>::const_iterator mi = members.begin(), me = members.end();
+			for (std::size_t midx=0; mi != me; ++mi,++midx)
+			{
+				if (midx) txtdump << ", ";
+				txtdump << *mi;
+			}
+			txtdump << "}" << std::endl;
 		}
 		txtdump << std::endl;
 		return txtdump.str();
@@ -452,7 +470,10 @@ public:
 	VectorSpaceModelBuilder( const std::string& config_, ErrorBufferInterface* errorhnd_)
 		:m_errorhnd(errorhnd_),m_config(config_,errorhnd_)
 		,m_simrelmap(),m_lshmodel(),m_genmodel()
-		,m_samplear(),m_resultar(),m_modelLoadedFromFile(false)
+		,m_samplear(),m_resultar()
+		,m_sampleFeatureIndexMap()
+		,m_featureSampleIndexMap()
+		,m_modelLoadedFromFile(false)
 	{
 		if (!m_config.prepath.empty())
 		{
@@ -499,7 +520,9 @@ public:
 			{
 				m_simrelmap = m_genmodel.getSimRelationMap( m_samplear, logfile);
 			}
-			m_resultar = m_genmodel.run( m_samplear, m_simrelmap, logfile);
+			m_resultar = m_genmodel.run(
+					m_sampleFeatureIndexMap, m_featureSampleIndexMap,
+					m_samplear, m_simrelmap, logfile);
 			return true;
 		}
 		CATCH_ERROR_ARG1_MAP_RETURN( _TXT("error finalizing '%s' builder: %s"), MODULENAME, *m_errorhnd, false);
@@ -524,22 +547,17 @@ public:
 #ifdef STRUS_LOWLEVEL_DEBUG
 				writeDumpToFile( tostring(), path + dirSeparator() + DUMPFILE);
 #endif
-			if (m_modelLoadedFromFile)
+			writeVersionToFile( m_config.path + dirSeparator() + VERSIONFILE);
+			writeConfigurationToFile( m_config, m_config.path + dirSeparator() + CONFIGFILE);
+			writeLshModelToFile( m_lshmodel, m_config.path + dirSeparator() + MATRIXFILE);
+			writeSimHashVectorToFile( m_resultar, std::string( m_config.path + dirSeparator() + RESVECFILE));
+			if (!m_modelLoadedFromFile)
 			{
-				writeVersionToFile( m_config.path + dirSeparator() + VERSIONFILE);
-				writeConfigurationToFile( m_config, m_config.path + dirSeparator() + CONFIGFILE);
-				writeLshModelToFile( m_lshmodel, m_config.path + dirSeparator() + MATRIXFILE);
-				writeSimHashVectorToFile( m_resultar, std::string( m_config.path + dirSeparator() + RESVECFILE));
-			}
-			else
-			{
-				writeVersionToFile( m_config.path + dirSeparator() + VERSIONFILE);
-				writeConfigurationToFile( m_config, m_config.path + dirSeparator() + CONFIGFILE);
 				writeSimRelationMapToFile( m_simrelmap, m_config.path + dirSeparator() + SIMRELFILE);
-				writeLshModelToFile( m_lshmodel, m_config.path + dirSeparator() + MATRIXFILE);
 				writeSimHashVectorToFile( m_samplear, m_config.path + dirSeparator() + INPVECFILE);
-				writeSimHashVectorToFile( m_resultar, m_config.path + dirSeparator() + RESVECFILE);
 			}
+			writeSampleFeatureIndexMapToFile( m_sampleFeatureIndexMap, m_config.path + dirSeparator() + IDXFEATFILE);
+			writeFeatureSampleIndexMapToFile( m_featureSampleIndexMap, m_config.path + dirSeparator() + FEATIDXFILE);
 			return true;
 		}
 		CATCH_ERROR_ARG1_MAP_RETURN( _TXT("error storing '%s' builder: %s"), MODULENAME, *m_errorhnd, false);
@@ -572,6 +590,8 @@ private:
 	GenModel m_genmodel;
 	std::vector<SimHash> m_samplear;
 	std::vector<SimHash> m_resultar;
+	SampleFeatureIndexMap m_sampleFeatureIndexMap;
+	FeatureSampleIndexMap m_featureSampleIndexMap;
 	bool m_modelLoadedFromFile;
 };
 
@@ -605,6 +625,10 @@ bool VectorSpaceModel::destroyModel( const std::string& configstr) const
 		VectorSpaceModelConfig config( configstr, m_errorhnd);
 		if (config.path.empty()) throw strus::runtime_error(_TXT("no path defined, cannot remove model"));
 		unsigned int ec;
+		ec = removeFile( config.path + dirSeparator() + IDXFEATFILE);
+		if (ec) throw strus::runtime_error(_TXT("failed to remove file '%s': %s (%u)"), IDXFEATFILE, ::strerror(ec), ec);
+		ec = removeFile( config.path + dirSeparator() + FEATIDXFILE);
+		if (ec) throw strus::runtime_error(_TXT("failed to remove file '%s': %s (%u)"), FEATIDXFILE, ::strerror(ec), ec);
 		ec = removeFile( config.path + dirSeparator() + MATRIXFILE);
 		if (ec) throw strus::runtime_error(_TXT("failed to remove file '%s': %s (%u)"), MATRIXFILE, ::strerror(ec), ec);
 		ec = removeFile( config.path + dirSeparator() + SIMRELFILE);

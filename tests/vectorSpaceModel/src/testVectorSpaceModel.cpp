@@ -275,32 +275,68 @@ int main( int argc, const char** argv)
 		FeatureMatrix featureMatrix;
 		FeatureMatrix featureInvMatrix;
 		ClassesMap classesmap;
+		unsigned int groupAssozMisses = 0;
+		unsigned int groupAssozFalses = 0;
 
 		std::vector<std::vector<double> >::const_iterator si = samplear.begin(), se = samplear.end();
 		for (std::size_t sidx=0; si != se; ++si,++sidx)
 		{
 			std::vector<unsigned int> ctgar( categorizer->mapVectorToFeatures( *si));
+			std::vector<unsigned int> ctgar2( categorizer->mapIndexToFeatures( sidx));
 			std::vector<unsigned int>::const_iterator ci = ctgar.begin(), ce = ctgar.end();
+			std::vector<unsigned int>::const_iterator zi = ctgar2.begin(), ze = ctgar2.end();
 			std::cout << "[" << sidx << "] => ";
-			for (std::size_t cidx=0; ci != ce; ++ci,++cidx)
+			for (std::size_t cidx=0; ci != ce; ++ci,++cidx,++zi)
 			{
+				while (zi != ze && *zi < *ci)
+				{
+					++groupAssozFalses;
+					++zi;
+				}
+				if (zi == ze || *zi > *ci)
+				{
+					++groupAssozMisses;
+				}
 				featureMatrix( sidx, *ci-1) = 1;
 				featureInvMatrix( *ci-1, sidx) = 1;
 				if (cidx) std::cout << ", ";
 				std::cout << *ci;
 				classesmap.insert( ClassesElem( *ci, sidx));
 			}
+			while (zi < ze)
+			{
+				++groupAssozFalses;
+				++zi;
+			}
 			std::cout << std::endl;
 		}
 		// Output classes:
+		unsigned int memberAssozMisses = 0;
+		unsigned int memberAssozFalses = 0;
 		ClassesMap::const_iterator ci = classesmap.begin(), ce = classesmap.end();
 		while (ci != ce)
 		{
 			unsigned int key = ci->first;
+			std::vector<unsigned int> members( categorizer->mapFeatureToIndices( ci->first));
+			std::vector<unsigned int>::const_iterator mi = members.begin(), me = members.end();
 			std::cout << "(" << key << ") <= ";
-			for (; ci != ce && ci->first == key; ++ci)
+			for (; ci != ce && ci->first == key; ++ci,++mi)
 			{
+				while (mi != me && *mi < ci->second)
+				{
+					++memberAssozFalses;
+					++mi;
+				}
+				if (mi == me || *mi > ci->second)
+				{
+					++memberAssozMisses;
+				}
 				std::cout << ' ' << ci->second;
+			}
+			while (mi < me)
+			{
+				++memberAssozFalses;
+				++mi;
 			}
 			std::cout << std::endl;
 		}
@@ -369,6 +405,10 @@ int main( int argc, const char** argv)
 		std::cerr << "output:" << std::endl << outSimMatrix.tostring() << std::endl;
 		std::cerr << "expected:" << std::endl << expSimMatrix.tostring() << std::endl;
 #endif
+		std::cerr << "group assoz miss = " << groupAssozMisses << std::endl;
+		std::cerr << "group assoz false = " << groupAssozFalses << std::endl;
+		std::cerr << "member assoz miss = " << memberAssozMisses << std::endl;
+		std::cerr << "member assoz false = " << memberAssozFalses << std::endl;
 		std::cerr << "number of similarities = " << nofSimilarities << " reflexive = " << (nofSimilarities*2) << std::endl;
 		std::cerr << "number of misses = " << nofMisses << std::endl;
 		std::cerr << "false positives = " << nofFalsePositives << std::endl;
