@@ -423,6 +423,11 @@ public:
 		return m_individuals.size();
 	}
 
+	virtual unsigned int nofSamples() const
+	{
+		return m_sampleFeatureIndexMap.maxkey()+1;
+	}
+
 	virtual std::string config() const
 	{
 		return m_config.tostring();

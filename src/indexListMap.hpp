@@ -34,9 +34,9 @@ class IndexListMap
 {
 public:
 	IndexListMap()
-		:m_listmap(),m_list(){}
+		:m_listmap(),m_list(),m_maxkey(0){}
 	IndexListMap( const IndexListMap& o)
-		:m_listmap(o.m_listmap),m_list(o.m_list){}
+		:m_listmap(o.m_listmap),m_list(o.m_list),m_maxkey(o.m_maxkey){}
 
 	void clear()
 	{
@@ -46,6 +46,7 @@ public:
 
 	void add( const KeyType& key, const std::vector<ValueType>& values)
 	{
+		if (key > m_maxkey) m_maxkey = key;
 		typename ListMap::const_iterator li = m_listmap.find( key);
 		if (li != m_listmap.end()) throw strus::runtime_error(_TXT("index list map key added twice"));
 		IndexListRef ref( m_list.size(), values.size());
@@ -71,12 +72,18 @@ public:
 		unsigned int mapsize_n = ByteOrder<unsigned int>::hton( m_listmap.size());
 		rt.append( (const char*)&mapsize_n, sizeof(mapsize_n));
 
+		std::map<KeyType,IndexListRef> deterministicListMap;
 		typename ListMap::const_iterator li = m_listmap.begin(), le = m_listmap.end();
 		for (; li != le; ++li)
 		{
-			KeyType key_n = ByteOrder<KeyType>::hton( li->first);
-			uint64_t start_n = ByteOrder<uint64_t>::hton( li->second.start);
-			uint32_t size_n = ByteOrder<uint32_t>::hton( li->second.size);
+			deterministicListMap[ li->first] = li->second;
+		}
+		typename std::map<KeyType,IndexListRef>::const_iterator di = deterministicListMap.begin(), de = deterministicListMap.end();
+		for (; di != de; ++di)
+		{
+			KeyType key_n = ByteOrder<KeyType>::hton( di->first);
+			uint64_t start_n = ByteOrder<uint64_t>::hton( di->second.start);
+			uint32_t size_n = ByteOrder<uint32_t>::hton( di->second.size);
 
 			rt.append( (const char*)&key_n, sizeof(key_n));
 			rt.append( (const char*)&start_n, sizeof(start_n));
@@ -107,6 +114,7 @@ public:
 			uint64_t start = parseElem<uint64_t>( si, se);
 			uint32_t size = parseElem<uint32_t>( si, se);
 			rt.m_listmap[ key] = IndexListRef( start, size);
+			if (key > rt.m_maxkey) rt.m_maxkey = key;
 		}
 		while (si < se)
 		{
@@ -114,6 +122,11 @@ public:
 			rt.m_list.push_back( value);
 		}
 		return rt;
+	}
+
+	KeyType maxkey() const
+	{
+		return m_maxkey;
 	}
 
 private:
@@ -132,6 +145,7 @@ private:
 	typedef std::vector<ValueType> ValueList;
 	ListMap m_listmap;
 	ValueList m_list;
+	KeyType m_maxkey;
 };
 
 
