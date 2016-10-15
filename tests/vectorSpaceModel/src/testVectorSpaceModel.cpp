@@ -120,23 +120,44 @@ int main( int argc, const char** argv)
 		std::string path;
 		std::string prepath;
 		bool use_prepared_model = false;
+		bool use_group_assign = false;
 
 		// Parse parameters:
-		if (argc > 3)
+		int argidx = 1;
+		bool finished_options = false;
+		while (!finished_options && argc > argidx && argv[argidx][0] == '-')
+		{
+			if (0==std::strcmp( argv[argidx], "-g"))
+			{
+				use_group_assign = true;
+				std::cerr << "use feature group assign instead of similarity" << std::endl;
+			}
+			else if (0==std::strcmp( argv[argidx], "-h"))
+			{
+				std::cerr << "Usage: " << argv[0] << " [<config>] [<number of sample vectors>]" << std::endl;
+				exit(0);
+			}
+			else if (0==std::strcmp( argv[argidx], "--"))
+			{
+				finished_options = true;
+			}
+			++argidx;
+		}
+		if (argc > argidx + 2)
 		{
 			std::cerr << "Usage: " << argv[0] << " [<config>] [<number of sample vectors>]" << std::endl;
 			throw std::runtime_error( "too many arguments (maximum 1 expected)");
 		}
-		if (argc >= 2)
+		if (argc >= argidx + 1)
 		{
-			config = argv[1];
+			config = argv[argidx+0];
 		}
-		if (argc >= 3)
+		if (argc >= argidx + 2)
 		{
 			bool error = false;
-			if (argv[2][0] >= '0' && argv[2][0] <= '9')
+			if (argv[argidx+1][0] >= '0' && argv[argidx+1][0] <= '9')
 			{
-				nofSamples = std::atoi( argv[2]);
+				nofSamples = std::atoi( argv[argidx+1]);
 			}
 			else
 			{
@@ -205,7 +226,9 @@ int main( int argc, const char** argv)
 					vec = createSimilarVector( samplear[ idx], sim);
 				}
 				samplear.push_back( vec);
-				builder->addVector( vec);
+				char nam[ 64];
+				snprintf( nam, sizeof(nam), "_%u", (unsigned int)sidx);
+				builder->addVector( nam, vec);
 			}
 		}
 
@@ -283,17 +306,30 @@ int main( int argc, const char** argv)
 		{
 			std::vector<unsigned int> ctgar( categorizer->mapVectorToFeatures( *si));
 			std::vector<unsigned int> ctgar2( categorizer->mapIndexToFeatures( sidx));
-			std::vector<unsigned int>::const_iterator ci = ctgar.begin(), ce = ctgar.end();
-			std::vector<unsigned int>::const_iterator zi = ctgar2.begin(), ze = ctgar2.end();
+			std::vector<unsigned int>::const_iterator ci,ce,ca,zi,ze,za;
+			if (use_group_assign)
+			{
+				za = zi = ctgar.begin(), ze = ctgar.end();
+				ca = ci = ctgar2.begin(), ce = ctgar2.end();
+			}
+			else
+			{
+				ca = ci = ctgar.begin(), ce = ctgar.end();
+				za = zi = ctgar2.begin(), ze = ctgar2.end();
+			}
 			std::cout << "[" << sidx << "] => ";
-			for (std::size_t cidx=0; ci != ce; ++ci,++cidx,++zi)
+			for (std::size_t cidx=0; ci != ce; ++ci,++cidx)
 			{
 				while (zi != ze && *zi < *ci)
 				{
 					++groupAssozFalses;
 					++zi;
 				}
-				if (zi == ze || *zi > *ci)
+				if (zi != ze && *zi == *ci)
+				{
+					++zi;
+				}
+				else if (zi == ze || *zi > *ci)
 				{
 					++groupAssozMisses;
 				}
@@ -309,6 +345,14 @@ int main( int argc, const char** argv)
 				++zi;
 			}
 			std::cout << std::endl;
+			std::cout << " " << sidx << "  => ";
+			std::size_t zidx = 0;
+			for (zi = za; zi != ze; ++zi,++zidx)
+			{
+				if (zidx) std::cout << ", ";
+				std::cout << *zi;
+			}
+			std::cout << std::endl;
 		}
 		// Output classes:
 		unsigned int memberAssozMisses = 0;
@@ -320,14 +364,18 @@ int main( int argc, const char** argv)
 			std::vector<unsigned int> members( categorizer->mapFeatureToIndices( ci->first));
 			std::vector<unsigned int>::const_iterator mi = members.begin(), me = members.end();
 			std::cout << "(" << key << ") <= ";
-			for (; ci != ce && ci->first == key; ++ci,++mi)
+			for (; ci != ce && ci->first == key; ++ci)
 			{
 				while (mi != me && *mi < ci->second)
 				{
 					++memberAssozFalses;
 					++mi;
 				}
-				if (mi == me || *mi > ci->second)
+				if (mi != me && *mi == ci->second)
+				{
+					++mi;
+				}
+				else if (mi == me || *mi > ci->second)
 				{
 					++memberAssozMisses;
 				}
@@ -339,6 +387,12 @@ int main( int argc, const char** argv)
 				++mi;
 			}
 			std::cout << std::endl;
+			std::cout << " " << key << "  <= ";
+			for (mi = members.begin(); mi != me; ++mi)
+			{
+				std::cout << ' ' << *mi;
+			}
+			std::cout << std::endl;
 		}
 		// Build a similarity matrix defined by features shared between input vectors:
 		std::cerr << "build sample to sample feature relation matrix:" << std::endl;
@@ -347,7 +401,9 @@ int main( int argc, const char** argv)
 		for (; fi != fe; ++fi)
 		{
 			std::vector<unsigned int> featureMembers;
-			FeatureMatrix::const_row_iterator ri = featureInvMatrix.begin_row( fi), re = featureInvMatrix.end_row( fi);
+			FeatureMatrix::const_row_iterator
+				ri = featureInvMatrix.begin_row( fi),
+				re = featureInvMatrix.end_row( fi);
 			for (; ri != re; ++ri)
 			{
 				std::vector<unsigned int>::const_iterator

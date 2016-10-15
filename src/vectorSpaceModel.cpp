@@ -17,6 +17,7 @@
 #include "lshModel.hpp"
 #include "genModel.hpp"
 #include "indexListMap.hpp"
+#include "stringList.hpp"
 #include "strus/base/fileio.hpp"
 #include "strus/base/configParser.hpp"
 #include "strus/versionVector.hpp"
@@ -36,7 +37,7 @@ using namespace strus;
 #define DUMPFILE     "dump.txt"			// Textdump output of structures if used with LOWLEVEL DEBUG defined
 #define FEATIDXFILE  "featsampleindex.fsi"	// map feature number to sample indices [FeatureSampleIndexMap]
 #define IDXFEATFILE  "samplefeatindex.sfi"	// map sample index to feature numbers [SampleFeatureIndexMap]
-
+#define VECNAMEFILE  "vecnames.lst"		// list of sample vector names
 
 #undef STRUS_LOWLEVEL_DEBUG
 
@@ -353,13 +354,27 @@ static void writeFeatureSampleIndexMapToFile( const FeatureSampleIndexMap& map, 
 	if (ec) throw strus::runtime_error(_TXT("failed to write sample feature index map to file '%s' (errno %u): %s"), filename.c_str(), ec, ::strerror(ec));
 }
 
+static StringList readSampleNamesFromFile( const std::string& filename)
+{
+	std::string content;
+	unsigned int ec = readFile( filename, content);
+	if (ec) throw strus::runtime_error(_TXT("failed to read sample name list from file '%s' (errno %u): %s"), filename.c_str(), ec, ::strerror(ec));
+	return StringList::fromSerialization( content);
+}
+
+static void writeSampleNamesToFile( const StringList& names, const std::string& filename)
+{
+	unsigned int ec = writeFile( filename, names.serialization());
+	if (ec) throw strus::runtime_error(_TXT("failed to write sample name list to file '%s' (errno %u): %s"), filename.c_str(), ec, ::strerror(ec));
+}
+
 
 class VectorSpaceModelInstance
 	:public VectorSpaceModelInstanceInterface
 {
 public:
 	VectorSpaceModelInstance( const std::string& config_, ErrorBufferInterface* errorhnd_)
-		:m_errorhnd(errorhnd_),m_config(config_,errorhnd_),m_lshmodel()
+		:m_errorhnd(errorhnd_),m_config(config_,errorhnd_)
 	{
 		if (m_config.path.empty()) throw strus::runtime_error(_TXT("no 'path' configuration variable defined, cannot load model"));
 		checkVersionFile( m_config.path + dirSeparator() + VERSIONFILE);
@@ -368,13 +383,17 @@ public:
 		m_individuals = readSimHashVectorFromFile( m_config.path + dirSeparator() + RESVECFILE);
 		m_sampleFeatureIndexMap = readSampleFeatureIndexMapFromFile( m_config.path + dirSeparator() + IDXFEATFILE);
 		m_featureSampleIndexMap = readFeatureSampleIndexMapFromFile( m_config.path + dirSeparator() + FEATIDXFILE);
+		m_sampleNames = readSampleNamesFromFile( m_config.path + dirSeparator() + VECNAMEFILE);
 #ifdef STRUS_LOWLEVEL_DEBUG
 		writeDumpToFile( tostring(), m_config.path + dirSeparator() + DUMPFILE);
 #endif
 	}
 
 	VectorSpaceModelInstance( const VectorSpaceModelInstance& o)
-		:m_errorhnd(o.m_errorhnd),m_config(o.m_config),m_lshmodel(o.m_lshmodel),m_sampleFeatureIndexMap(o.m_sampleFeatureIndexMap),m_featureSampleIndexMap(o.m_featureSampleIndexMap){}
+		:m_errorhnd(o.m_errorhnd),m_config(o.m_config),m_lshmodel(o.m_lshmodel)
+		,m_sampleFeatureIndexMap(o.m_sampleFeatureIndexMap)
+		,m_featureSampleIndexMap(o.m_featureSampleIndexMap)
+		,m_sampleNames(o.m_sampleNames){}
 
 	virtual ~VectorSpaceModelInstance()
 	{}
@@ -400,22 +419,30 @@ public:
 
 	virtual std::vector<unsigned int> mapIndexToFeatures( unsigned int index) const
 	{
-		std::vector<unsigned int> rt;
-		std::vector<FeatureIndex> res = m_sampleFeatureIndexMap.getValues( index);
-		rt.reserve( res.size());
-		std::vector<FeatureIndex>::const_iterator ri = res.begin(), re =  res.end();
-		for (; ri != re; ++ri) rt.push_back( *ri);
-		return rt;
+		try
+		{
+			std::vector<unsigned int> rt;
+			std::vector<FeatureIndex> res = m_sampleFeatureIndexMap.getValues( index);
+			rt.reserve( res.size());
+			std::vector<FeatureIndex>::const_iterator ri = res.begin(), re =  res.end();
+			for (; ri != re; ++ri) rt.push_back( *ri);
+			return rt;
+		}
+		CATCH_ERROR_ARG1_MAP_RETURN( _TXT("error in instance of '%s' mapping index to features: %s"), MODULENAME, *m_errorhnd, std::vector<unsigned int>());
 	}
 
 	virtual std::vector<unsigned int> mapFeatureToIndices( unsigned int feature) const
 	{
-		std::vector<unsigned int> rt;
-		std::vector<FeatureIndex> res = m_featureSampleIndexMap.getValues( feature);
-		rt.reserve( res.size());
-		std::vector<SampleIndex>::const_iterator ri = res.begin(), re =  res.end();
-		for (; ri != re; ++ri) rt.push_back( *ri);
-		return rt;
+		try
+		{
+			std::vector<unsigned int> rt;
+			std::vector<FeatureIndex> res = m_featureSampleIndexMap.getValues( feature);
+			rt.reserve( res.size());
+			std::vector<SampleIndex>::const_iterator ri = res.begin(), re =  res.end();
+			for (; ri != re; ++ri) rt.push_back( *ri);
+			return rt;
+		}
+		CATCH_ERROR_ARG1_MAP_RETURN( _TXT("error in instance of '%s' mapping feature to indices: %s"), MODULENAME, *m_errorhnd, std::vector<unsigned int>());
 	}
 
 	virtual unsigned int nofFeatures() const
@@ -423,9 +450,27 @@ public:
 		return m_individuals.size();
 	}
 
+	virtual std::string sampleName( unsigned int index) const
+	{
+		try
+		{
+			return m_sampleNames[ index];
+		}
+		CATCH_ERROR_ARG1_MAP_RETURN( _TXT("error in instance of '%s' getting name of sample: %s"), MODULENAME, *m_errorhnd, std::string());
+	}
+
+	virtual unsigned int nofSamples() const
+	{
+		return m_sampleFeatureIndexMap.maxkey()+1;
+	}
+
 	virtual std::string config() const
 	{
-		return m_config.tostring();
+		try
+		{
+			return m_config.tostring();
+		}
+		CATCH_ERROR_ARG1_MAP_RETURN( _TXT("error in instance of '%s' mapping configuration to string: %s"), MODULENAME, *m_errorhnd, std::string());
 	}
 
 private:
@@ -460,6 +505,7 @@ private:
 	std::vector<SimHash> m_individuals;
 	SampleFeatureIndexMap m_sampleFeatureIndexMap;
 	FeatureSampleIndexMap m_featureSampleIndexMap;
+	StringList m_sampleNames;
 };
 
 
@@ -473,6 +519,7 @@ public:
 		,m_samplear(),m_resultar()
 		,m_sampleFeatureIndexMap()
 		,m_featureSampleIndexMap()
+		,m_sampleNames()
 		,m_modelLoadedFromFile(false)
 	{
 		if (!m_config.prepath.empty())
@@ -483,6 +530,7 @@ public:
 			m_lshmodel = readLshModelFromFile( m_config.prepath + dirSeparator() + MATRIXFILE);
 			m_genmodel = GenModel( m_config.threads, m_config.simdist, m_config.raddist, m_config.eqdist, m_config.mutations, m_config.votes, m_config.descendants, m_config.maxage, m_config.iterations, m_config.assignments, m_config.isaf, m_config.with_singletons);
 			m_samplear = readSimHashVectorFromFile( m_config.prepath + dirSeparator() + INPVECFILE);
+			m_sampleNames = readSampleNamesFromFile( m_config.prepath + dirSeparator() + VECNAMEFILE);
 			m_modelLoadedFromFile = true;
 
 			std::string path = m_config.path;
@@ -498,14 +546,19 @@ public:
 	virtual ~VectorSpaceModelBuilder()
 	{}
 
-	virtual void addVector( const std::vector<double>& vec)
+	virtual void addVector( const std::string& name, const std::vector<double>& vec)
 	{
 		try
 		{
+			if (0!=std::memchr( name.c_str(), '\0', name.size()))
+			{
+				throw strus::runtime_error(_TXT("name of vector contains null bytes"));
+			}
 			if (m_modelLoadedFromFile)
 			{
 				throw strus::runtime_error(_TXT("no more samples accepted, model was loaded from file"));
 			}
+			m_sampleNames.push_back( name);
 			m_samplear.push_back( m_lshmodel.simHash( arma::vec( vec)));
 		}
 		CATCH_ERROR_ARG1_MAP( _TXT("error adding sample vector to '%s' builder: %s"), MODULENAME, *m_errorhnd);
@@ -555,6 +608,7 @@ public:
 			{
 				writeSimRelationMapToFile( m_simrelmap, m_config.path + dirSeparator() + SIMRELFILE);
 				writeSimHashVectorToFile( m_samplear, m_config.path + dirSeparator() + INPVECFILE);
+				writeSampleNamesToFile( m_sampleNames, m_config.path + dirSeparator() + VECNAMEFILE);
 			}
 			writeSampleFeatureIndexMapToFile( m_sampleFeatureIndexMap, m_config.path + dirSeparator() + IDXFEATFILE);
 			writeFeatureSampleIndexMapToFile( m_featureSampleIndexMap, m_config.path + dirSeparator() + FEATIDXFILE);
@@ -592,6 +646,7 @@ private:
 	std::vector<SimHash> m_resultar;
 	SampleFeatureIndexMap m_sampleFeatureIndexMap;
 	FeatureSampleIndexMap m_featureSampleIndexMap;
+	StringList m_sampleNames;
 	bool m_modelLoadedFromFile;
 };
 
