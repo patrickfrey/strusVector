@@ -17,6 +17,7 @@
 #include "lshModel.hpp"
 #include "genModel.hpp"
 #include "indexListMap.hpp"
+#include "stringList.hpp"
 #include "strus/base/fileio.hpp"
 #include "strus/base/configParser.hpp"
 #include "strus/versionVector.hpp"
@@ -36,7 +37,7 @@ using namespace strus;
 #define DUMPFILE     "dump.txt"			// Textdump output of structures if used with LOWLEVEL DEBUG defined
 #define FEATIDXFILE  "featsampleindex.fsi"	// map feature number to sample indices [FeatureSampleIndexMap]
 #define IDXFEATFILE  "samplefeatindex.sfi"	// map sample index to feature numbers [SampleFeatureIndexMap]
-#define VECNAMEFILE  "vecnames.txt"		// list of sample vector names
+#define VECNAMEFILE  "vecnames.lst"		// list of sample vector names
 
 #undef STRUS_LOWLEVEL_DEBUG
 
@@ -353,34 +354,18 @@ static void writeFeatureSampleIndexMapToFile( const FeatureSampleIndexMap& map, 
 	if (ec) throw strus::runtime_error(_TXT("failed to write sample feature index map to file '%s' (errno %u): %s"), filename.c_str(), ec, ::strerror(ec));
 }
 
-static std::vector<std::string> readSampleNamesFromFile( const std::string& filename)
+static StringList readSampleNamesFromFile( const std::string& filename)
 {
 	std::string content;
 	unsigned int ec = readFile( filename, content);
-	if (ec) throw strus::runtime_error(_TXT("failed to read sample feature index map from file '%s' (errno %u): %s"), filename.c_str(), ec, ::strerror(ec));
-	std::vector<std::string> rt;
-	char const* si = content.c_str();
-	const char* se = si + content.size();
-	while (si < se)
-	{
-		const char* sn = std::strchr( si, '\0');
-		rt.push_back( std::string( si, sn - si));
-		si = sn+1;
-	}
-	return rt;
+	if (ec) throw strus::runtime_error(_TXT("failed to read sample name list from file '%s' (errno %u): %s"), filename.c_str(), ec, ::strerror(ec));
+	return StringList::fromSerialization( content);
 }
 
-static void writeSampleNamesToFile( const std::vector<std::string>& names, const std::string& filename)
+static void writeSampleNamesToFile( const StringList& names, const std::string& filename)
 {
-	std::string content;
-	std::vector<std::string>::const_iterator ni = names.begin(), ne = names.end();
-	for (; ni != ne; ++ni)
-	{
-		content.append( *ni);
-		content.push_back( '\0');
-	}
-	unsigned int ec = writeFile( filename, content);
-	if (ec) throw strus::runtime_error(_TXT("failed to write sample names to file '%s' (errno %u): %s"), filename.c_str(), ec, ::strerror(ec));
+	unsigned int ec = writeFile( filename, names.serialization());
+	if (ec) throw strus::runtime_error(_TXT("failed to write sample name list to file '%s' (errno %u): %s"), filename.c_str(), ec, ::strerror(ec));
 }
 
 
@@ -467,15 +452,11 @@ public:
 
 	virtual std::string sampleName( unsigned int index) const
 	{
-		if (index >= m_sampleNames.size())
-		{
-			m_errorhnd->report(_TXT("index of sample out of range"));
-			return std::string();
-		}
-		else
+		try
 		{
 			return m_sampleNames[ index];
 		}
+		CATCH_ERROR_ARG1_MAP_RETURN( _TXT("error in instance of '%s' getting name of sample: %s"), MODULENAME, *m_errorhnd, std::string());
 	}
 
 	virtual unsigned int nofSamples() const
@@ -524,7 +505,7 @@ private:
 	std::vector<SimHash> m_individuals;
 	SampleFeatureIndexMap m_sampleFeatureIndexMap;
 	FeatureSampleIndexMap m_featureSampleIndexMap;
-	std::vector<std::string> m_sampleNames;
+	StringList m_sampleNames;
 };
 
 
@@ -569,8 +550,6 @@ public:
 	{
 		try
 		{
-			m_sampleNames.reserve( m_sampleNames.size()+1);
-			m_samplear.reserve( m_samplear.size()+1);
 			if (0!=std::memchr( name.c_str(), '\0', name.size()))
 			{
 				throw strus::runtime_error(_TXT("name of vector contains null bytes"));
@@ -667,7 +646,7 @@ private:
 	std::vector<SimHash> m_resultar;
 	SampleFeatureIndexMap m_sampleFeatureIndexMap;
 	FeatureSampleIndexMap m_featureSampleIndexMap;
-	std::vector<std::string> m_sampleNames;
+	StringList m_sampleNames;
 	bool m_modelLoadedFromFile;
 };
 
