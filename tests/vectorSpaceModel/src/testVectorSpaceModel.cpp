@@ -226,7 +226,9 @@ int main( int argc, const char** argv)
 					vec = createSimilarVector( samplear[ idx], sim);
 				}
 				samplear.push_back( vec);
-				builder->addVector( vec);
+				char nam[ 64];
+				snprintf( nam, sizeof(nam), "_%u", (unsigned int)sidx);
+				builder->addVector( nam, vec);
 			}
 		}
 
