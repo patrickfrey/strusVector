@@ -635,6 +635,16 @@ std::vector<SimHash> GenModel::run(
 
 		// Mutation step for all groups and dropping of elements that got too far away from the
 		// representants genom:
+		unsigned int rel_raddist;
+		unsigned int rad_iterations = (m_iterations - (m_iterations >> 2));
+		if (iteration >= rad_iterations)
+		{
+			rel_raddist = m_raddist;
+		}
+		else
+		{
+			rel_raddist = m_raddist + ((m_simdist - m_raddist) * (rad_iterations - iteration - 1) / (rad_iterations - 1));
+		}
 		gi = groupInstanceList.begin(), ge = groupInstanceList.end();
 		for (; gi != ge; ++gi)
 		{
@@ -643,8 +653,7 @@ std::vector<SimHash> GenModel::run(
 			SimGroup::const_iterator mi = gi->begin(), me = gi->end();
 			for (std::size_t midx=0; mi != me; ++mi,++midx)
 			{
-				unsigned int dist = m_raddist + ((m_simdist - m_raddist) * (m_iterations - iteration - 1) / (m_iterations - 1));
-				if (!gi->gencode().near( samplear[ *mi], dist))
+				if (!gi->gencode().near( samplear[ *mi], rel_raddist))
 				{
 					// Dropped members that got too far out of the group:
 					SampleIndex member = *mi;
