@@ -19,7 +19,7 @@
 #include <iostream>
 #include <stdexcept>
 
-#undef STRUS_LOWLEVEL_DEBUG
+#define STRUS_LOWLEVEL_DEBUG
 
 static void printUsage()
 {
@@ -139,13 +139,16 @@ int main( int argc, const char* argv[])
 			throw strus::runtime_error(_TXT("failed to parse configuration"));
 		}
 		std::string command( strus::utils::tolower( argv[ argi+0]));
+#ifdef STRUS_LOWLEVEL_DEBUG
+		std::cerr << strus::string_format( _TXT("execute command '%s'"), command.c_str()) << std::endl;
+#endif
 		if (command == "simrel")
 		{
 			printSimilarityRelationMap( config);
 		}
 		else
 		{
-			throw strus::runtime_error(_TXT("unknonw program command '%s'"), command.c_str());
+			throw strus::runtime_error(_TXT("unknown program command '%s'"), command.c_str());
 		}
 		if (g_errorBuffer->hasError())
 		{
