@@ -34,14 +34,33 @@ static void printUsage()
 	std::cout << "-S|--configfile <CFGFILE>" << std::endl;
 	std::cout << "    " << _TXT("Define the model configuration file as <CFGFILE>") << std::endl;
 	std::cout << "<cmd>        : " << _TXT("command to execute (what to inspect), one of:") << std::endl;
-	std::cout << "               'simrel' =   " << _TXT("similarity relation map") << std::endl;
+	std::cout << "               'simrel'      =   " << _TXT("similarity relation map") << std::endl;
+	std::cout << "               'simrelterms' =   " << _TXT("similarity relation map with words") << std::endl;
 }
 
 static strus::ErrorBufferInterface* g_errorBuffer = 0;
 
+static void printSimilarityRelationMapWithWords( const strus::VectorSpaceModelConfig& config)
+{
+	strus::SimRelationMap simrelmap( strus::readSimRelationMapFromFile( config.path + strus::dirSeparator() + SIMRELFILE));
+	strus::StringList sampleNames = strus::readSampleNamesFromFile( config.path + strus::dirSeparator() + VECNAMEFILE);
+
+	strus::SampleIndex si=0, se=simrelmap.nofSamples();
+	for (; si != se; ++si)
+	{
+		strus::SimRelationMap::Row row = simrelmap.row( si);
+		strus::SimRelationMap::Row::const_iterator ri = row.begin(), re = row.end();
+		for (; ri != re; ++ri)
+		{
+			std::cout << sampleNames[si] << " " << sampleNames[ri->index] << " " << ri->simdist << std::endl;
+		}
+	}
+}
+
 static void printSimilarityRelationMap( const strus::VectorSpaceModelConfig& config)
 {
 	strus::SimRelationMap simrelmap( strus::readSimRelationMapFromFile( config.path + strus::dirSeparator() + SIMRELFILE));
+
 	strus::SampleIndex si=0, se=simrelmap.nofSamples();
 	for (; si != se; ++si)
 	{
@@ -145,6 +164,10 @@ int main( int argc, const char* argv[])
 		if (command == "simrel")
 		{
 			printSimilarityRelationMap( config);
+		}
+		else if (command == "simrelterms")
+		{
+			printSimilarityRelationMapWithWords( config);
 		}
 		else
 		{
