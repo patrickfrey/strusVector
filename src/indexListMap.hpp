@@ -106,7 +106,7 @@ public:
 		unsigned int mapsize_n;
 		std::memcpy( &mapsize_n, si, sizeof( mapsize_n));
 		si += sizeof(mapsize_n);
-		unsigned int mapsize = ByteOrder<unsigned int>::ntoh( mapsize_n);
+		unsigned int mapsize = ByteOrder<uint32_t>::ntoh( mapsize_n);
 
 		for (unsigned int mi = 0; si < se && mi < mapsize; ++mi)
 		{
