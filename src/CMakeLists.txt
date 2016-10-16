@@ -16,6 +16,8 @@ set(
 	getSimRelationMap.cpp
 	lshModel.cpp
 	genModel.cpp 
+	vectorSpaceModelConfig.cpp
+	vectorSpaceModelFiles.cpp
 	vectorSpaceModel.cpp
 )
 
@@ -54,6 +56,9 @@ add_library( modstrus_storage_vectorspace  MODULE  modstrus_storage_vectorspace.
 set_target_properties( modstrus_storage_vectorspace PROPERTIES PREFIX "")
 target_link_libraries( modstrus_storage_vectorspace strus_module_storage strus_vectorspace ${Intl_LIBRARIES} ${Boost_LIBRARIES} )
 
+add_executable( strusInspectVectorSpaceModel strusInspectVectorSpaceModel.cpp )
+target_link_libraries( strusInspectVectorSpaceModel  strus_error strus_base strus_vectorspace_static ${Intl_LIBRARIES} ${Boost_LIBRARIES} )
+
 # ------------------------------
 # INSTALLATION
 # ------------------------------
@@ -64,3 +69,5 @@ install( TARGETS modstrus_storage_vectorspace
            LIBRARY DESTINATION ${LIB_INSTALL_DIR}/strus/modules
 	   RUNTIME DESTINATION bin )
 
+install( TARGETS strusInspectVectorSpaceModel
+	   RUNTIME DESTINATION bin )
