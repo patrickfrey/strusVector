@@ -10,7 +10,10 @@ case $OS in
 		sudo apt-get install -y \
 			cmake \
 			libboost-all-dev \
-			libleveldb-dev
+			libleveldb-dev \
+			libatlas-dev \
+			liblapack-dev \
+			libblas-dev
 		;;
 		
 	Darwin)

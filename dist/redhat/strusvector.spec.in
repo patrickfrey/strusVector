@@ -231,9 +231,12 @@ Requires: leveldb
 %if %{rhel} || %{centos} || %{scilin} || %{fedora} || %{suse} || %{sles}
 BuildRequires: blas-devel
 BuildRequires: lapack-devel
-BuildRequires: atlas-devel
 Requires: blas
 Requires: lapack
+%endif
+
+%if %{rhel} || %{centos} || %{scilin} || %{fedora}
+BuildRequires: atlas-devel
 Requires: atlas
 %endif
 
