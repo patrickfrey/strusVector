@@ -43,6 +43,9 @@ dist/archlinux/PKGBUILD
 dist/obs/strusvector.dsc
 dist/obs/strusvector-Debian_7.0.dsc
 dist/obs/strusvector-xUbuntu_12.04.dsc
+dist/obs/strusvector-xUbuntu_14.04.dsc
+dist/obs/strusvector-xUbuntu_15.10.dsc
+dist/obs/strusvector-xUbuntu_16.04.dsc
 dist/redhat/strusvector.spec
 3rdParty/armadillo/InstallFiles/ArmadilloConfig.cmake
 3rdParty/armadillo/ArmadilloConfig.cmake
