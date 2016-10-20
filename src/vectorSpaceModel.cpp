@@ -62,7 +62,7 @@ public:
 		try
 		{
 			std::vector<unsigned int> rt;
-			SimHash hash( m_lshmodel.simHash( arma::vec( vec)));
+			SimHash hash( m_lshmodel.simHash( arma::normalise( arma::vec( vec))));
 			std::vector<SimHash>::const_iterator ii = m_individuals.begin(), ie = m_individuals.end();
 			for (std::size_t iidx=1; ii != ie; ++ii,++iidx)
 			{
@@ -76,7 +76,7 @@ public:
 		CATCH_ERROR_ARG1_MAP_RETURN( _TXT("error in instance of '%s' mapping vector to features: %s"), MODULENAME, *m_errorhnd, std::vector<unsigned int>());
 	}
 
-	virtual std::vector<unsigned int> mapIndexToFeatures( unsigned int index) const
+	virtual std::vector<unsigned int> sampleFeatures( unsigned int index) const
 	{
 		try
 		{
@@ -87,10 +87,24 @@ public:
 			for (; ri != re; ++ri) rt.push_back( *ri);
 			return rt;
 		}
-		CATCH_ERROR_ARG1_MAP_RETURN( _TXT("error in instance of '%s' mapping index to features: %s"), MODULENAME, *m_errorhnd, std::vector<unsigned int>());
+		CATCH_ERROR_ARG1_MAP_RETURN( _TXT("error in instance of '%s' getting learnt features by sample index: %s"), MODULENAME, *m_errorhnd, std::vector<unsigned int>());
 	}
 
-	virtual std::vector<unsigned int> mapFeatureToIndices( unsigned int feature) const
+	virtual std::vector<double> sampleVector( unsigned int index) const
+	{
+		try
+		{
+			std::vector<double> rt;
+			std::vector<FeatureIndex> res = m_sampleFeatureIndexMap.getValues( index);
+			rt.reserve( res.size());
+			std::vector<FeatureIndex>::const_iterator ri = res.begin(), re =  res.end();
+			for (; ri != re; ++ri) rt.push_back( *ri);
+			return rt;
+		}
+		CATCH_ERROR_ARG1_MAP_RETURN( _TXT("error in instance of '%s' getting sample vector by index: %s"), MODULENAME, *m_errorhnd, std::vector<double>());
+	}
+
+	virtual std::vector<unsigned int> featureSamples( unsigned int feature) const
 	{
 		try
 		{
@@ -101,7 +115,7 @@ public:
 			for (; ri != re; ++ri) rt.push_back( *ri);
 			return rt;
 		}
-		CATCH_ERROR_ARG1_MAP_RETURN( _TXT("error in instance of '%s' mapping feature to indices: %s"), MODULENAME, *m_errorhnd, std::vector<unsigned int>());
+		CATCH_ERROR_ARG1_MAP_RETURN( _TXT("error in instance of '%s' getting associated sample indices by learnt feature: %s"), MODULENAME, *m_errorhnd, std::vector<unsigned int>());
 	}
 
 	virtual unsigned int nofFeatures() const
@@ -165,6 +179,7 @@ private:
 	SampleFeatureIndexMap m_sampleFeatureIndexMap;
 	FeatureSampleIndexMap m_featureSampleIndexMap;
 	StringList m_sampleNames;
+	DataRecordFile m_vectorfile;
 };
 
 
@@ -205,7 +220,7 @@ public:
 	virtual ~VectorSpaceModelBuilder()
 	{}
 
-	virtual void addVector( const std::string& name, const std::vector<double>& vec)
+	virtual void addSampleVector( const std::string& name, const std::vector<double>& vec)
 	{
 		try
 		{
@@ -218,7 +233,7 @@ public:
 				throw strus::runtime_error(_TXT("no more samples accepted, model was loaded from file"));
 			}
 			m_sampleNames.push_back( name);
-			m_samplear.push_back( m_lshmodel.simHash( arma::vec( vec)));
+			m_samplear.push_back( m_lshmodel.simHash( arma::normalise( arma::vec( vec))));
 		}
 		CATCH_ERROR_ARG1_MAP( _TXT("error adding sample vector to '%s' builder: %s"), MODULENAME, *m_errorhnd);
 	}

@@ -228,7 +228,7 @@ int main( int argc, const char** argv)
 				samplear.push_back( vec);
 				char nam[ 64];
 				snprintf( nam, sizeof(nam), "_%u", (unsigned int)sidx);
-				builder->addVector( nam, vec);
+				builder->addSampleVector( nam, vec);
 			}
 		}
 
@@ -305,7 +305,7 @@ int main( int argc, const char** argv)
 		for (std::size_t sidx=0; si != se; ++si,++sidx)
 		{
 			std::vector<unsigned int> ctgar( categorizer->mapVectorToFeatures( *si));
-			std::vector<unsigned int> ctgar2( categorizer->mapIndexToFeatures( sidx));
+			std::vector<unsigned int> ctgar2( categorizer->sampleFeatures( sidx));
 			std::vector<unsigned int>::const_iterator ci,ce,ca,zi,ze,za;
 			if (use_group_assign)
 			{
@@ -361,7 +361,7 @@ int main( int argc, const char** argv)
 		while (ci != ce)
 		{
 			unsigned int key = ci->first;
-			std::vector<unsigned int> members( categorizer->mapFeatureToIndices( ci->first));
+			std::vector<unsigned int> members( categorizer->featureSamples( ci->first));
 			std::vector<unsigned int>::const_iterator mi = members.begin(), me = members.end();
 			std::cout << "(" << key << ") <= ";
 			for (; ci != ce && ci->first == key; ++ci)
