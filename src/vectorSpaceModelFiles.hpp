@@ -9,7 +9,6 @@
 #ifndef _STRUS_VECTOR_SPACE_MODEL_FILES_HPP_INCLUDED
 #define _STRUS_VECTOR_SPACE_MODEL_FILES_HPP_INCLUDED
 #include "strus/base/stdint.h"
-#include "strus/base/dataRecordFile.hpp"
 #include "vectorSpaceModelConfig.hpp"
 #include "simHash.hpp"
 #include "simRelationMap.hpp"
@@ -58,11 +57,6 @@ void writeFeatureSampleIndexMapToFile( const FeatureSampleIndexMap& map, const s
 
 StringList readSampleNamesFromFile( const std::string& filename);
 void writeSampleNamesToFile( const StringList& names, const std::string& filename);
-
-typedef std::vector<double> Vector;
-std::vector<Vector> readVectorsFromFile( strus::DataRecordFile& vecfile);
-Vector readVectorFromFile( std::size_t index, strus::DataRecordFile& vecfile);
-void appendVectorsToFile( const std::vector<Vector>& vectors, strus::DataRecordFile& vecfile);
 
 }//namespace
 #endif

@@ -241,9 +241,15 @@ std::string SimHash::tostring() const
 
 std::string SimHash::serialization( const std::vector<SimHash>& ar)
 {
+	return serialization( ar.data(), ar.size());
+}
+
+std::string SimHash::serialization( const SimHash* ar, std::size_t arsize)
+{
 	std::string rt;
 	std::size_t vecsize = 0;
-	std::vector<SimHash>::const_iterator vi = ar.begin(), ve = ar.end();
+	SimHash const* vi = ar;
+	const SimHash* ve = ar + arsize;
 	for (; vi != ve; ++vi)
 	{
 		if (!vecsize)
@@ -256,12 +262,12 @@ std::string SimHash::serialization( const std::vector<SimHash>& ar)
 		}
 	}
 	if (vecsize > std::numeric_limits<uint32_t>::max()) throw strus::runtime_error(_TXT("sim hash elements too big to serialize"));
-	if (ar.size() > std::numeric_limits<uint32_t>::max()) throw strus::runtime_error(_TXT("sim hash vector too big to serialize"));
+	if (arsize > std::numeric_limits<uint32_t>::max()) throw strus::runtime_error(_TXT("sim hash vector too big to serialize"));
 
 	uint32_t nw;
 	nw = ByteOrder<uint32_t>::hton( (uint32_t)vecsize);   rt.append( (const char*)&nw, sizeof(nw));
-	nw = ByteOrder<uint32_t>::hton( (uint32_t)ar.size()); rt.append( (const char*)&nw, sizeof(nw));
-	for (vi = ar.begin(); vi != ve; ++vi)
+	nw = ByteOrder<uint32_t>::hton( (uint32_t)arsize);    rt.append( (const char*)&nw, sizeof(nw));
+	for (vi = ar; vi != ve; ++vi)
 	{
 		uint64_t const* ai = vi->m_ar;
 		const uint64_t* ae = vi->m_ar + vi->arsize();

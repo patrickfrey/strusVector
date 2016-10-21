@@ -179,7 +179,6 @@ private:
 	SampleFeatureIndexMap m_sampleFeatureIndexMap;
 	FeatureSampleIndexMap m_featureSampleIndexMap;
 	StringList m_sampleNames;
-	DataRecordFile m_vectorfile;
 };
 
 

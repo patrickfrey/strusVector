@@ -15,7 +15,8 @@ set(
 	simRelationMap.cpp
 	getSimRelationMap.cpp
 	lshModel.cpp
-	genModel.cpp 
+	genModel.cpp
+	databaseAdapter.cpp
 	vectorSpaceModelConfig.cpp
 	vectorSpaceModelFiles.cpp
 	vectorSpaceModel.cpp
