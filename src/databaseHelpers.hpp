@@ -119,7 +119,7 @@ public:
 	template <typename ScalarType>
 	DatabaseValueScanner& operator[]( ScalarType& val)
 	{
-		if (sizeof(ScalarType) > m_end - m_itr) throw strus::runtime_error(_TXT("array bound read in database value scanner"));
+		if (sizeof(ScalarType) > (unsigned int)(m_end - m_itr)) throw strus::runtime_error(_TXT("array bound read in database value scanner"));
 		ScalarType val_n;
 		std::memcpy( &val_n, m_itr, sizeof(ScalarType));
 		m_itr += sizeof(ScalarType);
