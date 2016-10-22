@@ -94,7 +94,10 @@ VectorSpaceModelConfig::VectorSpaceModelConfig( const std::string& config, Error
 std::string VectorSpaceModelConfig::tostring() const
 {
 	std::ostringstream buf;
-	buf << databaseConfig << ";" << std::endl;
+	buf << databaseConfig;
+	char const* ee = databaseConfig.c_str() + databaseConfig.size();
+	while (ee != databaseConfig.c_str() && ((unsigned char)*(ee-1) <= 32 || *(ee-1) == ';')) --ee;
+	buf << ";" << std::endl;
 	buf << "logfile=" << logfile << ";" << std::endl;
 	buf << "threads=" << threads << ";" << std::endl;
 	buf << "dim=" << dim << ";" << std::endl;

@@ -21,7 +21,7 @@
 #include <iostream>
 #include <stdexcept>
 
-#define STRUS_LOWLEVEL_DEBUG
+#undef STRUS_LOWLEVEL_DEBUG
 
 static void printUsage()
 {

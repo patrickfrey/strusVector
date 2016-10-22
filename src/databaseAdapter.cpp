@@ -141,7 +141,14 @@ unsigned int DatabaseAdapter::readVariable( const char* name) const
 	std::string blob;
 	if (!m_database->readValue( key.c_str(), key.size(), blob, DatabaseOptions().useCache()))
 	{
-		throw strus::runtime_error(_TXT("failed to to read sample vector: %s"), m_errorhnd->fetchError());
+		if (m_errorhnd->hasError())
+		{
+			throw strus::runtime_error(_TXT("failed to to read sample vector: %s"), m_errorhnd->fetchError());
+		}
+		else
+		{
+			return 0;
+		}
 	}
 	uint64_t rt;
 	DatabaseValueScanner scanner( blob);
@@ -255,7 +262,14 @@ SampleIndex DatabaseAdapter::readSampleIndex( const std::string& name) const
 	std::string blob;
 	if (!m_database->readValue( key.c_str(), key.size(), blob, DatabaseOptions().useCache()))
 	{
-		throw strus::runtime_error(_TXT("failed to read sample name: %s"), m_errorhnd->fetchError());
+		if (m_errorhnd->hasError())
+		{
+			throw strus::runtime_error(_TXT("failed to read sample name: %s"), m_errorhnd->fetchError());
+		}
+		else
+		{
+			return -1;
+		}
 	}
 	uint32_t value = 0;
 	DatabaseValueScanner scanner( blob);
@@ -292,7 +306,7 @@ std::vector<SimHash> DatabaseAdapter::readSimhashVector( const KeyPrefix& prefix
 	while (slice.defined())
 	{
 		SampleIndex sidx;
-		DatabaseKeyScanner key_scanner( slice.ptr(), slice.size());
+		DatabaseKeyScanner key_scanner( slice.ptr()+1, slice.size()-1);
 		key_scanner[ sidx];
 		if (sidx != (SampleIndex)rt.size()+1) throw strus::runtime_error( _TXT("keys not ascending in '%s' structure"), "simhash");
 
@@ -487,7 +501,14 @@ std::vector<FeatureIndex> DatabaseAdapter::readSampleFeatureIndices( const Sampl
 	std::string blob;
 	if (!m_database->readValue( key.c_str(), key.size(), blob, DatabaseOptions().useCache()))
 	{
-		throw strus::runtime_error( _TXT( "failed to read sample to feature index map from database: %s"), m_errorhnd->fetchError());
+		if (m_errorhnd->hasError())
+		{
+			throw strus::runtime_error( _TXT( "failed to read sample to feature index map from database: %s"), m_errorhnd->fetchError());
+		}
+		else
+		{
+			return std::vector<SampleIndex>();
+		}
 	}
 	return vectorFromSerialization<FeatureIndex>( blob);
 }
@@ -518,7 +539,14 @@ std::vector<SampleIndex> DatabaseAdapter::readFeatureSampleIndices( const Featur
 	std::string blob;
 	if (!m_database->readValue( key.c_str(), key.size(), blob, DatabaseOptions().useCache()))
 	{
-		throw strus::runtime_error( _TXT( "failed to read sample to feature index map from database: %s"), m_errorhnd->fetchError());
+		if (m_errorhnd->hasError())
+		{
+			throw strus::runtime_error( _TXT( "failed to read sample to feature index map from database: %s"), m_errorhnd->fetchError());
+		}
+		else
+		{
+			return std::vector<SampleIndex>();
+		}
 	}
 	return vectorFromSerialization<SampleIndex>( blob);
 }
