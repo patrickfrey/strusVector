@@ -6,15 +6,17 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 #include "strus/lib/error.hpp"
+#include "strus/lib/database_leveldb.hpp"
 #include "strus/versionVector.hpp"
 #include "strus/versionBase.hpp"
+#include "strus/versionStorage.hpp"
 #include "strus/errorBufferInterface.hpp"
 #include "internationalization.hpp"
 #include "utils.hpp"
 #include "vectorSpaceModelConfig.hpp"
-#include "vectorSpaceModelFiles.hpp"
-#include "strus/base/fileio.hpp"
+#include "databaseAdapter.hpp"
 #include "strus/base/string_format.hpp"
+#include "strus/base/fileio.hpp"
 #include <memory>
 #include <iostream>
 #include <stdexcept>
@@ -23,7 +25,7 @@
 
 static void printUsage()
 {
-	std::cout << "strusInspectVectorSpaceModel [options] <cmd> <args...>" << std::endl;
+	std::cout << "strusInspectVSM [options] <cmd> <args...>" << std::endl;
 	std::cout << "options:" << std::endl;
 	std::cout << "-h|--help" << std::endl;
 	std::cout << "    " << _TXT("Print this usage and do nothing else") << std::endl;
@@ -40,38 +42,59 @@ static void printUsage()
 
 static strus::ErrorBufferInterface* g_errorBuffer = 0;
 
-static void printSimilarityRelationMapWithWords( const strus::VectorSpaceModelConfig& config)
+static bool isUnsignedInt( const char* arg)
 {
-	strus::SimRelationMap simrelmap( strus::readSimRelationMapFromFile( config.path + strus::dirSeparator() + SIMRELFILE));
-	strus::StringList sampleNames = strus::readSampleNamesFromFile( config.path + strus::dirSeparator() + VECNAMEFILE);
+	char const* ai = arg;
+	for (; *ai; ++ai) if (*ai < '0' || *ai > '9') return false;
+	return ai != arg;
+}
 
-	strus::SampleIndex si=0, se=simrelmap.nofSamples();
-	for (; si != se; ++si)
+static unsigned int parseUnsignedInt( const char* arg)
+{
+	unsigned int rt = 0;
+	char const* ai = arg;
+	for (; *ai; ++ai)
 	{
-		strus::SimRelationMap::Row row = simrelmap.row( si);
-		strus::SimRelationMap::Row::const_iterator ri = row.begin(), re = row.end();
-		for (; ri != re; ++ri)
-		{
-			std::cout << sampleNames[si] << " " << sampleNames[ri->index] << " " << ri->simdist << std::endl;
-		}
+		if (*ai < '0' || *ai > '9') return 0;
+		rt = rt * 10 + (*ai - '0');
+	}
+	return rt;
+}
+
+static void printSimilarityRelation( strus::DatabaseAdapter& database, const strus::SampleIndex& sidx, const std::string& indent=std::string())
+{
+	std::vector<strus::SimRelationMap::Element> elems = database.readSimRelations( sidx);
+	std::vector<strus::SimRelationMap::Element>::const_iterator ei = elems.begin(), ee = elems.end();
+	for (; ei != ee; ++ei)
+	{
+		std::string name = database.readSampleName( ei->index);
+		std::cout << indent << ei->index << ": " << name << " " << ei->simdist << std::endl;
 	}
 }
 
-static void printSimilarityRelationMap( const strus::VectorSpaceModelConfig& config)
+static void printSimilarityRelation( strus::DatabaseAdapter& database, const std::string& name, const std::string& indent=std::string())
 {
-	strus::SimRelationMap simrelmap( strus::readSimRelationMapFromFile( config.path + strus::dirSeparator() + SIMRELFILE));
-
-	strus::SampleIndex si=0, se=simrelmap.nofSamples();
-	for (; si != se; ++si)
+	strus::SampleIndex sidx = database.readSampleIndex( name);
+	std::vector<strus::SimRelationMap::Element> elems = database.readSimRelations( sidx);
+	std::vector<strus::SimRelationMap::Element>::const_iterator ei = elems.begin(), ee = elems.end();
+	for (; ei != ee; ++ei)
 	{
-		strus::SimRelationMap::Row row = simrelmap.row( si);
-		strus::SimRelationMap::Row::const_iterator ri = row.begin(), re = row.end();
-		for (; ri != re; ++ri)
-		{
-			std::cout << si << " " << ri->index << " " << ri->simdist << std::endl;
-		}
+		std::string name = database.readSampleName( ei->index);
+		std::cout << indent << ei->index << ": " << name << " " << ei->simdist << std::endl;
 	}
 }
+
+static void printSimilarityRelation( strus::DatabaseAdapter& database)
+{
+	strus::SampleIndex si = 0, se = database.readNofSamples();
+	for (; si != se; ++si)
+	{
+		std::string name = database.readSampleName( si);
+		std::cout << si << ": " << name << ":" << std::endl;
+		printSimilarityRelation( database, si, "  ");
+	}
+}
+
 
 int main( int argc, const char* argv[])
 {
@@ -101,6 +124,7 @@ int main( int argc, const char* argv[])
 			else if (0==std::strcmp( argv[argi], "-v") || 0==std::strcmp( argv[argi], "--version"))
 			{
 				std::cerr << "strus base version " << STRUS_BASE_VERSION_STRING << std::endl;
+				std::cerr << "strus storage version " << STRUS_STORAGE_VERSION_STRING << std::endl;
 				std::cerr << "strus vector version " << STRUS_VECTOR_VERSION_STRING << std::endl;
 				doExit = true;
 			}
@@ -150,8 +174,12 @@ int main( int argc, const char* argv[])
 		}
 		if (doExit) return 0;
 		if (argc - argi < 1) throw strus::runtime_error( _TXT("too few arguments (given %u, at least required %u)"), argc - argi, 1);
-		if (argc - argi > 1) throw strus::runtime_error( _TXT("too many arguments (given %u, at least required %u)"), argc - argi, 1);
 
+		std::auto_ptr<strus::DatabaseInterface> database( createDatabase_leveldb( g_errorBuffer));
+		if (!database.get())
+		{
+			throw strus::runtime_error(_TXT("failed to create LevelDB database object"));
+		}
 		strus::VectorSpaceModelConfig config( configstr, g_errorBuffer);
 		if (g_errorBuffer->hasError())
 		{
@@ -163,11 +191,23 @@ int main( int argc, const char* argv[])
 #endif
 		if (command == "simrel")
 		{
-			printSimilarityRelationMap( config);
-		}
-		else if (command == "simrelterms")
-		{
-			printSimilarityRelationMapWithWords( config);
+			strus::DatabaseAdapter dbadapter( database.get(), config.databaseConfig, g_errorBuffer);
+
+			if (argc - argi > 2) throw strus::runtime_error( _TXT("too many arguments (given %u, max %u)"), argc - argi, 2);
+			if (argc - argi == 1)
+			{
+				printSimilarityRelation( dbadapter);
+			}
+			else if (argv[ argi+1][0] == '#' && isUnsignedInt( argv[ argi+1]+1))
+			{
+				unsigned int sampleidx = parseUnsignedInt( argv[ argi+1]+1);
+				printSimilarityRelation( dbadapter, sampleidx);
+			}
+			else
+			{
+				std::string samplename = argv[ argi+1];
+				printSimilarityRelation( dbadapter, samplename);
+			}
 		}
 		else
 		{

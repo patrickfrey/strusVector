@@ -10,14 +10,15 @@
 #define _STRUS_VECTOR_SPACE_MODEL_SIMILAITY_GROUP_HPP_INCLUDED
 #include "simHash.hpp"
 #include "armadillo"
+#include "strus/index.hpp"
 #include "strus/base/stdint.h"
 #include <vector>
 #include <set>
 
 namespace strus {
 
-typedef uint32_t SampleIndex;
-typedef uint32_t FeatureIndex;
+typedef Index SampleIndex;
+typedef Index FeatureIndex;
 
 /// \brief Structure for storing a representant of a similarity group
 class SimGroup

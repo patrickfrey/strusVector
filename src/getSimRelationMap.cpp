@@ -53,7 +53,7 @@ public:
 	bool fetch( SampleIndex& index)
 	{
 		index = m_sampleIndex.allocIncrement();
-		if (index >= m_samplear->size())
+		if (index >= (SampleIndex)m_samplear->size())
 		{
 			m_sampleIndex.decrement();
 			return false;

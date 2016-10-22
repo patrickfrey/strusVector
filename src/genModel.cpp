@@ -259,7 +259,7 @@ static bool findClosestFreeSample( SimRelationMap::Element& res, SampleIndex sam
 }
 
 
-typedef std::pair<unsigned int,unsigned int> Dependency;
+typedef std::pair<FeatureIndex,FeatureIndex> Dependency;
 typedef std::set<Dependency> DependencyGraph;
 
 /// \brief Build a directed graph of dependencies of groups derived from the map of samples to groups.
@@ -353,10 +353,10 @@ static void eliminateCircularReferences( DependencyGraph& graph)
 	std::set<Dependency>::iterator hi = graph.begin(), he = graph.end();
 	while (hi != he)
 	{
-		std::set<unsigned int> visited;		// set of visited for not processing nodes more than once
-		std::vector<unsigned int> queue;	// queue with candidates to process
+		std::set<FeatureIndex> visited;		// set of visited for not processing nodes more than once
+		std::vector<FeatureIndex> queue;	// queue with candidates to process
 		std::size_t qidx = 0;			// iterator in the candidate queue
-		unsigned int gid = hi->first;		// current node visited
+		FeatureIndex gid = hi->first;		// current node visited
 		// Iterate through all vertices pointed to by arcs rooted in the current node visited:
 		for (; hi != he && gid == hi->first; ++hi)
 		{
@@ -706,7 +706,7 @@ std::vector<SimHash> GenModel::run(
 		DependencyGraph::const_iterator di = groupDependencyGraph.begin(), de = groupDependencyGraph.end();
 		while (di != de)
 		{
-			unsigned int gid = di->first;
+			FeatureIndex gid = di->first;
 			removeGroup( gid, groupIdAllocator, groupInstanceList, groupInstanceMap, sampleSimGroupMap);
 			for (++di; di != de && gid == di->first; ++di){}
 		}
@@ -762,7 +762,7 @@ std::vector<SimHash> GenModel::run(
 			ne = sampleSimGroupMap.node_end(si);
 		for (; ni != ne; ++ni)
 		{
-			if (*ni == 0 || *ni > gidmap.size() || gidmap[*ni-1] == 0) throw strus::runtime_error(_TXT("illegal group id found: %u"), *ni);
+			if (*ni == 0 || *ni > (FeatureIndex)gidmap.size() || gidmap[*ni-1] == 0) throw strus::runtime_error(_TXT("illegal group id found: %u"), *ni);
 			groups.push_back( gidmap[*ni-1]);
 		}
 		if (!groups.empty())

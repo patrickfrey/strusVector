@@ -6,6 +6,7 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 #include "databaseAdapter.hpp"
+#include "databaseHelpers.hpp"
 #include "strus/base/hton.hpp"
 #include "strus/base/utf8.hpp"
 #include "strus/base/stdint.h"
@@ -18,10 +19,12 @@
 
 using namespace strus;
 
-using namespace strus;
+#define VARIABLE_NOF_SAMPLES  "samples"
+#define VARIABLE_NOF_FEATURES "feats"
 
-DatabaseAdapter::DatabaseAdapter( DatabaseInterface* database, const std::string& config, ErrorBufferInterface* errorhnd_)
-	:m_database(database->createClient(config)),m_errorhnd(errorhnd_)
+
+DatabaseAdapter::DatabaseAdapter( const DatabaseInterface* database_, const std::string& config, ErrorBufferInterface* errorhnd_)
+	:m_database(database_->createClient(config)),m_errorhnd(errorhnd_)
 {
 	if (!m_database.get()) throw strus::runtime_error( _TXT("failed to create database client for standard vector space model: %s"), m_errorhnd->fetchError());
 }
@@ -91,83 +94,9 @@ struct VectorSpaceModelHdr
 	}
 };
 
-
-enum DatabaseKeyPrefix
-{
-	KeyVersion = 'V',
-	KeySampleVectors = '$',
-	KeySampleSimHashVector = 'S',
-	KeyResultSimHashVector = 'R',
-	KeyConfig = 'C',
-	KeyLshModel = 'L',
-	KeySimRelationMap = 'M',
-	KeySampleFeatureIndexMap = 'f',
-	KeyFeatureSampleIndexMap = 's'
-};
-
-struct DatabaseKey
-{
-public:
-	explicit DatabaseKey( const DatabaseKeyPrefix& prefix)
-		:m_itr(1)
-	{
-		m_buf[0] = (char)prefix;
-		m_buf[1] = '\0';
-	}
-	DatabaseKey()
-		:m_itr(0)
-	{
-		m_buf[0] = '\0';
-	}
-	template <typename ScalarType>
-	DatabaseKey& operator[]( const ScalarType& val)
-	{
-		if (8 + m_itr > MaxKeySize) throw strus::runtime_error(_TXT("array bound write in database key buffer"));
-		m_itr += utf8encode( m_buf + m_itr, val);
-		m_buf[ m_itr] = 0;
-		return *this;
-	}
-
-	const char* c_str() const	{return m_buf;}
-	std::size_t size() const	{return m_itr;}
-
-private:
-	enum {MaxKeySize=256};
-	char m_buf[ MaxKeySize];
-	std::size_t m_itr;
-};
-
-struct DatabaseValue
-{
-public:
-	DatabaseValue()
-		:m_itr(0)
-	{
-		m_buf[0] = '\0';
-	}
-	template <typename ScalarType>
-	DatabaseValue& operator[]( const ScalarType& val)
-	{
-		if (sizeof(ScalarType) + m_itr > MaxValueSize) throw strus::runtime_error(_TXT("array bound write in database value buffer"));
-		ScalarType hostval = ByteOrder<ScalarType>( val);
-		std::memcpy( m_buf + m_itr, &hostval, sizeof(hostval));
-		m_itr += sizeof(hostval);
-		return *this;
-	}
-
-	const char* c_str() const	{return m_buf;}
-	std::size_t size() const	{return m_itr;}
-
-private:
-	enum {MaxValueSize=1024};
-	char m_buf[ 256];
-	std::size_t m_itr;
-};
-
-
 void DatabaseAdapter::checkVersion()
 {
-	DatabaseKey key( KeyVersion);
+	DatabaseKeyBuffer key( KeyVersion);
 
 	std::string content;
 	if (!m_database->readValue( key.c_str(), key.size(), content, DatabaseOptions()))
@@ -183,7 +112,7 @@ void DatabaseAdapter::checkVersion()
 
 void DatabaseAdapter::writeVersion()
 {
-	DatabaseKey key( KeyVersion);
+	DatabaseKeyBuffer key( KeyVersion);
 
 	VectorSpaceModelHdr hdr;
 	hdr.hton();
@@ -191,173 +120,229 @@ void DatabaseAdapter::writeVersion()
 	m_transaction->write( key.c_str(), key.size(), (const char*)&hdr, sizeof(hdr));
 }
 
+void DatabaseAdapter::writeVariable( const char* name, unsigned int value)
+{
+	std::string key;
+	key.push_back( (char)KeyVariable);
+	key.append( name);
+	DatabaseValueBuffer valuebuf;
+	valuebuf[ (uint64_t)value];
+
+	if (!m_transaction.get()) beginTransaction();
+	m_transaction->write( key.c_str(), key.size(), valuebuf.c_str(), valuebuf.size());
+}
+
+unsigned int DatabaseAdapter::readVariable( const char* name) const
+{
+	std::string key;
+	key.push_back( (char)KeyVariable);
+	key.append( name);
+
+	std::string blob;
+	if (!m_database->readValue( key.c_str(), key.size(), blob, DatabaseOptions().useCache()))
+	{
+		throw strus::runtime_error(_TXT("failed to to read sample vector: %s"), m_errorhnd->fetchError());
+	}
+	uint64_t rt;
+	DatabaseValueScanner scanner( blob);
+	scanner[ rt];
+	if (!scanner.eof()) throw strus::runtime_error(_TXT("failed to read variable: %s"), "extra characters in stored value");
+
+	return (unsigned int)rt;
+}
+
+void DatabaseAdapter::writeVariables( const SampleIndex& nofSamples, const FeatureIndex& nofFeatures)
+{
+	if (!m_transaction.get()) beginTransaction();
+	writeVariable( VARIABLE_NOF_SAMPLES, nofSamples);
+	writeVariable( VARIABLE_NOF_FEATURES, nofFeatures);
+}
+
+void DatabaseAdapter::writeSample( const SampleIndex& sidx, const std::string& name, const Vector& vec, const SimHash& simHash)
+{
+	if (!m_transaction.get()) beginTransaction();
+	writeSampleIndex( sidx, name);
+	writeSampleName( sidx, name);
+	writeSampleVector( sidx, vec);
+	writeSimhash( KeySampleSimHash, sidx, simHash);
+}
+
 enum {SimHashBlockSize=128};
 
-static void verifyAscIndex( const DatabaseKey& key, unsigned int expected_idx, const char* recname)
+template <typename ScalarType>
+static std::vector<ScalarType> vectorFromSerialization( const std::string& blob)
 {
-	if (expected_idx != (unsigned int)utf8decode( key.c_str()+1, key.size()-1))
+	std::vector<ScalarType> rt;
+	rt.reserve( blob.size() / sizeof(ScalarType));
+	if (blob.size() % sizeof(ScalarType) != 0)
 	{
-		throw strus::runtime_error( _TXT("keys not ascending in '%s' structure"), recname);
+		throw strus::runtime_error(_TXT("corrupt data in vector serialization"));
 	}
-}
-
-static DatabaseAdapter::Vector createVectorFromSerialization( const std::string& blob)
-{
-	DatabaseAdapter::Vector rt;
-	rt.reserve( blob.size() / sizeof(double));
-	double const* ri = (const double*)blob.c_str();
-	const double* re = ri + blob.size() / sizeof(double);
+	ScalarType const* ri = (const ScalarType*)blob.c_str();
+	const ScalarType* re = ri + blob.size() / sizeof(ScalarType);
 	for (; ri != re; ++ri)
 	{
-		rt.push_back( ByteOrder<double>::ntoh( *ri));
+		rt.push_back( ByteOrder<ScalarType>::ntoh( *ri));
 	}
 	return rt;
 }
 
-static std::string vectorSerialization( const DatabaseAdapter::Vector& vec)
+template <typename ScalarType>
+static std::string vectorSerialization( const std::vector<ScalarType>& vec)
 {
 	std::string rt;
-	rt.reserve( vec.size() * sizeof(double));
-	DatabaseAdapter::Vector::const_iterator vi = vec.begin(), ve = vec.end();
+	rt.reserve( vec.size() * sizeof(ScalarType));
+	typename std::vector<ScalarType>::const_iterator vi = vec.begin(), ve = vec.end();
 	for (; vi != ve; ++vi)
 	{
-		rt.push_back( ByteOrder<double>::hton( *vi));
+		ScalarType buf = ByteOrder<ScalarType>::hton( *vi);
+		rt.append( (const char*)&buf, sizeof(buf));
 	}
 	return rt;
 }
 
-std::vector<DatabaseAdapter::Vector> DatabaseAdapter::readSampleVectors() const
+DatabaseAdapter::Vector DatabaseAdapter::readSampleVector( const SampleIndex& sidx) const
 {
-	std::vector<Vector> rt;
-	std::auto_ptr<DatabaseCursorInterface> cursor( m_database->createCursor( DatabaseOptions()));
-	if (!cursor.get()) throw strus::runtime_error(_TXT("failed to create cursor to read sample vectors: %s"), m_errorhnd->fetchError());
+	DatabaseKeyBuffer key( KeySampleVector);
+	key[ sidx+1];
 
-	DatabaseKey key( KeySampleVectors);
-	unsigned int idx = 0;
+	std::string blob;
+	if (!m_database->readValue( key.c_str(), key.size(), blob, DatabaseOptions().useCache()))
+	{
+		throw strus::runtime_error(_TXT("failed to to read sample vector: %s"), m_errorhnd->fetchError());
+	}
+	return vectorFromSerialization<double>( blob);
+}
+
+void DatabaseAdapter::writeSampleVector( const SampleIndex& sidx, const Vector& vec)
+{
+	DatabaseKeyBuffer key( KeySampleVector);
+	key[ sidx+1];
+
+	std::string blob( vectorSerialization<double>( vec));
+	if (!m_transaction.get()) beginTransaction();
+	m_transaction->write( key.c_str(), key.size(), blob.c_str(), blob.size());
+}
+
+std::string DatabaseAdapter::readSampleName( const SampleIndex& sidx) const
+{
+	DatabaseKeyBuffer key( KeySampleName);
+	key[ sidx+1];
+
+	std::string name;
+	if (!m_database->readValue( key.c_str(), key.size(), name, DatabaseOptions().useCache()))
+	{
+		throw strus::runtime_error(_TXT("failed to read sample name: %s"), m_errorhnd->fetchError());
+	}
+	return name;
+}
+
+void DatabaseAdapter::writeSampleName( const SampleIndex& sidx, const std::string& name)
+{
+	DatabaseKeyBuffer key( KeySampleName);
+	key[ sidx+1];
+
+	if (!m_transaction.get()) beginTransaction();
+	m_transaction->write( key.c_str(), key.size(), name.c_str(), name.size());
+}
+
+SampleIndex DatabaseAdapter::readSampleIndex( const std::string& name) const
+{
+	std::string key;
+	key.push_back( (char)KeySampleName);
+	key.append( name);
+
+	std::string blob;
+	if (!m_database->readValue( key.c_str(), key.size(), blob, DatabaseOptions().useCache()))
+	{
+		throw strus::runtime_error(_TXT("failed to read sample name: %s"), m_errorhnd->fetchError());
+	}
+	uint32_t value = 0;
+	DatabaseValueScanner scanner( blob);
+	scanner[ value];
+	if (!scanner.eof()) throw strus::runtime_error(_TXT("failed to read sample index: %s"), "extra characters in stored value");
+	return value;
+}
+
+void DatabaseAdapter::writeSampleIndex( const SampleIndex& sidx, const std::string& name)
+{
+	std::string key;
+	key.push_back( (char)KeySampleName);
+	key.append( name);
+
+	if (!m_transaction.get()) beginTransaction();
+	DatabaseValueBuffer buffer;
+	buffer[ sidx];
+	m_transaction->write( key.c_str(), key.size(), buffer.c_str(), buffer.size());
+}
+
+SampleIndex DatabaseAdapter::readNofSamples() const
+{
+	return readVariable( VARIABLE_NOF_SAMPLES);
+}
+
+std::vector<SimHash> DatabaseAdapter::readSimhashVector( const KeyPrefix& prefix) const
+{
+	std::vector<SimHash> rt;
+	std::auto_ptr<DatabaseCursorInterface> cursor( m_database->createCursor( DatabaseOptions()));
+	if (!cursor.get()) throw strus::runtime_error(_TXT("failed to create cursor to read sim hash vector: %s"), m_errorhnd->fetchError());
+
+	DatabaseKeyBuffer key( prefix);
 	DatabaseCursorInterface::Slice slice = cursor->seekFirst( key.c_str(), key.size());
 	while (slice.defined())
 	{
-		verifyAscIndex( key, ++idx, "samplevec");
+		SampleIndex sidx;
+		DatabaseKeyScanner key_scanner( slice.ptr(), slice.size());
+		key_scanner[ sidx];
+		if (sidx != (SampleIndex)rt.size()+1) throw strus::runtime_error( _TXT("keys not ascending in '%s' structure"), "simhash");
 
-		Vector vec = createVectorFromSerialization( cursor->value());
+		SimHash vec = SimHash::createFromSerialization( cursor->value());
 		rt.push_back( vec);
 		slice = cursor->seekNext();
 	}
 	return rt;
 }
 
-void DatabaseAdapter::writeSampleVectors( const std::vector<DatabaseAdapter::Vector>& ar)
+void DatabaseAdapter::writeSimhashVector( const KeyPrefix& prefix, const std::vector<SimHash>& ar)
 {
 	if (!m_transaction.get()) beginTransaction();
-	unsigned int aidx = 0;
-	std::vector<Vector>::const_iterator ai = ar.begin(), ae = ar.end();
-	for (; ai != ae; ++ai)
-	{
-		DatabaseKey key( KeySampleVectors);
-		key[ ++aidx];
 
-		std::string blob( vectorSerialization( *ai));
-		m_transaction->write( key.c_str(), key.size(), blob.c_str(), blob.size());
-		if (aidx % 10000 == 0) commit();
-	}
-	if (m_errorhnd->hasError())
+	std::vector<SimHash>::const_iterator si = ar.begin(), se = ar.end();
+	for (std::size_t sidx=0; si < se; ++si,++sidx)
 	{
-		throw strus::runtime_error(_TXT("storing sample vectors failed: %s"), m_errorhnd->fetchError());
+		writeSimhash( prefix, sidx, *si);
 	}
 }
 
-DatabaseAdapter::Vector DatabaseAdapter::readSampleVector( const SampleIndex& sidx) const
+void DatabaseAdapter::writeSimhash( const KeyPrefix& prefix, const SampleIndex& sidx, const SimHash& simHash)
 {
-	DatabaseKey key( KeySampleVectors);
+	if (!m_transaction.get()) beginTransaction();
+	DatabaseKeyBuffer key( prefix);
 	key[ sidx+1];
 
-	std::string blob;
-	if (!m_database->readValue( key.c_str(), key.size(), blob, DatabaseOptions().useCache()))
-	{
-		throw strus::runtime_error(_TXT("failed to create cursor to read sample vector: %s"), m_errorhnd->fetchError());
-	}
-	return createVectorFromSerialization( blob);
-}
-
-void DatabaseAdapter::writeSampleVector( const SampleIndex& sidx, const Vector& vec)
-{
-	DatabaseKey key( KeySampleVectors);
-	key[ sidx+1];
-
-	std::string blob( vectorSerialization( vec));
+	std::string blob( simHash.serialization());
 	m_transaction->write( key.c_str(), key.size(), blob.c_str(), blob.size());
-}
-
-std::vector<SimHash> DatabaseAdapter::readSimhashVector( char prefix) const
-{
-	std::vector<SimHash> rt;
-	std::auto_ptr<DatabaseCursorInterface> cursor( m_database->createCursor( DatabaseOptions()));
-	if (!cursor.get()) throw strus::runtime_error(_TXT("failed to create cursor to read sim hash vector: %s"), m_errorhnd->fetchError());
-
-	DatabaseKey key( (DatabaseKeyPrefix)prefix);
-	unsigned int idx = 0;
-	DatabaseCursorInterface::Slice slice = cursor->seekFirst( key.c_str(), key.size());
-	while (slice.defined())
-	{
-		verifyAscIndex( key, ++idx, "simhash");
-
-		std::vector<SimHash> vec = SimHash::createFromSerialization( cursor->value());
-		rt.insert( rt.end(), vec.begin(), vec.end());
-		slice = cursor->seekNext();
-		if (vec.size() != SimHashBlockSize && slice.defined())
-		{
-			throw strus::runtime_error( _TXT("blocks not complete in '%s' structure"), "simhash");
-		}
-	}
-	return rt;
-}
-
-void DatabaseAdapter::writeSimhashVector( char prefix, const std::vector<SimHash>& ar)
-{
-	if (!m_transaction.get()) beginTransaction();
-	unsigned int idx = 0;
-	SimHash const* ai = ar.data();
-	const SimHash* ae = ai + ar.size();
-	for (; ai < ae; ai += SimHashBlockSize)
-	{
-		DatabaseKey key( (DatabaseKeyPrefix)prefix);
-		key[ ++idx];
-
-		std::size_t blobsize = (ai+SimHashBlockSize) >= ae ? (ae-ai):SimHashBlockSize;
-		std::string blob( SimHash::serialization( ai, blobsize));
-		m_transaction->write( key.c_str(), key.size(), blob.c_str(), blob.size());
-		if (idx % 10000 == 0) commit();
-	}
-	if (m_errorhnd->hasError())
-	{
-		throw strus::runtime_error(_TXT("storing simhash vectors failed: %s"), m_errorhnd->fetchError());
-	}
 }
 
 std::vector<SimHash> DatabaseAdapter::readSampleSimhashVector() const
 {
-	return readSimhashVector( KeySampleSimHashVector);
+	return readSimhashVector( KeySampleSimHash);
 }
 
 std::vector<SimHash> DatabaseAdapter::readResultSimhashVector() const
 {
-	return readSimhashVector( KeyResultSimHashVector);
-}
-
-void DatabaseAdapter::writeSampleSimhashVector( const std::vector<SimHash>& ar)
-{
-	return writeSimhashVector( KeySampleSimHashVector, ar);
+	return readSimhashVector( KeyResultSimHash);
 }
 
 void DatabaseAdapter::writeResultSimhashVector( const std::vector<SimHash>& ar)
 {
-	return writeSimhashVector( KeyResultSimHashVector, ar);
+	return writeSimhashVector( KeyResultSimHash, ar);
 }
 
 
 VectorSpaceModelConfig DatabaseAdapter::readConfig() const
 {
-	DatabaseKey key( KeyConfig);
+	DatabaseKeyBuffer key( KeyConfig);
 
 	std::string content;
 	if (!m_database->readValue( key.c_str(), key.size(), content, DatabaseOptions()))
@@ -369,20 +354,16 @@ VectorSpaceModelConfig DatabaseAdapter::readConfig() const
 
 void DatabaseAdapter::writeConfig( const VectorSpaceModelConfig& config)
 {
-	DatabaseKey key( KeyConfig);
+	DatabaseKeyBuffer key( KeyConfig);
 	std::string content( config.tostring());
 
 	if (!m_transaction.get()) beginTransaction();
 	m_transaction->write( key.c_str(), key.size(), content.c_str(), content.size());
-	if (m_errorhnd->hasError())
-	{
-		throw strus::runtime_error(_TXT("storing configuration failed: %s"), m_errorhnd->fetchError());
-	}
 }
 
 LshModel DatabaseAdapter::readLshModel() const
 {
-	DatabaseKey key( KeyLshModel);
+	DatabaseKeyBuffer key( KeyLshModel);
 	
 	std::string content;
 	if (!m_database->readValue( key.c_str(), key.size(), content, DatabaseOptions()))
@@ -394,103 +375,213 @@ LshModel DatabaseAdapter::readLshModel() const
 
 void DatabaseAdapter::writeLshModel( const LshModel& model)
 {
-	DatabaseKey key( KeyLshModel);	
+	DatabaseKeyBuffer key( KeyLshModel);	
 	std::string content( model.serialization());
 
 	if (!m_transaction.get()) beginTransaction();
 	m_transaction->write( key.c_str(), key.size(), content.c_str(), content.size());
-	if (m_errorhnd->hasError())
-	{
-		throw strus::runtime_error(_TXT("storing LSH model failed: %s"), m_errorhnd->fetchError());
-	}
-	commit();
 }
 
 SimRelationMap DatabaseAdapter::readSimRelationMap() const
 {
-	DatabaseKey key( KeySimRelationMap);
-	
+	SimRelationMap rt;
+	DatabaseKeyBuffer key( KeySimRelationMap);
+
+	std::auto_ptr<DatabaseCursorInterface> cursor( m_database->createCursor( DatabaseOptions()));
+	if (!cursor.get()) throw strus::runtime_error(_TXT("failed to create cursor to read similarity relation map: %s"), m_errorhnd->fetchError());
+
+	DatabaseCursorInterface::Slice slice = cursor->seekFirst( key.c_str(), key.size());
+	while (slice.defined())
+	{
+		SampleIndex sidx;
+		DatabaseKeyScanner key_scanner( slice.ptr()+1, slice.size()-1);
+		key_scanner[ sidx];
+		--sidx;
+
+		DatabaseCursorInterface::Slice content = cursor->value();
+		char const* ci = content.ptr();
+		const char* ce = ci + content.size();
+		if ((ce - ci) % (sizeof(SampleIndex)+sizeof(unsigned short)) != 0)
+		{
+			throw strus::runtime_error(_TXT("corrupt row %u of similarity relation map"), sidx);
+		}
+		std::vector<SimRelationMap::Element> elems;
+		for (; ci < ce; ci += sizeof(SampleIndex)+sizeof(unsigned short))
+		{
+			SampleIndex col;
+			unsigned short simdist;
+			DatabaseValueScanner value_scanner( ci, (sizeof(SampleIndex)+sizeof(unsigned short)));
+			value_scanner[ col][ simdist];
+			elems.push_back( SimRelationMap::Element( col, simdist));
+		}
+		rt.addRow( sidx, elems);
+		slice = cursor->seekNext();
+	}
+	return rt;
+}
+
+std::vector<SimRelationMap::Element> DatabaseAdapter::readSimRelations( const SampleIndex& sidx) const
+{
+	DatabaseKeyBuffer key( KeySimRelationMap);
+	key[ sidx+1];
+
 	std::string content;
 	if (!m_database->readValue( key.c_str(), key.size(), content, DatabaseOptions()))
 	{
-		throw strus::runtime_error( _TXT( "failed to read sim relation map from database: %s"), m_errorhnd->fetchError());
+		if (m_errorhnd->hasError())
+		{
+			throw strus::runtime_error(_TXT("failed to read sim relations: %s"), m_errorhnd->fetchError());
+		}
+		return std::vector<SimRelationMap::Element>();
 	}
-	return SimRelationMap::fromSerialization( content);
+	else
+	{
+		char const* ci = content.c_str();
+		const char* ce = ci + content.size();
+		if ((ce - ci) % (sizeof(SampleIndex)+sizeof(unsigned short)) != 0)
+		{
+			throw strus::runtime_error(_TXT("corrupt row %u of similarity relation map"), sidx);
+		}
+		std::vector<SimRelationMap::Element> rt;
+		for (; ci < ce; ci += sizeof(SampleIndex)+sizeof(unsigned short))
+		{
+			SampleIndex col;
+			unsigned short simdist;
+			DatabaseValueScanner value_scanner( ci, (sizeof(SampleIndex)+sizeof(unsigned short)));
+			value_scanner[ col][ simdist];
+			rt.push_back( SimRelationMap::Element( col, simdist));
+		}
+		return rt;
+	}
 }
 
 void DatabaseAdapter::writeSimRelationMap( const SimRelationMap& simrelmap)
 {
-	DatabaseKey key( KeySimRelationMap);	
-	std::string content( simrelmap.serialization());
-
-	if (!m_transaction.get()) beginTransaction();
-	m_transaction->write( key.c_str(), key.size(), content.c_str(), content.size());
-	if (m_errorhnd->hasError())
+	SampleIndex si = 0, se = simrelmap.nofSamples();
+	for (; si != se; ++si)
 	{
-		throw strus::runtime_error(_TXT("storing sim relation map failed: %s"), m_errorhnd->fetchError());
+		SimRelationMap::Row row = simrelmap.row( si);
+		if (row.begin() == row.end()) continue;
+
+		DatabaseKeyBuffer key( KeySimRelationMap);	
+		key[ si+1];
+
+		std::string content;
+		SimRelationMap::Row::const_iterator ri = row.begin(), re = row.end();
+		for (; ri != re; ++ri)
+		{
+			DatabaseValueBuffer buffer;
+			buffer[ ri->index][ ri->simdist];
+			content.append( buffer.c_str(), buffer.size());
+		}
+		if (!m_transaction.get()) beginTransaction();
+		m_transaction->write( key.c_str(), key.size(), content.c_str(), content.size());
 	}
-	commit();
 }
 
-SampleFeatureIndexMap DatabaseAdapter::readSampleFeatureIndexMap() const
+std::vector<FeatureIndex> DatabaseAdapter::readSampleFeatureIndices( const SampleIndex& sidx) const
 {
-	DatabaseKey key( KeySampleFeatureIndexMap);
-	
-	std::string content;
-	if (!m_database->readValue( key.c_str(), key.size(), content, DatabaseOptions()))
+	DatabaseKeyBuffer key( KeySampleFeatureIndexMap);
+	key[ sidx+1];
+
+	std::string blob;
+	if (!m_database->readValue( key.c_str(), key.size(), blob, DatabaseOptions().useCache()))
 	{
 		throw strus::runtime_error( _TXT( "failed to read sample to feature index map from database: %s"), m_errorhnd->fetchError());
 	}
-	return SampleFeatureIndexMap::fromSerialization( content);
+	return vectorFromSerialization<FeatureIndex>( blob);
 }
 
-void DatabaseAdapter::writeSampleFeatureIndexMap( const SampleFeatureIndexMap& simrelmap)
+void DatabaseAdapter::writeSampleFeatureIndexMap( const SampleFeatureIndexMap& sfmap)
 {
-	DatabaseKey key( KeySampleFeatureIndexMap);	
-	std::string content( simrelmap.serialization());
-
-	if (!m_transaction.get()) beginTransaction();
-	m_transaction->write( key.c_str(), key.size(), content.c_str(), content.size());
-	if (m_errorhnd->hasError())
+	SampleIndex si = 0, se = sfmap.maxkey()+1;
+	for (; si != se; ++si)
 	{
-		throw strus::runtime_error(_TXT("storing sample to feature index map failed: %s"), m_errorhnd->fetchError());
+		if (!m_transaction.get()) beginTransaction();
+		std::vector<FeatureIndex> features = sfmap.getValues( si);
+		if (features.empty()) continue;
+		std::string blob = vectorSerialization<FeatureIndex>( features);
+
+		DatabaseKeyBuffer key( KeySampleFeatureIndexMap);
+		key[ si+1];
+		m_transaction->write( key.c_str(), key.size(), blob.c_str(), blob.size());
 	}
-	commit();
 }
 
-FeatureSampleIndexMap DatabaseAdapter::readFeatureSampleIndexMap() const
+std::vector<SampleIndex> DatabaseAdapter::readFeatureSampleIndices( const FeatureIndex& fidx) const
 {
-	DatabaseKey key( KeyFeatureSampleIndexMap);
-	
-	std::string content;
-	if (!m_database->readValue( key.c_str(), key.size(), content, DatabaseOptions()))
+	if (fidx == 0) throw strus::runtime_error(_TXT("illegal key (null) for feature"));
+
+	DatabaseKeyBuffer key( KeyFeatureSampleIndexMap);
+	key[ fidx];
+
+	std::string blob;
+	if (!m_database->readValue( key.c_str(), key.size(), blob, DatabaseOptions().useCache()))
 	{
 		throw strus::runtime_error( _TXT( "failed to read sample to feature index map from database: %s"), m_errorhnd->fetchError());
 	}
-	return FeatureSampleIndexMap::fromSerialization( content);
+	return vectorFromSerialization<SampleIndex>( blob);
 }
 
 void DatabaseAdapter::writeFeatureSampleIndexMap( const FeatureSampleIndexMap& fsmap)
 {
-	DatabaseKey key( KeyFeatureSampleIndexMap);	
-	std::string content( fsmap.serialization());
-
-	if (!m_transaction.get()) beginTransaction();
-	m_transaction->write( key.c_str(), key.size(), content.c_str(), content.size());
-	if (m_errorhnd->hasError())
+	SampleIndex fi = 1, fe = fsmap.maxkey();
+	for (; fi != fe; ++fi)
 	{
-		throw strus::runtime_error(_TXT("storing sample to feature index map failed: %s"), m_errorhnd->fetchError());
+		if (!m_transaction.get()) beginTransaction();
+		std::vector<SampleIndex> members = fsmap.getValues( fi);
+		if (members.empty()) continue;
+		std::string blob = vectorSerialization<SampleIndex>( members);
+
+		DatabaseKeyBuffer key( KeyFeatureSampleIndexMap);
+		key[ fi];
+		m_transaction->write( key.c_str(), key.size(), blob.c_str(), blob.size());
 	}
-	commit();
 }
 
-/*
-StringList strus::readSampleNamesFromFile( const std::string& filename)
+void DatabaseAdapter::deleteSubTree( const KeyPrefix& prefix)
 {
-	return StringList();
+	if (!m_transaction.get()) beginTransaction();
+	DatabaseKeyBuffer key( KeySimRelationMap);
+	m_transaction->removeSubTree( key.c_str(), key.size());
 }
 
-void strus::writeSampleNamesToFile( const StringList& , const std::string& filename)
+void DatabaseAdapter::deleteVariables()
 {
+	deleteSubTree( KeyVariable);
 }
-*/
+
+void DatabaseAdapter::deleteSamples()
+{
+	deleteSubTree( KeySampleVector);
+	deleteSubTree( KeySampleName);
+	deleteSubTree( KeySampleNameInv);
+}
+
+void DatabaseAdapter::deleteSampleSimhashVector()
+{
+	deleteSubTree( KeySampleSimHash);
+}
+
+void DatabaseAdapter::deleteResultSimhashVector()
+{
+	deleteSubTree( KeyResultSimHash);
+}
+
+void DatabaseAdapter::deleteSimRelationMap()
+{
+	deleteSubTree( KeySimRelationMap);
+}
+
+
+void DatabaseAdapter::deleteSampleFeatureIndexMap()
+{
+	deleteSubTree( KeySampleFeatureIndexMap);
+}
+
+void DatabaseAdapter::deleteFeatureSampleIndexMap()
+{
+	deleteSubTree( KeyFeatureSampleIndexMap);
+}
+
+

@@ -85,12 +85,12 @@ private:
 		bool insert( const FeatureIndex& gix, std::size_t maxnodesize);
 		bool remove( const FeatureIndex& gix);
 		bool contains( const FeatureIndex& gidx) const;
-		void check( std::size_t maxnodesize) const;
+		void check( FeatureIndex maxnodesize) const;
 	};
 	Node* m_nodear;
 	FeatureIndex* m_refs;
 	std::size_t m_nodearsize;
-	std::size_t m_maxnodesize;
+	FeatureIndex m_maxnodesize;
 };
 
 }//namespace

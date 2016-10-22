@@ -104,17 +104,17 @@ public:
 	/// \remark Absolutely necessary to call this function after building a similarity relation map with (a,b) for a > b !
 	SimRelationMap mirror() const;
 
-	/// \brief Serialize
-	std::string serialization() const;
-	/// \brief Deserialize
-	/// \param[in] blob the content with the serialization to build the object from
-	/// \return the deserialized object
-	static SimRelationMap fromSerialization( const std::string& blob);
-
 	/// \brief Join two similarity relation maps to one without overlapping rows
 	/// \param[in] o similarity relation map to join with
 	/// \remark throws when rows of the two maps are not disjoint
 	void join( const SimRelationMap& o);
+
+	void clear()
+	{
+		m_ar.clear();
+		m_rowdescrmap.clear();
+		m_nofSamples = 0;
+	}
 
 private:
 	struct RowDescr

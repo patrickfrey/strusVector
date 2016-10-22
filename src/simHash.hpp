@@ -101,10 +101,9 @@ public:
 	/// \brief Create a randomized SimHash of a given size
 	static SimHash randomHash( std::size_t size_, unsigned int seed);
 	/// \brief Serialize
-	static std::string serialization( const SimHash* ar, std::size_t arsize);
-	static std::string serialization( const std::vector<SimHash>& ar);
+	std::string serialization() const;
 	/// \brief Deserialize
-	static std::vector<SimHash> createFromSerialization( const std::string& blob);
+	static SimHash createFromSerialization( const std::string& blob);
 
 	/// \brief Get the size of the array used to represent the sim hash value
 	std::size_t arsize() const			{return (m_size+NofElementBits-1)/NofElementBits;}

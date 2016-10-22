@@ -295,10 +295,10 @@ make test
 %dir %{_libdir}/strus
 %{_libdir}/strus/libstrus_armadillo.so.@STRUS_MAJOR_VERSION@.@STRUS_MINOR_VERSION@
 %{_libdir}/strus/libstrus_armadillo.so.@STRUS_MAJOR_VERSION@.@STRUS_MINOR_VERSION@.@STRUS_PATCH_VERSION@
-%{_libdir}/strus/libstrus_vectorspace.so.@STRUS_MAJOR_VERSION@.@STRUS_MINOR_VERSION@
-%{_libdir}/strus/libstrus_vectorspace.so.@STRUS_MAJOR_VERSION@.@STRUS_MINOR_VERSION@.@STRUS_PATCH_VERSION@
+%{_libdir}/strus/libstrus_vectorspace_std.so.@STRUS_MAJOR_VERSION@.@STRUS_MINOR_VERSION@
+%{_libdir}/strus/libstrus_vectorspace_std.so.@STRUS_MAJOR_VERSION@.@STRUS_MINOR_VERSION@.@STRUS_PATCH_VERSION@
 %{_libdir}/strus/modules/modstrus_storage_vectorspace.so
-%{_bindir}/strusInspectVectorSpaceModel
+%{_bindir}/strusInspectVsm
 
 %files devel
 %defattr( -, root, root )

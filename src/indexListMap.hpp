@@ -12,6 +12,7 @@
 #include "utils.hpp"
 #include "internationalization.hpp"
 #include <vector>
+#include <map>
 
 
 namespace strus {
@@ -66,82 +67,13 @@ public:
 		return rt;
 	}
 
-	std::string serialization() const
-	{
-		std::string rt;
-		unsigned int mapsize_n = ByteOrder<unsigned int>::hton( m_listmap.size());
-		rt.append( (const char*)&mapsize_n, sizeof(mapsize_n));
-
-		std::map<KeyType,IndexListRef> deterministicListMap;
-		typename ListMap::const_iterator li = m_listmap.begin(), le = m_listmap.end();
-		for (; li != le; ++li)
-		{
-			deterministicListMap[ li->first] = li->second;
-		}
-		typename std::map<KeyType,IndexListRef>::const_iterator di = deterministicListMap.begin(), de = deterministicListMap.end();
-		for (; di != de; ++di)
-		{
-			KeyType key_n = ByteOrder<KeyType>::hton( di->first);
-			uint64_t start_n = ByteOrder<uint64_t>::hton( di->second.start);
-			uint32_t size_n = ByteOrder<uint32_t>::hton( di->second.size);
-
-			rt.append( (const char*)&key_n, sizeof(key_n));
-			rt.append( (const char*)&start_n, sizeof(start_n));
-			rt.append( (const char*)&size_n, sizeof(size_n));
-		}
-		typename ValueList::const_iterator vi = m_list.begin(), ve = m_list.end();
-		for (; vi != ve; ++vi)
-		{
-			ValueType val_n = ByteOrder<ValueType>::hton( *vi);
-			rt.append( (const char*)&val_n, sizeof(val_n));
-		}
-		return rt;
-	}
-
-	static IndexListMap fromSerialization( const std::string& content)
-	{
-		IndexListMap rt;
-		char const* si = content.c_str();
-		const char* se = content.c_str() + content.size();
-		unsigned int mapsize_n;
-		std::memcpy( &mapsize_n, si, sizeof( mapsize_n));
-		si += sizeof(mapsize_n);
-		unsigned int mapsize = ByteOrder<uint32_t>::ntoh( mapsize_n);
-
-		for (unsigned int mi = 0; si < se && mi < mapsize; ++mi)
-		{
-			KeyType key = parseElem<KeyType>( si, se);
-			uint64_t start = parseElem<uint64_t>( si, se);
-			uint32_t size = parseElem<uint32_t>( si, se);
-			rt.m_listmap[ key] = IndexListRef( start, size);
-			if (key > rt.m_maxkey) rt.m_maxkey = key;
-		}
-		while (si < se)
-		{
-			ValueType value = parseElem<ValueType>( si, se);
-			rt.m_list.push_back( value);
-		}
-		return rt;
-	}
-
 	KeyType maxkey() const
 	{
 		return m_maxkey;
 	}
 
 private:
-	template <typename ElemType>
-	static ElemType parseElem( char const*& si, const char* se)
-	{
-		ElemType elem_n;
-		if (si + sizeof(ElemType) > se) throw strus::runtime_error(_TXT("array bound read in parse index list map"));
-		std::memcpy( &elem_n, si, sizeof(elem_n));
-		si += sizeof(ElemType);
-		return ByteOrder<ElemType>::ntoh( elem_n);
-	}
-
-private:
-	typedef utils::UnorderedMap<KeyType,IndexListRef> ListMap;
+	typedef std::map<KeyType,IndexListRef> ListMap;
 	typedef std::vector<ValueType> ValueList;
 	ListMap m_listmap;
 	ValueList m_list;

@@ -239,71 +239,32 @@ std::string SimHash::tostring() const
 	return rt.str();
 }
 
-std::string SimHash::serialization( const std::vector<SimHash>& ar)
-{
-	return serialization( ar.data(), ar.size());
-}
-
-std::string SimHash::serialization( const SimHash* ar, std::size_t arsize)
+std::string SimHash::serialization() const
 {
 	std::string rt;
-	std::size_t vecsize = 0;
-	SimHash const* vi = ar;
-	const SimHash* ve = ar + arsize;
-	for (; vi != ve; ++vi)
+	uint32_t size_bits = ByteOrder<uint32_t>::hton( m_size);
+	rt.append( (const char*)&size_bits, sizeof(size_bits));
+	uint64_t const* ai = m_ar;
+	const uint64_t* ae = m_ar + arsize();
+	for (; ai != ae; ++ai)
 	{
-		if (!vecsize)
-		{
-			vecsize = vi->size();
-		}
-		else if (vi->size() != vecsize)
-		{
-			throw strus::runtime_error(_TXT("failed to serialize array with vectors of different size"));
-		}
-	}
-	if (vecsize > std::numeric_limits<uint32_t>::max()) throw strus::runtime_error(_TXT("sim hash elements too big to serialize"));
-	if (arsize > std::numeric_limits<uint32_t>::max()) throw strus::runtime_error(_TXT("sim hash vector too big to serialize"));
-
-	uint32_t nw;
-	nw = ByteOrder<uint32_t>::hton( (uint32_t)vecsize);   rt.append( (const char*)&nw, sizeof(nw));
-	nw = ByteOrder<uint32_t>::hton( (uint32_t)arsize);    rt.append( (const char*)&nw, sizeof(nw));
-	for (vi = ar; vi != ve; ++vi)
-	{
-		uint64_t const* ai = vi->m_ar;
-		const uint64_t* ae = vi->m_ar + vi->arsize();
-		for (; ai != ae; ++ai)
-		{
-			uint64_t val = ByteOrder<uint64_t>::hton( *ai);
-			rt.append( (const char*)&val, sizeof(val));
-		}
+		uint64_t val = ByteOrder<uint64_t>::hton( *ai);
+		rt.append( (const char*)&val, sizeof(val));
 	}
 	return rt;
 }
 
-std::vector<SimHash> SimHash::createFromSerialization( const std::string& in)
+SimHash SimHash::createFromSerialization( const std::string& in)
 {
-	std::vector<SimHash> rt;
 	uint32_t const* nw = (const uint32_t*)(void*)(in.c_str());
-	const uint32_t* start = nw;
-	std::size_t vecsize = ByteOrder<uint32_t>::ntoh( *nw++);
-	std::size_t vi=0,ve = ByteOrder<uint32_t>::ntoh( *nw++);
-	for (; vi < ve; ++vi)
+	uint32_t size_bits = ByteOrder<uint32_t>::ntoh( *nw++);
+	SimHash rt( size_bits, false);
+	std::size_t ai=0,ae=rt.arsize();
+	uint64_t const* nw64 = (const uint64_t*)nw;
+	for (; ai != ae; ++ai,++nw64)
 	{
-		SimHash elem( vecsize, false);
-		std::size_t ai=0,ae=elem.arsize();
-		for (; ai != ae; ++ai)
-		{
-			uint64_t const* nw64 = (const uint64_t*)nw;
-			uint64_t val = ByteOrder<uint64_t>::ntoh( *nw64);
-			nw += 2;
-			elem.m_ar[ ai] = val;
-		}
-		elem.m_size = vecsize;
-		rt.push_back( elem);
-	}
-	if ((nw - start) * sizeof(uint32_t) != in.size())
-	{
-		throw strus::runtime_error(_TXT("illegal blob passed as vector list serialization"));
+		uint64_t val = ByteOrder<uint64_t>::ntoh( *nw64);
+		rt.m_ar[ ai] = val;
 	}
 	return rt;
 }
@@ -325,14 +286,14 @@ uint64_t hash64Bitshuffle( uint64_t a)
 	return a;
 }
 
+#define KNUTH_CONST 2654435761U
 SimHash SimHash::randomHash( std::size_t size_, unsigned int seed)
 {
 	SimHash rt( size_, false);
 	std::size_t ai=0,ae = arsize(size_);
-	enum {KnuthConst=2654435761};
 	for (; ai != ae; ++ai)
 	{
-		rt.m_ar[ai] = hash64Bitshuffle( (seed + ai) * KnuthConst);
+		rt.m_ar[ai] = hash64Bitshuffle( (seed + ai) * KNUTH_CONST);
 	}
 	return rt;
 }

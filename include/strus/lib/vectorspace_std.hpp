@@ -17,7 +17,12 @@ namespace strus {
 class ErrorBufferInterface;
 /// \brief Forward declaration
 class VectorSpaceModelInterface;
+/// \brief Forward declaration
+class DatabaseInterface;
 
+/// \brief Create standard vector space model
+/// \param[in] database database to us for the data repository of the model
+/// \param[in] errorhnd error handler to use
 VectorSpaceModelInterface* createVectorSpaceModel_std( ErrorBufferInterface* errorhnd);
 
 }//namespace

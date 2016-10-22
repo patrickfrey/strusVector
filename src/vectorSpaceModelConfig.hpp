@@ -38,10 +38,19 @@ struct VectorSpaceModelConfig
 	VectorSpaceModelConfig();
 	VectorSpaceModelConfig( const std::string& config, ErrorBufferInterface* errorhnd);
 
+	bool isBuildCompatible( const VectorSpaceModelConfig& o)
+	{
+		return dim == o.dim 
+			&& bits == o.bits
+			&& variations == o.variations
+			&& simdist <= o.simdist
+			&& raddist <= o.simdist
+			&& eqdist <= o.simdist
+		;
+	}
 	std::string tostring() const;
 
-	std::string path;		///< path of model
-	std::string prepath;		///< for builder: path with preprocessed model (similarity relation map and input LSH values are precalculated)
+	std::string databaseConfig;	///< path of model
 	std::string logfile;		///< file where to log some status data
 	unsigned int threads;		///< maximum number of threads to use (0 = no threading)
 	unsigned int dim;		///< input vector dimension

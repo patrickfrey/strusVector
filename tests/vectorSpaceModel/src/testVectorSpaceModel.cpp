@@ -7,10 +7,12 @@
  */
 /// \brief Test program
 #include "strus/lib/vectorspace_std.hpp"
+#include "strus/lib/database_leveldb.hpp"
 #include "strus/lib/error.hpp"
 #include "strus/vectorSpaceModelInterface.hpp"
 #include "strus/vectorSpaceModelInstanceInterface.hpp"
 #include "strus/vectorSpaceModelBuilderInterface.hpp"
+#include "strus/databaseInterface.hpp"
 #include "strus/errorBufferInterface.hpp"
 #include "strus/base/configParser.hpp"
 #include "strus/base/stdint.h"
@@ -28,7 +30,6 @@
 #include <limits>
 
 #undef STRUS_LOWLEVEL_DEBUG
-#define SAMPLESFILE "samples.bin"
 
 static void initRandomNumberGenerator()
 {
@@ -110,6 +111,7 @@ int main( int argc, const char** argv)
 {
 	try
 	{
+		int rt = 0;
 		g_errorhnd = strus::createErrorBuffer_standard( 0, 0);
 		if (!g_errorhnd) throw std::runtime_error("failed to create error buffer structure");
 
@@ -119,8 +121,9 @@ int main( int argc, const char** argv)
 		unsigned int dim = 0;
 		std::string path;
 		std::string prepath;
-		bool use_prepared_model = false;
+		bool use_model_built = false;
 		bool use_group_assign = false;
+		bool printUsageAndExit = false;
 
 		// Parse parameters:
 		int argidx = 1;
@@ -130,12 +133,14 @@ int main( int argc, const char** argv)
 			if (0==std::strcmp( argv[argidx], "-g"))
 			{
 				use_group_assign = true;
-				std::cerr << "use feature group assign instead of similarity" << std::endl;
+			}
+			else if (0==std::strcmp( argv[argidx], "-b"))
+			{
+				use_model_built = true;
 			}
 			else if (0==std::strcmp( argv[argidx], "-h"))
 			{
-				std::cerr << "Usage: " << argv[0] << " [<config>] [<number of sample vectors>]" << std::endl;
-				exit(0);
+				printUsageAndExit = true;
 			}
 			else if (0==std::strcmp( argv[argidx], "--"))
 			{
@@ -145,8 +150,18 @@ int main( int argc, const char** argv)
 		}
 		if (argc > argidx + 2)
 		{
+			std::cerr << "too many arguments (maximum 1 expected)" << std::endl;
+			rt = 1;
+			printUsageAndExit = true;
+		}
+		if (printUsageAndExit)
+		{
 			std::cerr << "Usage: " << argv[0] << " [<config>] [<number of sample vectors>]" << std::endl;
-			throw std::runtime_error( "too many arguments (maximum 1 expected)");
+			std::cerr << "options:" << std::endl;
+			std::cerr << "-h     : print this usage" << std::endl;
+			std::cerr << "-g     : use feature group assign instead of similarity to verify results" << std::endl;
+			std::cerr << "-b     : do not recreate model, use the one built" << std::endl;
+			return rt;
 		}
 		if (argc >= argidx + 1)
 		{
@@ -168,48 +183,34 @@ int main( int argc, const char** argv)
 		std::cerr << "model config: " << config << std::endl;
 		std::string configsrc = config;
 		if (!extractUIntFromConfigString( dim, configsrc, "dim", g_errorhnd)) throw std::runtime_error("configuration parameter 'dim' is not specified");
-		if (!extractStringFromConfigString( path, configsrc, "path", g_errorhnd)) throw std::runtime_error("configuration parameter 'path' is not specified");
-		if (extractStringFromConfigString( prepath, configsrc, "prepath", g_errorhnd))
-		{
-			use_prepared_model = true;
-		}
 
 		// Build all objects:
+		std::auto_ptr<strus::DatabaseInterface> dbi( createDatabase_leveldb( g_errorhnd));
 		std::auto_ptr<strus::VectorSpaceModelInterface> vmodel( createVectorSpaceModel_std( g_errorhnd));
-		if (!vmodel.get() || g_errorhnd->hasError()) throw std::runtime_error( g_errorhnd->fetchError());
+		if (!dbi.get() || !vmodel.get() || g_errorhnd->hasError()) throw std::runtime_error( g_errorhnd->fetchError());
 
 		// Remove traces of old test model before creating a new one:
-		(void)strus::removeFile( path + strus::dirSeparator() + SAMPLESFILE);
-		if (!vmodel->destroyModel( config))
+		if (!use_model_built && !dbi->destroyDatabase( config))
 		{
 			(void)g_errorhnd->fetchError();
 		}
-		std::auto_ptr<strus::VectorSpaceModelBuilderInterface> builder( vmodel->createBuilder( config));
-		if (!builder.get()) throw std::runtime_error( g_errorhnd->fetchError());
 
 		// Build the test vectors:
 		std::vector<std::vector<double> > samplear;
-		if (use_prepared_model)
+		if (use_model_built)
 		{
-			std::string content;
-			unsigned int ec = strus::readFile( prepath + strus::dirSeparator() + SAMPLESFILE, content);
-			if (ec) throw std::runtime_error("could not load prepared sample vectors");
-			double const* vi = (const double*)content.c_str();
-			const double* ve = vi + (content.size() / sizeof(double));
-			while (vi < ve)
+			std::auto_ptr<strus::VectorSpaceModelInstanceInterface> instance( vmodel->createInstance( dbi.get(), config));
+			if (!instance.get()) throw std::runtime_error( g_errorhnd->fetchError());
+			strus::Index si = 0, se = instance->nofSamples();
+			for (; si != se; ++si)
 			{
-				std::vector<double> elem;
-				unsigned int di = 0, de = dim;
-				for (; di != de && vi != ve; ++di)
-				{
-					elem.push_back( *vi++);
-				}
-				if (di != de) throw std::runtime_error("file with sample vectors does not match in size");
-				samplear.push_back( elem);
+				samplear.push_back( instance->sampleVector( si));
 			}
-			if (vi != ve) throw std::runtime_error("file with sample vectors does not match in size");
 		}
-		else
+		std::auto_ptr<strus::VectorSpaceModelBuilderInterface> builder( vmodel->createBuilder( dbi.get(), config));
+		if (!builder.get()) throw std::runtime_error( g_errorhnd->fetchError());
+
+		if (!use_model_built)
 		{
 			std::cerr << "create " << nofSamples << " sample vectors" << std::endl;
 			for (std::size_t sidx = 0; sidx != nofSamples; ++sidx)
@@ -229,6 +230,10 @@ int main( int argc, const char** argv)
 				char nam[ 64];
 				snprintf( nam, sizeof(nam), "_%u", (unsigned int)sidx);
 				builder->addSampleVector( nam, vec);
+			}
+			if (!builder->commit())
+			{
+				throw std::runtime_error( "building example vector set for VSM failed");
 			}
 		}
 
@@ -266,35 +271,22 @@ int main( int argc, const char** argv)
 		std::cerr << "building model" << std::endl;
 		if (!builder->finalize())
 		{
-			throw std::runtime_error( "error in finalize");
+			throw std::runtime_error( "error in finalize VSM");
 		}
-		std::cerr << "store model" << std::endl;
-		if (!builder->store())
-		{
-			throw std::runtime_error( "error storing the model learnt");
-		}
-		std::cerr << "write samples to file" << std::endl;
-		std::string content;
-		{
-			std::vector<std::vector<double> >::const_iterator si = samplear.begin(), se = samplear.end();
-			for (; si != se; ++si)
-			{
-				content.append( (const char*)si->data(), si->size() * sizeof(double));
-			}
-			unsigned int ec = strus::writeFile( path + strus::dirSeparator() + SAMPLESFILE, content);
-			if (ec) throw std::runtime_error("failed to write samples file");
-		}
+		builder.reset();
+		std::cerr << "builder closed" << std::endl;
+
 		// Categorize the input vectors and build some maps out of the assignments of features:
 		std::cerr << "load model to categorize vectors" << std::endl;
-		std::auto_ptr<strus::VectorSpaceModelInstanceInterface> categorizer( vmodel->createInstance( config));
+		std::auto_ptr<strus::VectorSpaceModelInstanceInterface> categorizer( vmodel->createInstance( dbi.get(), config));
 		if (!categorizer.get())
 		{
-			throw std::runtime_error( g_errorhnd->fetchError());
+			throw std::runtime_error( "failed to create VSM instance from model stored");
 		}
 		std::cerr << "loaded trained model with " << categorizer->nofFeatures() << " features" << std::endl;
 		typedef strus::SparseDim2Field<unsigned char> FeatureMatrix;
-		typedef std::multimap<unsigned int,std::size_t> ClassesMap;
-		typedef std::pair<unsigned int,std::size_t> ClassesElem;
+		typedef std::multimap<strus::Index,strus::Index> ClassesMap;
+		typedef std::pair<strus::Index,strus::Index> ClassesElem;
 		FeatureMatrix featureMatrix;
 		FeatureMatrix featureInvMatrix;
 		ClassesMap classesmap;
@@ -304,9 +296,9 @@ int main( int argc, const char** argv)
 		std::vector<std::vector<double> >::const_iterator si = samplear.begin(), se = samplear.end();
 		for (std::size_t sidx=0; si != se; ++si,++sidx)
 		{
-			std::vector<unsigned int> ctgar( categorizer->mapVectorToFeatures( *si));
-			std::vector<unsigned int> ctgar2( categorizer->sampleFeatures( sidx));
-			std::vector<unsigned int>::const_iterator ci,ce,ca,zi,ze,za;
+			std::vector<strus::Index> ctgar( categorizer->mapVectorToFeatures( *si));
+			std::vector<strus::Index> ctgar2( categorizer->sampleFeatures( sidx));
+			std::vector<strus::Index>::const_iterator ci,ce,ca,zi,ze,za;
 			if (use_group_assign)
 			{
 				za = zi = ctgar.begin(), ze = ctgar.end();
@@ -360,9 +352,9 @@ int main( int argc, const char** argv)
 		ClassesMap::const_iterator ci = classesmap.begin(), ce = classesmap.end();
 		while (ci != ce)
 		{
-			unsigned int key = ci->first;
-			std::vector<unsigned int> members( categorizer->featureSamples( ci->first));
-			std::vector<unsigned int>::const_iterator mi = members.begin(), me = members.end();
+			strus::Index key = ci->first;
+			std::vector<strus::Index> members( categorizer->featureSamples( ci->first));
+			std::vector<strus::Index>::const_iterator mi = members.begin(), me = members.end();
 			std::cout << "(" << key << ") <= ";
 			for (; ci != ce && ci->first == key; ++ci)
 			{

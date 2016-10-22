@@ -23,6 +23,6 @@ add_executable( testLshVectorSpaceModel testLshVectorSpaceModel.cpp)
 target_link_libraries( testLshVectorSpaceModel boost_system strus_base ${Boost_LIBRARIES} ${Intl_LIBRARIES} strus_armadillo )
 
 add_executable( testVectorSpaceModel testVectorSpaceModel.cpp)
-target_link_libraries( testVectorSpaceModel boost_system strus_base strus_error strus_vectorspace ${Boost_LIBRARIES} ${Intl_LIBRARIES} strus_armadillo )
+target_link_libraries( testVectorSpaceModel boost_system strus_base strus_error strus_vectorspace_std strus_database_leveldb ${Boost_LIBRARIES} ${Intl_LIBRARIES} strus_armadillo )
 
 

@@ -55,11 +55,12 @@ dist/redhat/strusvector.spec
 3rdParty/armadillo/include/armadillo_bits/config.hpp
 
 # Compiled Programs
-src/strusInspectVectorSpaceModel
+src/strusInspectVsm
 tests/armadillo/src/testArmadillo
+tests/vectorSpaceModel/src/testVectorSpaceModel
 tests/vectorSpaceModel/src/testLshVectorSpaceModel
 tests/vectorSpaceModel/src/testLshSimHash
-tests/vectorSpaceModel/src/testVectorSpaceModel
+tests/vectorSpaceModel/src/strusInspectVsm
 tests/vectorSpaceModel/vsmodel/
 .travis.yml
 

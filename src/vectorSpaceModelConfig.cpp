@@ -16,7 +16,7 @@
 using namespace strus;
 
 VectorSpaceModelConfig::VectorSpaceModelConfig( const VectorSpaceModelConfig& o)
-	:path(o.path),prepath(o.prepath),logfile(o.logfile),threads(o.threads)
+	:databaseConfig(o.databaseConfig),logfile(o.logfile),threads(o.threads)
 	,dim(o.dim),bits(o.bits),variations(o.variations)
 	,simdist(o.simdist),raddist(o.raddist),eqdist(o.eqdist),mutations(o.mutations),votes(o.votes)
 	,descendants(o.descendants),maxage(o.maxage),iterations(o.iterations)
@@ -26,7 +26,7 @@ VectorSpaceModelConfig::VectorSpaceModelConfig( const VectorSpaceModelConfig& o)
 	{}
 
 VectorSpaceModelConfig::VectorSpaceModelConfig()
-	:path(),prepath(),logfile(),threads(DefaultThreads)
+	:databaseConfig(),logfile(),threads(DefaultThreads)
 	,dim(DefaultDim),bits(DefaultBits),variations(DefaultVariations)
 	,simdist(DefaultSimDist),raddist(DefaultRadDist),eqdist(DefaultEqDist)
 	,mutations(DefaultMutations),votes(DefaultMutationVotes)
@@ -37,7 +37,7 @@ VectorSpaceModelConfig::VectorSpaceModelConfig()
 	{}
 
 VectorSpaceModelConfig::VectorSpaceModelConfig( const std::string& config, ErrorBufferInterface* errorhnd)
-	:path(),prepath(),logfile(),threads(DefaultThreads)
+	:databaseConfig(),logfile(),threads(DefaultThreads)
 	,dim(DefaultDim),bits(DefaultBits),variations(DefaultVariations)
 	,simdist(DefaultSimDist),raddist(DefaultRadDist),eqdist(DefaultEqDist)
 	,mutations(DefaultMutations),votes(DefaultMutationVotes)
@@ -47,8 +47,6 @@ VectorSpaceModelConfig::VectorSpaceModelConfig( const std::string& config, Error
 	,with_singletons((bool)DefaultWithSingletons)
 {
 	std::string src = config;
-	if (extractStringFromConfigString( path, src, "path", errorhnd)){}
-	if (extractStringFromConfigString( prepath, src, "prepath", errorhnd)){}
 	if (extractStringFromConfigString( logfile, src, "logfile", errorhnd)){}
 	if (extractUIntFromConfigString( threads, src, "threads", errorhnd)){}
 	if (extractUIntFromConfigString( dim, src, "dim", errorhnd)){}
@@ -86,12 +84,7 @@ VectorSpaceModelConfig::VectorSpaceModelConfig( const std::string& config, Error
 	{
 		throw strus::runtime_error(_TXT("error in vector space model configuration: dim, bits, var, mutations, descendants, maxage or iterations values must not be zero"));
 	}
-	std::string::const_iterator si = src.begin(), se = src.end();
-	for (; si != se && (unsigned char)*si <= 32; ++si){}
-	if (si != se)
-	{
-		throw strus::runtime_error(_TXT("unknown configuration parameter: %s"), src.c_str());
-	}
+	databaseConfig = src;	//... reset is database configuration
 	if (errorhnd->hasError())
 	{
 		throw strus::runtime_error(_TXT("error loading vector space model configuration: %s"), errorhnd->fetchError());
@@ -101,8 +94,7 @@ VectorSpaceModelConfig::VectorSpaceModelConfig( const std::string& config, Error
 std::string VectorSpaceModelConfig::tostring() const
 {
 	std::ostringstream buf;
-	buf << "path=" << path << ";" << std::endl;
-	buf << "prepath=" << prepath << ";" << std::endl;
+	buf << databaseConfig << ";" << std::endl;
 	buf << "logfile=" << logfile << ";" << std::endl;
 	buf << "threads=" << threads << ";" << std::endl;
 	buf << "dim=" << dim << ";" << std::endl;

@@ -15,8 +15,8 @@ using namespace strus;
 
 void SampleSimGroupMap::init()
 {
-	std::size_t mm = m_nodearsize * std::max( m_maxnodesize, sizeof(FeatureIndex));
-	if (mm < m_nodearsize || mm < m_maxnodesize)
+	std::size_t mm = m_nodearsize * std::max( (std::size_t)m_maxnodesize, sizeof(FeatureIndex));
+	if (mm < m_nodearsize || mm < (std::size_t)m_maxnodesize)
 	{
 		throw std::bad_alloc();
 	}
@@ -60,7 +60,7 @@ bool SampleSimGroupMap::shares( const std::size_t& ndidx1, const std::size_t& nd
 	std::size_t i1=0, i2=0;
 	const Node& nd1 = m_nodear[ ndidx1];
 	const Node& nd2 = m_nodear[ ndidx2];
-	while (i1<m_maxnodesize && i2<m_maxnodesize)
+	while (i1<(std::size_t)m_maxnodesize && i2<(std::size_t)m_maxnodesize)
 	{
 		if (nd1.groupidx[i1] < nd2.groupidx[i2])
 		{
@@ -107,7 +107,7 @@ bool SampleSimGroupMap::Node::remove( const FeatureIndex& gidx)
 
 bool SampleSimGroupMap::Node::insert( const FeatureIndex& gidx, std::size_t maxnodesize)
 {
-	if (size == maxnodesize)
+	if (size == (FeatureIndex)maxnodesize)
 	{
 		throw strus::runtime_error(_TXT("try to insert in full sampleSimGroupMap node"));
 	}
@@ -137,7 +137,7 @@ bool SampleSimGroupMap::Node::contains( const FeatureIndex& gidx) const
 	return (groupidx[ii] == gidx);
 }
 
-void SampleSimGroupMap::Node::check( std::size_t maxnodesize) const
+void SampleSimGroupMap::Node::check( FeatureIndex maxnodesize) const
 {
 	if (!size) return;
 	FeatureIndex ii = 0;
@@ -152,7 +152,7 @@ void SampleSimGroupMap::Node::check( std::size_t maxnodesize) const
 			throw strus::runtime_error(_TXT("illegal SampleSimGroupMap::Node (order)"));
 		}
 	}
-	for (; ii<maxnodesize; ++ii)
+	for (; ii<(FeatureIndex)maxnodesize; ++ii)
 	{
 		if (groupidx[ii] != 0)
 		{

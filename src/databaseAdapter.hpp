@@ -27,52 +27,80 @@ namespace strus {
 /// \brief Forward declaration
 class ErrorBufferInterface;
 
-#define MATRIXFILE   "model.mat"		// Matrices for LSH calculation
-#define SIMRELFILE   "simrel.mat"		// Sparse matrix of imilarity relation map
-#define RESVECFILE   "result.lsh"		// Result LSH values
-#define INPVECFILE   "input.lsh"		// Input sample LSH values
-#define CONFIGFILE   "config.txt"		// Configuration as text
-#define VERSIONFILE  "version.hdr"		// Version for checking compatibility
-#define DUMPFILE     "dump.txt"			// Textdump output of structures if used with LOWLEVEL DEBUG defined
-#define FEATIDXFILE  "featsampleindex.fsi"	// map feature number to sample indices [FeatureSampleIndexMap]
-#define IDXFEATFILE  "samplefeatindex.sfi"	// map sample index to feature numbers [SampleFeatureIndexMap]
-#define VECNAMEFILE  "vecnames.lst"		// list of sample vector names
-#define VECTORSFILE  "vectors.bin"		// list of sample vectors
 
 class DatabaseAdapter
 {
 public:
-	DatabaseAdapter( DatabaseInterface* database, const std::string& config, ErrorBufferInterface* errorhnd_);
+	DatabaseAdapter( const DatabaseInterface* database_, const std::string& config, ErrorBufferInterface* errorhnd_);
 	~DatabaseAdapter(){}
 
 	void checkVersion();
+
 	typedef std::vector<double> Vector;
-	std::vector<Vector> readSampleVectors() const;
 	Vector readSampleVector( const SampleIndex& sidx) const;
+	std::string readSampleName( const SampleIndex& sidx) const;
+	SampleIndex readSampleIndex( const std::string& name) const;
+	SampleIndex readNofSamples() const;
+
 	std::vector<SimHash> readSampleSimhashVector() const;
 	std::vector<SimHash> readResultSimhashVector() const;
+
+	std::vector<SimRelationMap::Element> readSimRelations( const SampleIndex& sidx) const;
 	SimRelationMap readSimRelationMap() const;
-	SampleFeatureIndexMap readSampleFeatureIndexMap() const;
-	FeatureSampleIndexMap readFeatureSampleIndexMap() const;
+	std::vector<SampleIndex> readFeatureSampleIndices( const FeatureIndex& fidx) const;
+	std::vector<FeatureIndex> readSampleFeatureIndices( const SampleIndex& sidx) const;
 	VectorSpaceModelConfig readConfig() const;
 	LshModel readLshModel() const;
 
 	void writeVersion();
-	void writeSampleVectors( const std::vector<Vector>& ar);
-	void writeSampleVector( const SampleIndex& sidx, const Vector& vec);
-	void writeSampleSimhashVector( const std::vector<SimHash>& ar);
+	void writeVariables( const SampleIndex& nofSamples, const FeatureIndex& nofFeatures);
+	void writeSample( const SampleIndex& sidx, const std::string& name, const Vector& vec, const SimHash& simHash);
 	void writeResultSimhashVector( const std::vector<SimHash>& ar);
 	void writeSimRelationMap( const SimRelationMap& simrelmap);
 	void writeSampleFeatureIndexMap( const SampleFeatureIndexMap& sfmap);
 	void writeFeatureSampleIndexMap( const FeatureSampleIndexMap& fsmap);
 	void writeConfig( const VectorSpaceModelConfig& config);
 	void writeLshModel( const LshModel& model);
+
+	void deleteVariables();
+	void deleteSamples();
+	void deleteSampleSimhashVector();
+	void deleteResultSimhashVector();
+	void deleteSimRelationMap();
+	void deleteSampleFeatureIndexMap();
+	void deleteFeatureSampleIndexMap();
 	void commit();
+
+public:
+	enum KeyPrefix
+	{
+		KeyVersion = 'V',
+		KeyVariable = '*',
+		KeySampleVector = '$',
+		KeySampleName = '@',
+		KeySampleNameInv = '#',
+		KeySampleSimHash = 'S',
+		KeyResultSimHash = 'R',
+		KeyConfig = 'C',
+		KeyLshModel = 'L',
+		KeySimRelationMap = 'M',
+		KeySampleFeatureIndexMap = 'f',
+		KeyFeatureSampleIndexMap = 's'
+	};
 
 private:
 	void beginTransaction();
-	std::vector<SimHash> readSimhashVector( char prefix) const;
-	void writeSimhashVector( char prefix, const std::vector<SimHash>& ar);
+	std::vector<SimHash> readSimhashVector( const KeyPrefix& prefix) const;
+	unsigned int readVariable( const char* name) const;
+
+	void writeSimhash( const KeyPrefix& prefix, const SampleIndex& sidx, const SimHash& simHash);
+	void writeSimhashVector( const KeyPrefix& prefix, const std::vector<SimHash>& ar);
+	void writeSampleIndex( const SampleIndex& sidx, const std::string& name);
+	void writeSampleName( const SampleIndex& sidx, const std::string& name);
+	void writeSampleVector( const SampleIndex& sidx, const Vector& vec);
+	void writeVariable( const char* name, unsigned int value);
+
+	void deleteSubTree( const KeyPrefix& prefix);
 
 private:
 	Reference<DatabaseClientInterface> m_database;

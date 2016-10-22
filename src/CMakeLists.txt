@@ -18,7 +18,6 @@ set(
 	genModel.cpp
 	databaseAdapter.cpp
 	vectorSpaceModelConfig.cpp
-	vectorSpaceModelFiles.cpp
 	vectorSpaceModel.cpp
 )
 
@@ -43,10 +42,10 @@ link_directories(
 add_library( strus_vectorspace_static STATIC ${libstrus_vectorspace_source_files} )
 target_link_libraries( strus_vectorspace_static strus_base strus_armadillo )
 
-add_library( strus_vectorspace SHARED libstrus_vectorspace.cpp )
-target_link_libraries( strus_vectorspace strus_vectorspace_static strus_base strus_armadillo ${Intl_LIBRARIES} ${Boost_LIBRARIES} )
+add_library( strus_vectorspace_std SHARED libstrus_vectorspace_std.cpp )
+target_link_libraries( strus_vectorspace_std strus_vectorspace_static strus_base strus_armadillo ${Intl_LIBRARIES} ${Boost_LIBRARIES} )
 set_target_properties(
-    strus_vectorspace
+    strus_vectorspace_std
     PROPERTIES
     DEBUG_POSTFIX "_d"
     SOVERSION "${STRUS_MAJOR_VERSION}.${STRUS_MINOR_VERSION}"
@@ -55,20 +54,20 @@ set_target_properties(
 
 add_library( modstrus_storage_vectorspace  MODULE  modstrus_storage_vectorspace.cpp )
 set_target_properties( modstrus_storage_vectorspace PROPERTIES PREFIX "")
-target_link_libraries( modstrus_storage_vectorspace strus_module_storage strus_vectorspace ${Intl_LIBRARIES} ${Boost_LIBRARIES} )
+target_link_libraries( modstrus_storage_vectorspace strus_module_storage strus_vectorspace_std ${Intl_LIBRARIES} ${Boost_LIBRARIES} )
 
-add_executable( strusInspectVectorSpaceModel strusInspectVectorSpaceModel.cpp )
-target_link_libraries( strusInspectVectorSpaceModel  strus_error strus_base strus_vectorspace_static ${Intl_LIBRARIES} ${Boost_LIBRARIES} )
+add_executable( strusInspectVsm strusInspectVsm.cpp )
+target_link_libraries( strusInspectVsm  strus_error strus_base strus_database_leveldb strus_vectorspace_static ${Intl_LIBRARIES} ${Boost_LIBRARIES} )
 
 # ------------------------------
 # INSTALLATION
 # ------------------------------
-install( TARGETS strus_vectorspace
+install( TARGETS strus_vectorspace_std
            LIBRARY DESTINATION ${LIB_INSTALL_DIR}/strus )
 
 install( TARGETS modstrus_storage_vectorspace
            LIBRARY DESTINATION ${LIB_INSTALL_DIR}/strus/modules
 	   RUNTIME DESTINATION bin )
 
-install( TARGETS strusInspectVectorSpaceModel
+install( TARGETS strusInspectVsm
 	   RUNTIME DESTINATION bin )
