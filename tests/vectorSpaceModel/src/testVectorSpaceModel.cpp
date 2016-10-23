@@ -119,8 +119,6 @@ int main( int argc, const char** argv)
 		std::string config( DEFAULT_CONFIG);
 		unsigned int nofSamples = 1000;
 		unsigned int dim = 0;
-		std::string path;
-		std::string prepath;
 		bool use_model_built = false;
 		bool use_group_assign = false;
 		bool printUsageAndExit = false;
@@ -223,7 +221,7 @@ int main( int argc, const char** argv)
 				else
 				{
 					std::size_t idx = rand() % sidx;
-					double sim = 0.90 + (rand() % 100) * 0.001;
+					double sim = 0.90 + (rand() % 120) * 0.001;
 					vec = createSimilarVector( samplear[ idx], sim);
 				}
 				samplear.push_back( vec);
