@@ -11,6 +11,7 @@
 #include "strus/base/stdint.h"
 #include "strus/base/hton.hpp"
 #include <cstdlib>
+#include <limits>
 
 using namespace strus;
 
@@ -55,6 +56,34 @@ LshModel::LshModel( std::size_t dim_, std::size_t nofbits_, std::size_t variatio
 	}
 }
 
+static bool mat_isequal( const arma::mat& m1, const arma::mat& m2)
+{
+	arma::mat::const_iterator
+		mi1 = m1.begin(), me1 = m1.end(),
+		mi2 = m2.begin(), me2 = m2.end();
+	for (; mi1 != me1 && mi2 != me2; ++mi1,++mi2)
+	{
+		double diff = *mi1 > *mi2 ? (*mi1 - *mi2):(*mi2 - *mi1);
+		if (diff > std::numeric_limits<double>::epsilon()) return false;
+	}
+	return (mi1 == me1 && mi2 == me2);
+}
+
+bool LshModel::isequal( const LshModel& o) const
+{
+	if (m_dim != o.m_dim) return false;
+	if (m_nofbits != o.m_nofbits) return false;
+	if (m_variations != o.m_variations) return false;
+	if (!mat_isequal( m_modelMatrix, o.m_modelMatrix)) return false;
+	std::vector<arma::mat>::const_iterator
+		ri = m_rotations.begin(), re = m_rotations.end(),
+		roi = o.m_rotations.begin(), roe = o.m_rotations.end();
+	for (; ri != re && roi != roe; ++ri,++roi)
+	{
+		if (!mat_isequal( *ri, *roi)) return false;
+	}
+	return ri == re && roi == roe;
+}
 
 arma::mat LshModel::createModelMatrix( std::size_t dim_, std::size_t nofbits_)
 {

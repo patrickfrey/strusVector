@@ -45,8 +45,16 @@ public:
 	std::vector<std::size_t> indices( bool what) const;
 
 	SimHash& operator=( const SimHash& o);
+	bool operator==( const SimHash& o) const	{return compare(o) == 0;}
+	bool operator!=( const SimHash& o) const	{return compare(o) != 0;}
+	bool operator<( const SimHash& o) const		{return compare(o) < 0;}
+	bool operator<=( const SimHash& o) const	{return compare(o) <= 0;}
+	bool operator>( const SimHash& o) const		{return compare(o) > 0;}
+	bool operator>=( const SimHash& o) const	{return compare(o) >= 0;}
 
 private:
+	int compare( const SimHash& o) const;
+
 	template <class Functor>
 	SimHash BINOP( const SimHash& o) const
 	{

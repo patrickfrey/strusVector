@@ -42,6 +42,12 @@ Random::Random()
 	m_incr = m_value * KnuthIntegerHashFactor;
 }
 
+Random::Random( unsigned int seed)
+{
+	m_value = uint32_hash( seed);
+	m_incr = m_value * KnuthIntegerHashFactor;
+}
+
 unsigned int Random::get( unsigned int min_, unsigned int max_)
 {
 	if (min_ >= max_)

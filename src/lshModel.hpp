@@ -38,6 +38,8 @@ public:
 	/// \return simhash value acording to this model
 	SimHash simHash( const arma::vec& vec) const;
 
+	bool isequal( const LshModel& o) const;
+
 private:
 	static arma::mat createModelMatrix( std::size_t dim_, std::size_t nofbits_);
 	LshModel( std::size_t dim_, std::size_t nofbits_, std::size_t variations_, const arma::mat& modelMatrix_, const std::vector<arma::mat>& rotations_);

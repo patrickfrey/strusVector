@@ -107,6 +107,12 @@ SimHash& SimHash::operator=( const SimHash& o)
 	return *this;
 }
 
+int SimHash::compare( const SimHash& o) const
+{
+	if (m_size != o.m_size) return (m_size > o.m_size)?1:-1;
+	return std::memcmp( m_ar, o.m_ar, SimHash_mallocSize(m_size));
+}
+
 bool SimHash::operator[]( std::size_t idx) const
 {
 	if (idx >= (std::size_t)m_size)

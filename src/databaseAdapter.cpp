@@ -295,6 +295,11 @@ SampleIndex DatabaseAdapter::readNofSamples() const
 	return readVariable( VARIABLE_NOF_SAMPLES);
 }
 
+SampleIndex DatabaseAdapter::readNofFeatures() const
+{
+	return readVariable( VARIABLE_NOF_FEATURES);
+}
+
 std::vector<SimHash> DatabaseAdapter::readSimhashVector( const KeyPrefix& prefix) const
 {
 	std::vector<SimHash> rt;

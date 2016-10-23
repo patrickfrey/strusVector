@@ -16,6 +16,7 @@ class Random
 {
 public:
 	Random();
+	Random( unsigned int seed);
 	unsigned int get( unsigned int min_, unsigned int max_);
 
 private:

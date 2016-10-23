@@ -41,6 +41,7 @@ public:
 	std::string readSampleName( const SampleIndex& sidx) const;
 	SampleIndex readSampleIndex( const std::string& name) const;
 	SampleIndex readNofSamples() const;
+	SampleIndex readNofFeatures() const;
 
 	std::vector<SimHash> readSampleSimhashVector() const;
 	std::vector<SimHash> readResultSimhashVector() const;
