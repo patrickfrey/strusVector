@@ -117,7 +117,7 @@ int main( int argc, const char** argv)
 
 		initRandomNumberGenerator();
 		std::string config( DEFAULT_CONFIG);
-		unsigned int nofSamples = 1000;
+		unsigned int nofFeatures = 1000;
 		unsigned int dim = 0;
 		bool use_model_built = false;
 		bool use_group_assign = false;
@@ -154,7 +154,7 @@ int main( int argc, const char** argv)
 		}
 		if (printUsageAndExit)
 		{
-			std::cerr << "Usage: " << argv[0] << " [<config>] [<number of sample vectors>]" << std::endl;
+			std::cerr << "Usage: " << argv[0] << " [<config>] [<number of features added>]" << std::endl;
 			std::cerr << "options:" << std::endl;
 			std::cerr << "-h     : print this usage" << std::endl;
 			std::cerr << "-g     : use feature group assign instead of similarity to verify results" << std::endl;
@@ -170,7 +170,7 @@ int main( int argc, const char** argv)
 			bool error = false;
 			if (argv[argidx+1][0] >= '0' && argv[argidx+1][0] <= '9')
 			{
-				nofSamples = std::atoi( argv[argidx+1]);
+				nofFeatures = std::atoi( argv[argidx+1]);
 			}
 			else
 			{
@@ -199,10 +199,10 @@ int main( int argc, const char** argv)
 		{
 			std::auto_ptr<strus::VectorSpaceModelInstanceInterface> instance( vmodel->createInstance( dbi.get(), config));
 			if (!instance.get()) throw std::runtime_error( g_errorhnd->fetchError());
-			strus::Index si = 0, se = instance->nofSamples();
+			strus::Index si = 0, se = instance->nofFeatures();
 			for (; si != se; ++si)
 			{
-				samplear.push_back( instance->sampleVector( si));
+				samplear.push_back( instance->featureVector( si));
 			}
 		}
 		std::auto_ptr<strus::VectorSpaceModelBuilderInterface> builder( vmodel->createBuilder( dbi.get(), config));
@@ -210,8 +210,8 @@ int main( int argc, const char** argv)
 
 		if (!use_model_built)
 		{
-			std::cerr << "create " << nofSamples << " sample vectors" << std::endl;
-			for (std::size_t sidx = 0; sidx != nofSamples; ++sidx)
+			std::cerr << "create " << nofFeatures << " sample vectors" << std::endl;
+			for (std::size_t sidx = 0; sidx != nofFeatures; ++sidx)
 			{
 				std::vector<double> vec;
 				if (!sidx || rand() % 3 < 2)
@@ -227,7 +227,7 @@ int main( int argc, const char** argv)
 				samplear.push_back( vec);
 				char nam[ 64];
 				snprintf( nam, sizeof(nam), "_%u", (unsigned int)sidx);
-				builder->addSampleVector( nam, vec);
+				builder->addFeature( nam, vec);
 			}
 			if (!builder->commit())
 			{
@@ -243,7 +243,7 @@ int main( int argc, const char** argv)
 		{
 			std::vector<arma::vec> samplevecar;
 
-			for (std::size_t sidx = 0; sidx != nofSamples; ++sidx)
+			for (std::size_t sidx = 0; sidx != nofFeatures; ++sidx)
 			{
 				samplevecar.push_back( arma::vec( samplear[ sidx]));
 
@@ -281,7 +281,7 @@ int main( int argc, const char** argv)
 		{
 			throw std::runtime_error( "failed to create VSM instance from model stored");
 		}
-		std::cerr << "loaded trained model with " << categorizer->nofFeatures() << " features" << std::endl;
+		std::cerr << "loaded trained model with " << categorizer->nofConcepts() << " features" << std::endl;
 		typedef strus::SparseDim2Field<unsigned char> FeatureMatrix;
 		typedef std::multimap<strus::Index,strus::Index> ClassesMap;
 		typedef std::pair<strus::Index,strus::Index> ClassesElem;
@@ -294,8 +294,8 @@ int main( int argc, const char** argv)
 		std::vector<std::vector<double> >::const_iterator si = samplear.begin(), se = samplear.end();
 		for (std::size_t sidx=0; si != se; ++si,++sidx)
 		{
-			std::vector<strus::Index> ctgar( categorizer->mapVectorToFeatures( *si));
-			std::vector<strus::Index> ctgar2( categorizer->sampleFeatures( sidx));
+			std::vector<strus::Index> ctgar( categorizer->mapVectorToConcepts( *si));
+			std::vector<strus::Index> ctgar2( categorizer->featureConcepts( sidx));
 			std::vector<strus::Index>::const_iterator ci,ce,ca,zi,ze,za;
 			if (use_group_assign)
 			{
@@ -351,7 +351,7 @@ int main( int argc, const char** argv)
 		while (ci != ce)
 		{
 			strus::Index key = ci->first;
-			std::vector<strus::Index> members( categorizer->featureSamples( ci->first));
+			std::vector<strus::Index> members( categorizer->conceptFeatures( ci->first));
 			std::vector<strus::Index>::const_iterator mi = members.begin(), me = members.end();
 			std::cout << "(" << key << ") <= ";
 			for (; ci != ce && ci->first == key; ++ci)
@@ -387,7 +387,7 @@ int main( int argc, const char** argv)
 		// Build a similarity matrix defined by features shared between input vectors:
 		std::cerr << "build sample to sample feature relation matrix:" << std::endl;
 		strus::SparseDim2Field<unsigned char> outSimMatrix;
-		unsigned int fi=0, fe=categorizer->nofFeatures();
+		unsigned int fi=0, fe=categorizer->nofConcepts();
 		for (; fi != fe; ++fi)
 		{
 			std::vector<unsigned int> featureMembers;
@@ -411,9 +411,9 @@ int main( int argc, const char** argv)
 		unsigned int nofMisses = 0;
 		unsigned int nofFalsePositives = 0;
 		unsigned int nofBadFalsePositives = 0;
-		for (std::size_t sidx=0; sidx != nofSamples; ++sidx)
+		for (std::size_t sidx=0; sidx != nofFeatures; ++sidx)
 		{
-			for (std::size_t oidx=0; oidx != nofSamples; ++oidx)
+			for (std::size_t oidx=0; oidx != nofFeatures; ++oidx)
 			{
 				double sim = simMatrix.get( sidx, oidx);
 				unsigned char val = outSimMatrix.get( sidx, oidx);

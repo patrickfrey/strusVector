@@ -67,7 +67,7 @@ public:
 	virtual ~VectorSpaceModelInstance()
 	{}
 
-	virtual std::vector<Index> mapVectorToFeatures( const std::vector<double>& vec) const
+	virtual std::vector<Index> mapVectorToConcepts( const std::vector<double>& vec) const
 	{
 		try
 		{
@@ -86,7 +86,7 @@ public:
 		CATCH_ERROR_ARG1_MAP_RETURN( _TXT("error in instance of '%s' mapping vector to features: %s"), MODULENAME, *m_errorhnd, std::vector<Index>());
 	}
 
-	virtual std::vector<Index> sampleFeatures( const Index& index) const
+	virtual std::vector<Index> featureConcepts( const Index& index) const
 	{
 		try
 		{
@@ -95,7 +95,7 @@ public:
 		CATCH_ERROR_ARG1_MAP_RETURN( _TXT("error in instance of '%s' retrieving associated features by sample index: %s"), MODULENAME, *m_errorhnd, std::vector<Index>());
 	}
 
-	virtual std::vector<double> sampleVector( const Index& index) const
+	virtual std::vector<double> featureVector( const Index& index) const
 	{
 		try
 		{
@@ -104,32 +104,32 @@ public:
 		CATCH_ERROR_ARG1_MAP_RETURN( _TXT("error in instance of '%s' getting sample vector by index: %s"), MODULENAME, *m_errorhnd, std::vector<double>());
 	}
 
-	virtual std::vector<Index> featureSamples( const Index& feature) const
-	{
-		try
-		{
-			return m_database->readFeatureSampleIndices( feature);
-		}
-		CATCH_ERROR_ARG1_MAP_RETURN( _TXT("error in instance of '%s' getting associated sample indices by learnt feature: %s"), MODULENAME, *m_errorhnd, std::vector<Index>());
-	}
-
-	virtual unsigned int nofFeatures() const
-	{
-		return m_individuals.size();
-	}
-
-	virtual unsigned int nofSamples() const
-	{
-		return m_database->readNofSamples();
-	}
-
-	virtual std::string sampleName( const Index& index) const
+	virtual std::string featureName( const Index& index) const
 	{
 		try
 		{
 			return m_database->readSampleName( index);
 		}
 		CATCH_ERROR_ARG1_MAP_RETURN( _TXT("error in instance of '%s' getting name of sample: %s"), MODULENAME, *m_errorhnd, std::string());
+	}
+
+	virtual std::vector<Index> conceptFeatures( const Index& conceptid) const
+	{
+		try
+		{
+			return m_database->readFeatureSampleIndices( conceptid);
+		}
+		CATCH_ERROR_ARG1_MAP_RETURN( _TXT("error in instance of '%s' getting associated sample indices by learnt feature: %s"), MODULENAME, *m_errorhnd, std::vector<Index>());
+	}
+
+	virtual unsigned int nofConcepts() const
+	{
+		return m_individuals.size();
+	}
+
+	virtual unsigned int nofFeatures() const
+	{
+		return m_database->readNofSamples();
 	}
 
 	virtual std::string config() const
@@ -192,7 +192,7 @@ public:
 	virtual ~VectorSpaceModelBuilder()
 	{}
 
-	virtual void addSampleVector( const std::string& name, const std::vector<double>& vec)
+	virtual void addFeature( const std::string& name, const std::vector<double>& vec)
 	{
 		try
 		{
