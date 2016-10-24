@@ -422,7 +422,7 @@ SimRelationMap DatabaseAdapter::readSimRelationMap() const
 		const char* ce = ci + content.size();
 		if ((ce - ci) % (sizeof(SampleIndex)+sizeof(unsigned short)) != 0)
 		{
-			throw strus::runtime_error(_TXT("corrupt row %u of similarity relation map"), sidx);
+			throw strus::runtime_error(_TXT("corrupt row of similarity relation map"));
 		}
 		std::vector<SimRelationMap::Element> elems;
 		for (; ci < ce; ci += sizeof(SampleIndex)+sizeof(unsigned short))
@@ -459,7 +459,7 @@ std::vector<SimRelationMap::Element> DatabaseAdapter::readSimRelations( const Sa
 		const char* ce = ci + content.size();
 		if ((ce - ci) % (sizeof(SampleIndex)+sizeof(unsigned short)) != 0)
 		{
-			throw strus::runtime_error(_TXT("corrupt row %u of similarity relation map"), sidx);
+			throw strus::runtime_error(_TXT("corrupt row of similarity relation map"));
 		}
 		std::vector<SimRelationMap::Element> rt;
 		for (; ci < ce; ci += sizeof(SampleIndex)+sizeof(unsigned short))
@@ -556,9 +556,14 @@ std::vector<SampleIndex> DatabaseAdapter::readFeatureSampleIndices( const Featur
 	return vectorFromSerialization<SampleIndex>( blob);
 }
 
+SampleFeatureIndexMap DatabaseAdapter::readSampleFeatureIndexMap()
+{
+	return readIndexListMap( KeySampleFeatureIndexMap);
+}
+
 void DatabaseAdapter::writeFeatureSampleIndexMap( const FeatureSampleIndexMap& fsmap)
 {
-	SampleIndex fi = 1, fe = fsmap.maxkey();
+	FeatureIndex fi = 1, fe = fsmap.maxkey();
 	for (; fi != fe; ++fi)
 	{
 		if (!m_transaction.get()) beginTransaction();
@@ -570,6 +575,48 @@ void DatabaseAdapter::writeFeatureSampleIndexMap( const FeatureSampleIndexMap& f
 		key[ fi];
 		m_transaction->write( key.c_str(), key.size(), blob.c_str(), blob.size());
 	}
+}
+
+FeatureSampleIndexMap DatabaseAdapter::readFeatureSampleIndexMap()
+{
+	return readIndexListMap( KeyFeatureSampleIndexMap);
+}
+
+IndexListMap<strus::Index,strus::Index> DatabaseAdapter::readIndexListMap( const KeyPrefix& prefix) const
+{
+	IndexListMap<strus::Index,strus::Index> rt;
+	DatabaseKeyBuffer key( prefix);
+
+	std::auto_ptr<DatabaseCursorInterface> cursor( m_database->createCursor( DatabaseOptions()));
+	if (!cursor.get()) throw strus::runtime_error(_TXT("failed to create cursor to read index map: %s"), m_errorhnd->fetchError());
+
+	DatabaseCursorInterface::Slice slice = cursor->seekFirst( key.c_str(), key.size());
+	while (slice.defined())
+	{
+		strus::Index idx;
+		DatabaseKeyScanner key_scanner( slice.ptr()+1, slice.size()-1);
+		key_scanner[ idx];
+		if (prefix == KeySampleFeatureIndexMap) --idx;
+
+		DatabaseCursorInterface::Slice content = cursor->value();
+		char const* ci = content.ptr();
+		const char* ce = ci + content.size();
+		if ((ce - ci) % (sizeof(strus::Index)) != 0)
+		{
+			throw strus::runtime_error(_TXT("corrupt row of index list map"));
+		}
+		std::vector<strus::Index> elems;
+		for (; ci < ce; ci += sizeof(strus::Index))
+		{
+			strus::Index val;
+			DatabaseValueScanner value_scanner( ci, (sizeof(strus::Index)));
+			value_scanner[ val];
+			elems.push_back( val);
+		}
+		rt.add( idx, elems);
+		slice = cursor->seekNext();
+	}
+	return rt;
 }
 
 void DatabaseAdapter::deleteSubTree( const KeyPrefix& prefix)

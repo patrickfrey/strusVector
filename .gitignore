@@ -61,6 +61,7 @@ tests/vectorSpaceModel/src/testVectorSpaceModel
 tests/vectorSpaceModel/src/testLshVectorSpaceModel
 tests/vectorSpaceModel/src/testLshSimHash
 tests/vectorSpaceModel/src/strusInspectVsm
+tests/database/src/testDatabaseAdapter
 tests/vectorSpaceModel/vsmodel/
 .travis.yml
 

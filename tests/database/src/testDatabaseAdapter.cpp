@@ -9,6 +9,7 @@
 #include "strus/lib/vectorspace_std.hpp"
 #include "strus/lib/database_leveldb.hpp"
 #include "strus/lib/error.hpp"
+#include "strus/index.hpp"
 #include "strus/vectorSpaceModelInterface.hpp"
 #include "strus/vectorSpaceModelInstanceInterface.hpp"
 #include "strus/vectorSpaceModelBuilderInterface.hpp"
@@ -28,6 +29,7 @@
 #include "simHash.hpp"
 #include "simRelationMap.hpp"
 #include "sparseDim2Field.hpp"
+#include "databaseAdapter.hpp"
 #include "armadillo"
 #include <iostream>
 #include <sstream>
@@ -136,8 +138,8 @@ strus::SampleFeatureIndexMap getSampleFeatureIndexMap( unsigned int nofSamples)
 strus::FeatureSampleIndexMap getFeatureSampleIndexMap( unsigned int nofSamples)
 {
 	strus::IndexListMap<strus::Index,strus::Index> rt;
+	strus::Random rnd;
 	unsigned int nofFeatures = getNofFeatures( nofSamples);
-	strus::IndexListMap<strus::Index,strus::Index> rt;
 	unsigned int fi = 1, fe = nofFeatures+1;
 	for (; fi < fe; ++fi)
 	{
@@ -174,8 +176,8 @@ struct TestDataset
 		}
 	}
 
-	unsigned int nofFeatures;
-	unsigned int nofSamples;
+	strus::Index nofFeatures;
+	strus::Index nofSamples;
 	strus::LshModel lshmodel;
 	strus::SimRelationMap simrelmap;
 	strus::SampleFeatureIndexMap sfmap;
@@ -193,16 +195,16 @@ static void writeDatabase( const strus::VectorSpaceModelConfig& config, const Te
 
 	database.writeVersion();
 	database.writeVariables( dataset.nofSamples, dataset.nofFeatures);
-	unsigned int si = 0, se = nofSamples;
+	strus::Index si = 0, se = dataset.nofSamples;
 	for (; si != se; ++si)
 	{
-		writeSample( si, dataset.sampleNames[si], dataset.sampleVectors[si], dataset.sampleSimHashs[si]);
+		database.writeSample( si, dataset.sampleNames[si], dataset.sampleVectors[si], dataset.sampleSimHashs[si]);
 	}
 	database.writeResultSimhashVector( dataset.sampleSimHashs);
 	database.writeSimRelationMap( dataset.simrelmap);
 	database.writeSampleFeatureIndexMap( dataset.sfmap);
 	database.writeFeatureSampleIndexMap( dataset.fsmap);
-	database.writeConfig( config.tostring());
+	database.writeConfig( config);
 	database.writeLshModel( dataset.lshmodel);
 }
 
@@ -212,7 +214,7 @@ static bool compare( const std::vector<double>& v1, const std::vector<double>& v
 	std::vector<double>::const_iterator vi2 = v2.begin(), ve2 = v2.end();
 	for (; vi1 != ve1 && vi2 != ve2; ++vi1,++vi2)
 	{
-		diff = (vi1 > vi2)?(vi1 - vi2):(vi2 - vi1);
+		double diff = (vi1 > vi2)?(vi1 - vi2):(vi2 - vi1);
 		if (diff > std::numeric_limits<double>::epsilon()) return false;
 	}
 	return vi1 == ve1 && vi2 == ve2;
@@ -220,8 +222,8 @@ static bool compare( const std::vector<double>& v1, const std::vector<double>& v
 
 static bool compare( const std::vector<strus::SimHash>& v1, const std::vector<strus::SimHash>& v2)
 {
-	std::vector<double>::const_iterator vi1 = v1.begin(), ve1 = v1.end();
-	std::vector<double>::const_iterator vi2 = v2.begin(), ve2 = v2.end();
+	std::vector<strus::SimHash>::const_iterator vi1 = v1.begin(), ve1 = v1.end();
+	std::vector<strus::SimHash>::const_iterator vi2 = v2.begin(), ve2 = v2.end();
 	for (; vi1 != ve1 && vi2 != ve2; ++vi1,++vi2)
 	{
 		if (*vi1 != *vi2) return false;
@@ -232,7 +234,7 @@ static bool compare( const std::vector<strus::SimHash>& v1, const std::vector<st
 static bool compare( const strus::SimRelationMap& m1, const strus::SimRelationMap& m2)
 {
 	if (m1.nofSamples() != m2.nofSamples()) return false;
-	unsigned int si = 0, s2 = m1.nofSamples();
+	strus::Index si = 0, se = m1.nofSamples();
 	for (; si != se; ++si)
 	{
 		strus::SimRelationMap::Row r1 = m1.row( si);
@@ -249,9 +251,9 @@ static bool compare( const strus::SimRelationMap& m1, const strus::SimRelationMa
 	return true;
 }
 
-static bool compare( const strus::IndexListMap<strus::Index>& m1, const strus::IndexListMap<strus::Index>& m2)
+static bool compare( const strus::IndexListMap<strus::Index,strus::Index>& m1, const strus::IndexListMap<strus::Index,strus::Index>& m2)
 {
-	unsigned int si = 0, s2 = m1.maxkey()+1;
+	strus::Index si = 0, se = m1.maxkey()+1;
 	for (; si != se; ++si)
 	{
 		std::vector<strus::Index> v1 = m1.getValues( si);
@@ -282,12 +284,12 @@ static void readAndCheckDatabase( const strus::VectorSpaceModelConfig& config, c
 	if (dataset.nofSamples != database.readNofSamples()) throw std::runtime_error("number of samples does not match");
 	if (dataset.nofFeatures != database.readNofFeatures()) throw std::runtime_error("number of features does not match");
 
-	unsigned int si = 0, se = dataset.nofSamples;
+	strus::Index si = 0, se = dataset.nofSamples;
 	for (; si != se; ++si)
 	{
-		if (!compare( readSampleVector( si), dataset.sampleVectors[ si])) throw std::runtime_error("sample vectors do not match");
-		if (readSampleName( si) != dataset.sampleNames[si]) throw std::runtime_error("sample names do not match");
-		if (readSampleIndex( dataset.sampleNames[si]) != si) throw std::runtime_error("sample indices got by name do not match");
+		if (!compare( database.readSampleVector( si), dataset.sampleVectors[ si])) throw std::runtime_error("sample vectors do not match");
+		if (database.readSampleName( si) != dataset.sampleNames[si]) throw std::runtime_error("sample names do not match");
+		if (database.readSampleIndex( dataset.sampleNames[si]) != si) throw std::runtime_error("sample indices got by name do not match");
 	}
 	if (!compare( dataset.sampleSimHashs, database.readSampleSimhashVector())) throw std::runtime_error("sample sim hash values do not match");
 	if (!compare( dataset.sampleSimHashs, database.readResultSimhashVector())) throw std::runtime_error("result sim hash values do not match");
@@ -295,7 +297,7 @@ static void readAndCheckDatabase( const strus::VectorSpaceModelConfig& config, c
 	if (!compare( dataset.simrelmap, database.readSimRelationMap())) throw std::runtime_error("result sim relation map does not match");
 	if (!compare( dataset.sfmap, database.readSampleFeatureIndexMap())) throw std::runtime_error("sample feature index map does not match");
 	if (!compare( dataset.fsmap, database.readFeatureSampleIndexMap())) throw std::runtime_error("feature sample index map does not match");
-	if (config.tostring() != database.readConfig()) throw std::runtime_error("configuration does not match");
+	if (config.tostring() != database.readConfig().tostring()) throw std::runtime_error("configuration does not match");
 	if (!compare( dataset.lshmodel, database.readLshModel())) throw std::runtime_error("LSH model does not match");
 }
 
@@ -327,7 +329,7 @@ int main( int argc, const char** argv)
 
 		initRandomNumberGenerator();
 		std::string configstr( DEFAULT_CONFIG);
-		unsigned int nofSamples = 1000;
+		strus::Index nofSamples = 1000;
 		bool printUsageAndExit = false;
 
 		// Parse parameters:
@@ -362,7 +364,12 @@ int main( int argc, const char** argv)
 		}
 		else
 		{
-			if (!parseUint( nofSamples, argv[ argidx]))
+			unsigned int numarg;
+			if (parseUint( numarg, argv[ argidx]))
+			{
+				nofSamples = (strus::Index)numarg;
+			}
+			else
 			{
 				std::cerr << "non negative number (number of examples) expected as first argument" << std::endl;
 				rt = 1;
@@ -380,9 +387,9 @@ int main( int argc, const char** argv)
 		strus::VectorSpaceModelConfig config( configstr, g_errorhnd);
 		if (g_errorhnd->hasError()) throw std::runtime_error("error in test configuration");
 
-		TestDataset dataset( lshmodel, const strus::VectorSpaceModelConfig& config, unsigned int nofSamples)
-		writeDatabase( lshmodel, config, nofSamples);
-		readAndCheckDatabase( lshmodel, config, nofSamples);
+		TestDataset dataset( config, nofSamples);
+		writeDatabase( config, dataset);
+		readAndCheckDatabase( config, dataset);
 
 		if (g_errorhnd->hasError())
 		{

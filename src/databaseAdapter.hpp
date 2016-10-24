@@ -49,7 +49,9 @@ public:
 	std::vector<SimRelationMap::Element> readSimRelations( const SampleIndex& sidx) const;
 	SimRelationMap readSimRelationMap() const;
 	std::vector<SampleIndex> readFeatureSampleIndices( const FeatureIndex& fidx) const;
+	FeatureSampleIndexMap readFeatureSampleIndexMap();
 	std::vector<FeatureIndex> readSampleFeatureIndices( const SampleIndex& sidx) const;
+	SampleFeatureIndexMap readSampleFeatureIndexMap();
 	VectorSpaceModelConfig readConfig() const;
 	LshModel readLshModel() const;
 
@@ -93,6 +95,7 @@ private:
 	void beginTransaction();
 	std::vector<SimHash> readSimhashVector( const KeyPrefix& prefix) const;
 	unsigned int readVariable( const char* name) const;
+	IndexListMap<strus::Index,strus::Index> readIndexListMap( const KeyPrefix& prefix) const;
 
 	void writeSimhash( const KeyPrefix& prefix, const SampleIndex& sidx, const SimHash& simHash);
 	void writeSimhashVector( const KeyPrefix& prefix, const std::vector<SimHash>& ar);
