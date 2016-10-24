@@ -146,7 +146,7 @@ strus::FeatureSampleIndexMap getFeatureSampleIndexMap( unsigned int nofSamples)
 		if (rnd.get( 1, 3) < 2) continue;
 		std::vector<strus::Index> elems;
 		unsigned int si = 0, se = nofSamples, step = 1+rnd.get( 0, nofSamples/2); 
-		for (; si != se; si += step)
+		for (; si < se; si += step)
 		{
 			elems.push_back( si);
 		}
@@ -191,6 +191,17 @@ struct TestDataset
 static void writeDatabase( const strus::VectorSpaceModelConfig& config, const TestDataset& dataset)
 {
 	std::auto_ptr<strus::DatabaseInterface> dbi( createDatabase_leveldb( g_errorhnd));
+	if (dbi->exists( config.databaseConfig))
+	{
+		if (!dbi->destroyDatabase( config.databaseConfig))
+		{
+			throw std::runtime_error("could not destroy old test database");
+		}
+	}
+	if (!dbi->createDatabase( config.databaseConfig))
+	{
+		throw std::runtime_error("could not create new test database");
+	}
 	strus::DatabaseAdapter database( dbi.get(), config.databaseConfig, g_errorhnd);
 
 	database.writeVersion();
@@ -206,6 +217,7 @@ static void writeDatabase( const strus::VectorSpaceModelConfig& config, const Te
 	database.writeFeatureSampleIndexMap( dataset.fsmap);
 	database.writeConfig( config);
 	database.writeLshModel( dataset.lshmodel);
+	database.commit();
 }
 
 static bool compare( const std::vector<double>& v1, const std::vector<double>& v2)
@@ -214,7 +226,7 @@ static bool compare( const std::vector<double>& v1, const std::vector<double>& v
 	std::vector<double>::const_iterator vi2 = v2.begin(), ve2 = v2.end();
 	for (; vi1 != ve1 && vi2 != ve2; ++vi1,++vi2)
 	{
-		double diff = (vi1 > vi2)?(vi1 - vi2):(vi2 - vi1);
+		double diff = (*vi1 > *vi2)?(*vi1 - *vi2):(*vi2 - *vi1);
 		if (diff > std::numeric_limits<double>::epsilon()) return false;
 	}
 	return vi1 == ve1 && vi2 == ve2;
@@ -253,7 +265,7 @@ static bool compare( const strus::SimRelationMap& m1, const strus::SimRelationMa
 
 static bool compare( const strus::IndexListMap<strus::Index,strus::Index>& m1, const strus::IndexListMap<strus::Index,strus::Index>& m2)
 {
-	strus::Index si = 0, se = m1.maxkey()+1;
+	strus::Index si = 0, se = std::max( m1.maxkey(), m2.maxkey()) + 1;
 	for (; si != se; ++si)
 	{
 		std::vector<strus::Index> v1 = m1.getValues( si);
@@ -305,17 +317,17 @@ static void readAndCheckDatabase( const strus::VectorSpaceModelConfig& config, c
 #define DEFAULT_CONFIG \
 	"path=vsmodel;"\
 	"logfile=-;"\
-	"dim=300;"\
-	"bit=64;"\
-	"var=32;"\
-	"simdist=340;"\
-	"raddist=250;"\
-	"eqdist=80;"\
-	"mutations=20;"\
+	"dim=121;"\
+	"bit=7;"\
+	"var=13;"\
+	"simdist=13;"\
+	"raddist=7;"\
+	"eqdist=3;"\
+	"mutations=21;"\
 	"votes=5;"\
-	"descendants=5;"\
-	"maxage=20;"\
-	"iterations=20;"\
+	"descendants=3;"\
+	"maxage=21;"\
+	"iterations=23;"\
 	"assignments=7;"\
 	"singletons=no"
 
@@ -329,7 +341,7 @@ int main( int argc, const char** argv)
 
 		initRandomNumberGenerator();
 		std::string configstr( DEFAULT_CONFIG);
-		strus::Index nofSamples = 1000;
+		strus::Index nofSamples = 1211;
 		bool printUsageAndExit = false;
 
 		// Parse parameters:
@@ -362,7 +374,7 @@ int main( int argc, const char** argv)
 			rt = 1;
 			printUsageAndExit = true;
 		}
-		else
+		else if (argc > argidx)
 		{
 			unsigned int numarg;
 			if (parseUint( numarg, argv[ argidx]))
@@ -391,6 +403,11 @@ int main( int argc, const char** argv)
 		writeDatabase( config, dataset);
 		readAndCheckDatabase( config, dataset);
 
+		std::auto_ptr<strus::DatabaseInterface> dbi( createDatabase_leveldb( g_errorhnd));
+		if (dbi.get())
+		{
+			(void)dbi->destroyDatabase( config.databaseConfig);
+		}
 		if (g_errorhnd->hasError())
 		{
 			throw std::runtime_error( "uncaught exception");

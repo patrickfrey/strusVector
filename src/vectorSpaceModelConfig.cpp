@@ -9,9 +9,11 @@
 #include "vectorSpaceModelConfig.hpp"
 #include "strus/errorBufferInterface.hpp"
 #include "strus/base/configParser.hpp"
+#include "utils.hpp"
 #include "internationalization.hpp"
 #include <iostream>
 #include <sstream>
+#include <iomanip>
 
 using namespace strus;
 
@@ -84,7 +86,9 @@ VectorSpaceModelConfig::VectorSpaceModelConfig( const std::string& config, Error
 	{
 		throw strus::runtime_error(_TXT("error in vector space model configuration: dim, bits, var, mutations, descendants, maxage or iterations values must not be zero"));
 	}
-	databaseConfig = src;	//... reset is database configuration
+	databaseConfig = utils::trim(src);	//... rest is database configuration
+	while (databaseConfig.size() && databaseConfig[ databaseConfig.size()-1] == ';') databaseConfig.resize( databaseConfig.size()-1);
+
 	if (errorhnd->hasError())
 	{
 		throw strus::runtime_error(_TXT("error loading vector space model configuration: %s"), errorhnd->fetchError());
@@ -94,6 +98,7 @@ VectorSpaceModelConfig::VectorSpaceModelConfig( const std::string& config, Error
 std::string VectorSpaceModelConfig::tostring() const
 {
 	std::ostringstream buf;
+	buf << std::fixed << std::setprecision(5);
 	buf << databaseConfig;
 	char const* ee = databaseConfig.c_str() + databaseConfig.size();
 	while (ee != databaseConfig.c_str() && ((unsigned char)*(ee-1) <= 32 || *(ee-1) == ';')) --ee;

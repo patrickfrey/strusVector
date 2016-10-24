@@ -101,7 +101,14 @@ void DatabaseAdapter::checkVersion()
 	std::string content;
 	if (!m_database->readValue( key.c_str(), key.size(), content, DatabaseOptions()))
 	{
-		throw strus::runtime_error( _TXT( "failed to read version from database: %s"), m_errorhnd->fetchError());
+		if (m_errorhnd->hasError())
+		{
+			throw strus::runtime_error( _TXT( "failed to read version from database: %s"), m_errorhnd->fetchError());
+		}
+		else
+		{
+			throw strus::runtime_error( _TXT( "failed to read non exising version from database"));
+		}
 	}
 	VectorSpaceModelHdr hdr;
 	if (content.size() < sizeof(hdr)) throw strus::runtime_error(_TXT("unknown version format"));
@@ -216,7 +223,14 @@ DatabaseAdapter::Vector DatabaseAdapter::readSampleVector( const SampleIndex& si
 	std::string blob;
 	if (!m_database->readValue( key.c_str(), key.size(), blob, DatabaseOptions().useCache()))
 	{
-		throw strus::runtime_error(_TXT("failed to to read sample vector: %s"), m_errorhnd->fetchError());
+		if (m_errorhnd->hasError())
+		{
+			throw strus::runtime_error(_TXT("failed to read sample vector: %s"), m_errorhnd->fetchError());
+		}
+		else
+		{
+			throw strus::runtime_error(_TXT("try to to read sample vector (index %d) that does not exist"), sidx);
+		}
 	}
 	return vectorFromSerialization<double>( blob);
 }
@@ -239,7 +253,14 @@ std::string DatabaseAdapter::readSampleName( const SampleIndex& sidx) const
 	std::string name;
 	if (!m_database->readValue( key.c_str(), key.size(), name, DatabaseOptions().useCache()))
 	{
-		throw strus::runtime_error(_TXT("failed to read sample name: %s"), m_errorhnd->fetchError());
+		if (m_errorhnd->hasError())
+		{
+			throw strus::runtime_error(_TXT("failed to read sample name: %s"), m_errorhnd->fetchError());
+		}
+		else
+		{
+			throw strus::runtime_error(_TXT("try to to read sample name (index %d) that does not exist"), sidx);
+		}
 	}
 	return name;
 }
@@ -366,7 +387,14 @@ VectorSpaceModelConfig DatabaseAdapter::readConfig() const
 	std::string content;
 	if (!m_database->readValue( key.c_str(), key.size(), content, DatabaseOptions()))
 	{
-		throw strus::runtime_error( _TXT( "failed to read configuration from database: %s"), m_errorhnd->fetchError());
+		if (m_errorhnd->hasError())
+		{
+			throw strus::runtime_error( _TXT( "failed to read configuration from database: %s"), m_errorhnd->fetchError());
+		}
+		else
+		{
+			throw strus::runtime_error( _TXT( "failed to read non existing configuration from database"));
+		}
 	}
 	return VectorSpaceModelConfig( content, m_errorhnd);
 }
@@ -387,7 +415,14 @@ LshModel DatabaseAdapter::readLshModel() const
 	std::string content;
 	if (!m_database->readValue( key.c_str(), key.size(), content, DatabaseOptions()))
 	{
-		throw strus::runtime_error( _TXT( "failed to read LSH model from database: %s"), m_errorhnd->fetchError());
+		if (m_errorhnd->hasError())
+		{
+			throw strus::runtime_error( _TXT( "failed to read LSH model from database: %s"), m_errorhnd->fetchError());
+		}
+		else
+		{
+			throw strus::runtime_error( _TXT( "failed to read non existing LSH model from database"));
+		}
 	}
 	return LshModel::fromSerialization( content);
 }
@@ -563,7 +598,7 @@ SampleFeatureIndexMap DatabaseAdapter::readSampleFeatureIndexMap()
 
 void DatabaseAdapter::writeFeatureSampleIndexMap( const FeatureSampleIndexMap& fsmap)
 {
-	FeatureIndex fi = 1, fe = fsmap.maxkey();
+	FeatureIndex fi = 1, fe = fsmap.maxkey()+1;
 	for (; fi != fe; ++fi)
 	{
 		if (!m_transaction.get()) beginTransaction();
