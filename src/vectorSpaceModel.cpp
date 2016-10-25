@@ -289,7 +289,7 @@ VectorSpaceModel::VectorSpaceModel( ErrorBufferInterface* errorhnd_)
 	:m_errorhnd(errorhnd_){}
 
 
-bool VectorSpaceModel::createRepository( const std::string& configsource, const DatabaseInterface* dbi)
+bool VectorSpaceModel::createRepository( const std::string& configsource, const DatabaseInterface* dbi) const
 {
 	try
 	{
@@ -309,7 +309,7 @@ bool VectorSpaceModel::createRepository( const std::string& configsource, const 
 	CATCH_ERROR_ARG1_MAP_RETURN( _TXT("error creating '%s' repository: %s"), MODULENAME, *m_errorhnd, false);
 }
 
-bool VectorSpaceModel::resetRepository( const std::string& configsrc, const DatabaseInterface* dbi)
+bool VectorSpaceModel::resetRepository( const std::string& configsrc, const DatabaseInterface* dbi) const
 {
 	try
 	{
