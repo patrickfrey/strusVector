@@ -33,11 +33,12 @@ class VectorSpaceModelInstance
 	:public VectorSpaceModelInstanceInterface
 {
 public:
-	VectorSpaceModelInstance( const DatabaseInterface* database_, const std::string& config_, ErrorBufferInterface* errorhnd_)
+	VectorSpaceModelInstance( const std::string& config_, const DatabaseInterface* database_, ErrorBufferInterface* errorhnd_)
 		:m_errorhnd(errorhnd_),m_database(),m_config(config_,errorhnd_),m_lshmodel(),m_individuals()
 	{
 		m_database.reset( new DatabaseAdapter( database_, m_config.databaseConfig, m_errorhnd));
 		m_database->checkVersion();
+		if (m_database->isempty()) throw strus::runtime_error(_TXT("try to open a vector space model that is empty, need to be built first"));
 		m_config = m_database->readConfig();
 		m_lshmodel = m_database->readLshModel();
 		m_individuals = m_database->readResultSimhashVector();
@@ -154,14 +155,22 @@ class VectorSpaceModelBuilder
 	:public VectorSpaceModelBuilderInterface
 {
 public:
-	VectorSpaceModelBuilder( const DatabaseInterface* database_, const std::string& config_, ErrorBufferInterface* errorhnd_)
+	VectorSpaceModelBuilder( const std::string& config_, const DatabaseInterface* database_, ErrorBufferInterface* errorhnd_)
 		:m_errorhnd(errorhnd_),m_config(config_,errorhnd_)
 		,m_simrelmap(),m_lshmodel(),m_genmodel(),m_samplear()
 	{
-		if (database_->exists( m_config.databaseConfig))
+		m_database.reset( new DatabaseAdapter( database_, m_config.databaseConfig, m_errorhnd));
+		m_database->checkVersion();
+		if (m_database->isempty())
 		{
-			m_database.reset( new DatabaseAdapter( database_, m_config.databaseConfig, m_errorhnd));
-			m_database->checkVersion();
+			m_database->writeConfig( m_config);
+			m_lshmodel = LshModel( m_config.dim, m_config.bits, m_config.variations);
+			m_genmodel = GenModel( m_config.threads, m_config.simdist, m_config.raddist, m_config.eqdist, m_config.mutations, m_config.votes, m_config.descendants, m_config.maxage, m_config.iterations, m_config.assignments, m_config.isaf, m_config.with_singletons);
+			m_database->writeLshModel( m_lshmodel);
+			m_database->commit();
+		}
+		else
+		{
 			VectorSpaceModelConfig cfg = m_database->readConfig();
 			if (!m_config.isBuildCompatible( cfg))
 			{
@@ -173,22 +182,8 @@ public:
 			m_simrelmap = m_database->readSimRelationMap();
 			m_samplear = m_database->readSampleSimhashVector();
 		}
-		else if (database_->createDatabase( m_config.databaseConfig))
-		{
-			m_database.reset( new DatabaseAdapter( database_, m_config.databaseConfig, m_errorhnd));
-			m_database->writeVersion();
-			m_database->writeConfig( m_config);
-
-			m_lshmodel = LshModel( m_config.dim, m_config.bits, m_config.variations);
-			m_genmodel = GenModel( m_config.threads, m_config.simdist, m_config.raddist, m_config.eqdist, m_config.mutations, m_config.votes, m_config.descendants, m_config.maxage, m_config.iterations, m_config.assignments, m_config.isaf, m_config.with_singletons);
-			m_database->writeLshModel( m_lshmodel);
-			m_database->commit();
-		}
-		else
-		{
-			throw strus::runtime_error(_TXT("failed to create non existing database for vector space model: %s"), m_errorhnd->fetchError());
-		}
 	}
+
 	virtual ~VectorSpaceModelBuilder()
 	{}
 
@@ -294,20 +289,54 @@ VectorSpaceModel::VectorSpaceModel( ErrorBufferInterface* errorhnd_)
 	:m_errorhnd(errorhnd_){}
 
 
-VectorSpaceModelInstanceInterface* VectorSpaceModel::createInstance( const DatabaseInterface* database, const std::string& config) const
+bool VectorSpaceModel::createRepository( const std::string& configsource, const DatabaseInterface* dbi)
 {
 	try
 	{
-		return new VectorSpaceModelInstance( database, config, m_errorhnd);
+		VectorSpaceModelConfig config( configsource, m_errorhnd);
+		if (dbi->createDatabase( config.databaseConfig))
+		{
+			DatabaseAdapter database( dbi, config.databaseConfig, m_errorhnd);
+			database.writeVersion();
+			database.commit();
+		}
+		else
+		{
+			throw strus::runtime_error(_TXT("failed to create repository for vector space model: %s"), m_errorhnd->fetchError());
+		}
+		return true;
+	}
+	CATCH_ERROR_ARG1_MAP_RETURN( _TXT("error creating '%s' repository: %s"), MODULENAME, *m_errorhnd, false);
+}
+
+bool VectorSpaceModel::resetRepository( const std::string& configsrc, const DatabaseInterface* dbi)
+{
+	try
+	{
+		VectorSpaceModelConfig config( configsrc, m_errorhnd);
+		DatabaseAdapter database( dbi, config.databaseConfig, m_errorhnd);
+		database.clear();
+		database.commit();
+		return true;
+	}
+	CATCH_ERROR_ARG1_MAP_RETURN( _TXT("failed to reset '%s' repository: %s"), MODULENAME, *m_errorhnd, false);
+}
+
+
+VectorSpaceModelInstanceInterface* VectorSpaceModel::createInstance( const std::string& configsrc, const DatabaseInterface* database) const
+{
+	try
+	{
+		return new VectorSpaceModelInstance( configsrc, database, m_errorhnd);
 	}
 	CATCH_ERROR_ARG1_MAP_RETURN( _TXT("error creating '%s' instance: %s"), MODULENAME, *m_errorhnd, 0);
 }
 
-VectorSpaceModelBuilderInterface* VectorSpaceModel::createBuilder( const DatabaseInterface* database, const std::string& config) const
+VectorSpaceModelBuilderInterface* VectorSpaceModel::createBuilder( const std::string& configsrc, const DatabaseInterface* database) const
 {
 	try
 	{
-		return new VectorSpaceModelBuilder( database, config, m_errorhnd);
+		return new VectorSpaceModelBuilder( configsrc, database, m_errorhnd);
 	}
 	CATCH_ERROR_ARG1_MAP_RETURN( _TXT("error creating '%s' builder: %s"), MODULENAME, *m_errorhnd, 0);
 }

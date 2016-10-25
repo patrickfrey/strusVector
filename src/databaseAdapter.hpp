@@ -65,6 +65,10 @@ public:
 	void writeConfig( const VectorSpaceModelConfig& config);
 	void writeLshModel( const LshModel& model);
 
+	bool isempty();
+	void clear();
+
+	void deleteConfig();
 	void deleteVariables();
 	void deleteSamples();
 	void deleteSampleSimhashVector();
@@ -72,6 +76,7 @@ public:
 	void deleteSimRelationMap();
 	void deleteSampleFeatureIndexMap();
 	void deleteFeatureSampleIndexMap();
+	void deleteLshModel();
 	void commit();
 
 public:

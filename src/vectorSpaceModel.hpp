@@ -30,8 +30,11 @@ public:
 
 	VectorSpaceModel( ErrorBufferInterface* errorhnd_);
 
-	virtual VectorSpaceModelInstanceInterface* createInstance( const DatabaseInterface* database, const std::string& config) const;
-	virtual VectorSpaceModelBuilderInterface* createBuilder( const DatabaseInterface* database, const std::string& config) const;
+	virtual bool createRepository( const std::string& configsource, const DatabaseInterface* database);
+	virtual bool resetRepository( const std::string& configsource, const DatabaseInterface* database);
+
+	virtual VectorSpaceModelInstanceInterface* createInstance( const std::string& configsrc, const DatabaseInterface* database) const;
+	virtual VectorSpaceModelBuilderInterface* createBuilder( const std::string& configsrc, const DatabaseInterface* database) const;
 
 private:
 	ErrorBufferInterface* m_errorhnd;	///< buffer for reporting errors

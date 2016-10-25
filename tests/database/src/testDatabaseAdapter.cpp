@@ -190,7 +190,7 @@ struct TestDataset
 
 static void writeDatabase( const strus::VectorSpaceModelConfig& config, const TestDataset& dataset)
 {
-	std::auto_ptr<strus::DatabaseInterface> dbi( createDatabase_leveldb( g_errorhnd));
+	std::auto_ptr<strus::DatabaseInterface> dbi( strus::createDatabaseType_leveldb( g_errorhnd));
 	if (dbi->exists( config.databaseConfig))
 	{
 		if (!dbi->destroyDatabase( config.databaseConfig))
@@ -289,7 +289,7 @@ static bool compare( const strus::LshModel& m1, const strus::LshModel& m2)
 
 static void readAndCheckDatabase( const strus::VectorSpaceModelConfig& config, const TestDataset& dataset)
 {
-	std::auto_ptr<strus::DatabaseInterface> dbi( createDatabase_leveldb( g_errorhnd));
+	std::auto_ptr<strus::DatabaseInterface> dbi( strus::createDatabaseType_leveldb( g_errorhnd));
 	strus::DatabaseAdapter database( dbi.get(), config.databaseConfig, g_errorhnd);
 
 	database.checkVersion();
@@ -403,7 +403,7 @@ int main( int argc, const char** argv)
 		writeDatabase( config, dataset);
 		readAndCheckDatabase( config, dataset);
 
-		std::auto_ptr<strus::DatabaseInterface> dbi( createDatabase_leveldb( g_errorhnd));
+		std::auto_ptr<strus::DatabaseInterface> dbi( strus::createDatabaseType_leveldb( g_errorhnd));
 		if (dbi.get())
 		{
 			(void)dbi->destroyDatabase( config.databaseConfig);

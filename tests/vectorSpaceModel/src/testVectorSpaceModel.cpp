@@ -183,7 +183,7 @@ int main( int argc, const char** argv)
 		if (!extractUIntFromConfigString( dim, configsrc, "dim", g_errorhnd)) throw std::runtime_error("configuration parameter 'dim' is not specified");
 
 		// Build all objects:
-		std::auto_ptr<strus::DatabaseInterface> dbi( createDatabase_leveldb( g_errorhnd));
+		std::auto_ptr<strus::DatabaseInterface> dbi( strus::createDatabaseType_leveldb( g_errorhnd));
 		std::auto_ptr<strus::VectorSpaceModelInterface> vmodel( createVectorSpaceModel_std( g_errorhnd));
 		if (!dbi.get() || !vmodel.get() || g_errorhnd->hasError()) throw std::runtime_error( g_errorhnd->fetchError());
 
@@ -197,7 +197,7 @@ int main( int argc, const char** argv)
 		std::vector<std::vector<double> > samplear;
 		if (use_model_built)
 		{
-			std::auto_ptr<strus::VectorSpaceModelInstanceInterface> instance( vmodel->createInstance( dbi.get(), config));
+			std::auto_ptr<strus::VectorSpaceModelInstanceInterface> instance( vmodel->createInstance( config, dbi.get()));
 			if (!instance.get()) throw std::runtime_error( g_errorhnd->fetchError());
 			strus::Index si = 0, se = instance->nofFeatures();
 			for (; si != se; ++si)
@@ -205,7 +205,7 @@ int main( int argc, const char** argv)
 				samplear.push_back( instance->featureVector( si));
 			}
 		}
-		std::auto_ptr<strus::VectorSpaceModelBuilderInterface> builder( vmodel->createBuilder( dbi.get(), config));
+		std::auto_ptr<strus::VectorSpaceModelBuilderInterface> builder( vmodel->createBuilder( config, dbi.get()));
 		if (!builder.get()) throw std::runtime_error( g_errorhnd->fetchError());
 
 		if (!use_model_built)
@@ -276,7 +276,7 @@ int main( int argc, const char** argv)
 
 		// Categorize the input vectors and build some maps out of the assignments of features:
 		std::cerr << "load model to categorize vectors" << std::endl;
-		std::auto_ptr<strus::VectorSpaceModelInstanceInterface> categorizer( vmodel->createInstance( dbi.get(), config));
+		std::auto_ptr<strus::VectorSpaceModelInstanceInterface> categorizer( vmodel->createInstance( config, dbi.get()));
 		if (!categorizer.get())
 		{
 			throw std::runtime_error( "failed to create VSM instance from model stored");

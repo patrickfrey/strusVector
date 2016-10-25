@@ -175,7 +175,7 @@ int main( int argc, const char* argv[])
 		if (doExit) return 0;
 		if (argc - argi < 1) throw strus::runtime_error( _TXT("too few arguments (given %u, at least required %u)"), argc - argi, 1);
 
-		std::auto_ptr<strus::DatabaseInterface> database( createDatabase_leveldb( g_errorBuffer));
+		std::auto_ptr<strus::DatabaseInterface> database( createDatabaseType_leveldb( g_errorBuffer));
 		if (!database.get())
 		{
 			throw strus::runtime_error(_TXT("failed to create LevelDB database object"));

@@ -408,6 +408,25 @@ void DatabaseAdapter::writeConfig( const VectorSpaceModelConfig& config)
 	m_transaction->write( key.c_str(), key.size(), content.c_str(), content.size());
 }
 
+bool DatabaseAdapter::isempty()
+{
+	DatabaseKeyBuffer key( KeyConfig);
+
+	std::string content;
+	if (!m_database->readValue( key.c_str(), key.size(), content, DatabaseOptions()))
+	{
+		if (m_errorhnd->hasError())
+		{
+			throw strus::runtime_error( _TXT( "failed to read configuration from database: %s"), m_errorhnd->fetchError());
+		}
+		else
+		{
+			return true;
+		}
+	}
+	return false;
+}
+
 LshModel DatabaseAdapter::readLshModel() const
 {
 	DatabaseKeyBuffer key( KeyLshModel);
@@ -661,6 +680,24 @@ void DatabaseAdapter::deleteSubTree( const KeyPrefix& prefix)
 	m_transaction->removeSubTree( key.c_str(), key.size());
 }
 
+void DatabaseAdapter::clear()
+{
+	deleteConfig();
+	deleteVariables();
+	deleteSamples();
+	deleteSampleSimhashVector();
+	deleteResultSimhashVector();
+	deleteLshModel();
+	deleteSimRelationMap();
+	deleteSampleFeatureIndexMap();
+	deleteFeatureSampleIndexMap();
+}
+
+void DatabaseAdapter::deleteConfig()
+{
+	deleteSubTree( KeyVariable);
+}
+
 void DatabaseAdapter::deleteVariables()
 {
 	deleteSubTree( KeyVariable);
@@ -699,4 +736,8 @@ void DatabaseAdapter::deleteFeatureSampleIndexMap()
 	deleteSubTree( KeyFeatureSampleIndexMap);
 }
 
+void DatabaseAdapter::deleteLshModel()
+{
+	deleteSubTree( KeyLshModel);
+}
 
