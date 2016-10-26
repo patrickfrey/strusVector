@@ -303,7 +303,7 @@ make test
 %files devel
 %defattr( -, root, root )
 %{_libdir}/strus/libstrus_armadillo.so
-%{_libdir}/strus/libstrus_vectorspace.so
+%{_libdir}/strus/libstrus_vectorspace_std.so
 %dir %{_includedir}/strus
 %{_includedir}/strus/*.hpp
 %{_includedir}/strus/armadillo
