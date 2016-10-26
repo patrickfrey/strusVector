@@ -14,6 +14,7 @@ set(
 	sampleSimGroupMap.cpp
 	simRelationMap.cpp
 	getSimRelationMap.cpp
+	getSimhashValues.cpp
 	lshModel.cpp
 	genModel.cpp
 	databaseAdapter.cpp

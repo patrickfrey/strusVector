@@ -12,15 +12,19 @@
 #include "strus/vectorSpaceModelBuilderInterface.hpp"
 #include "strus/databaseInterface.hpp"
 #include "strus/base/fileio.hpp"
+#include "strus/base/string_format.hpp"
 #include "vectorSpaceModelConfig.hpp"
 #include "databaseAdapter.hpp"
 #include "internationalization.hpp"
 #include "errorUtils.hpp"
+#include "utils.hpp"
+#include "logger.hpp"
 #include "simHash.hpp"
 #include "simRelationMap.hpp"
 #include "lshModel.hpp"
 #include "genModel.hpp"
 #include "stringList.hpp"
+#include "getSimhashValues.hpp"
 #include "armadillo"
 #include <memory>
 
@@ -148,6 +152,7 @@ private:
 	VectorSpaceModelConfig m_config;
 	LshModel m_lshmodel;
 	std::vector<SimHash> m_individuals;
+	
 };
 
 
@@ -191,15 +196,14 @@ public:
 	{
 		try
 		{
+			utils::ScopedLock lock( m_mutex);
 			if (m_simrelmap.nofSamples() != 0)
 			{
 				m_database->deleteSimRelationMap();
 				m_database->commit();
 			}
-			
-			SimHash sh( m_lshmodel.simHash( arma::normalise( arma::vec( vec))));
-			m_samplear.push_back( sh);
-			m_database->writeSample( m_samplear.size(), name, vec, sh);
+			m_vecar.push_back( vec);
+			m_namear.push_back( name);
 		}
 		CATCH_ERROR_ARG1_MAP( _TXT("error adding sample vector to '%s' builder: %s"), MODULENAME, *m_errorhnd);
 	}
@@ -208,7 +212,22 @@ public:
 	{
 		try
 		{
+			utils::ScopedLock lock( m_mutex);
+			std::vector<SimHash> shar = getSimhashValues( m_lshmodel, m_vecar, m_config.threads);
+			std::size_t si = 0, se = m_vecar.size();
+			for (; si != se; ++si)
+			{
+				m_database->writeSample( si, m_namear[si], m_vecar[si], shar[si]);
+			}
+			m_samplear.insert( m_samplear.end(), shar.begin(), shar.end());
 			m_database->commit();
+			m_vecar.clear();
+			m_namear.clear();
+			if (!m_config.logfile.empty())
+			{
+				Logger logout( m_config.logfile.c_str());
+				logout << string_format( _TXT("inserted %u features"), m_samplear.size());
+			}
 			return true;
 		}
 		CATCH_ERROR_ARG1_MAP_RETURN( _TXT("error in vector space model database commit of '%s' builder: %s"), MODULENAME, *m_errorhnd, false);
@@ -238,6 +257,7 @@ public:
 	{
 		try
 		{
+			utils::ScopedLock lock( m_mutex);
 			const char* logfile = m_config.logfile.empty()?0:m_config.logfile.c_str();
 			storeSimRelationMap();
 			deletePreviousRun();
@@ -281,7 +301,10 @@ private:
 	SimRelationMap m_simrelmap;
 	LshModel m_lshmodel;
 	GenModel m_genmodel;
+	utils::Mutex m_mutex;
 	std::vector<SimHash> m_samplear;
+	std::vector<std::vector<double> > m_vecar;
+	std::vector<std::string> m_namear;
 };
 
 

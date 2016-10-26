@@ -46,7 +46,7 @@ static SimRelationMap getSimRelationMap_singlethread( const std::vector<SimHash>
 class RowBuilderGlobalContext
 {
 public:
-	explicit RowBuilderGlobalContext( const std::vector<SimHash>* samplear_, unsigned int maxdist_, const char* logfile)
+	RowBuilderGlobalContext( const std::vector<SimHash>* samplear_, unsigned int maxdist_, const char* logfile)
 		:m_sampleIndex(0),m_samplear(samplear_),m_maxdist(maxdist_),m_logout(logfile)
 	{
 		if (m_logout) m_logout << _TXT("build similarity relation map (multithreaded)");
@@ -165,6 +165,11 @@ public:
 		{
 			m_ctx->logmsg( string_format( _TXT("out of memory in thread %u"), m_threadid));
 			m_ctx->reportError( string_format( _TXT("out of memory in thread %u"), m_threadid));
+		}
+		catch (const boost::thread_interrupted&)
+		{
+			m_ctx->logmsg( string_format( _TXT("failed to complete calculation: thread %u interrupted"), m_threadid));
+			m_ctx->reportError( string_format( _TXT("failed to complete calculation: thread %u interrupted"), m_threadid));
 		}
 	}
 
