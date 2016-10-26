@@ -9,9 +9,11 @@
 #include "getSimRelationMap.hpp"
 #include "simGroup.hpp"
 #include "logger.hpp"
-#include "thread.hpp"
+#include "utils.hpp"
 #include "strus/base/string_format.hpp"
+#include "strus/reference.hpp"
 #include <memory>
+#include <boost/thread.hpp>
 
 using namespace strus;
 
@@ -182,15 +184,22 @@ SimRelationMap strus::getSimRelationMap( const std::vector<SimHash>& samplear, u
 	else
 	{
 		RowBuilderGlobalContext threadGlobalContext( &samplear, maxdist, logfile);
-		std::auto_ptr< ThreadGroup< RowBuilder > >
-			rowBuilderThreads(
-				new ThreadGroup<RowBuilder>( "simrelbuilder"));
 
+		std::vector<strus::Reference<RowBuilder> > processorList;
+		processorList.reserve( threads);
 		for (unsigned int ti = 0; ti<threads; ++ti)
 		{
-			rowBuilderThreads->start( new RowBuilder( &threadGlobalContext, ti+1));
+			processorList.push_back(
+				new RowBuilder( &threadGlobalContext, ti+1));
 		}
-		rowBuilderThreads->wait_termination();
+		{
+			boost::thread_group tgroup;
+			for (unsigned int ti=0; ti<threads; ++ti)
+			{
+				tgroup.create_thread( boost::bind( &RowBuilder::run, processorList[ti].get()));
+			}
+			tgroup.join_all();
+		}
 		if (threadGlobalContext.hasError())
 		{
 			throw strus::runtime_error("failed to build similarity relation map: %s", threadGlobalContext.error().c_str());
