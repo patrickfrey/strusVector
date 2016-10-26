@@ -12,8 +12,11 @@
 #include "strus/base/string_format.hpp"
 #include "strus/reference.hpp"
 #include <memory>
+#include <iostream>
 #include <boost/thread.hpp>
 #include "armadillo"
+
+#undef STRUS_LOWLEVEL_DEBUG
 
 using namespace strus;
 
@@ -37,22 +40,25 @@ public:
 		:m_chunkIndex(0),m_resar(resar_),m_vecar(vecar_),m_arsize(arsize_),m_chunksize(chunksize_)
 	{}
 
-	bool fetch( SimHash*& resar, const std::vector<double>*& vecar, std::size_t& arsize)
+	bool fetch( SimHash*& chunk_resar, const std::vector<double>*& chunk_vecar, std::size_t& chunk_arsize)
 	{
-		unsigned int index = m_chunkIndex.allocIncrement();
-		std::size_t ofs = index * m_chunksize;
-		if (ofs >= m_vecar->size())
+		unsigned int chunk_index = m_chunkIndex.allocIncrement();
+		std::size_t chunk_ofs = chunk_index * m_chunksize;
+		if (chunk_ofs >= m_arsize)
 		{
 			m_chunkIndex.decrement();
 			return false;
 		}
-		vecar = m_vecar + ofs;
-		resar = m_resar + ofs;
-		arsize = m_vecar->size() - ofs;
-		if (arsize > m_chunksize)
+		chunk_vecar = m_vecar + chunk_ofs;
+		chunk_resar = m_resar + chunk_ofs;
+		chunk_arsize = m_arsize - chunk_ofs;
+		if (chunk_arsize > m_chunksize)
 		{
-			arsize = m_chunksize;
+			chunk_arsize = m_chunksize;
 		}
+#ifdef STRUS_LOWLEVEL_DEBUG
+		std::cerr << strus::string_format( "fetch %u %u %u", chunk_index, chunk_ofs, chunk_arsize) << std::endl;
+#endif
 		return true;
 	}
 
@@ -99,16 +105,16 @@ public:
 	{
 		try
 		{
-			SimHash* resar = 0;
-			const std::vector<double>* vecar = 0;
-			std::size_t arsize = 0;
+			SimHash* chunk_resar = 0;
+			const std::vector<double>* chunk_vecar = 0;
+			std::size_t chunk_arsize = 0;
 
-			while (!m_terminated && m_ctx->fetch( resar, vecar, arsize))
+			while (!m_terminated && m_ctx->fetch( chunk_resar, chunk_vecar, chunk_arsize))
 			{
-				std::size_t ai = 0, ae = arsize;
+				std::size_t ai = 0, ae = chunk_arsize;
 				for (;ai != ae; ++ai)
 				{
-					resar[ ai] = m_lshModel->simHash( arma::normalise( arma::vec( vecar[ ai])));
+					chunk_resar[ ai] = m_lshModel->simHash( arma::normalise( arma::vec( chunk_vecar[ ai])));
 				}
 			}
 		}
@@ -151,7 +157,7 @@ std::vector<SimHash> strus::getSimhashValues(
 		for (; si != se; ++si) rt.push_back( SimHash());
 
 		unsigned int chunksize = 16;
-		while (chunksize * threads < se) chunksize *= 2;
+		while (chunksize * threads * 5 < se) chunksize *= 2;
 		SimhashBuilderGlobalContext context( rt.data(), vecar.data(), se, chunksize);
 
 		std::vector<strus::Reference<SimhashBuilder> > processorList;
