@@ -1,3 +1,4 @@
 + use more bits in genetic algorithm, use less in final groups for classification, make the number of final result bits and the related similarity bits configurable
 + not only drop elements that got too far away from centroid, try to test for bigger groups if dropping farest away element improves fitness function
 + learn different radius with same simRelationMap and link the resulting groups with the ones with different radius
++ name learnt concepts (not only one relation)

@@ -165,7 +165,7 @@ public:
 		{
 			m_database->writeConfig( m_config);
 			m_lshmodel = LshModel( m_config.dim, m_config.bits, m_config.variations);
-			m_genmodel = GenModel( m_config.threads, m_config.simdist, m_config.raddist, m_config.eqdist, m_config.mutations, m_config.votes, m_config.descendants, m_config.maxage, m_config.iterations, m_config.assignments, m_config.isaf, m_config.with_singletons);
+			m_genmodel = GenModel( m_config.threads, m_config.maxdist, m_config.simdist, m_config.raddist, m_config.eqdist, m_config.mutations, m_config.votes, m_config.descendants, m_config.maxage, m_config.iterations, m_config.assignments, m_config.isaf, m_config.with_singletons);
 			m_database->writeLshModel( m_lshmodel);
 			m_database->commit();
 		}
@@ -177,7 +177,7 @@ public:
 				throw strus::runtime_error(_TXT("loading vector space model with incompatible configuration"));
 			}
 			m_lshmodel = m_database->readLshModel();
-			m_genmodel = GenModel( m_config.threads, m_config.simdist, m_config.raddist, m_config.eqdist, m_config.mutations, m_config.votes, m_config.descendants, m_config.maxage, m_config.iterations, m_config.assignments, m_config.isaf, m_config.with_singletons);
+			m_genmodel = GenModel( m_config.threads, m_config.maxdist, m_config.simdist, m_config.raddist, m_config.eqdist, m_config.mutations, m_config.votes, m_config.descendants, m_config.maxage, m_config.iterations, m_config.assignments, m_config.isaf, m_config.with_singletons);
 
 			m_simrelmap = m_database->readSimRelationMap();
 			m_samplear = m_database->readSampleSimhashVector();

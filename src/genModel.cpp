@@ -70,7 +70,7 @@ private:
 
 SimRelationMap GenModel::getSimRelationMap( const std::vector<SimHash>& samplear, const char* logfile) const
 {
-	return strus::getSimRelationMap( samplear, m_simdist, logfile, m_threads);
+	return strus::getSimRelationMap( samplear, m_maxdist, logfile, m_threads);
 }
 
 typedef std::list<SimGroup> GroupInstanceList;
@@ -243,12 +243,14 @@ static bool tryLeaveUnfitestGroup(
 }
 
 /// \brief Find the closest sample to a given sample that is not yet in a group with this sample and can still be assigned to a new group
-static bool findClosestFreeSample( SimRelationMap::Element& res, SampleIndex sampleidx, const SampleSimGroupMap& sampleSimGroupMap, const SimRelationMap& simrelmap)
+static bool findClosestFreeSample( SimRelationMap::Element& res, SampleIndex sampleidx, const SampleSimGroupMap& sampleSimGroupMap, const SimRelationMap& simrelmap, unsigned int simdist)
 {
 	SimRelationMap::Row row = simrelmap.row( sampleidx);
 	SimRelationMap::Row::const_iterator ri = row.begin(), re = row.end();
 	for (; ri != re; ++ri)
 	{
+		if (ri->simdist > simdist) break;
+
 		if (sampleSimGroupMap.hasSpace( ri->index) && !sampleSimGroupMap.shares( sampleidx, ri->index))
 		{
 			res = *ri;
@@ -487,6 +489,18 @@ std::vector<SimHash> GenModel::run(
 	unsigned int iteration=0;
 	for (; iteration != m_iterations; ++iteration)
 	{
+		// Set 'rel_raddist' as a value that starts with 'simdist' an moves towards 'raddist' with more iterations:
+		unsigned int rel_raddist;
+		unsigned int rad_iterations = (m_iterations - (m_iterations >> 2));
+		if (iteration >= rad_iterations)
+		{
+			rel_raddist = m_raddist;
+		}
+		else
+		{
+			rel_raddist = m_raddist + ((m_simdist - m_raddist) * (rad_iterations - iteration - 1) / (rad_iterations - 1));
+		}
+
 		unsigned int mutationcnt = 0;
 		if (logout) logout << string_format( _TXT("starting iteration %u"), iteration);
 #ifdef STRUS_LOWLEVEL_DEBUG
@@ -507,7 +521,7 @@ std::vector<SimHash> GenModel::run(
 
 			// Find the closest neighbour, that is not yet in a group with this sample:
 			SimRelationMap::Element neighbour;
-			if (findClosestFreeSample( neighbour, sidx, sampleSimGroupMap, simrelmap))
+			if (findClosestFreeSample( neighbour, sidx, sampleSimGroupMap, simrelmap, rel_raddist))
 			{
 				// Try to find a group the visited sample belongs to that is closer to the
 				// found candidate than the visited sample:
@@ -635,16 +649,6 @@ std::vector<SimHash> GenModel::run(
 
 		// Mutation step for all groups and dropping of elements that got too far away from the
 		// representants genom:
-		unsigned int rel_raddist;
-		unsigned int rad_iterations = (m_iterations - (m_iterations >> 2));
-		if (iteration >= rad_iterations)
-		{
-			rel_raddist = m_raddist;
-		}
-		else
-		{
-			rel_raddist = m_raddist + ((m_simdist - m_raddist) * (rad_iterations - iteration - 1) / (rad_iterations - 1));
-		}
 		gi = groupInstanceList.begin(), ge = groupInstanceList.end();
 		for (; gi != ge; ++gi)
 		{

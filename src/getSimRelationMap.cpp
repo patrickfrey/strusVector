@@ -15,7 +15,7 @@
 
 using namespace strus;
 
-static SimRelationMap getSimRelationMap_singlethread( const std::vector<SimHash>& samplear, unsigned int simdist, const char* logfile)
+static SimRelationMap getSimRelationMap_singlethread( const std::vector<SimHash>& samplear, unsigned int maxdist, const char* logfile)
 {
 	Logger logout( logfile);
 	SimRelationMap rt;
@@ -29,7 +29,7 @@ static SimRelationMap getSimRelationMap_singlethread( const std::vector<SimHash>
 		std::vector<SimHash>::const_iterator pi = samplear.begin();
 		for (SampleIndex pidx=0; pi != si; ++pi,++pidx)
 		{
-			if (pidx != sidx && si->near( *pi, simdist))
+			if (pidx != sidx && si->near( *pi, maxdist))
 			{
 				unsigned short dist = si->dist( *pi);
 				row.push_back( SimRelationMap::Element( pidx, dist));
@@ -44,8 +44,8 @@ static SimRelationMap getSimRelationMap_singlethread( const std::vector<SimHash>
 class RowBuilderGlobalContext
 {
 public:
-	explicit RowBuilderGlobalContext( const std::vector<SimHash>* samplear_, unsigned int simdist_, const char* logfile)
-		:m_sampleIndex(0),m_samplear(samplear_),m_simdist(simdist_),m_logout(logfile)
+	explicit RowBuilderGlobalContext( const std::vector<SimHash>* samplear_, unsigned int maxdist_, const char* logfile)
+		:m_sampleIndex(0),m_samplear(samplear_),m_maxdist(maxdist_),m_logout(logfile)
 	{
 		if (m_logout) m_logout << _TXT("build similarity relation map (multithreaded)");
 	}
@@ -74,7 +74,7 @@ public:
 		std::vector<SimHash>::const_iterator pi = m_samplear->begin();
 		for (SampleIndex pidx=0; pidx != sidx; ++pi,++pidx)
 		{
-			if (pi->near( srec, m_simdist))
+			if (pi->near( srec, m_maxdist))
 			{
 				unsigned short dist = pi->dist( srec);
 				rt.push_back( SimRelationMap::Element( pidx, dist));
@@ -120,7 +120,7 @@ public:
 private:
 	utils::AtomicCounter<SampleIndex> m_sampleIndex;
 	const std::vector<SimHash>* m_samplear;
-	unsigned int m_simdist;
+	unsigned int m_maxdist;
 	Logger m_logout;
 	utils::Mutex m_mutex;
 	std::string m_errormsg;
@@ -173,15 +173,15 @@ private:
 	unsigned int m_threadid;
 };
 
-SimRelationMap strus::getSimRelationMap( const std::vector<SimHash>& samplear, unsigned int simdist, const char* logfile, unsigned int threads)
+SimRelationMap strus::getSimRelationMap( const std::vector<SimHash>& samplear, unsigned int maxdist, const char* logfile, unsigned int threads)
 {
 	if (!threads)
 	{
-		return getSimRelationMap_singlethread( samplear, simdist, logfile);
+		return getSimRelationMap_singlethread( samplear, maxdist, logfile);
 	}
 	else
 	{
-		RowBuilderGlobalContext threadGlobalContext( &samplear, simdist, logfile);
+		RowBuilderGlobalContext threadGlobalContext( &samplear, maxdist, logfile);
 		std::auto_ptr< ThreadGroup< RowBuilder > >
 			rowBuilderThreads(
 				new ThreadGroup<RowBuilder>( "simrelbuilder"));

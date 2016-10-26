@@ -20,7 +20,8 @@ using namespace strus;
 VectorSpaceModelConfig::VectorSpaceModelConfig( const VectorSpaceModelConfig& o)
 	:databaseConfig(o.databaseConfig),logfile(o.logfile),threads(o.threads)
 	,dim(o.dim),bits(o.bits),variations(o.variations)
-	,simdist(o.simdist),raddist(o.raddist),eqdist(o.eqdist),mutations(o.mutations),votes(o.votes)
+	,maxdist(o.maxdist),simdist(o.simdist),raddist(o.raddist),eqdist(o.eqdist)
+	,mutations(o.mutations),votes(o.votes)
 	,descendants(o.descendants),maxage(o.maxage),iterations(o.iterations)
 	,assignments(o.assignments)
 	,isaf(o.isaf)
@@ -30,7 +31,7 @@ VectorSpaceModelConfig::VectorSpaceModelConfig( const VectorSpaceModelConfig& o)
 VectorSpaceModelConfig::VectorSpaceModelConfig()
 	:databaseConfig(),logfile(),threads(DefaultThreads)
 	,dim(DefaultDim),bits(DefaultBits),variations(DefaultVariations)
-	,simdist(DefaultSimDist),raddist(DefaultRadDist),eqdist(DefaultEqDist)
+	,maxdist(DefaultMaxDist),simdist(DefaultSimDist),raddist(DefaultRadDist),eqdist(DefaultEqDist)
 	,mutations(DefaultMutations),votes(DefaultMutationVotes)
 	,descendants(DefaultDescendants),maxage(DefaultMaxAge),iterations(DefaultIterations)
 	,assignments(DefaultAssignments)
@@ -41,7 +42,7 @@ VectorSpaceModelConfig::VectorSpaceModelConfig()
 VectorSpaceModelConfig::VectorSpaceModelConfig( const std::string& config, ErrorBufferInterface* errorhnd)
 	:databaseConfig(),logfile(),threads(DefaultThreads)
 	,dim(DefaultDim),bits(DefaultBits),variations(DefaultVariations)
-	,simdist(DefaultSimDist),raddist(DefaultRadDist),eqdist(DefaultEqDist)
+	,maxdist(DefaultMaxDist),simdist(DefaultSimDist),raddist(DefaultRadDist),eqdist(DefaultEqDist)
 	,mutations(DefaultMutations),votes(DefaultMutationVotes)
 	,descendants(DefaultDescendants),maxage(DefaultMaxAge),iterations(DefaultIterations)
 	,assignments(DefaultAssignments)
@@ -54,10 +55,15 @@ VectorSpaceModelConfig::VectorSpaceModelConfig( const std::string& config, Error
 	if (extractUIntFromConfigString( dim, src, "dim", errorhnd)){}
 	if (extractUIntFromConfigString( bits, src, "bit", errorhnd)){}
 	if (extractUIntFromConfigString( variations, src, "var", errorhnd)){}
+	if (extractUIntFromConfigString( simdist, src, "maxdist", errorhnd)){}
 	if (extractUIntFromConfigString( simdist, src, "simdist", errorhnd))
 	{
 		raddist = simdist;
 		eqdist = simdist / 6;
+	}
+	if (simdist > maxdist)
+	{
+		throw strus::runtime_error(_TXT("the 'simdist' configuration parameter must not be bigger than 'maxdist'"));
 	}
 	if (extractUIntFromConfigString( raddist, src, "raddist", errorhnd)){}
 	if (raddist > simdist)
@@ -108,6 +114,7 @@ std::string VectorSpaceModelConfig::tostring() const
 	buf << "dim=" << dim << ";" << std::endl;
 	buf << "bit=" << bits << ";" << std::endl;
 	buf << "var=" << variations << ";" << std::endl;
+	buf << "maxdist=" << maxdist << ";" << std::endl;
 	buf << "simdist=" << simdist << ";" << std::endl;
 	buf << "raddist=" << raddist << ";" << std::endl;
 	buf << "eqdist=" << eqdist << ";" << std::endl;

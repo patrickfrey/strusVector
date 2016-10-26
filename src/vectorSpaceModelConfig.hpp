@@ -22,6 +22,7 @@ struct VectorSpaceModelConfig
 		DefaultDim = 300,
 		DefaultBits = 64,
 		DefaultVariations = 32,
+		DefaultMaxDist = 640,	//< 640 out of 2K (32*64)
 		DefaultSimDist = 340,	//< 340 out of 2K (32*64) ~ cosine dist 0.9
 		DefaultRadDist = 320,	//< 340 out of 2K (32*64) ~ cosine dist 0.9
 		DefaultEqDist = 60,
@@ -43,9 +44,9 @@ struct VectorSpaceModelConfig
 		return dim == o.dim 
 			&& bits == o.bits
 			&& variations == o.variations
-			&& simdist <= o.simdist
-			&& raddist <= o.simdist
-			&& eqdist <= o.simdist
+			&& simdist <= o.maxdist
+			&& raddist <= o.maxdist
+			&& eqdist <= o.maxdist
 		;
 	}
 	std::string tostring() const;
@@ -56,6 +57,7 @@ struct VectorSpaceModelConfig
 	unsigned int dim;		///< input vector dimension
 	unsigned int bits;		///< number of bits to calculate for an LSH per variation
 	unsigned int variations;	///< number of variations
+	unsigned int maxdist;		///< maximum LSH edit distance precalculated in the similarity relation map. Maximum for any other similarity distance (simdist,eqdist,raddist)
 	unsigned int simdist;		///< maximum LSH edit distance considered as similarity
 	unsigned int raddist;		///< centroid radius distance (smaller than simdist)
 	unsigned int eqdist;		///< maximum LSH edit distance considered as equal
