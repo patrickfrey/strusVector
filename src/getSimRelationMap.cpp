@@ -17,7 +17,7 @@
 
 using namespace strus;
 
-static SimRelationMap getSimRelationMap_singlethread( const std::vector<SimHash>& samplear, unsigned int maxdist, const char* logfile)
+static SimRelationMap getSimRelationMap_singlethread( const std::vector<SimHash>& samplear, unsigned int maxdist, unsigned int commitsize, const char* logfile)
 {
 	Logger logout( logfile);
 	SimRelationMap rt;
@@ -25,7 +25,7 @@ static SimRelationMap getSimRelationMap_singlethread( const std::vector<SimHash>
 	std::vector<SimHash>::const_iterator si = samplear.begin(), se = samplear.end();
 	for (SampleIndex sidx=0; si != se; ++si,++sidx)
 	{
-		if (logout && sidx % 10000 == 0) logout << string_format( _TXT("processed %u lines with %u similarities"), sidx, rt.nofRelationsDetected());
+		if (commitsize && logout && sidx % commitsize == 0) logout << string_format( _TXT("processed %u lines with %u similarities"), sidx, rt.nofRelationsDetected());
 		std::vector<SimRelationMap::Element> row;
 
 		std::vector<SimHash>::const_iterator pi = samplear.begin();
@@ -112,6 +112,7 @@ public:
 	{
 		utils::ScopedLock lock( m_mutex);
 		m_simrelmap.join( result);
+		if (m_logout) m_logout << string_format( _TXT("got %u similarities"), m_simrelmap.nofRelationsDetected());
 	}
 
 	const SimRelationMap& result()
@@ -153,9 +154,9 @@ public:
 				m_simrelmap.addRow( sidx, m_ctx->getRow( sidx));
 				if (m_commitsize && cnt % m_commitsize == 0)
 				{
+					m_ctx->logmsg( string_format( _TXT("simrel processed %u lines"), m_ctx->current()));
 					m_ctx->pushResult( m_simrelmap);
 					m_simrelmap.clear();
-					m_ctx->logmsg( string_format( _TXT("simrel processed %u lines"), m_ctx->current()));
 				}
 			}
 			m_ctx->pushResult( m_simrelmap);
@@ -191,7 +192,7 @@ SimRelationMap strus::getSimRelationMap( const std::vector<SimHash>& samplear, u
 {
 	if (!threads)
 	{
-		return getSimRelationMap_singlethread( samplear, maxdist, logfile);
+		return getSimRelationMap_singlethread( samplear, maxdist, commitsize, logfile);
 	}
 	else
 	{
