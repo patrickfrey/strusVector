@@ -132,8 +132,8 @@ private:
 class RowBuilder
 {
 public:
-	RowBuilder( RowBuilderGlobalContext* ctx_, unsigned int threadid_)
-		:m_ctx(ctx_),m_simrelmap(),m_terminated(false),m_threadid(threadid_){}
+	RowBuilder( RowBuilderGlobalContext* ctx_, unsigned int threadid_, unsigned int commitsize_)
+		:m_ctx(ctx_),m_simrelmap(),m_terminated(false),m_threadid(threadid_),m_commitsize(commitsize_){}
 	~RowBuilder(){}
 
 	void sigStop()
@@ -151,10 +151,14 @@ public:
 			{
 				++cnt;
 				m_simrelmap.addRow( sidx, m_ctx->getRow( sidx));
-				if (cnt % 10000 == 0) m_ctx->logmsg( string_format( _TXT("processed %u lines"), m_ctx->current()));
+				if (cnt % m_commitsize == 0)
+				{
+					m_ctx->pushResult( m_simrelmap);
+					m_simrelmap.clear();
+					m_ctx->logmsg( string_format( _TXT("simrel processed %u lines"), m_ctx->current()));
+				}
 			}
-			m_ctx->logmsg( string_format( _TXT("processed %u lines"), m_ctx->current()));
-			m_ctx->pushResult( m_simrelmap);
+			m_ctx->logmsg( string_format( _TXT("simrel processed %u lines"), m_ctx->current()));
 		}
 		catch (const std::runtime_error& err)
 		{
@@ -178,6 +182,7 @@ private:
 	SimRelationMap m_simrelmap;
 	bool m_terminated;
 	unsigned int m_threadid;
+	unsigned int m_commitsize;
 };
 
 SimRelationMap strus::getSimRelationMap( const std::vector<SimHash>& samplear, unsigned int maxdist, const char* logfile, unsigned int threads)
