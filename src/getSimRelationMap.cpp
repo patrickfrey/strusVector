@@ -151,13 +151,15 @@ public:
 			{
 				++cnt;
 				m_simrelmap.addRow( sidx, m_ctx->getRow( sidx));
-				if (cnt % m_commitsize == 0)
+				if (m_commitsize && cnt % m_commitsize == 0)
 				{
 					m_ctx->pushResult( m_simrelmap);
 					m_simrelmap.clear();
 					m_ctx->logmsg( string_format( _TXT("simrel processed %u lines"), m_ctx->current()));
 				}
 			}
+			m_ctx->pushResult( m_simrelmap);
+			m_simrelmap.clear();
 			m_ctx->logmsg( string_format( _TXT("simrel processed %u lines"), m_ctx->current()));
 		}
 		catch (const std::runtime_error& err)
@@ -185,7 +187,7 @@ private:
 	unsigned int m_commitsize;
 };
 
-SimRelationMap strus::getSimRelationMap( const std::vector<SimHash>& samplear, unsigned int maxdist, const char* logfile, unsigned int threads)
+SimRelationMap strus::getSimRelationMap( const std::vector<SimHash>& samplear, unsigned int maxdist, const char* logfile, unsigned int threads, unsigned int commitsize)
 {
 	if (!threads)
 	{
@@ -200,7 +202,7 @@ SimRelationMap strus::getSimRelationMap( const std::vector<SimHash>& samplear, u
 		for (unsigned int ti = 0; ti<threads; ++ti)
 		{
 			processorList.push_back(
-				new RowBuilder( &threadGlobalContext, ti+1));
+				new RowBuilder( &threadGlobalContext, ti+1, commitsize));
 		}
 		{
 			boost::thread_group tgroup;

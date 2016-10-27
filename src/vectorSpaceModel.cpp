@@ -21,6 +21,7 @@
 #include "logger.hpp"
 #include "simHash.hpp"
 #include "simRelationMap.hpp"
+#include "getSimRelationMap.hpp"
 #include "lshModel.hpp"
 #include "genModel.hpp"
 #include "stringList.hpp"
@@ -258,7 +259,8 @@ public:
 			if (m_simrelmap.nofSamples() == 0)
 			{
 				const char* logfile = m_config.logfile.empty()?0:m_config.logfile.c_str();
-				m_simrelmap = m_genmodel.getSimRelationMap( m_samplear, logfile);
+				m_simrelmap = strus::getSimRelationMap( m_samplear, m_config.maxdist, logfile, m_config.threads, m_config.commitsize);
+
 				m_database->writeSimRelationMap( m_simrelmap, m_config.commitsize);
 				m_database->writeState( 2);
 				m_database->commit();

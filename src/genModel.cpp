@@ -9,7 +9,6 @@
 #include "genModel.hpp"
 #include "logger.hpp"
 #include "sampleSimGroupMap.hpp"
-#include "getSimRelationMap.hpp"
 #include "random.hpp"
 #include "internationalization.hpp"
 #include "strus/base/string_format.hpp"
@@ -67,11 +66,6 @@ private:
 	FeatureIndex m_cnt;
 	std::vector<FeatureIndex> m_freeList;
 };
-
-SimRelationMap GenModel::getSimRelationMap( const std::vector<SimHash>& samplear, const char* logfile) const
-{
-	return strus::getSimRelationMap( samplear, m_maxdist, logfile, m_threads);
-}
 
 typedef std::list<SimGroup> GroupInstanceList;
 typedef std::map<FeatureIndex,GroupInstanceList::iterator> GroupInstanceMap;

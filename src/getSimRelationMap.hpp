@@ -19,10 +19,11 @@ namespace strus {
 /// \param[in] maxdist maximum edit distance to put into the result matrix
 /// \param[in] logfile file to log status
 /// \param[in] threads number of threads to use, 0 for no threading at all
+/// \param[in] commitsize number of rows to build in an iteration of a thread (multithreading only)
 /// \return similarity relation map
 SimRelationMap getSimRelationMap(
 		const std::vector<SimHash>& samplear,
-		unsigned int maxdist, const char* logfile, unsigned int threads);
+		unsigned int maxdist, const char* logfile, unsigned int threads, unsigned int commitsize);
 
 } //namespace
 #endif
