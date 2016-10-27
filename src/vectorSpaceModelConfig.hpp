@@ -19,6 +19,7 @@ struct VectorSpaceModelConfig
 {
 	enum Defaults {
 		DefaultThreads = 0,
+		DefaultCommitSize = 0,
 		DefaultDim = 300,
 		DefaultBits = 64,
 		DefaultVariations = 32,
@@ -54,6 +55,7 @@ struct VectorSpaceModelConfig
 	std::string databaseConfig;	///< path of model
 	std::string logfile;		///< file where to log some status data
 	unsigned int threads;		///< maximum number of threads to use (0 = no threading)
+	unsigned int commitsize;	///< auto commit after this amount of operations to reduce memory consumption
 	unsigned int dim;		///< input vector dimension
 	unsigned int bits;		///< number of bits to calculate for an LSH per variation
 	unsigned int variations;	///< number of variations

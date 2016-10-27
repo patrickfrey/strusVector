@@ -41,7 +41,8 @@ public:
 	std::string readSampleName( const SampleIndex& sidx) const;
 	SampleIndex readSampleIndex( const std::string& name) const;
 	SampleIndex readNofSamples() const;
-	SampleIndex readNofFeatures() const;
+	FeatureIndex readNofFeatures() const;
+	unsigned int readState() const;
 
 	std::vector<SimHash> readSampleSimhashVector() const;
 	std::vector<SimHash> readResultSimhashVector() const;
@@ -56,10 +57,12 @@ public:
 	LshModel readLshModel() const;
 
 	void writeVersion();
-	void writeVariables( const SampleIndex& nofSamples, const FeatureIndex& nofFeatures);
+	void writeNofSamples( const SampleIndex& nofSamples);
+	void writeNofFeatures( const FeatureIndex& nofFeatures);
+	void writeState( unsigned int state);
 	void writeSample( const SampleIndex& sidx, const std::string& name, const Vector& vec, const SimHash& simHash);
 	void writeResultSimhashVector( const std::vector<SimHash>& ar);
-	void writeSimRelationMap( const SimRelationMap& simrelmap);
+	void writeSimRelationMap( const SimRelationMap& simrelmap, unsigned int commitsize);
 	void writeSampleFeatureIndexMap( const SampleFeatureIndexMap& sfmap);
 	void writeFeatureSampleIndexMap( const FeatureSampleIndexMap& fsmap);
 	void writeConfig( const VectorSpaceModelConfig& config);

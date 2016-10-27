@@ -18,7 +18,8 @@
 using namespace strus;
 
 VectorSpaceModelConfig::VectorSpaceModelConfig( const VectorSpaceModelConfig& o)
-	:databaseConfig(o.databaseConfig),logfile(o.logfile),threads(o.threads)
+	:databaseConfig(o.databaseConfig),logfile(o.logfile)
+	,threads(o.threads),commitsize(o.commitsize)
 	,dim(o.dim),bits(o.bits),variations(o.variations)
 	,maxdist(o.maxdist),simdist(o.simdist),raddist(o.raddist),eqdist(o.eqdist)
 	,mutations(o.mutations),votes(o.votes)
@@ -29,7 +30,7 @@ VectorSpaceModelConfig::VectorSpaceModelConfig( const VectorSpaceModelConfig& o)
 	{}
 
 VectorSpaceModelConfig::VectorSpaceModelConfig()
-	:databaseConfig(),logfile(),threads(DefaultThreads)
+	:databaseConfig(),logfile(),threads(DefaultThreads),commitsize(DefaultCommitSize)
 	,dim(DefaultDim),bits(DefaultBits),variations(DefaultVariations)
 	,maxdist(DefaultMaxDist),simdist(DefaultSimDist),raddist(DefaultRadDist),eqdist(DefaultEqDist)
 	,mutations(DefaultMutations),votes(DefaultMutationVotes)
@@ -40,7 +41,7 @@ VectorSpaceModelConfig::VectorSpaceModelConfig()
 	{}
 
 VectorSpaceModelConfig::VectorSpaceModelConfig( const std::string& config, ErrorBufferInterface* errorhnd)
-	:databaseConfig(),logfile(),threads(DefaultThreads)
+	:databaseConfig(),logfile(),threads(DefaultThreads),commitsize(DefaultCommitSize)
 	,dim(DefaultDim),bits(DefaultBits),variations(DefaultVariations)
 	,maxdist(DefaultMaxDist),simdist(DefaultSimDist),raddist(DefaultRadDist),eqdist(DefaultEqDist)
 	,mutations(DefaultMutations),votes(DefaultMutationVotes)
@@ -52,6 +53,7 @@ VectorSpaceModelConfig::VectorSpaceModelConfig( const std::string& config, Error
 	std::string src = config;
 	if (extractStringFromConfigString( logfile, src, "logfile", errorhnd)){}
 	if (extractUIntFromConfigString( threads, src, "threads", errorhnd)){}
+	if (extractUIntFromConfigString( commitsize, src, "commit", errorhnd)){}
 	if (extractUIntFromConfigString( dim, src, "dim", errorhnd)){}
 	if (extractUIntFromConfigString( bits, src, "bit", errorhnd)){}
 	if (extractUIntFromConfigString( variations, src, "var", errorhnd)){}
@@ -111,6 +113,7 @@ std::string VectorSpaceModelConfig::tostring() const
 	buf << ";" << std::endl;
 	buf << "logfile=" << logfile << ";" << std::endl;
 	buf << "threads=" << threads << ";" << std::endl;
+	buf << "commit=" << commitsize << ";" << std::endl;
 	buf << "dim=" << dim << ";" << std::endl;
 	buf << "bit=" << bits << ";" << std::endl;
 	buf << "var=" << variations << ";" << std::endl;

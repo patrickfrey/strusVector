@@ -160,6 +160,7 @@ struct TestDataset
 	TestDataset( const strus::VectorSpaceModelConfig& config, unsigned int nofSamples_)
 		:nofFeatures(getNofFeatures( nofSamples_))
 		,nofSamples(nofSamples_)
+		,state((nofSamples_*17)%3 + 1)
 		,lshmodel( config.dim, config.bits, config.variations)
 		,simrelmap(getSimRelationMap( nofSamples, config.simdist))
 		,sfmap(getSampleFeatureIndexMap( nofSamples))
@@ -178,6 +179,7 @@ struct TestDataset
 
 	strus::Index nofFeatures;
 	strus::Index nofSamples;
+	unsigned int state;
 	strus::LshModel lshmodel;
 	strus::SimRelationMap simrelmap;
 	strus::SampleFeatureIndexMap sfmap;
@@ -205,14 +207,16 @@ static void writeDatabase( const strus::VectorSpaceModelConfig& config, const Te
 	strus::DatabaseAdapter database( dbi.get(), config.databaseConfig, g_errorhnd);
 
 	database.writeVersion();
-	database.writeVariables( dataset.nofSamples, dataset.nofFeatures);
+	database.writeNofSamples( dataset.nofSamples);
+	database.writeNofFeatures( dataset.nofFeatures);
+	database.writeState( dataset.state);
 	strus::Index si = 0, se = dataset.nofSamples;
 	for (; si != se; ++si)
 	{
 		database.writeSample( si, dataset.sampleNames[si], dataset.sampleVectors[si], dataset.sampleSimHashs[si]);
 	}
 	database.writeResultSimhashVector( dataset.sampleSimHashs);
-	database.writeSimRelationMap( dataset.simrelmap);
+	database.writeSimRelationMap( dataset.simrelmap, 0);
 	database.writeSampleFeatureIndexMap( dataset.sfmap);
 	database.writeFeatureSampleIndexMap( dataset.fsmap);
 	database.writeConfig( config);
@@ -295,6 +299,7 @@ static void readAndCheckDatabase( const strus::VectorSpaceModelConfig& config, c
 	database.checkVersion();
 	if (dataset.nofSamples != database.readNofSamples()) throw std::runtime_error("number of samples does not match");
 	if (dataset.nofFeatures != database.readNofFeatures()) throw std::runtime_error("number of features does not match");
+	if (dataset.state != database.readState()) throw std::runtime_error("number of features does not match");
 
 	strus::Index si = 0, se = dataset.nofSamples;
 	for (; si != se; ++si)

@@ -21,7 +21,7 @@ using namespace strus;
 
 #define VARIABLE_NOF_SAMPLES  "samples"
 #define VARIABLE_NOF_FEATURES "feats"
-
+#define VARIABLE_STATE "state"
 
 DatabaseAdapter::DatabaseAdapter( const DatabaseInterface* database_, const std::string& config, ErrorBufferInterface* errorhnd_)
 	:m_database(database_->createClient(config)),m_errorhnd(errorhnd_)
@@ -165,12 +165,24 @@ unsigned int DatabaseAdapter::readVariable( const char* name) const
 	return (unsigned int)rt;
 }
 
-void DatabaseAdapter::writeVariables( const SampleIndex& nofSamples, const FeatureIndex& nofFeatures)
+void DatabaseAdapter::writeNofSamples( const SampleIndex& nofSamples)
 {
 	if (!m_transaction.get()) beginTransaction();
 	writeVariable( VARIABLE_NOF_SAMPLES, nofSamples);
+}
+
+void DatabaseAdapter::writeNofFeatures( const FeatureIndex& nofFeatures)
+{
+	if (!m_transaction.get()) beginTransaction();
 	writeVariable( VARIABLE_NOF_FEATURES, nofFeatures);
 }
+
+void DatabaseAdapter::writeState( unsigned int state)
+{
+	if (!m_transaction.get()) beginTransaction();
+	writeVariable( VARIABLE_STATE, state);
+}
+
 
 void DatabaseAdapter::writeSample( const SampleIndex& sidx, const std::string& name, const Vector& vec, const SimHash& simHash)
 {
@@ -316,9 +328,14 @@ SampleIndex DatabaseAdapter::readNofSamples() const
 	return readVariable( VARIABLE_NOF_SAMPLES);
 }
 
-SampleIndex DatabaseAdapter::readNofFeatures() const
+FeatureIndex DatabaseAdapter::readNofFeatures() const
 {
 	return readVariable( VARIABLE_NOF_FEATURES);
+}
+
+unsigned int DatabaseAdapter::readState() const
+{
+	return readVariable( VARIABLE_STATE);
 }
 
 std::vector<SimHash> DatabaseAdapter::readSimhashVector( const KeyPrefix& prefix) const
@@ -528,7 +545,7 @@ std::vector<SimRelationMap::Element> DatabaseAdapter::readSimRelations( const Sa
 	}
 }
 
-void DatabaseAdapter::writeSimRelationMap( const SimRelationMap& simrelmap)
+void DatabaseAdapter::writeSimRelationMap( const SimRelationMap& simrelmap, unsigned int commitsize)
 {
 	SampleIndex si = 0, se = simrelmap.nofSamples();
 	for (; si != se; ++si)
@@ -549,7 +566,12 @@ void DatabaseAdapter::writeSimRelationMap( const SimRelationMap& simrelmap)
 		}
 		if (!m_transaction.get()) beginTransaction();
 		m_transaction->write( key.c_str(), key.size(), content.c_str(), content.size());
+		if (commitsize && (si+1) % commitsize == 0)
+		{
+			commit();
+		}
 	}
+	if (commitsize) commit();
 }
 
 std::vector<FeatureIndex> DatabaseAdapter::readSampleFeatureIndices( const SampleIndex& sidx) const

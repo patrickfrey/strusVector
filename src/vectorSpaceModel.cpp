@@ -172,6 +172,7 @@ public:
 			m_lshmodel = LshModel( m_config.dim, m_config.bits, m_config.variations);
 			m_genmodel = GenModel( m_config.threads, m_config.maxdist, m_config.simdist, m_config.raddist, m_config.eqdist, m_config.mutations, m_config.votes, m_config.descendants, m_config.maxage, m_config.iterations, m_config.assignments, m_config.isaf, m_config.with_singletons);
 			m_database->writeLshModel( m_lshmodel);
+			m_database->writeState( 1);
 			m_database->commit();
 		}
 		else
@@ -184,7 +185,10 @@ public:
 			m_lshmodel = m_database->readLshModel();
 			m_genmodel = GenModel( m_config.threads, m_config.maxdist, m_config.simdist, m_config.raddist, m_config.eqdist, m_config.mutations, m_config.votes, m_config.descendants, m_config.maxage, m_config.iterations, m_config.assignments, m_config.isaf, m_config.with_singletons);
 
-			m_simrelmap = m_database->readSimRelationMap();
+			if (m_database->readState() >= 2)
+			{
+				m_simrelmap = m_database->readSimRelationMap();
+			}
 			m_samplear = m_database->readSampleSimhashVector();
 		}
 	}
@@ -199,11 +203,20 @@ public:
 			utils::ScopedLock lock( m_mutex);
 			if (m_simrelmap.nofSamples() != 0)
 			{
+				m_simrelmap.clear();
 				m_database->deleteSimRelationMap();
+				m_database->writeState( 1);
 				m_database->commit();
 			}
 			m_vecar.push_back( vec);
 			m_namear.push_back( name);
+			if (m_config.commitsize && m_vecar.size() >= m_config.commitsize)
+			{
+				if (!commit())
+				{
+					throw strus::runtime_error(_TXT("autocommit failed after %u operations"), m_config.commitsize);
+				}
+			}
 		}
 		CATCH_ERROR_ARG1_MAP( _TXT("error adding sample vector to '%s' builder: %s"), MODULENAME, *m_errorhnd);
 	}
@@ -220,7 +233,9 @@ public:
 				m_database->writeSample( si, m_namear[si], m_vecar[si], shar[si]);
 			}
 			m_samplear.insert( m_samplear.end(), shar.begin(), shar.end());
+			m_database->writeNofSamples( m_samplear.size());
 			m_database->commit();
+
 			m_vecar.clear();
 			m_namear.clear();
 			if (!m_config.logfile.empty())
@@ -233,34 +248,25 @@ public:
 		CATCH_ERROR_ARG1_MAP_RETURN( _TXT("error in vector space model database commit of '%s' builder: %s"), MODULENAME, *m_errorhnd, false);
 	}
 
-	void deletePreviousRun()
-	{
-		m_database->deleteSampleFeatureIndexMap();
-		m_database->deleteFeatureSampleIndexMap();
-		m_database->deleteResultSimhashVector();
-		m_database->commit();
-	}
-
-	void storeSimRelationMap()
-	{
-		m_database->writeVariables( m_samplear.size(), 0);
-		if (m_simrelmap.nofSamples() == 0)
-		{
-			const char* logfile = m_config.logfile.empty()?0:m_config.logfile.c_str();
-			m_simrelmap = m_genmodel.getSimRelationMap( m_samplear, logfile);
-			m_database->writeSimRelationMap( m_simrelmap);
-		}
-		m_database->commit();
-	}
-
 	virtual bool finalize()
 	{
 		try
 		{
 			utils::ScopedLock lock( m_mutex);
+			m_database->commit();
 			const char* logfile = m_config.logfile.empty()?0:m_config.logfile.c_str();
-			storeSimRelationMap();
-			deletePreviousRun();
+			if (m_simrelmap.nofSamples() == 0)
+			{
+				const char* logfile = m_config.logfile.empty()?0:m_config.logfile.c_str();
+				m_simrelmap = m_genmodel.getSimRelationMap( m_samplear, logfile);
+				m_database->writeSimRelationMap( m_simrelmap, m_config.commitsize);
+				m_database->writeState( 2);
+				m_database->commit();
+			}
+			m_database->deleteSampleFeatureIndexMap();
+			m_database->deleteFeatureSampleIndexMap();
+			m_database->deleteResultSimhashVector();
+			m_database->commit();
 
 			std::vector<SimHash> resultar;
 			SampleFeatureIndexMap sampleFeatureIndexMap;
@@ -272,7 +278,9 @@ public:
 			m_database->writeResultSimhashVector( resultar);
 			m_database->writeSampleFeatureIndexMap( sampleFeatureIndexMap);
 			m_database->writeFeatureSampleIndexMap( featureSampleIndexMap);
-			m_database->writeVariables( m_samplear.size(), resultar.size());
+			m_database->writeNofSamples( m_samplear.size());
+			m_database->writeNofFeatures( resultar.size());
+			m_database->writeState( 3);
 			m_database->commit();
 #ifdef STRUS_LOWLEVEL_DEBUG
 			std::cout << "model built:" << std::endl;
