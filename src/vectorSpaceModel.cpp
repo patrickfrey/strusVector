@@ -142,7 +142,7 @@ public:
 	{
 		try
 		{
-			return m_config.tostring();
+			return m_database->config() + ";" + m_config.tostring();
 		}
 		CATCH_ERROR_ARG1_MAP_RETURN( _TXT("error in instance of '%s' mapping configuration to string: %s"), MODULENAME, *m_errorhnd, std::string());
 	}

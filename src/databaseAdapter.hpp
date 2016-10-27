@@ -82,6 +82,8 @@ public:
 	void deleteLshModel();
 	void commit();
 
+	std::string config() const		{return m_database->config();}
+
 public:
 	enum KeyPrefix
 	{

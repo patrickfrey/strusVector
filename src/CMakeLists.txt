@@ -57,9 +57,6 @@ add_library( modstrus_storage_vectorspace_std  MODULE  modstrus_storage_vectorsp
 set_target_properties( modstrus_storage_vectorspace_std PROPERTIES PREFIX "")
 target_link_libraries( modstrus_storage_vectorspace_std strus_module_storage strus_vectorspace_std ${Intl_LIBRARIES} ${Boost_LIBRARIES} )
 
-add_executable( strusInspectVsm strusInspectVsm.cpp )
-target_link_libraries( strusInspectVsm  strus_error strus_base strus_database_leveldb strus_vectorspace_static ${Intl_LIBRARIES} ${Boost_LIBRARIES} )
-
 # ------------------------------
 # INSTALLATION
 # ------------------------------
@@ -70,5 +67,3 @@ install( TARGETS modstrus_storage_vectorspace_std
            LIBRARY DESTINATION ${LIB_INSTALL_DIR}/strus/modules
 	   RUNTIME DESTINATION bin )
 
-install( TARGETS strusInspectVsm
-	   RUNTIME DESTINATION bin )
