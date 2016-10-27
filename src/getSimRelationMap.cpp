@@ -161,7 +161,7 @@ public:
 			}
 			m_ctx->pushResult( m_simrelmap);
 			m_simrelmap.clear();
-			m_ctx->logmsg( string_format( _TXT("simrel processed %u lines"), m_ctx->current()));
+			m_ctx->logmsg( string_format( _TXT("simrel processed final %u lines"), m_ctx->current()));
 		}
 		catch (const std::runtime_error& err)
 		{
