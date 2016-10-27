@@ -125,7 +125,7 @@ public:
 		{
 			return m_database->readSampleIndex( name);
 		}
-		CATCH_ERROR_ARG1_MAP_RETURN( _TXT("error in instance of '%s' getting index of feature by its name: %s"), MODULENAME, *m_errorhnd, std::string());
+		CATCH_ERROR_ARG1_MAP_RETURN( _TXT("error in instance of '%s' getting index of feature by its name: %s"), MODULENAME, *m_errorhnd, -1);
 	}
 
 	virtual std::vector<Index> conceptFeatures( const Index& conceptid) const
