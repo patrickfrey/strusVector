@@ -134,21 +134,16 @@ class RowBuilder
 {
 public:
 	RowBuilder( RowBuilderGlobalContext* ctx_, unsigned int threadid_, unsigned int commitsize_)
-		:m_ctx(ctx_),m_simrelmap(),m_terminated(false),m_threadid(threadid_),m_commitsize(commitsize_){}
+		:m_ctx(ctx_),m_simrelmap(),m_threadid(threadid_),m_commitsize(commitsize_){}
 	~RowBuilder(){}
-
-	void sigStop()
-	{
-		m_terminated = true;
-	}
 
 	void run()
 	{
 		try
 		{
-			SampleIndex sidx;
+			SampleIndex sidx = 0;
 			SampleIndex cnt = 0;
-			while (!m_terminated && m_ctx->fetch(sidx))
+			while (m_ctx->fetch( sidx))
 			{
 				++cnt;
 				m_simrelmap.addRow( sidx, m_ctx->getRow( sidx));
@@ -183,7 +178,6 @@ public:
 private:
 	RowBuilderGlobalContext* m_ctx;
 	SimRelationMap m_simrelmap;
-	bool m_terminated;
 	unsigned int m_threadid;
 	unsigned int m_commitsize;
 };
@@ -197,6 +191,7 @@ SimRelationMap strus::getSimRelationMap( const std::vector<SimHash>& samplear, u
 	else
 	{
 		RowBuilderGlobalContext threadGlobalContext( &samplear, maxdist, logfile);
+		/*[-]*/threadGlobalContext.logmsg( string_format( _TXT("getSimRelationMap got %u samples"), samplear.size()));
 
 		std::vector<strus::Reference<RowBuilder> > processorList;
 		processorList.reserve( threads);

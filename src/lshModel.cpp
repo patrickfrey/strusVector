@@ -14,6 +14,8 @@
 #include <limits>
 
 using namespace strus;
+#define VEC_EPSILON  (std::numeric_limits<double>::epsilon() * 10.0)
+
 
 LshModel::LshModel()
 	:m_dim(0),m_nofbits(0),m_variations(0)
@@ -64,7 +66,7 @@ static bool mat_isequal( const arma::mat& m1, const arma::mat& m2)
 	for (; mi1 != me1 && mi2 != me2; ++mi1,++mi2)
 	{
 		double diff = *mi1 > *mi2 ? (*mi1 - *mi2):(*mi2 - *mi1);
-		if (diff > std::numeric_limits<double>::epsilon()) return false;
+		if (diff > VEC_EPSILON) return false;
 	}
 	return (mi1 == me1 && mi2 == me2);
 }

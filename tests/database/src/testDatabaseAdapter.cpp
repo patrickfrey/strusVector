@@ -42,6 +42,7 @@
 #include <limits>
 
 #undef STRUS_LOWLEVEL_DEBUG
+#define VEC_EPSILON  (std::numeric_limits<double>::epsilon() * 10.0)
 
 static void initRandomNumberGenerator()
 {
@@ -231,7 +232,7 @@ static bool compare( const std::vector<double>& v1, const std::vector<double>& v
 	for (; vi1 != ve1 && vi2 != ve2; ++vi1,++vi2)
 	{
 		double diff = (*vi1 > *vi2)?(*vi1 - *vi2):(*vi2 - *vi1);
-		if (diff > std::numeric_limits<double>::epsilon()) return false;
+		if (diff > VEC_EPSILON) return false;
 	}
 	return vi1 == ve1 && vi2 == ve2;
 }
