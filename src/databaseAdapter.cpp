@@ -9,6 +9,7 @@
 #include "databaseHelpers.hpp"
 #include "strus/base/hton.hpp"
 #include "strus/base/utf8.hpp"
+#include "strus/base/string_format.hpp"
 #include "strus/base/stdint.h"
 #include "strus/versionVector.hpp"
 #include "strus/databaseOptions.hpp"

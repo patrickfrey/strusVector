@@ -244,7 +244,7 @@ public:
 			std::size_t si = 0, se = m_vecar.size();
 			for (; si != se; ++si)
 			{
-				m_database->writeSample( si, m_namear[si], m_vecar[si], shar[si]);
+				m_database->writeSample( m_samplear.size() + si, m_namear[si], m_vecar[si], shar[si]);
 			}
 			m_samplear.insert( m_samplear.end(), shar.begin(), shar.end());
 			m_database->writeNofSamples( m_samplear.size());
