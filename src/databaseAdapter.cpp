@@ -23,6 +23,8 @@ using namespace strus;
 #define VARIABLE_NOF_CONCEPTS "concepts"
 #define VARIABLE_STATE "state"
 
+#undef STRUS_LOWLEVEL_DEBUG
+
 DatabaseAdapter::DatabaseAdapter( const DatabaseInterface* database_, const std::string& config, ErrorBufferInterface* errorhnd_)
 	:m_database(database_->createClient(config)),m_errorhnd(errorhnd_)
 {
@@ -195,9 +197,27 @@ void DatabaseAdapter::writeSample( const SampleIndex& sidx, const std::string& n
 
 enum {SimHashBlockSize=128};
 
+#ifdef STRUS_LOWLEVEL_DEBUG
+static void print_value_seq( const void* sq, unsigned int sqlen)
+{
+	static const char* HEX = "0123456789ABCDEF";
+	unsigned char const* si = (const unsigned char*) sq;
+	unsigned const char* se = (const unsigned char*) sq + sqlen;
+	for (; si != se; ++si)
+	{
+		unsigned char lo = *si % 16, hi = *si / 16;
+		printf( " %c%c", HEX[hi], HEX[lo]);
+	}
+	printf(" |");
+}
+#endif
+
 template <typename ScalarType>
 static std::vector<ScalarType> vectorFromSerialization( const std::string& blob)
 {
+#ifdef STRUS_LOWLEVEL_DEBUG
+	printf("read vector");
+#endif
 	std::vector<ScalarType> rt;
 	rt.reserve( blob.size() / sizeof(ScalarType));
 	if (blob.size() % sizeof(ScalarType) != 0)
@@ -209,21 +229,36 @@ static std::vector<ScalarType> vectorFromSerialization( const std::string& blob)
 	for (; ri != re; ++ri)
 	{
 		rt.push_back( ByteOrder<ScalarType>::ntoh( *ri));
+#ifdef STRUS_LOWLEVEL_DEBUG
+		print_value_seq( &rt.back(), sizeof(ScalarType));
+#endif
 	}
+#ifdef STRUS_LOWLEVEL_DEBUG
+	printf("\n");
+#endif
 	return rt;
 }
 
 template <typename ScalarType>
 static std::string vectorSerialization( const std::vector<ScalarType>& vec)
 {
+#ifdef STRUS_LOWLEVEL_DEBUG
+	printf("write vector");
+#endif
 	std::string rt;
 	rt.reserve( vec.size() * sizeof(ScalarType));
 	typename std::vector<ScalarType>::const_iterator vi = vec.begin(), ve = vec.end();
 	for (; vi != ve; ++vi)
 	{
+#ifdef STRUS_LOWLEVEL_DEBUG
+		print_value_seq( &*vi, sizeof(ScalarType));
+#endif
 		ScalarType buf = ByteOrder<ScalarType>::hton( *vi);
 		rt.append( (const char*)&buf, sizeof(buf));
 	}
+#ifdef STRUS_LOWLEVEL_DEBUG
+	printf("\n");
+#endif
 	return rt;
 }
 
