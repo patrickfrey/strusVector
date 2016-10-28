@@ -210,17 +210,21 @@ public:
 	{
 		try
 		{
-			utils::ScopedLock lock( m_mutex);
-			if (m_simrelmap.nofSamples() != 0)
+			unsigned int nofFeaturesAdded = 0;
 			{
-				m_simrelmap.clear();
-				m_database->deleteSimRelationMap();
-				m_database->writeState( 1);
-				m_database->commit();
+				utils::ScopedLock lock( m_mutex);
+				if (m_simrelmap.nofSamples() != 0)
+				{
+					m_simrelmap.clear();
+					m_database->deleteSimRelationMap();
+					m_database->writeState( 1);
+					m_database->commit();
+				}
+				m_vecar.push_back( vec);
+				m_namear.push_back( name);
+				nofFeaturesAdded = m_vecar.size();
 			}
-			m_vecar.push_back( vec);
-			m_namear.push_back( name);
-			if (m_config.commitsize && m_vecar.size() >= m_config.commitsize)
+			if (m_config.commitsize && nofFeaturesAdded >= m_config.commitsize)
 			{
 				if (!commit())
 				{
