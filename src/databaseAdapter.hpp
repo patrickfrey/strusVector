@@ -41,7 +41,7 @@ public:
 	std::string readSampleName( const SampleIndex& sidx) const;
 	SampleIndex readSampleIndex( const std::string& name) const;
 	SampleIndex readNofSamples() const;
-	FeatureIndex readNofFeatures() const;
+	ConceptIndex readNofConcepts() const;
 	unsigned int readState() const;
 
 	std::vector<SimHash> readSampleSimhashVector() const;
@@ -49,22 +49,22 @@ public:
 
 	std::vector<SimRelationMap::Element> readSimRelations( const SampleIndex& sidx) const;
 	SimRelationMap readSimRelationMap() const;
-	std::vector<SampleIndex> readFeatureSampleIndices( const FeatureIndex& fidx) const;
-	FeatureSampleIndexMap readFeatureSampleIndexMap();
-	std::vector<FeatureIndex> readSampleFeatureIndices( const SampleIndex& sidx) const;
-	SampleFeatureIndexMap readSampleFeatureIndexMap();
+	std::vector<SampleIndex> readConceptSampleIndices( const ConceptIndex& fidx) const;
+	ConceptSampleIndexMap readConceptSampleIndexMap();
+	std::vector<ConceptIndex> readSampleConceptIndices( const SampleIndex& sidx) const;
+	SampleConceptIndexMap readSampleConceptIndexMap();
 	VectorSpaceModelConfig readConfig() const;
 	LshModel readLshModel() const;
 
 	void writeVersion();
 	void writeNofSamples( const SampleIndex& nofSamples);
-	void writeNofFeatures( const FeatureIndex& nofFeatures);
+	void writeNofConcepts( const ConceptIndex& nofConcepts);
 	void writeState( unsigned int state);
 	void writeSample( const SampleIndex& sidx, const std::string& name, const Vector& vec, const SimHash& simHash);
 	void writeResultSimhashVector( const std::vector<SimHash>& ar);
 	void writeSimRelationMap( const SimRelationMap& simrelmap, unsigned int commitsize);
-	void writeSampleFeatureIndexMap( const SampleFeatureIndexMap& sfmap);
-	void writeFeatureSampleIndexMap( const FeatureSampleIndexMap& fsmap);
+	void writeSampleConceptIndexMap( const SampleConceptIndexMap& sfmap);
+	void writeConceptSampleIndexMap( const ConceptSampleIndexMap& fsmap);
 	void writeConfig( const VectorSpaceModelConfig& config);
 	void writeLshModel( const LshModel& model);
 
@@ -77,8 +77,8 @@ public:
 	void deleteSampleSimhashVector();
 	void deleteResultSimhashVector();
 	void deleteSimRelationMap();
-	void deleteSampleFeatureIndexMap();
-	void deleteFeatureSampleIndexMap();
+	void deleteSampleConceptIndexMap();
+	void deleteConceptSampleIndexMap();
 	void deleteLshModel();
 	void commit();
 
@@ -97,8 +97,8 @@ public:
 		KeyConfig = 'C',
 		KeyLshModel = 'L',
 		KeySimRelationMap = 'M',
-		KeySampleFeatureIndexMap = 'f',
-		KeyFeatureSampleIndexMap = 's'
+		KeySampleConceptIndexMap = 'f',
+		KeyConceptSampleIndexMap = 's'
 	};
 
 private:

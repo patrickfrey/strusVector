@@ -20,7 +20,7 @@
 using namespace strus;
 
 #define VARIABLE_NOF_SAMPLES  "samples"
-#define VARIABLE_NOF_FEATURES "feats"
+#define VARIABLE_NOF_CONCEPTS "concepts"
 #define VARIABLE_STATE "state"
 
 DatabaseAdapter::DatabaseAdapter( const DatabaseInterface* database_, const std::string& config, ErrorBufferInterface* errorhnd_)
@@ -171,10 +171,10 @@ void DatabaseAdapter::writeNofSamples( const SampleIndex& nofSamples)
 	writeVariable( VARIABLE_NOF_SAMPLES, nofSamples);
 }
 
-void DatabaseAdapter::writeNofFeatures( const FeatureIndex& nofFeatures)
+void DatabaseAdapter::writeNofConcepts( const ConceptIndex& nofConcepts)
 {
 	if (!m_transaction.get()) beginTransaction();
-	writeVariable( VARIABLE_NOF_FEATURES, nofFeatures);
+	writeVariable( VARIABLE_NOF_CONCEPTS, nofConcepts);
 }
 
 void DatabaseAdapter::writeState( unsigned int state)
@@ -328,9 +328,9 @@ SampleIndex DatabaseAdapter::readNofSamples() const
 	return readVariable( VARIABLE_NOF_SAMPLES);
 }
 
-FeatureIndex DatabaseAdapter::readNofFeatures() const
+ConceptIndex DatabaseAdapter::readNofConcepts() const
 {
-	return readVariable( VARIABLE_NOF_FEATURES);
+	return readVariable( VARIABLE_NOF_CONCEPTS);
 }
 
 unsigned int DatabaseAdapter::readState() const
@@ -574,9 +574,9 @@ void DatabaseAdapter::writeSimRelationMap( const SimRelationMap& simrelmap, unsi
 	if (commitsize) commit();
 }
 
-std::vector<FeatureIndex> DatabaseAdapter::readSampleFeatureIndices( const SampleIndex& sidx) const
+std::vector<ConceptIndex> DatabaseAdapter::readSampleConceptIndices( const SampleIndex& sidx) const
 {
-	DatabaseKeyBuffer key( KeySampleFeatureIndexMap);
+	DatabaseKeyBuffer key( KeySampleConceptIndexMap);
 	key[ sidx+1];
 
 	std::string blob;
@@ -584,37 +584,37 @@ std::vector<FeatureIndex> DatabaseAdapter::readSampleFeatureIndices( const Sampl
 	{
 		if (m_errorhnd->hasError())
 		{
-			throw strus::runtime_error( _TXT( "failed to read sample to feature index map from database: %s"), m_errorhnd->fetchError());
+			throw strus::runtime_error( _TXT( "failed to read sample to concept index map from database: %s"), m_errorhnd->fetchError());
 		}
 		else
 		{
 			return std::vector<SampleIndex>();
 		}
 	}
-	return vectorFromSerialization<FeatureIndex>( blob);
+	return vectorFromSerialization<ConceptIndex>( blob);
 }
 
-void DatabaseAdapter::writeSampleFeatureIndexMap( const SampleFeatureIndexMap& sfmap)
+void DatabaseAdapter::writeSampleConceptIndexMap( const SampleConceptIndexMap& sfmap)
 {
 	SampleIndex si = 0, se = sfmap.maxkey()+1;
 	for (; si != se; ++si)
 	{
 		if (!m_transaction.get()) beginTransaction();
-		std::vector<FeatureIndex> features = sfmap.getValues( si);
-		if (features.empty()) continue;
-		std::string blob = vectorSerialization<FeatureIndex>( features);
+		std::vector<ConceptIndex> concepts = sfmap.getValues( si);
+		if (concepts.empty()) continue;
+		std::string blob = vectorSerialization<ConceptIndex>( concepts);
 
-		DatabaseKeyBuffer key( KeySampleFeatureIndexMap);
+		DatabaseKeyBuffer key( KeySampleConceptIndexMap);
 		key[ si+1];
 		m_transaction->write( key.c_str(), key.size(), blob.c_str(), blob.size());
 	}
 }
 
-std::vector<SampleIndex> DatabaseAdapter::readFeatureSampleIndices( const FeatureIndex& fidx) const
+std::vector<SampleIndex> DatabaseAdapter::readConceptSampleIndices( const ConceptIndex& fidx) const
 {
-	if (fidx == 0) throw strus::runtime_error(_TXT("illegal key (null) for feature"));
+	if (fidx == 0) throw strus::runtime_error(_TXT("illegal key (null) for concept"));
 
-	DatabaseKeyBuffer key( KeyFeatureSampleIndexMap);
+	DatabaseKeyBuffer key( KeyConceptSampleIndexMap);
 	key[ fidx];
 
 	std::string blob;
@@ -622,7 +622,7 @@ std::vector<SampleIndex> DatabaseAdapter::readFeatureSampleIndices( const Featur
 	{
 		if (m_errorhnd->hasError())
 		{
-			throw strus::runtime_error( _TXT( "failed to read sample to feature index map from database: %s"), m_errorhnd->fetchError());
+			throw strus::runtime_error( _TXT( "failed to read sample to concept index map from database: %s"), m_errorhnd->fetchError());
 		}
 		else
 		{
@@ -632,14 +632,14 @@ std::vector<SampleIndex> DatabaseAdapter::readFeatureSampleIndices( const Featur
 	return vectorFromSerialization<SampleIndex>( blob);
 }
 
-SampleFeatureIndexMap DatabaseAdapter::readSampleFeatureIndexMap()
+SampleConceptIndexMap DatabaseAdapter::readSampleConceptIndexMap()
 {
-	return readIndexListMap( KeySampleFeatureIndexMap);
+	return readIndexListMap( KeySampleConceptIndexMap);
 }
 
-void DatabaseAdapter::writeFeatureSampleIndexMap( const FeatureSampleIndexMap& fsmap)
+void DatabaseAdapter::writeConceptSampleIndexMap( const ConceptSampleIndexMap& fsmap)
 {
-	FeatureIndex fi = 1, fe = fsmap.maxkey()+1;
+	ConceptIndex fi = 1, fe = fsmap.maxkey()+1;
 	for (; fi != fe; ++fi)
 	{
 		if (!m_transaction.get()) beginTransaction();
@@ -647,15 +647,15 @@ void DatabaseAdapter::writeFeatureSampleIndexMap( const FeatureSampleIndexMap& f
 		if (members.empty()) continue;
 		std::string blob = vectorSerialization<SampleIndex>( members);
 
-		DatabaseKeyBuffer key( KeyFeatureSampleIndexMap);
+		DatabaseKeyBuffer key( KeyConceptSampleIndexMap);
 		key[ fi];
 		m_transaction->write( key.c_str(), key.size(), blob.c_str(), blob.size());
 	}
 }
 
-FeatureSampleIndexMap DatabaseAdapter::readFeatureSampleIndexMap()
+ConceptSampleIndexMap DatabaseAdapter::readConceptSampleIndexMap()
 {
-	return readIndexListMap( KeyFeatureSampleIndexMap);
+	return readIndexListMap( KeyConceptSampleIndexMap);
 }
 
 IndexListMap<strus::Index,strus::Index> DatabaseAdapter::readIndexListMap( const KeyPrefix& prefix) const
@@ -672,7 +672,7 @@ IndexListMap<strus::Index,strus::Index> DatabaseAdapter::readIndexListMap( const
 		strus::Index idx;
 		DatabaseKeyScanner key_scanner( slice.ptr()+1, slice.size()-1);
 		key_scanner[ idx];
-		if (prefix == KeySampleFeatureIndexMap) --idx;
+		if (prefix == KeySampleConceptIndexMap) --idx;
 
 		DatabaseCursorInterface::Slice content = cursor->value();
 		char const* ci = content.ptr();
@@ -711,8 +711,8 @@ void DatabaseAdapter::clear()
 	deleteResultSimhashVector();
 	deleteLshModel();
 	deleteSimRelationMap();
-	deleteSampleFeatureIndexMap();
-	deleteFeatureSampleIndexMap();
+	deleteSampleConceptIndexMap();
+	deleteConceptSampleIndexMap();
 }
 
 void DatabaseAdapter::deleteConfig()
@@ -748,14 +748,14 @@ void DatabaseAdapter::deleteSimRelationMap()
 }
 
 
-void DatabaseAdapter::deleteSampleFeatureIndexMap()
+void DatabaseAdapter::deleteSampleConceptIndexMap()
 {
-	deleteSubTree( KeySampleFeatureIndexMap);
+	deleteSubTree( KeySampleConceptIndexMap);
 }
 
-void DatabaseAdapter::deleteFeatureSampleIndexMap()
+void DatabaseAdapter::deleteConceptSampleIndexMap()
 {
-	deleteSubTree( KeyFeatureSampleIndexMap);
+	deleteSubTree( KeyConceptSampleIndexMap);
 }
 
 void DatabaseAdapter::deleteLshModel()

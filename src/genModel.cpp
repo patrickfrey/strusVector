@@ -32,9 +32,9 @@ public:
 	GroupIdAllocator( const GroupIdAllocator& o)
 		:m_cnt(o.m_cnt),m_freeList(o.m_freeList){}
 
-	FeatureIndex alloc()
+	ConceptIndex alloc()
 	{
-		FeatureIndex rt;
+		ConceptIndex rt;
 		if (!m_freeList.empty())
 		{
 			rt = m_freeList.back();
@@ -47,7 +47,7 @@ public:
 		return rt;
 	}
 
-	void free( const FeatureIndex& idx)
+	void free( const ConceptIndex& idx)
 	{
 		m_freeList.push_back( idx);
 	}
@@ -63,16 +63,16 @@ public:
 	}
 
 private:
-	FeatureIndex m_cnt;
-	std::vector<FeatureIndex> m_freeList;
+	ConceptIndex m_cnt;
+	std::vector<ConceptIndex> m_freeList;
 };
 
 typedef std::list<SimGroup> GroupInstanceList;
-typedef std::map<FeatureIndex,GroupInstanceList::iterator> GroupInstanceMap;
+typedef std::map<ConceptIndex,GroupInstanceList::iterator> GroupInstanceMap;
 
 #ifdef STRUS_LOWLEVEL_DEBUG
 static std::string groupMembersString(
-		const FeatureIndex& group_id,
+		const ConceptIndex& group_id,
 		const GroupInstanceList& groupInstanceList,
 		const GroupInstanceMap& groupInstanceMap)
 {
@@ -94,7 +94,7 @@ static std::string groupMembersString(
 #endif
 
 static void removeGroup(
-		const FeatureIndex& group_id,
+		const ConceptIndex& group_id,
 		GroupIdAllocator& groupIdAllocator,
 		GroupInstanceList& groupInstanceList,
 		GroupInstanceMap& groupInstanceMap,
@@ -129,7 +129,7 @@ static unsigned int age_mutation_votes( const SimGroup& group, unsigned int maxa
 	return conf_votes * (std::min( group.age(), maxage) / maxage) + 1;
 }
 
-static bool tryAddGroupMember( const FeatureIndex& group_id, SampleIndex newmember,
+static bool tryAddGroupMember( const ConceptIndex& group_id, SampleIndex newmember,
 				GroupInstanceMap& groupInstanceMap,
 				SampleSimGroupMap& sampleSimGroupMap, const std::vector<SimHash>& samplear,
 				unsigned int descendants, unsigned int mutations, unsigned int votes,
@@ -154,7 +154,7 @@ static bool tryAddGroupMember( const FeatureIndex& group_id, SampleIndex newmemb
 }
 
 ///\brief Eval the group closest to a sample that is closer than a min dist
-static FeatureIndex getSampleClosestSimGroup(
+static ConceptIndex getSampleClosestSimGroup(
 				SampleIndex main_sampleidx, SampleIndex search_sampleidx, 
 				unsigned short min_dist,
 				const GroupInstanceList& groupInstanceList,
@@ -162,7 +162,7 @@ static FeatureIndex getSampleClosestSimGroup(
 				const SampleSimGroupMap& sampleSimGroupMap,
 				const std::vector<SimHash>& samplear)
 {
-	FeatureIndex rt = 0;
+	ConceptIndex rt = 0;
 	SampleSimGroupMap::const_node_iterator gi = sampleSimGroupMap.node_begin( main_sampleidx), ge = sampleSimGroupMap.node_end( main_sampleidx);
 	for (; gi != ge; ++gi)
 	{
@@ -224,7 +224,7 @@ static bool tryLeaveUnfitestGroup(
 	}
 	if (unfitestGroup != groupInstanceList.end() && minFitness < maxFitness * STRUS_VECTOR_BAD_FITNESS_FRACTION)
 	{
-		FeatureIndex group_id = unfitestGroup->id();
+		ConceptIndex group_id = unfitestGroup->id();
 		unfitestGroup->removeMember( sampleidx);
 		sampleSimGroupMap.remove( sampleidx, group_id);
 		if (unfitestGroup->size() < 2)
@@ -255,7 +255,7 @@ static bool findClosestFreeSample( SimRelationMap::Element& res, SampleIndex sam
 }
 
 
-typedef std::pair<FeatureIndex,FeatureIndex> Dependency;
+typedef std::pair<ConceptIndex,ConceptIndex> Dependency;
 typedef std::set<Dependency> DependencyGraph;
 
 /// \brief Build a directed graph of dependencies of groups derived from the map of samples to groups.
@@ -349,10 +349,10 @@ static void eliminateCircularReferences( DependencyGraph& graph)
 	std::set<Dependency>::iterator hi = graph.begin(), he = graph.end();
 	while (hi != he)
 	{
-		std::set<FeatureIndex> visited;		// set of visited for not processing nodes more than once
-		std::vector<FeatureIndex> queue;	// queue with candidates to process
+		std::set<ConceptIndex> visited;		// set of visited for not processing nodes more than once
+		std::vector<ConceptIndex> queue;	// queue with candidates to process
 		std::size_t qidx = 0;			// iterator in the candidate queue
-		FeatureIndex gid = hi->first;		// current node visited
+		ConceptIndex gid = hi->first;		// current node visited
 		// Iterate through all vertices pointed to by arcs rooted in the current node visited:
 		for (; hi != he && gid == hi->first; ++hi)
 		{
@@ -467,8 +467,8 @@ static void checkSimGroupStructures(
 #endif
 
 std::vector<SimHash> GenModel::run(
-		SampleFeatureIndexMap& sampleFeatureIndexMap,
-		FeatureSampleIndexMap& featureSampleIndexMap,
+		SampleConceptIndexMap& sampleConceptIndexMap,
+		ConceptSampleIndexMap& conceptSampleIndexMap,
 		const std::vector<SimHash>& samplear,
 		const SimRelationMap& simrelmap,
 		const char* logfile) const
@@ -519,7 +519,7 @@ std::vector<SimHash> GenModel::run(
 			{
 				// Try to find a group the visited sample belongs to that is closer to the
 				// found candidate than the visited sample:
-				FeatureIndex bestmatch_simgroup = getSampleClosestSimGroup( sidx, neighbour.index, neighbour.simdist, groupInstanceList, groupInstanceMap, sampleSimGroupMap, samplear);
+				ConceptIndex bestmatch_simgroup = getSampleClosestSimGroup( sidx, neighbour.index, neighbour.simdist, groupInstanceList, groupInstanceMap, sampleSimGroupMap, samplear);
 				if (bestmatch_simgroup)
 				{
 					// ...if we found such a group, we try to add the candidate there instead:
@@ -553,7 +553,7 @@ std::vector<SimHash> GenModel::run(
 		for (; gi != ge; ++gi)
 		{
 			// Build the set of neighbour groups:
-			std::set<FeatureIndex> neighbour_groups;
+			std::set<ConceptIndex> neighbour_groups;
 			SimGroup::const_iterator mi = gi->begin(), me = gi->end();
 			for (; mi != me; ++mi)
 			{
@@ -568,7 +568,7 @@ std::vector<SimHash> GenModel::run(
 			}
 			// Go through all neighbour groups that are in a distance closer to eqdist
 			// and delete them if the members are all within the group:
-			std::set<FeatureIndex>::const_iterator ni = neighbour_groups.begin(), ne = neighbour_groups.end();
+			std::set<ConceptIndex>::const_iterator ni = neighbour_groups.begin(), ne = neighbour_groups.end();
 			for (; ni != ne; ++ni)
 			{
 				GroupInstanceMap::iterator sim_gi_slot = groupInstanceMap.find( *ni);
@@ -665,7 +665,7 @@ std::vector<SimHash> GenModel::run(
 			if (gi->size() < 2)
 			{
 				// Delete group that lost too many members:
-				FeatureIndex gid = gi->id();
+				ConceptIndex gid = gi->id();
 				++gi;
 				removeGroup( gid, groupIdAllocator, groupInstanceList, groupInstanceMap, sampleSimGroupMap);
 				--gi;
@@ -704,7 +704,7 @@ std::vector<SimHash> GenModel::run(
 		DependencyGraph::const_iterator di = groupDependencyGraph.begin(), de = groupDependencyGraph.end();
 		while (di != de)
 		{
-			FeatureIndex gid = di->first;
+			ConceptIndex gid = di->first;
 			removeGroup( gid, groupIdAllocator, groupInstanceList, groupInstanceMap, sampleSimGroupMap);
 			for (++di; di != de && gid == di->first; ++di){}
 		}
@@ -714,7 +714,7 @@ std::vector<SimHash> GenModel::run(
 	std::vector<SimHash> rt;
 
 	// Count the number of singletons and possibly add them to the result:
-	featureSampleIndexMap.clear();
+	conceptSampleIndexMap.clear();
 	SampleIndex si=0, se=samplear.size();
 	unsigned int nofSigletons = 0;
 	for (; si != se; ++si)
@@ -726,17 +726,17 @@ std::vector<SimHash> GenModel::run(
 			{
 				// Add singleton to result:
 				rt.push_back( samplear[ si]);
-				// Collect si as group member into featureSampleIndexMap:
+				// Collect si as group member into conceptSampleIndexMap:
 				std::vector<SampleIndex> members;
 				members.push_back( si);
-				featureSampleIndexMap.add( rt.size(), members);
+				conceptSampleIndexMap.add( rt.size(), members);
 			}
 		}
 	}
 	if (logout) logout << string_format( _TXT("found %u singletons"), nofSigletons);
 
-	// Add the groups to the result and collect group members into featureSampleIndexMap:
-	std::vector<FeatureIndex> gidmap( groupIdAllocator.nofGroupIdsAllocated(), 0);
+	// Add the groups to the result and collect group members into conceptSampleIndexMap:
+	std::vector<ConceptIndex> gidmap( groupIdAllocator.nofGroupIdsAllocated(), 0);
 	GroupInstanceList::const_iterator gi = groupInstanceList.begin(), ge = groupInstanceList.end();
 	for (; gi != ge; ++gi)
 	{
@@ -748,24 +748,24 @@ std::vector<SimHash> GenModel::run(
 		{
 			members.push_back( *mi);
 		}
-		featureSampleIndexMap.add( rt.size(), members);
+		conceptSampleIndexMap.add( rt.size(), members);
 	}
-	// Collect the group membership for every sample into sampleFeatureIndexMap:
-	sampleFeatureIndexMap.clear();
+	// Collect the group membership for every sample into sampleConceptIndexMap:
+	sampleConceptIndexMap.clear();
 	for (si=0; si != se; ++si)
 	{
-		std::vector<FeatureIndex> groups;
+		std::vector<ConceptIndex> groups;
 		SampleSimGroupMap::const_node_iterator
 			ni = sampleSimGroupMap.node_begin(si),
 			ne = sampleSimGroupMap.node_end(si);
 		for (; ni != ne; ++ni)
 		{
-			if (*ni == 0 || *ni > (FeatureIndex)gidmap.size() || gidmap[*ni-1] == 0) throw strus::runtime_error(_TXT("illegal group id found: %u"), *ni);
+			if (*ni == 0 || *ni > (ConceptIndex)gidmap.size() || gidmap[*ni-1] == 0) throw strus::runtime_error(_TXT("illegal group id found: %u"), *ni);
 			groups.push_back( gidmap[*ni-1]);
 		}
 		if (!groups.empty())
 		{
-			sampleFeatureIndexMap.add( si, groups);
+			sampleConceptIndexMap.add( si, groups);
 		}
 	}
 

@@ -84,7 +84,7 @@ bool parseUint( unsigned int& res, const std::string& numstr)
 
 static strus::ErrorBufferInterface* g_errorhnd = 0;
 
-static unsigned int getNofFeatures( unsigned int nofSamples)
+static unsigned int getNofConcepts( unsigned int nofSamples)
 {
 	return nofSamples / 3 + nofSamples / 2;
 }
@@ -114,17 +114,17 @@ static strus::SimRelationMap getSimRelationMap( unsigned int nofSamples, unsigne
 	return rt;
 }
 
-strus::SampleFeatureIndexMap getSampleFeatureIndexMap( unsigned int nofSamples)
+strus::SampleConceptIndexMap getSampleConceptIndexMap( unsigned int nofSamples)
 {
 	strus::Random rnd;
-	unsigned int nofFeatures = getNofFeatures( nofSamples);
+	unsigned int nofConcepts = getNofConcepts( nofSamples);
 	strus::IndexListMap<strus::Index,strus::Index> rt;
 	unsigned int si = 0, se = nofSamples;
 	for (; si != se; ++si)
 	{
 		if (rnd.get( 1, 3) < 2) continue;
 		std::vector<strus::Index> elems;
-		unsigned int fi = 1, fe = nofFeatures+1, step = 1+rnd.get( 0, nofFeatures/2); 
+		unsigned int fi = 1, fe = nofConcepts+1, step = 1+rnd.get( 0, nofConcepts/2); 
 		for (; fi < fe; fi += step)
 		{
 			if (rnd.get( 0, 4) == 0) continue;
@@ -135,12 +135,12 @@ strus::SampleFeatureIndexMap getSampleFeatureIndexMap( unsigned int nofSamples)
 	return rt;
 }
 
-strus::FeatureSampleIndexMap getFeatureSampleIndexMap( unsigned int nofSamples)
+strus::ConceptSampleIndexMap getConceptSampleIndexMap( unsigned int nofSamples)
 {
 	strus::IndexListMap<strus::Index,strus::Index> rt;
 	strus::Random rnd;
-	unsigned int nofFeatures = getNofFeatures( nofSamples);
-	unsigned int fi = 1, fe = nofFeatures+1;
+	unsigned int nofConcepts = getNofConcepts( nofSamples);
+	unsigned int fi = 1, fe = nofConcepts+1;
 	for (; fi < fe; ++fi)
 	{
 		if (rnd.get( 1, 3) < 2) continue;
@@ -158,13 +158,13 @@ strus::FeatureSampleIndexMap getFeatureSampleIndexMap( unsigned int nofSamples)
 struct TestDataset
 {
 	TestDataset( const strus::VectorSpaceModelConfig& config, unsigned int nofSamples_)
-		:nofFeatures(getNofFeatures( nofSamples_))
+		:nofConcepts(getNofConcepts( nofSamples_))
 		,nofSamples(nofSamples_)
 		,state((nofSamples_*17)%3 + 1)
 		,lshmodel( config.dim, config.bits, config.variations)
 		,simrelmap(getSimRelationMap( nofSamples, config.simdist))
-		,sfmap(getSampleFeatureIndexMap( nofSamples))
-		,fsmap(getFeatureSampleIndexMap( nofSamples))
+		,sfmap(getSampleConceptIndexMap( nofSamples))
+		,fsmap(getConceptSampleIndexMap( nofSamples))
 		,sampleNames(),sampleVectors(),sampleSimHashs()
 	{
 		unsigned int si = 0, se = nofSamples;
@@ -177,13 +177,13 @@ struct TestDataset
 		}
 	}
 
-	strus::Index nofFeatures;
+	strus::Index nofConcepts;
 	strus::Index nofSamples;
 	unsigned int state;
 	strus::LshModel lshmodel;
 	strus::SimRelationMap simrelmap;
-	strus::SampleFeatureIndexMap sfmap;
-	strus::FeatureSampleIndexMap fsmap;
+	strus::SampleConceptIndexMap sfmap;
+	strus::ConceptSampleIndexMap fsmap;
 	std::vector< std::string> sampleNames;
 	std::vector< std::vector<double> > sampleVectors;
 	std::vector< strus::SimHash> sampleSimHashs;
@@ -208,7 +208,7 @@ static void writeDatabase( const strus::VectorSpaceModelConfig& config, const Te
 
 	database.writeVersion();
 	database.writeNofSamples( dataset.nofSamples);
-	database.writeNofFeatures( dataset.nofFeatures);
+	database.writeNofConcepts( dataset.nofConcepts);
 	database.writeState( dataset.state);
 	strus::Index si = 0, se = dataset.nofSamples;
 	for (; si != se; ++si)
@@ -217,8 +217,8 @@ static void writeDatabase( const strus::VectorSpaceModelConfig& config, const Te
 	}
 	database.writeResultSimhashVector( dataset.sampleSimHashs);
 	database.writeSimRelationMap( dataset.simrelmap, 0);
-	database.writeSampleFeatureIndexMap( dataset.sfmap);
-	database.writeFeatureSampleIndexMap( dataset.fsmap);
+	database.writeSampleConceptIndexMap( dataset.sfmap);
+	database.writeConceptSampleIndexMap( dataset.fsmap);
 	database.writeConfig( config);
 	database.writeLshModel( dataset.lshmodel);
 	database.commit();
@@ -298,8 +298,8 @@ static void readAndCheckDatabase( const strus::VectorSpaceModelConfig& config, c
 
 	database.checkVersion();
 	if (dataset.nofSamples != database.readNofSamples()) throw std::runtime_error("number of samples does not match");
-	if (dataset.nofFeatures != database.readNofFeatures()) throw std::runtime_error("number of features does not match");
-	if (dataset.state != database.readState()) throw std::runtime_error("number of features does not match");
+	if (dataset.nofConcepts != database.readNofConcepts()) throw std::runtime_error("number of concepts does not match");
+	if (dataset.state != database.readState()) throw std::runtime_error("number of concepts does not match");
 
 	strus::Index si = 0, se = dataset.nofSamples;
 	for (; si != se; ++si)
@@ -312,8 +312,8 @@ static void readAndCheckDatabase( const strus::VectorSpaceModelConfig& config, c
 	if (!compare( dataset.sampleSimHashs, database.readResultSimhashVector())) throw std::runtime_error("result sim hash values do not match");
 
 	if (!compare( dataset.simrelmap, database.readSimRelationMap())) throw std::runtime_error("result sim relation map does not match");
-	if (!compare( dataset.sfmap, database.readSampleFeatureIndexMap())) throw std::runtime_error("sample feature index map does not match");
-	if (!compare( dataset.fsmap, database.readFeatureSampleIndexMap())) throw std::runtime_error("feature sample index map does not match");
+	if (!compare( dataset.sfmap, database.readSampleConceptIndexMap())) throw std::runtime_error("sample concept index map does not match");
+	if (!compare( dataset.fsmap, database.readConceptSampleIndexMap())) throw std::runtime_error("concept sample index map does not match");
 	if (config.tostring() != database.readConfig().tostring()) throw std::runtime_error("configuration does not match");
 	if (!compare( dataset.lshmodel, database.readLshModel())) throw std::runtime_error("LSH model does not match");
 }

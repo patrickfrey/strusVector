@@ -154,10 +154,10 @@ int main( int argc, const char** argv)
 		}
 		if (printUsageAndExit)
 		{
-			std::cerr << "Usage: " << argv[0] << " [<config>] [<number of features added>]" << std::endl;
+			std::cerr << "Usage: " << argv[0] << " [<config>] [<number of concepts added>]" << std::endl;
 			std::cerr << "options:" << std::endl;
 			std::cerr << "-h     : print this usage" << std::endl;
-			std::cerr << "-g     : use feature group assign instead of similarity to verify results" << std::endl;
+			std::cerr << "-g     : use concept assignment instead of similarity to verify results" << std::endl;
 			std::cerr << "-b     : do not recreate model, use the one built" << std::endl;
 			return rt;
 		}
@@ -274,19 +274,19 @@ int main( int argc, const char** argv)
 		builder.reset();
 		std::cerr << "builder closed" << std::endl;
 
-		// Categorize the input vectors and build some maps out of the assignments of features:
+		// Categorize the input vectors and build some maps out of the assignments of concepts:
 		std::cerr << "load model to categorize vectors" << std::endl;
 		std::auto_ptr<strus::VectorSpaceModelInstanceInterface> categorizer( vmodel->createInstance( config, dbi.get()));
 		if (!categorizer.get())
 		{
 			throw std::runtime_error( "failed to create VSM instance from model stored");
 		}
-		std::cerr << "loaded trained model with " << categorizer->nofConcepts() << " features" << std::endl;
-		typedef strus::SparseDim2Field<unsigned char> FeatureMatrix;
+		std::cerr << "loaded trained model with " << categorizer->nofConcepts() << " concepts" << std::endl;
+		typedef strus::SparseDim2Field<unsigned char> ConceptMatrix;
 		typedef std::multimap<strus::Index,strus::Index> ClassesMap;
 		typedef std::pair<strus::Index,strus::Index> ClassesElem;
-		FeatureMatrix featureMatrix;
-		FeatureMatrix featureInvMatrix;
+		ConceptMatrix conceptMatrix;
+		ConceptMatrix conceptInvMatrix;
 		ClassesMap classesmap;
 		unsigned int groupAssozMisses = 0;
 		unsigned int groupAssozFalses = 0;
@@ -323,8 +323,8 @@ int main( int argc, const char** argv)
 				{
 					++groupAssozMisses;
 				}
-				featureMatrix( sidx, *ci-1) = 1;
-				featureInvMatrix( *ci-1, sidx) = 1;
+				conceptMatrix( sidx, *ci-1) = 1;
+				conceptInvMatrix( *ci-1, sidx) = 1;
 				if (cidx) std::cout << ", ";
 				std::cout << *ci;
 				classesmap.insert( ClassesElem( *ci, sidx));
@@ -384,30 +384,30 @@ int main( int argc, const char** argv)
 			}
 			std::cout << std::endl;
 		}
-		// Build a similarity matrix defined by features shared between input vectors:
-		std::cerr << "build sample to sample feature relation matrix:" << std::endl;
+		// Build a similarity matrix defined by concepts shared between input vectors:
+		std::cerr << "build sample to sample concept relation matrix:" << std::endl;
 		strus::SparseDim2Field<unsigned char> outSimMatrix;
 		unsigned int fi=0, fe=categorizer->nofConcepts();
 		for (; fi != fe; ++fi)
 		{
-			std::vector<unsigned int> featureMembers;
-			FeatureMatrix::const_row_iterator
-				ri = featureInvMatrix.begin_row( fi),
-				re = featureInvMatrix.end_row( fi);
+			std::vector<unsigned int> conceptMembers;
+			ConceptMatrix::const_row_iterator
+				ri = conceptInvMatrix.begin_row( fi),
+				re = conceptInvMatrix.end_row( fi);
 			for (; ri != re; ++ri)
 			{
 				std::vector<unsigned int>::const_iterator
-					mi = featureMembers.begin(), me = featureMembers.end();
+					mi = conceptMembers.begin(), me = conceptMembers.end();
 				for (; mi != me; ++mi)
 				{
 					outSimMatrix( *mi, ri.col()) = 1;
 					outSimMatrix( ri.col(), *mi) = 1;
 				}
-				featureMembers.push_back( ri.col());
+				conceptMembers.push_back( ri.col());
 			}
 		}
-		// Compare the similarity matrix defined by feature assignments and the one defined by the cosine measure of the sample vectors and accumulate the results:
-		std::cerr << "test calculated feature assignments:" << std::endl;
+		// Compare the similarity matrix defined by concept assignments and the one defined by the cosine measure of the sample vectors and accumulate the results:
+		std::cerr << "test calculated concept assignments:" << std::endl;
 		unsigned int nofMisses = 0;
 		unsigned int nofFalsePositives = 0;
 		unsigned int nofBadFalsePositives = 0;

@@ -53,10 +53,10 @@ public:
 		std::cout << "lsh model: " << std::endl << m_lshmodel.tostring() << std::endl;
 		std::cout << "individuals: " << std::endl;
 		std::vector<SimHash>::const_iterator ii = m_individuals.begin(), ie = m_individuals.end();
-		FeatureIndex fidx = 1;
+		ConceptIndex fidx = 1;
 		for (; ii != ie; ++ii,++fidx)
 		{
-			std::vector<SampleIndex> members = m_featureSampleIndexMap.getValues( fidx);
+			std::vector<SampleIndex> members = m_conceptSampleIndexMap.getValues( fidx);
 			std::cout << ii->tostring() << ": {";
 			std::vector<SampleIndex>::const_iterator mi = members.begin(), me = members.end();
 			for (std::size_t midx=0; mi != me; ++mi,++midx)
@@ -89,16 +89,16 @@ public:
 			}
 			return rt;
 		}
-		CATCH_ERROR_ARG1_MAP_RETURN( _TXT("error in instance of '%s' mapping vector to features: %s"), MODULENAME, *m_errorhnd, std::vector<Index>());
+		CATCH_ERROR_ARG1_MAP_RETURN( _TXT("error in instance of '%s' mapping vector to concepts: %s"), MODULENAME, *m_errorhnd, std::vector<Index>());
 	}
 
 	virtual std::vector<Index> featureConcepts( const Index& index) const
 	{
 		try
 		{
-			return m_database->readSampleFeatureIndices( index);
+			return m_database->readSampleConceptIndices( index);
 		}
-		CATCH_ERROR_ARG1_MAP_RETURN( _TXT("error in instance of '%s' retrieving associated features by sample index: %s"), MODULENAME, *m_errorhnd, std::vector<Index>());
+		CATCH_ERROR_ARG1_MAP_RETURN( _TXT("error in instance of '%s' retrieving associated concepts by sample index: %s"), MODULENAME, *m_errorhnd, std::vector<Index>());
 	}
 
 	virtual std::vector<double> featureVector( const Index& index) const
@@ -132,9 +132,9 @@ public:
 	{
 		try
 		{
-			return m_database->readFeatureSampleIndices( conceptid);
+			return m_database->readConceptSampleIndices( conceptid);
 		}
-		CATCH_ERROR_ARG1_MAP_RETURN( _TXT("error in instance of '%s' getting associated sample indices by learnt feature: %s"), MODULENAME, *m_errorhnd, std::vector<Index>());
+		CATCH_ERROR_ARG1_MAP_RETURN( _TXT("error in instance of '%s' getting associated feature indices by learnt concept: %s"), MODULENAME, *m_errorhnd, std::vector<Index>());
 	}
 
 	virtual unsigned int nofConcepts() const
@@ -274,23 +274,23 @@ public:
 				m_database->writeState( 2);
 				m_database->commit();
 			}
-			m_database->deleteSampleFeatureIndexMap();
-			m_database->deleteFeatureSampleIndexMap();
+			m_database->deleteSampleConceptIndexMap();
+			m_database->deleteConceptSampleIndexMap();
 			m_database->deleteResultSimhashVector();
 			m_database->commit();
 
 			std::vector<SimHash> resultar;
-			SampleFeatureIndexMap sampleFeatureIndexMap;
-			FeatureSampleIndexMap featureSampleIndexMap;
+			SampleConceptIndexMap sampleConceptIndexMap;
+			ConceptSampleIndexMap conceptSampleIndexMap;
 			
 			resultar = m_genmodel.run(
-					sampleFeatureIndexMap, featureSampleIndexMap,
+					sampleConceptIndexMap, conceptSampleIndexMap,
 					m_samplear, m_simrelmap, logfile);
 			m_database->writeResultSimhashVector( resultar);
-			m_database->writeSampleFeatureIndexMap( sampleFeatureIndexMap);
-			m_database->writeFeatureSampleIndexMap( featureSampleIndexMap);
+			m_database->writeSampleConceptIndexMap( sampleConceptIndexMap);
+			m_database->writeConceptSampleIndexMap( conceptSampleIndexMap);
 			m_database->writeNofSamples( m_samplear.size());
-			m_database->writeNofFeatures( resultar.size());
+			m_database->writeNofConcepts( resultar.size());
 			m_database->writeState( 3);
 			m_database->commit();
 #ifdef STRUS_LOWLEVEL_DEBUG

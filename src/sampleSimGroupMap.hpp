@@ -23,15 +23,15 @@ public:
 	~SampleSimGroupMap();
 
 	void check() const;
-	bool insert( const std::size_t& ndidx, const FeatureIndex& groupidx)
+	bool insert( const std::size_t& ndidx, const ConceptIndex& groupidx)
 		{return m_nodear[ndidx].insert( groupidx, m_maxnodesize);}
 	/// \brief Evaluate if a sample references a group
-	bool contains( const std::size_t& ndidx, const FeatureIndex& groupidx) const
+	bool contains( const std::size_t& ndidx, const ConceptIndex& groupidx) const
 		{return m_nodear[ndidx].contains( groupidx);}
 	/// \brief Evaluate if the two samples share a group reference
 	bool shares( const std::size_t& ndidx1, const std::size_t& ndidx2) const;
 	/// \brief Remove sample reference relationship to a group
-	bool remove( const std::size_t& ndidx, const FeatureIndex& groupidx)
+	bool remove( const std::size_t& ndidx, const ConceptIndex& groupidx)
 		{return m_nodear[ndidx].remove( groupidx);}
 	/// \brief Evaluate, if there is space left for adding a new relation
 	bool hasSpace( const std::size_t& ndidx) const
@@ -46,7 +46,7 @@ public:
 	class const_node_iterator
 	{
 	public:
-		explicit const_node_iterator( const FeatureIndex* ref_)	:ref(ref_){}
+		explicit const_node_iterator( const ConceptIndex* ref_)	:ref(ref_){}
 		const_node_iterator( const const_node_iterator& o)	:ref(o.ref){}
 
 		const_node_iterator& operator++()			{++ref; return *this;}
@@ -59,10 +59,10 @@ public:
 		bool operator>( const const_node_iterator& o) const	{return ref > o.ref;}
 		bool operator>=( const const_node_iterator& o) const	{return ref >= o.ref;}
 
-		const FeatureIndex& operator*() const			{return *ref;}
+		const ConceptIndex& operator*() const			{return *ref;}
 
 	private:
-		FeatureIndex const* ref;
+		ConceptIndex const* ref;
 	};
 
 	const_node_iterator node_begin( std::size_t ndidx) const	{const Node& nd = m_nodear[ ndidx]; return const_node_iterator( nd.groupidx);}
@@ -73,24 +73,24 @@ private:
 
 	struct Node
 	{
-		FeatureIndex size;
-		FeatureIndex* groupidx;
+		ConceptIndex size;
+		ConceptIndex* groupidx;
 
-		void init( FeatureIndex* groupidx_)
+		void init( ConceptIndex* groupidx_)
 		{
 			size = 0;
 			groupidx = groupidx_;
 		}
 
-		bool insert( const FeatureIndex& gix, std::size_t maxnodesize);
-		bool remove( const FeatureIndex& gix);
-		bool contains( const FeatureIndex& gidx) const;
-		void check( FeatureIndex maxnodesize) const;
+		bool insert( const ConceptIndex& gix, std::size_t maxnodesize);
+		bool remove( const ConceptIndex& gix);
+		bool contains( const ConceptIndex& gidx) const;
+		void check( ConceptIndex maxnodesize) const;
 	};
 	Node* m_nodear;
-	FeatureIndex* m_refs;
+	ConceptIndex* m_refs;
 	std::size_t m_nodearsize;
-	FeatureIndex m_maxnodesize;
+	ConceptIndex m_maxnodesize;
 };
 
 }//namespace

@@ -16,7 +16,7 @@ using namespace strus;
 
 static Random g_random;
 
-SimGroup::SimGroup( const std::vector<SimHash>& samplear, std::size_t m1, std::size_t m2, const FeatureIndex& id_)
+SimGroup::SimGroup( const std::vector<SimHash>& samplear, std::size_t m1, std::size_t m2, const ConceptIndex& id_)
 	:m_id(id_),m_gencode(),m_age(0),m_members(),m_nofmembers(2),m_fitness(0.0),m_fitness_valid(false)
 {
 	if (m1 == m2) throw strus::runtime_error(_TXT("illegal group creations (two init members are duplicates)"));

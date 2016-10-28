@@ -23,8 +23,8 @@ namespace strus {
 #define STRUS_VECTOR_MAXAGE_MATURE_PERCENTAGE 30   // define what precentage of age compared with maxage is considered mature
 #define STRUS_VECTOR_BAD_FITNESS_FRACTION     0.6  // factor of fitness considered bad compared with the best fitness of the group, used to decide wheter a 'mature' group can be left when maximum capacity of releations is reached
 
-typedef IndexListMap<SampleIndex,FeatureIndex> SampleFeatureIndexMap;
-typedef IndexListMap<FeatureIndex,SampleIndex> FeatureSampleIndexMap;
+typedef IndexListMap<SampleIndex,ConceptIndex> SampleConceptIndexMap;
+typedef IndexListMap<ConceptIndex,SampleIndex> ConceptSampleIndexMap;
 
 /// \brief Structure for implementing unsupervised learning of SimHash group representants with help of genetic algorithms
 class GenModel
@@ -63,8 +63,8 @@ public:
 
 	/// \brief Unsupervised learning of a good group representantion of the sample set passed as argument
 	std::vector<SimHash> run(
-			SampleFeatureIndexMap& sampleFeatureIndexMap,
-			FeatureSampleIndexMap& featureSampleIndexMap,
+			SampleConceptIndexMap& sampleConceptIndexMap,
+			ConceptSampleIndexMap& conceptSampleIndexMap,
 			const std::vector<SimHash>& samples,
 			const SimRelationMap& simrelmap,
 			const char* logfile) const;

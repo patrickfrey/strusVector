@@ -18,21 +18,21 @@
 namespace strus {
 
 typedef Index SampleIndex;
-typedef Index FeatureIndex;
+typedef Index ConceptIndex;
 
 /// \brief Structure for storing a representant of a similarity group
 class SimGroup
 {
 public:
-	SimGroup( const std::vector<SimHash>& samplear, std::size_t m1, std::size_t m2, const FeatureIndex& id_);
-	SimGroup( const SimHash& gencode_, const FeatureIndex& id_)
+	SimGroup( const std::vector<SimHash>& samplear, std::size_t m1, std::size_t m2, const ConceptIndex& id_);
+	SimGroup( const SimHash& gencode_, const ConceptIndex& id_)
 		:m_id(id_),m_gencode(gencode_),m_age(0),m_members(),m_nofmembers(0),m_fitness(0.0),m_fitness_valid(false){}
 	SimGroup( const SimGroup& o)
 		:m_id(o.m_id),m_gencode(o.m_gencode),m_age(o.m_age),m_members(o.m_members),m_nofmembers(o.m_nofmembers),m_fitness(o.m_fitness),m_fitness_valid(o.m_fitness_valid){}
-	SimGroup( const SimGroup& o, const FeatureIndex& id_)
+	SimGroup( const SimGroup& o, const ConceptIndex& id_)
 		:m_id(id_),m_gencode(o.m_gencode),m_age(o.m_age),m_members(o.m_members),m_nofmembers(o.m_nofmembers),m_fitness(o.m_fitness),m_fitness_valid(o.m_fitness_valid){}
 
-	const FeatureIndex& id() const					{return m_id;}
+	const ConceptIndex& id() const					{return m_id;}
 	const SimHash& gencode() const					{return m_gencode;}
 	unsigned int age() const					{return m_age;}
 
@@ -93,7 +93,7 @@ private:
 	bool mutation_vote( const std::vector<SimHash>& samplear, unsigned int mutidx, unsigned int nofqueries) const;
 
 private:
-	FeatureIndex m_id;			///< feature identifier given to the group
+	ConceptIndex m_id;			///< concept identifier given to the group
 	SimHash m_gencode;			///< genetic code of the group
 	unsigned int m_age;			///< virtual value for age of the genom
 	std::set<SampleIndex> m_members;	///< members of the group
