@@ -1,0 +1,4 @@
+FEATURE		A vector of floating point numbers with an associated identifier
+CONCEPT		A set of similar features represented by an associated identifier
+
+
