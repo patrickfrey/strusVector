@@ -8,7 +8,6 @@
 /// \brief Function for evaluating similarity relations (incl. multithreaded)
 #include "getSimRelationMap.hpp"
 #include "simGroup.hpp"
-#include "logger.hpp"
 #include "utils.hpp"
 #include "strus/base/string_format.hpp"
 #include "strus/reference.hpp"
@@ -19,19 +18,13 @@ using namespace strus;
 
 static SimRelationMap getSimRelationMap_singlethread( 
 		const std::vector<SimHash>& samplear, SampleIndex idx_begin, SampleIndex idx_end,
-		unsigned int maxdist, unsigned int commitsize, const char* logfile)
+		unsigned int maxdist)
 {
-	Logger logout( logfile);
 	SimRelationMap rt;
-	if (logout) logout << string_format( _TXT("calculate similarity relation map from %u to %u (singlethreaded)"), idx_begin, idx_end);
 	for (SampleIndex sidx=idx_begin; sidx != idx_end; ++sidx)
 	{
 		const SimHash& srec = samplear[ sidx];
 
-		if (commitsize && logout && sidx % commitsize == 0)
-		{
-			logout << string_format( _TXT("processed %u lines with %u similarities"), sidx, rt.nofRelationsDetected());
-		}
 		std::vector<SimRelationMap::Element> row;
 
 		std::vector<SimHash>::const_iterator pi = samplear.begin(), pe = samplear.end();
@@ -45,7 +38,6 @@ static SimRelationMap getSimRelationMap_singlethread(
 		}
 		rt.addRow( sidx, row);
 	}
-	if (logout) logout << string_format( _TXT("got %u with %u similarities"), samplear.size(), rt.nofRelationsDetected());
 	return rt;
 }
 
@@ -54,12 +46,10 @@ class RowBuilderGlobalContext
 public:
 	RowBuilderGlobalContext(
 			const std::vector<SimHash>* samplear_, SampleIndex idx_begin, SampleIndex idx_end,
-			unsigned int maxdist_, const char* logfile)
+			unsigned int maxdist_)
 		:m_sampleIndex(idx_begin),m_endSampleIndex(idx_end),m_samplear(samplear_)
-		,m_maxdist(maxdist_),m_logout(logfile)
-	{
-		if (m_logout) m_logout << string_format( _TXT("calculate similarity relation map from %u to %u (multithreaded)"), idx_begin, idx_end);
-	}
+		,m_maxdist(maxdist_)
+	{}
 
 	bool fetch( SampleIndex& index)
 	{
@@ -94,12 +84,6 @@ public:
 		return rt;
 	}
 
-	void logmsg( const std::string& msg)
-	{
-		utils::ScopedLock lock( m_mutex);
-		m_logout << msg;
-	}
-
 	void reportError( const std::string& msg)
 	{
 		utils::ScopedLock lock( m_mutex);
@@ -121,7 +105,6 @@ public:
 	{
 		utils::ScopedLock lock( m_mutex);
 		m_simrelmap.join( result);
-		if (m_logout) m_logout << string_format( _TXT("got %u similarities"), m_simrelmap.nofRelationsDetected());
 	}
 
 	const SimRelationMap& result()
@@ -134,7 +117,6 @@ private:
 	std::size_t m_endSampleIndex;
 	const std::vector<SimHash>* m_samplear;
 	unsigned int m_maxdist;
-	Logger m_logout;
 	utils::Mutex m_mutex;
 	std::string m_errormsg;
 	SimRelationMap m_simrelmap;
@@ -143,8 +125,8 @@ private:
 class RowBuilder
 {
 public:
-	RowBuilder( RowBuilderGlobalContext* ctx_, unsigned int threadid_, unsigned int commitsize_)
-		:m_ctx(ctx_),m_simrelmap(),m_threadid(threadid_),m_commitsize(commitsize_){}
+	RowBuilder( RowBuilderGlobalContext* ctx_, unsigned int threadid_)
+		:m_ctx(ctx_),m_simrelmap(),m_threadid(threadid_){}
 	~RowBuilder(){}
 
 	void run()
@@ -152,35 +134,23 @@ public:
 		try
 		{
 			SampleIndex sidx = 0;
-			SampleIndex cnt = 0;
 			while (m_ctx->fetch( sidx))
 			{
-				++cnt;
 				m_simrelmap.addRow( sidx, m_ctx->getRow( sidx));
-				if (m_commitsize && cnt % m_commitsize == 0)
-				{
-					m_ctx->logmsg( string_format( _TXT("simrel processed %u lines"), m_ctx->current()));
-					m_ctx->pushResult( m_simrelmap);
-					m_simrelmap.clear();
-				}
 			}
 			m_ctx->pushResult( m_simrelmap);
 			m_simrelmap.clear();
-			m_ctx->logmsg( string_format( _TXT("simrel processed final %u lines"), m_ctx->current()));
 		}
 		catch (const std::runtime_error& err)
 		{
-			m_ctx->logmsg( string_format( _TXT("error in thread %u: %s"), m_threadid, err.what()));
 			m_ctx->reportError( string_format( _TXT("error in thread %u: %s"), m_threadid, err.what()));
 		}
 		catch (const std::bad_alloc&)
 		{
-			m_ctx->logmsg( string_format( _TXT("out of memory in thread %u"), m_threadid));
 			m_ctx->reportError( string_format( _TXT("out of memory in thread %u"), m_threadid));
 		}
 		catch (const boost::thread_interrupted&)
 		{
-			m_ctx->logmsg( string_format( _TXT("failed to complete calculation: thread %u interrupted"), m_threadid));
 			m_ctx->reportError( string_format( _TXT("failed to complete calculation: thread %u interrupted"), m_threadid));
 		}
 	}
@@ -189,12 +159,11 @@ private:
 	RowBuilderGlobalContext* m_ctx;
 	SimRelationMap m_simrelmap;
 	unsigned int m_threadid;
-	unsigned int m_commitsize;
 };
 
 SimRelationMap strus::getSimRelationMap(
 		const std::vector<SimHash>& samplear, SampleIndex idx_begin, SampleIndex idx_end,
-		unsigned int maxdist, const char* logfile, unsigned int threads, unsigned int commitsize)
+		unsigned int maxdist, unsigned int threads)
 {
 	if (idx_end < idx_begin)
 	{
@@ -202,18 +171,17 @@ SimRelationMap strus::getSimRelationMap(
 	}
 	if (!threads)
 	{
-		return getSimRelationMap_singlethread( samplear, idx_begin, idx_end, maxdist, commitsize, logfile);
+		return getSimRelationMap_singlethread( samplear, idx_begin, idx_end, maxdist);
 	}
 	else
 	{
-		RowBuilderGlobalContext threadGlobalContext( &samplear, idx_begin, idx_end, maxdist, logfile);
+		RowBuilderGlobalContext threadGlobalContext( &samplear, idx_begin, idx_end, maxdist);
 
 		std::vector<strus::Reference<RowBuilder> > processorList;
 		processorList.reserve( threads);
 		for (unsigned int ti = 0; ti<threads; ++ti)
 		{
-			processorList.push_back(
-				new RowBuilder( &threadGlobalContext, ti+1, commitsize));
+			processorList.push_back( new RowBuilder( &threadGlobalContext, ti+1));
 		}
 		{
 			boost::thread_group tgroup;
@@ -227,7 +195,7 @@ SimRelationMap strus::getSimRelationMap(
 		{
 			throw strus::runtime_error("failed to build similarity relation map: %s", threadGlobalContext.error().c_str());
 		}
-		return threadGlobalContext.result().mirror();
+		return threadGlobalContext.result();
 	}
 }
 

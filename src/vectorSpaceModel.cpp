@@ -22,10 +22,10 @@
 #include "simHash.hpp"
 #include "simRelationMap.hpp"
 #include "getSimRelationMap.hpp"
+#include "getSimhashValues.hpp"
 #include "lshModel.hpp"
 #include "genModel.hpp"
 #include "stringList.hpp"
-#include "getSimhashValues.hpp"
 #include "armadillo"
 #include <memory>
 
@@ -245,7 +245,7 @@ public:
 		try
 		{
 			utils::ScopedLock lock( m_mutex);
-			std::vector<SimHash> shar = getSimhashValues( m_lshmodel, m_vecar, m_config.threads);
+			std::vector<SimHash> shar = strus::getSimhashValues( m_lshmodel, m_vecar, m_config.threads);
 			std::size_t si = 0, se = m_vecar.size();
 			for (; si != se; ++si)
 			{
@@ -286,17 +286,19 @@ public:
 	void buildSimRelationMap()
 	{
 		const char* logfile = m_config.logfile.empty()?0:m_config.logfile.c_str();
+		Logger logout( logfile);
 
 		m_database->deleteSimRelationMap();
 		m_database->writeState( 1);
 		m_database->commit();
 
+		if (logout) logout << string_format( _TXT("calculate similarity relation matrix for %u features"), m_samplear.size());
 		std::size_t si = 0, se = m_samplear.size();
 		for (; si < se; si += m_config.commitsize)
 		{
 			std::size_t chunkend = si + m_config.commitsize;
 			if (chunkend > se) chunkend = se;
-			SimRelationMap simrelmap_part = strus::getSimRelationMap( m_samplear, si,  chunkend, m_config.maxdist, logfile, m_config.threads, m_config.commitsize);
+			SimRelationMap simrelmap_part = strus::getSimRelationMap( m_samplear, si,  chunkend, m_config.maxdist, m_config.threads);
 			std::size_t xi = si, xe = chunkend;
 			for (; xi != xe; ++xi)
 			{
@@ -306,9 +308,11 @@ public:
 				m_database->writeSimRelationRow( xi, row);
 			}
 			m_database->commit();
+			if (logout) logout << string_format( _TXT("got %u features with %u similarities"), si, simrelmap_part.nofRelationsDetected());
 		}
 		m_database->writeState( 2);
 		m_database->commit();
+		if (logout) logout << string_format( _TXT("calculate similarity relation matrix stored to database"));
 	}
 
 	virtual bool finalize()
