@@ -229,12 +229,28 @@ static bool compare( const std::vector<double>& v1, const std::vector<double>& v
 {
 	std::vector<double>::const_iterator vi1 = v1.begin(), ve1 = v1.end();
 	std::vector<double>::const_iterator vi2 = v2.begin(), ve2 = v2.end();
-	for (; vi1 != ve1 && vi2 != ve2; ++vi1,++vi2)
+	for (unsigned int vidx=0; vi1 != ve1 && vi2 != ve2; ++vi1,++vi2,++vidx)
 	{
 		double diff = (*vi1 > *vi2)?(*vi1 - *vi2):(*vi2 - *vi1);
-		if (diff > VEC_EPSILON) return false;
+		if (diff > VEC_EPSILON)
+		{
+			for (unsigned int vv=0; vv != vidx; ++vv)
+			{
+				std::cerr << strus::string_format("%u: %f == %f", vv, v1[vv], v2[vv]) << std::endl;
+			}
+			std::cerr << strus::string_format("diff of %u: %f and %f is bigger than %f", vidx, *vi1, *vi2, VEC_EPSILON) << std::endl;
+			return false;
+		}
 	}
-	return vi1 == ve1 && vi2 == ve2;
+	if (vi1 == ve1 && vi2 == ve2)
+	{
+		return true;
+	}
+	else
+	{
+		std::cerr << strus::string_format( "vectors have different length %u != %u", v1.size(), v2.size()) << std::endl;
+		return false;
+	}
 }
 
 static bool compare( const std::vector<strus::SimHash>& v1, const std::vector<strus::SimHash>& v2)
