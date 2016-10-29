@@ -42,7 +42,7 @@
 #include <limits>
 
 #undef STRUS_LOWLEVEL_DEBUG
-#define VEC_EPSILON  (std::numeric_limits<double>::epsilon() * 10.0)
+#define VEC_EPSILON  (1.0E-11)
 
 static void initRandomNumberGenerator()
 {

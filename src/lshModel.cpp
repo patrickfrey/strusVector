@@ -14,7 +14,7 @@
 #include <limits>
 
 using namespace strus;
-#define VEC_EPSILON  (std::numeric_limits<double>::epsilon() * 10.0)
+#define VEC_EPSILON  (1.0E-11)
 
 
 LshModel::LshModel()
