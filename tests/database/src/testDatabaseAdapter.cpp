@@ -236,9 +236,9 @@ static bool compare( const std::vector<double>& v1, const std::vector<double>& v
 		{
 			for (unsigned int vv=0; vv != vidx; ++vv)
 			{
-				std::cerr << strus::string_format("%u: %f == %f", vv, v1[vv], v2[vv]) << std::endl;
+				std::cerr << strus::string_format("%u: %lf == %lf", vv, v1[vv], v2[vv]) << std::endl;
 			}
-			std::cerr << strus::string_format("diff of %u: %f and %f is bigger than %f", vidx, *vi1, *vi2, VEC_EPSILON) << std::endl;
+			std::cerr << strus::string_format("diff of %u: %lf and %lf is bigger than %lf", vidx, *vi1, *vi2, VEC_EPSILON) << std::endl;
 			return false;
 		}
 	}
