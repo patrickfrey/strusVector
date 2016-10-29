@@ -63,6 +63,7 @@ public:
 	void writeSample( const SampleIndex& sidx, const std::string& name, const Vector& vec, const SimHash& simHash);
 	void writeResultSimhashVector( const std::vector<SimHash>& ar);
 	void writeSimRelationMap( const SimRelationMap& simrelmap, unsigned int commitsize);
+	void writeSimRelationRow( const SampleIndex& sidx, const SimRelationMap::Row& row);
 	void writeSampleConceptIndexMap( const SampleConceptIndexMap& sfmap);
 	void writeConceptSampleIndexMap( const ConceptSampleIndexMap& fsmap);
 	void writeConfig( const VectorSpaceModelConfig& config);

@@ -65,6 +65,8 @@ public:
 		const_iterator begin() const	{return m_begin;}
 		const_iterator end() const	{return m_end;}
 
+		bool empty() const		{return m_begin == m_end;}
+
 	private:
 		const_iterator m_begin;
 		const_iterator m_end;

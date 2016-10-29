@@ -165,6 +165,21 @@ private:
 	
 };
 
+class SimRelationImpl
+	:public GenModel::SimRelationI
+{
+public:
+	explicit SimRelationImpl( const DatabaseAdapter* database_)
+		:database(database_){}
+	virtual ~SimRelationImpl(){}
+	virtual std::vector<SimRelationMap::Element> readSimRelations( const SampleIndex& sidx) const
+	{
+		return database->readSimRelations( sidx);
+	}
+private:
+	const DatabaseAdapter* database;
+};
+
 
 class VectorSpaceModelBuilder
 	:public VectorSpaceModelBuilderInterface
@@ -172,17 +187,18 @@ class VectorSpaceModelBuilder
 public:
 	VectorSpaceModelBuilder( const std::string& config_, const DatabaseInterface* database_, ErrorBufferInterface* errorhnd_)
 		:m_errorhnd(errorhnd_),m_config(config_,errorhnd_)
-		,m_simrelmap(),m_lshmodel(),m_genmodel(),m_samplear()
+		,m_state(0),m_lshmodel(),m_genmodel(),m_samplear()
 	{
 		m_database.reset( new DatabaseAdapter( database_, m_config.databaseConfig, m_errorhnd));
 		m_database->checkVersion();
-		if (m_database->isempty())
+		m_state = m_database->readState();
+		if (m_database->isempty() || m_state < 1)
 		{
 			m_database->writeConfig( m_config);
 			m_lshmodel = LshModel( m_config.dim, m_config.bits, m_config.variations);
 			m_genmodel = GenModel( m_config.threads, m_config.maxdist, m_config.simdist, m_config.raddist, m_config.eqdist, m_config.mutations, m_config.votes, m_config.descendants, m_config.maxage, m_config.iterations, m_config.assignments, m_config.isaf, m_config.with_singletons);
 			m_database->writeLshModel( m_lshmodel);
-			m_database->writeState( 1);
+			m_database->writeState( m_state = 1);
 			m_database->commit();
 		}
 		else
@@ -194,15 +210,10 @@ public:
 			}
 			m_lshmodel = m_database->readLshModel();
 			m_genmodel = GenModel( m_config.threads, m_config.maxdist, m_config.simdist, m_config.raddist, m_config.eqdist, m_config.mutations, m_config.votes, m_config.descendants, m_config.maxage, m_config.iterations, m_config.assignments, m_config.isaf, m_config.with_singletons);
-
-			if (m_database->readState() >= 2)
-			{
-				m_simrelmap = m_database->readSimRelationMap();
-			}
 			m_samplear = m_database->readSampleSimhashVector();
 		}
 	}
-
+	
 	virtual ~VectorSpaceModelBuilder()
 	{}
 
@@ -213,13 +224,7 @@ public:
 			unsigned int nofFeaturesAdded = 0;
 			{
 				utils::ScopedLock lock( m_mutex);
-				if (m_simrelmap.nofSamples() != 0)
-				{
-					m_simrelmap.clear();
-					m_database->deleteSimRelationMap();
-					m_database->writeState( 1);
-					m_database->commit();
-				}
+				resetSimRelationMap();
 				m_vecar.push_back( vec);
 				m_namear.push_back( name);
 				nofFeaturesAdded = m_vecar.size();
@@ -262,21 +267,59 @@ public:
 		CATCH_ERROR_ARG1_MAP_RETURN( _TXT("error in vector space model database commit of '%s' builder: %s"), MODULENAME, *m_errorhnd, false);
 	}
 
+	bool needToCalculateSimRelationMap()
+	{
+		return (m_state < 2);
+	}
+
+	void resetSimRelationMap()
+	{
+		if (m_state >= 2)
+		{
+			m_state = 1;
+			m_database->writeState( m_state);
+			m_database->deleteSimRelationMap();
+			m_database->commit();
+		}
+	}
+
+	void buildSimRelationMap()
+	{
+		const char* logfile = m_config.logfile.empty()?0:m_config.logfile.c_str();
+
+		m_database->deleteSimRelationMap();
+		m_database->writeState( 1);
+		m_database->commit();
+
+		std::size_t si = 0, se = m_samplear.size();
+		for (; si < se; si += m_config.commitsize)
+		{
+			std::size_t chunkend = si + m_config.commitsize;
+			if (chunkend > se) chunkend = se;
+			SimRelationMap simrelmap_part = strus::getSimRelationMap( m_samplear, si,  chunkend, m_config.maxdist, logfile, m_config.threads, m_config.commitsize);
+			std::size_t xi = si, xe = chunkend;
+			for (; xi != xe; ++xi)
+			{
+				SimRelationMap::Row row = simrelmap_part.row( xi);
+				if (row.empty()) continue;
+
+				m_database->writeSimRelationRow( xi, row);
+			}
+			m_database->commit();
+		}
+		m_database->writeState( 2);
+		m_database->commit();
+	}
+
 	virtual bool finalize()
 	{
 		try
 		{
 			utils::ScopedLock lock( m_mutex);
 			m_database->commit();
-			const char* logfile = m_config.logfile.empty()?0:m_config.logfile.c_str();
-			if (m_simrelmap.nofSamples() == 0)
+			if (needToCalculateSimRelationMap())
 			{
-				const char* logfile = m_config.logfile.empty()?0:m_config.logfile.c_str();
-				m_simrelmap = strus::getSimRelationMap( m_samplear, m_config.maxdist, logfile, m_config.threads, m_config.commitsize);
-
-				m_database->writeSimRelationMap( m_simrelmap, m_config.commitsize);
-				m_database->writeState( 2);
-				m_database->commit();
+				buildSimRelationMap();
 			}
 			m_database->deleteSampleConceptIndexMap();
 			m_database->deleteConceptSampleIndexMap();
@@ -286,10 +329,12 @@ public:
 			std::vector<SimHash> resultar;
 			SampleConceptIndexMap sampleConceptIndexMap;
 			ConceptSampleIndexMap conceptSampleIndexMap;
-			
+
+			const char* logfile = m_config.logfile.empty()?0:m_config.logfile.c_str();
+			SimRelationImpl simrelmap( m_database.get());
 			resultar = m_genmodel.run(
 					sampleConceptIndexMap, conceptSampleIndexMap,
-					m_samplear, m_simrelmap, logfile);
+					m_samplear, simrelmap, logfile);
 			m_database->writeResultSimhashVector( resultar);
 			m_database->writeSampleConceptIndexMap( sampleConceptIndexMap);
 			m_database->writeConceptSampleIndexMap( conceptSampleIndexMap);
@@ -321,7 +366,7 @@ private:
 	ErrorBufferInterface* m_errorhnd;
 	Reference<DatabaseAdapter> m_database;
 	VectorSpaceModelConfig m_config;
-	SimRelationMap m_simrelmap;
+	unsigned int m_state;
 	LshModel m_lshmodel;
 	GenModel m_genmodel;
 	utils::Mutex m_mutex;

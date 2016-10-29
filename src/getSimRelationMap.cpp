@@ -17,45 +17,54 @@
 
 using namespace strus;
 
-static SimRelationMap getSimRelationMap_singlethread( const std::vector<SimHash>& samplear, unsigned int maxdist, unsigned int commitsize, const char* logfile)
+static SimRelationMap getSimRelationMap_singlethread( 
+		const std::vector<SimHash>& samplear, SampleIndex idx_begin, SampleIndex idx_end,
+		unsigned int maxdist, unsigned int commitsize, const char* logfile)
 {
 	Logger logout( logfile);
 	SimRelationMap rt;
-	if (logout) logout << _TXT("calculate similarity relation map");
-	std::vector<SimHash>::const_iterator si = samplear.begin(), se = samplear.end();
-	for (SampleIndex sidx=0; si != se; ++si,++sidx)
+	if (logout) logout << string_format( _TXT("calculate similarity relation map from %u to %u (singlethreaded)"), idx_begin, idx_end);
+	for (SampleIndex sidx=idx_begin; sidx != idx_end; ++sidx)
 	{
-		if (commitsize && logout && sidx % commitsize == 0) logout << string_format( _TXT("processed %u lines with %u similarities"), sidx, rt.nofRelationsDetected());
+		const SimHash& srec = samplear[ sidx];
+
+		if (commitsize && logout && sidx % commitsize == 0)
+		{
+			logout << string_format( _TXT("processed %u lines with %u similarities"), sidx, rt.nofRelationsDetected());
+		}
 		std::vector<SimRelationMap::Element> row;
 
-		std::vector<SimHash>::const_iterator pi = samplear.begin();
-		for (SampleIndex pidx=0; pi != si; ++pi,++pidx)
+		std::vector<SimHash>::const_iterator pi = samplear.begin(), pe = samplear.end();
+		for (SampleIndex pidx=0; pi != pe; ++pi,++pidx)
 		{
-			if (pidx != sidx && si->near( *pi, maxdist))
+			if (pidx != sidx && pi->near( srec, maxdist))
 			{
-				unsigned short dist = si->dist( *pi);
+				unsigned short dist = pi->dist( srec);
 				row.push_back( SimRelationMap::Element( pidx, dist));
 			}
 		}
 		rt.addRow( sidx, row);
 	}
 	if (logout) logout << string_format( _TXT("got %u with %u similarities"), samplear.size(), rt.nofRelationsDetected());
-	return rt.mirror();
+	return rt;
 }
 
 class RowBuilderGlobalContext
 {
 public:
-	RowBuilderGlobalContext( const std::vector<SimHash>* samplear_, unsigned int maxdist_, const char* logfile)
-		:m_sampleIndex(0),m_samplear(samplear_),m_maxdist(maxdist_),m_logout(logfile)
+	RowBuilderGlobalContext(
+			const std::vector<SimHash>* samplear_, SampleIndex idx_begin, SampleIndex idx_end,
+			unsigned int maxdist_, const char* logfile)
+		:m_sampleIndex(idx_begin),m_endSampleIndex(idx_end),m_samplear(samplear_)
+		,m_maxdist(maxdist_),m_logout(logfile)
 	{
-		if (m_logout) m_logout << _TXT("build similarity relation map (multithreaded)");
+		if (m_logout) m_logout << string_format( _TXT("calculate similarity relation map from %u to %u (multithreaded)"), idx_begin, idx_end);
 	}
 
 	bool fetch( SampleIndex& index)
 	{
 		index = m_sampleIndex.allocIncrement();
-		if (index >= (SampleIndex)m_samplear->size())
+		if (index >= (SampleIndex)m_endSampleIndex)
 		{
 			m_sampleIndex.decrement();
 			return false;
@@ -73,10 +82,10 @@ public:
 		const SimHash& srec = (*m_samplear)[ sidx];
 		std::vector<SimRelationMap::Element> rt;
 
-		std::vector<SimHash>::const_iterator pi = m_samplear->begin();
-		for (SampleIndex pidx=0; pidx != sidx; ++pi,++pidx)
+		std::vector<SimHash>::const_iterator pi = m_samplear->begin(), pe = m_samplear->end();
+		for (SampleIndex pidx=0; pi != pe; ++pi,++pidx)
 		{
-			if (pi->near( srec, m_maxdist))
+			if (pidx != sidx && pi->near( srec, m_maxdist))
 			{
 				unsigned short dist = pi->dist( srec);
 				rt.push_back( SimRelationMap::Element( pidx, dist));
@@ -122,6 +131,7 @@ public:
 
 private:
 	utils::AtomicCounter<SampleIndex> m_sampleIndex;
+	std::size_t m_endSampleIndex;
 	const std::vector<SimHash>* m_samplear;
 	unsigned int m_maxdist;
 	Logger m_logout;
@@ -182,16 +192,21 @@ private:
 	unsigned int m_commitsize;
 };
 
-SimRelationMap strus::getSimRelationMap( const std::vector<SimHash>& samplear, unsigned int maxdist, const char* logfile, unsigned int threads, unsigned int commitsize)
+SimRelationMap strus::getSimRelationMap(
+		const std::vector<SimHash>& samplear, SampleIndex idx_begin, SampleIndex idx_end,
+		unsigned int maxdist, const char* logfile, unsigned int threads, unsigned int commitsize)
 {
+	if (idx_end < idx_begin)
+	{
+		throw strus::runtime_error(_TXT("illegal range of elements to calculate passed to '%s'"), "getSimRelationMap");
+	}
 	if (!threads)
 	{
-		return getSimRelationMap_singlethread( samplear, maxdist, commitsize, logfile);
+		return getSimRelationMap_singlethread( samplear, idx_begin, idx_end, maxdist, commitsize, logfile);
 	}
 	else
 	{
-		RowBuilderGlobalContext threadGlobalContext( &samplear, maxdist, logfile);
-		/*[-]*/threadGlobalContext.logmsg( string_format( _TXT("getSimRelationMap got %u samples"), samplear.size()));
+		RowBuilderGlobalContext threadGlobalContext( &samplear, idx_begin, idx_end, maxdist, logfile);
 
 		std::vector<strus::Reference<RowBuilder> > processorList;
 		processorList.reserve( threads);

@@ -14,15 +14,17 @@
 
 namespace strus {
 
-/// \brief Get a sparse matrix of similarity relations defined by edit distance of the LSH values of an array of samples
-/// \param[in] samplear array of samples to process
+/// \brief Get a part of the sparse matrix of similarity relations defined by edit distance of the LSH values of an array of samples
+/// \param[in] samplear array of all samples to process
+/// \param[in] idx_begin index of first element to process by this call
+/// \param[in] idx_end index of end element to process by this call
 /// \param[in] maxdist maximum edit distance to put into the result matrix
 /// \param[in] logfile file to log status
 /// \param[in] threads number of threads to use, 0 for no threading at all
 /// \param[in] commitsize number of rows to build in an iteration of a thread (multithreading only)
 /// \return similarity relation map
 SimRelationMap getSimRelationMap(
-		const std::vector<SimHash>& samplear,
+		const std::vector<SimHash>& samplear, SampleIndex idx_begin, SampleIndex idx_end,
 		unsigned int maxdist, const char* logfile, unsigned int threads, unsigned int commitsize);
 
 } //namespace

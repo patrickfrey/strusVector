@@ -30,6 +30,15 @@ typedef IndexListMap<ConceptIndex,SampleIndex> ConceptSampleIndexMap;
 class GenModel
 {
 public:
+	/// \brief Interface to get the most similar elements of sidx in the ascending order of similarity
+	class SimRelationI
+	{
+	public:
+		virtual ~SimRelationI(){}
+		virtual std::vector<SimRelationMap::Element> readSimRelations( const SampleIndex& sidx) const=0;
+	};
+
+public:
 	/// \brief Default constructor
 	GenModel()
 		:m_threads(0)
@@ -66,7 +75,7 @@ public:
 			SampleConceptIndexMap& sampleConceptIndexMap,
 			ConceptSampleIndexMap& conceptSampleIndexMap,
 			const std::vector<SimHash>& samples,
-			const SimRelationMap& simrelmap,
+			const SimRelationI& simrelmap,
 			const char* logfile) const;
 
 private:

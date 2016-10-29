@@ -237,10 +237,10 @@ static bool tryLeaveUnfitestGroup(
 }
 
 /// \brief Find the closest sample to a given sample that is not yet in a group with this sample and can still be assigned to a new group
-static bool findClosestFreeSample( SimRelationMap::Element& res, SampleIndex sampleidx, const SampleSimGroupMap& sampleSimGroupMap, const SimRelationMap& simrelmap, unsigned int simdist)
+static bool findClosestFreeSample( SimRelationMap::Element& res, SampleIndex sampleidx, const SampleSimGroupMap& sampleSimGroupMap, const GenModel::SimRelationI& simrelmap, unsigned int simdist)
 {
-	SimRelationMap::Row row = simrelmap.row( sampleidx);
-	SimRelationMap::Row::const_iterator ri = row.begin(), re = row.end();
+	std::vector<SimRelationMap::Element> elements = simrelmap.readSimRelations( sampleidx);
+	std::vector<SimRelationMap::Element>::const_iterator ri = elements.begin(), re = elements.end();
 	for (; ri != re; ++ri)
 	{
 		if (ri->simdist > simdist) break;
@@ -470,7 +470,7 @@ std::vector<SimHash> GenModel::run(
 		SampleConceptIndexMap& sampleConceptIndexMap,
 		ConceptSampleIndexMap& conceptSampleIndexMap,
 		const std::vector<SimHash>& samplear,
-		const SimRelationMap& simrelmap,
+		const SimRelationI& simrelmap,
 		const char* logfile) const
 {
 	Logger logout( logfile);

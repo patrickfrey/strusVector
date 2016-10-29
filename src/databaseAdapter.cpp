@@ -564,21 +564,34 @@ std::vector<SimRelationMap::Element> DatabaseAdapter::readSimRelations( const Sa
 	{
 		char const* ci = content.c_str();
 		const char* ce = ci + content.size();
-		if ((ce - ci) % (sizeof(SampleIndex)+sizeof(unsigned short)) != 0)
-		{
-			throw strus::runtime_error(_TXT("corrupt row of similarity relation map"));
-		}
+		DatabaseValueScanner value_scanner( ci, ce-ci);
 		std::vector<SimRelationMap::Element> rt;
-		for (; ci < ce; ci += sizeof(SampleIndex)+sizeof(unsigned short))
+		while (!value_scanner.eof())
 		{
 			SampleIndex col;
 			unsigned short simdist;
-			DatabaseValueScanner value_scanner( ci, (sizeof(SampleIndex)+sizeof(unsigned short)));
 			value_scanner[ col][ simdist];
 			rt.push_back( SimRelationMap::Element( col, simdist));
 		}
 		return rt;
 	}
+}
+
+void DatabaseAdapter::writeSimRelationRow( const SampleIndex& sidx, const SimRelationMap::Row& row)
+{
+	DatabaseKeyBuffer key( KeySimRelationMap);
+	key[ sidx+1];
+
+	std::string content;
+	SimRelationMap::Row::const_iterator ri = row.begin(), re = row.end();
+	for (; ri != re; ++ri)
+	{
+		DatabaseValueBuffer buffer;
+		buffer[ ri->index][ ri->simdist];
+		content.append( buffer.c_str(), buffer.size());
+	}
+	if (!m_transaction.get()) beginTransaction();
+	m_transaction->write( key.c_str(), key.size(), content.c_str(), content.size());
 }
 
 void DatabaseAdapter::writeSimRelationMap( const SimRelationMap& simrelmap, unsigned int commitsize)
@@ -589,19 +602,6 @@ void DatabaseAdapter::writeSimRelationMap( const SimRelationMap& simrelmap, unsi
 		SimRelationMap::Row row = simrelmap.row( si);
 		if (row.begin() == row.end()) continue;
 
-		DatabaseKeyBuffer key( KeySimRelationMap);	
-		key[ si+1];
-
-		std::string content;
-		SimRelationMap::Row::const_iterator ri = row.begin(), re = row.end();
-		for (; ri != re; ++ri)
-		{
-			DatabaseValueBuffer buffer;
-			buffer[ ri->index][ ri->simdist];
-			content.append( buffer.c_str(), buffer.size());
-		}
-		if (!m_transaction.get()) beginTransaction();
-		m_transaction->write( key.c_str(), key.size(), content.c_str(), content.size());
 		if (commitsize && (si+1) % commitsize == 0)
 		{
 			commit();
