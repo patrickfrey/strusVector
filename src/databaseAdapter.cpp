@@ -602,6 +602,7 @@ void DatabaseAdapter::writeSimRelationMap( const SimRelationMap& simrelmap, unsi
 		SimRelationMap::Row row = simrelmap.row( si);
 		if (row.begin() == row.end()) continue;
 
+		writeSimRelationRow( si, row);
 		if (commitsize && (si+1) % commitsize == 0)
 		{
 			commit();
