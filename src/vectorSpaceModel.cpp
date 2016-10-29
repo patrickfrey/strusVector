@@ -294,6 +294,7 @@ public:
 
 		if (logout) logout << string_format( _TXT("calculate similarity relation matrix for %u features"), m_samplear.size());
 		std::size_t si = 0, se = m_samplear.size();
+		uint64_t total_nof_similarities = 0;
 		for (; si < se; si += m_config.commitsize)
 		{
 			std::size_t chunkend = si + m_config.commitsize;
@@ -308,7 +309,8 @@ public:
 				m_database->writeSimRelationRow( xi, row);
 			}
 			m_database->commit();
-			if (logout) logout << string_format( _TXT("got total %u features with %u similarities"), chunkend, simrelmap_part.nofRelationsDetected());
+			total_nof_similarities += simrelmap_part.nofRelationsDetected();
+			if (logout) logout << string_format( _TXT("got total %u features with %uK similarities"), chunkend, (unsigned int)(total_nof_similarities/1024));
 		}
 		m_database->writeState( 2);
 		m_database->commit();
