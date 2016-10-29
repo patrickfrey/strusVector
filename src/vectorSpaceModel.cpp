@@ -308,11 +308,11 @@ public:
 				m_database->writeSimRelationRow( xi, row);
 			}
 			m_database->commit();
-			if (logout) logout << string_format( _TXT("got %u features with %u similarities"), si, simrelmap_part.nofRelationsDetected());
+			if (logout) logout << string_format( _TXT("got total %u features with %u similarities"), chunkend, simrelmap_part.nofRelationsDetected());
 		}
 		m_database->writeState( 2);
 		m_database->commit();
-		if (logout) logout << string_format( _TXT("calculate similarity relation matrix stored to database"));
+		if (logout) logout << string_format( _TXT("calculated similarity relation matrix stored to database"));
 	}
 
 	virtual bool finalize()
