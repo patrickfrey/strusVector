@@ -19,11 +19,13 @@ namespace strus {
 /// \param[in] idx_begin index of first element to process by this call
 /// \param[in] idx_end index of end element to process by this call
 /// \param[in] maxdist maximum edit distance to put into the result matrix
+/// \param[in] maxsimsam maximum number of nearest neighbours put input similarity relation map
+/// \param[in] rndsimsam number of additional random samples put into similarity relation map, if 'maxsimsam' is specified
 /// \param[in] threads number of threads to use, 0 for no threading at all
 /// \return similarity relation map
 SimRelationMap getSimRelationMap(
 		const std::vector<SimHash>& samplear, SampleIndex idx_begin, SampleIndex idx_end,
-		unsigned int maxdist, unsigned int threads);
+		unsigned int maxdist, unsigned int maxsimsam, unsigned int rndsimsam, unsigned int threads);
 
 } //namespace
 #endif

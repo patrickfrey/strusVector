@@ -299,7 +299,7 @@ public:
 		{
 			std::size_t chunkend = si + m_config.commitsize;
 			if (chunkend > se) chunkend = se;
-			SimRelationMap simrelmap_part = strus::getSimRelationMap( m_samplear, si,  chunkend, m_config.maxdist, m_config.threads);
+			SimRelationMap simrelmap_part = strus::getSimRelationMap( m_samplear, si,  chunkend, m_config.maxdist, m_config.maxsimsam, m_config.rndsimsam, m_config.threads);
 			std::size_t xi = si, xe = chunkend;
 			for (; xi != xe; ++xi)
 			{

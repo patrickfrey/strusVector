@@ -27,6 +27,8 @@ struct VectorSpaceModelConfig
 		DefaultSimDist = 340,	//< 340 out of 2K (32*64) ~ cosine dist 0.9
 		DefaultRadDist = 320,	//< 340 out of 2K (32*64) ~ cosine dist 0.9
 		DefaultEqDist = 60,
+		DefaultMaxSimSam = 0,
+		DefaultRndSimSam = 0,
 		DefaultMutations = 50,
 		DefaultMutationVotes = 13,
 		DefaultDescendants = 10,
@@ -63,6 +65,8 @@ struct VectorSpaceModelConfig
 	unsigned int simdist;		///< maximum LSH edit distance considered as similarity
 	unsigned int raddist;		///< centroid radius distance (smaller than simdist)
 	unsigned int eqdist;		///< maximum LSH edit distance considered as equal
+	unsigned int maxsimsam;		///< maximum number of nearest neighbours put input similarity relation map
+	unsigned int rndsimsam;		///< number of additional random samples put into similarity relation map, if 'maxsimsam' is specified
 	unsigned int mutations;		///< number of mutations when a genetic code is changed
 	unsigned int votes;		///< number of votes to decide in which direction a mutation should go
 	unsigned int descendants;	///< number of descendants to evaluate the fitest of when trying to change an individual

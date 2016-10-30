@@ -22,6 +22,7 @@ VectorSpaceModelConfig::VectorSpaceModelConfig( const VectorSpaceModelConfig& o)
 	,threads(o.threads),commitsize(o.commitsize)
 	,dim(o.dim),bits(o.bits),variations(o.variations)
 	,maxdist(o.maxdist),simdist(o.simdist),raddist(o.raddist),eqdist(o.eqdist)
+	,maxsimsam(o.maxsimsam),rndsimsam(o.rndsimsam)
 	,mutations(o.mutations),votes(o.votes)
 	,descendants(o.descendants),maxage(o.maxage),iterations(o.iterations)
 	,assignments(o.assignments)
@@ -33,6 +34,7 @@ VectorSpaceModelConfig::VectorSpaceModelConfig()
 	:databaseConfig(),logfile(),threads(DefaultThreads),commitsize(DefaultCommitSize)
 	,dim(DefaultDim),bits(DefaultBits),variations(DefaultVariations)
 	,maxdist(DefaultMaxDist),simdist(DefaultSimDist),raddist(DefaultRadDist),eqdist(DefaultEqDist)
+	,maxsimsam(DefaultMaxSimSam),rndsimsam(DefaultRndSimSam)
 	,mutations(DefaultMutations),votes(DefaultMutationVotes)
 	,descendants(DefaultDescendants),maxage(DefaultMaxAge),iterations(DefaultIterations)
 	,assignments(DefaultAssignments)
@@ -44,6 +46,7 @@ VectorSpaceModelConfig::VectorSpaceModelConfig( const std::string& config, Error
 	:databaseConfig(),logfile(),threads(DefaultThreads),commitsize(DefaultCommitSize)
 	,dim(DefaultDim),bits(DefaultBits),variations(DefaultVariations)
 	,maxdist(DefaultMaxDist),simdist(DefaultSimDist),raddist(DefaultRadDist),eqdist(DefaultEqDist)
+	,maxsimsam(DefaultMaxSimSam),rndsimsam(DefaultRndSimSam)
 	,mutations(DefaultMutations),votes(DefaultMutationVotes)
 	,descendants(DefaultDescendants),maxage(DefaultMaxAge),iterations(DefaultIterations)
 	,assignments(DefaultAssignments)
@@ -77,6 +80,8 @@ VectorSpaceModelConfig::VectorSpaceModelConfig( const std::string& config, Error
 	{
 		throw strus::runtime_error(_TXT("the 'eqdist' configuration parameter must not be bigger than 'simdist'"));
 	}
+	if (extractUIntFromConfigString( maxsimsam, src, "maxsimsam", errorhnd)){}
+	if (extractUIntFromConfigString( rndsimsam, src, "rndsimsam", errorhnd)){}
 	if (extractUIntFromConfigString( mutations, src, "mutations", errorhnd)){}
 	if (extractUIntFromConfigString( votes, src, "votes", errorhnd)){}
 	if (extractUIntFromConfigString( descendants, src, "descendants", errorhnd)){}
@@ -121,6 +126,8 @@ std::string VectorSpaceModelConfig::tostring() const
 	buf << "simdist=" << simdist << ";" << std::endl;
 	buf << "raddist=" << raddist << ";" << std::endl;
 	buf << "eqdist=" << eqdist << ";" << std::endl;
+	buf << "maxsimsam=" << maxsimsam << ";" << std::endl;
+	buf << "rndsimsam=" << rndsimsam << ";" << std::endl;
 	buf << "mutations=" << mutations << ";" << std::endl;
 	buf << "votes=" << votes << ";" << std::endl;
 	buf << "descendants=" << descendants << ";" << std::endl;
