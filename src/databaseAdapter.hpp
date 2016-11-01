@@ -44,6 +44,7 @@ public:
 	ConceptIndex readNofConcepts() const;
 	unsigned int readState() const;
 
+	SimHash readSampleSimhash( const SampleIndex& sidx) const;
 	std::vector<SimHash> readSampleSimhashVector() const;
 	std::vector<SimHash> readResultSimhashVector() const;
 
@@ -104,6 +105,7 @@ public:
 
 private:
 	void beginTransaction();
+	SimHash readSimhash( const KeyPrefix& prefix, const SampleIndex& sidx) const;
 	std::vector<SimHash> readSimhashVector( const KeyPrefix& prefix) const;
 	unsigned int readVariable( const char* name) const;
 	IndexListMap<strus::Index,strus::Index> readIndexListMap( const KeyPrefix& prefix) const;

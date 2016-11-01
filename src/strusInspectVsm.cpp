@@ -21,6 +21,7 @@
 #include <iostream>
 #include <stdexcept>
 
+#error DEPRECATED
 #undef STRUS_LOWLEVEL_DEBUG
 
 static void printUsage()

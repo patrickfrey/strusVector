@@ -374,6 +374,26 @@ unsigned int DatabaseAdapter::readState() const
 	return readVariable( VARIABLE_STATE);
 }
 
+SimHash DatabaseAdapter::readSimhash( const KeyPrefix& prefix, const SampleIndex& sidx) const
+{
+	DatabaseKeyBuffer key( prefix);
+	key[ sidx+1];
+
+	std::string content;
+	if (!m_database->readValue( key.c_str(), key.size(), content, DatabaseOptions()))
+	{
+		if (m_errorhnd->hasError())
+		{
+			throw strus::runtime_error(_TXT("failed to read sim hash: %s"), m_errorhnd->fetchError());
+		}
+		else
+		{
+			throw strus::runtime_error(_TXT("accessing sim hash value of undefined feature"));
+		}
+	}
+	return SimHash::createFromSerialization( content);
+}
+
 std::vector<SimHash> DatabaseAdapter::readSimhashVector( const KeyPrefix& prefix) const
 {
 	std::vector<SimHash> rt;
@@ -415,6 +435,11 @@ void DatabaseAdapter::writeSimhash( const KeyPrefix& prefix, const SampleIndex& 
 
 	std::string blob( simHash.serialization());
 	m_transaction->write( key.c_str(), key.size(), blob.c_str(), blob.size());
+}
+
+SimHash DatabaseAdapter::readSampleSimhash( const SampleIndex& sidx) const
+{
+	return readSimhash( KeySampleSimHash, sidx);
 }
 
 std::vector<SimHash> DatabaseAdapter::readSampleSimhashVector() const

@@ -128,6 +128,54 @@ public:
 		CATCH_ERROR_ARG1_MAP_RETURN( _TXT("error in instance of '%s' getting index of feature by its name: %s"), MODULENAME, *m_errorhnd, -1);
 	}
 
+	virtual std::vector<std::string> attributes( const std::string& name, const Index& index) const
+	{
+		try
+		{
+			std::vector<std::string> rt;
+			if (utils::caseInsensitiveEquals( name, "featurelsh"))
+			{
+				SimHash simhash = m_database->readSampleSimhash( index);
+				rt.push_back( simhash.tostring());
+			}
+			else if (utils::caseInsensitiveEquals( name, "conceptlsh"))
+			{
+				if (index == 0 || (std::size_t)index > m_individuals.size()) throw strus::runtime_error(_TXT("concept index out of range"));
+				rt.push_back( m_individuals[ index-1].tostring());
+			}
+			else if (utils::caseInsensitiveEquals( name, "simrel"))
+			{
+				std::vector<SimRelationMap::Element> elems = m_database->readSimRelations( index);
+				std::vector<SimRelationMap::Element>::const_iterator ei = elems.begin(), ee = elems.end();
+				for (; ei != ee; ++ei)
+				{
+					std::ostringstream elemstr;
+					elemstr << ei->index << " " << ei->simdist;
+					rt.push_back( elemstr.str());
+				}
+			}
+			else
+			{
+				throw strus::runtime_error(_TXT("unknonwn feature attribute name '%s'"), name.c_str());
+			}
+			return rt;
+		}
+		CATCH_ERROR_ARG1_MAP_RETURN( _TXT("error in instance of '%s' getting feature attribute names: %s"), MODULENAME, *m_errorhnd, std::vector<std::string>());
+	}
+
+	virtual std::vector<std::string> attributeNames() const
+	{
+		try
+		{
+			std::vector<std::string> rt;
+			rt.push_back( "featurelsh");
+			rt.push_back( "conceptlsh");
+			rt.push_back( "simrel");
+			return rt;
+		}
+		CATCH_ERROR_ARG1_MAP_RETURN( _TXT("error in instance of '%s' getting feature attribute names: %s"), MODULENAME, *m_errorhnd, std::vector<std::string>());
+	}
+
 	virtual std::vector<Index> conceptFeatures( const Index& conceptid) const
 	{
 		try
