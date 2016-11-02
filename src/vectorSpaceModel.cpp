@@ -45,15 +45,22 @@ public:
 		m_database->checkVersion();
 		if (m_database->isempty()) throw strus::runtime_error(_TXT("try to open a vector space model that is empty, need to be built first"));
 		m_config = m_database->readConfig();
-		if (m_config.with_preload)
-		{
-			m_lshmodel.reset( new LshModel( m_database->readLshModel()));
-			m_individuals.reset( new std::vector<SimHash>( m_database->readResultSimhashVector()));
-		}
 	}
 
 	virtual ~VectorSpaceModelInstance()
 	{}
+
+	virtual void preload()
+	{
+		if (!m_lshmodel.get())
+		{
+			m_lshmodel.reset( new LshModel( m_database->readLshModel()));
+		}
+		if (!m_individuals.get())
+		{
+			m_individuals.reset( new std::vector<SimHash>( m_database->readResultSimhashVector()));
+		}
+	}
 
 	virtual std::vector<Index> mapVectorToConcepts( const std::vector<double>& vec) const
 	{

@@ -36,8 +36,7 @@ struct VectorSpaceModelConfig
 		DefaultIterations = 20,
 		DefaultAssignments = 7,
 		DefaultIsaf = 60,
-		DefaultWithSingletons = 0,
-		DefaultPreload = 1
+		DefaultWithSingletons = 0
 	};
 	VectorSpaceModelConfig( const VectorSpaceModelConfig& o);
 	VectorSpaceModelConfig();
@@ -76,7 +75,6 @@ struct VectorSpaceModelConfig
 	unsigned int assignments;	///< maximum number of group assignments for each input vector
 	float isaf;			///< fraction of elements of a superset that has to be in a subset for declaring the subset as dependent (is a) of the superset
 	bool with_singletons;		///< true, if singleton vectors thould also get into the result
-	bool with_preload;		///< true, if tables for mapping should be preloaded or loaded on demand
 };
 
 }//namespace
