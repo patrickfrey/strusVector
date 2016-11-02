@@ -72,7 +72,7 @@ struct VectorSpaceModelHdr
 
 	VectorSpaceModelHdr()
 	{
-		std::memcpy( name, "strus standard vector space model bin file\n\0", sizeof(name));
+		std::memcpy( name, "strus standard vector space model\n\0", sizeof(name));
 		_id = FILEID;
 		version_major = STRUS_VECTOR_VERSION_MAJOR;
 		version_minor = STRUS_VECTOR_VERSION_MINOR;
@@ -835,7 +835,7 @@ void DatabaseAdapter::dumpKeyValue( std::ostream& out, const strus::DatabaseCurs
 			if (value.size() < sizeof(hdr)) throw strus::runtime_error(_TXT("unknown version format"));
 			std::memcpy( &hdr, value.ptr(), sizeof(hdr));
 			hdr.ntoh();
-			out << hdr.name << " " << hdr.version_major << "." << hdr.version_minor;
+			out << hdr.name << " " << hdr.version_major << "." << hdr.version_minor << std::endl;
 			break;
 		}
 		case DatabaseAdapter::KeyVariable:
