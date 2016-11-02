@@ -45,29 +45,11 @@ public:
 		m_database->checkVersion();
 		if (m_database->isempty()) throw strus::runtime_error(_TXT("try to open a vector space model that is empty, need to be built first"));
 		m_config = m_database->readConfig();
-		m_lshmodel = m_database->readLshModel();
-		m_individuals = m_database->readResultSimhashVector();
-
-#ifdef STRUS_LOWLEVEL_DEBUG
-		std::cout << "config: " << m_config.tostring() << std::endl;
-		std::cout << "lsh model: " << std::endl << m_lshmodel.tostring() << std::endl;
-		std::cout << "individuals: " << std::endl;
-		std::vector<SimHash>::const_iterator ii = m_individuals.begin(), ie = m_individuals.end();
-		ConceptIndex fidx = 1;
-		for (; ii != ie; ++ii,++fidx)
+		if (m_config.with_preload)
 		{
-			std::vector<SampleIndex> members = m_conceptSampleIndexMap.getValues( fidx);
-			std::cout << ii->tostring() << ": {";
-			std::vector<SampleIndex>::const_iterator mi = members.begin(), me = members.end();
-			for (std::size_t midx=0; mi != me; ++mi,++midx)
-			{
-				if (midx) std::cout << ", ";
-				std::cout << *mi;
-			}
-			std::cout << "}" << std::endl;
+			m_lshmodel.reset( new LshModel( m_database->readLshModel()));
+			m_individuals.reset( new std::vector<SimHash>( m_database->readResultSimhashVector()));
 		}
-		std::cout << std::endl;
-#endif
 	}
 
 	virtual ~VectorSpaceModelInstance()
@@ -77,9 +59,17 @@ public:
 	{
 		try
 		{
+			if (!m_lshmodel.get())
+			{
+				m_lshmodel.reset( new LshModel( m_database->readLshModel()));
+			}
+			if (!m_individuals.get())
+			{
+				m_individuals.reset( new std::vector<SimHash>( m_database->readResultSimhashVector()));
+			}
 			std::vector<Index> rt;
-			SimHash hash( m_lshmodel.simHash( arma::normalise( arma::vec( vec))));
-			std::vector<SimHash>::const_iterator ii = m_individuals.begin(), ie = m_individuals.end();
+			SimHash hash( m_lshmodel->simHash( arma::normalise( arma::vec( vec))));
+			std::vector<SimHash>::const_iterator ii = m_individuals->begin(), ie = m_individuals->end();
 			for (std::size_t iidx=1; ii != ie; ++ii,++iidx)
 			{
 				if (ii->near( hash, m_config.simdist))
@@ -140,8 +130,12 @@ public:
 			}
 			else if (utils::caseInsensitiveEquals( name, "conceptlsh"))
 			{
-				if (index == 0 || (std::size_t)index > m_individuals.size()) throw strus::runtime_error(_TXT("concept index out of range"));
-				rt.push_back( m_individuals[ index-1].tostring());
+				if (!m_individuals.get())
+				{
+					m_individuals.reset( new std::vector<SimHash>( m_database->readResultSimhashVector()));
+				}
+				if (index == 0 || (std::size_t)index > m_individuals->size()) throw strus::runtime_error(_TXT("concept index out of range"));
+				rt.push_back( (*m_individuals)[ index-1].tostring());
 			}
 			else if (utils::caseInsensitiveEquals( name, "simrel"))
 			{
@@ -187,7 +181,18 @@ public:
 
 	virtual unsigned int nofConcepts() const
 	{
-		return m_individuals.size();
+		try
+		{
+			if (!m_individuals.get())
+			{
+				return m_database->readNofConcepts();
+			}
+			else
+			{
+				return m_individuals->size();
+			}
+		}
+		CATCH_ERROR_ARG1_MAP_RETURN( _TXT("error in instance of '%s' getting number of concepts learnt: %s"), MODULENAME, *m_errorhnd, 0);
 	}
 
 	virtual unsigned int nofFeatures() const
@@ -208,9 +213,8 @@ private:
 	ErrorBufferInterface* m_errorhnd;
 	Reference<DatabaseAdapter> m_database;
 	VectorSpaceModelConfig m_config;
-	LshModel m_lshmodel;
-	std::vector<SimHash> m_individuals;
-	
+	mutable Reference<LshModel> m_lshmodel;				//< cached model
+	mutable Reference<std::vector<SimHash> > m_individuals;		//< cached concepts
 };
 
 class SimRelationImpl
@@ -396,21 +400,6 @@ public:
 			m_database->writeNofConcepts( resultar.size());
 			m_database->writeState( 3);
 			m_database->commit();
-#ifdef STRUS_LOWLEVEL_DEBUG
-			std::cout << "model built:" << std::endl;
-			std::vector<SimHash>::const_iterator si = m_samplear.begin(), se = m_samplear.end();
-			for (unsigned int sidx=0; si != se; ++si,++sidx)
-			{
-				std::cout << "sample [" << sidx << "] " << si->tostring() << std::endl;
-			}
-			std::vector<SimHash>::const_iterator ri = resultar.begin(), re = resultar.end();
-			for (unsigned int ridx=0; ri != re; ++ri,++ridx)
-			{
-				std::cout << "result [" << ridx << "] " << ri->tostring() << std::endl;
-			}
-			std::cout << "lsh model:" << std::endl << m_lshmodel.tostring() << std::endl;
-			std::cout << "gen model:" << std::endl << m_genmodel.tostring() << std::endl;
-#endif
 			return true;
 		}
 		CATCH_ERROR_ARG1_MAP_RETURN( _TXT("error finalizing '%s' builder: %s"), MODULENAME, *m_errorhnd, false);

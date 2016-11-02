@@ -28,6 +28,7 @@ VectorSpaceModelConfig::VectorSpaceModelConfig( const VectorSpaceModelConfig& o)
 	,assignments(o.assignments)
 	,isaf(o.isaf)
 	,with_singletons(o.with_singletons)
+	,with_preload(o.with_preload)
 	{}
 
 VectorSpaceModelConfig::VectorSpaceModelConfig()
@@ -40,6 +41,7 @@ VectorSpaceModelConfig::VectorSpaceModelConfig()
 	,assignments(DefaultAssignments)
 	,isaf((float)DefaultIsaf / 100)
 	,with_singletons((bool)DefaultWithSingletons)
+	,with_preload((bool)DefaultPreload)
 	{}
 
 VectorSpaceModelConfig::VectorSpaceModelConfig( const std::string& config, ErrorBufferInterface* errorhnd)
@@ -52,6 +54,7 @@ VectorSpaceModelConfig::VectorSpaceModelConfig( const std::string& config, Error
 	,assignments(DefaultAssignments)
 	,isaf((float)DefaultIsaf / 100)
 	,with_singletons((bool)DefaultWithSingletons)
+	,with_preload((bool)DefaultPreload)
 {
 	std::string src = config;
 	if (extractStringFromConfigString( logfile, src, "logfile", errorhnd)){}
@@ -94,6 +97,7 @@ VectorSpaceModelConfig::VectorSpaceModelConfig( const std::string& config, Error
 	double val;
 	if (extractFloatFromConfigString( val, src, "isaf", errorhnd)){isaf=(float)val;}
 	if (extractBooleanFromConfigString( with_singletons, src, "singletons", errorhnd)){}
+	if (extractBooleanFromConfigString( with_preload, src, "preload", errorhnd)){}
 
 	if (dim == 0 || bits == 0 || variations == 0 || mutations == 0 || descendants == 0 || maxage == 0 || iterations == 0)
 	{
@@ -135,7 +139,8 @@ std::string VectorSpaceModelConfig::tostring() const
 	buf << "iterations=" << iterations << ";" << std::endl;
 	buf << "assignments=" << assignments << ";" << std::endl;
 	buf << "isaf=" << isaf << ";" << std::endl;
-	buf << "singletons=" << (with_singletons?"yes":"no") << std::endl;
+	buf << "singletons=" << (with_singletons?"yes":"no") << ";" << std::endl;
+	buf << "preload=" << (with_preload?"yes":"no") << std::endl;
 	return buf.str();
 }
 
