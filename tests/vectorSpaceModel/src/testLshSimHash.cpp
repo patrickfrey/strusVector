@@ -102,7 +102,7 @@ int main( int argc, const char** argv)
 		unsigned int ti=9, te=NofTests;
 		for (; ti != te; ++ti)
 		{
-			sizear[ti] = rand() % MaxSize;
+			sizear[ti] = (rand() % MaxSize + 1);
 		}
 		for (ti=0; ti != te; ++ti)
 		{

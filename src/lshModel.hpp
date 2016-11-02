@@ -32,6 +32,8 @@ public:
 	std::string serialization() const;
 	/// \brief Deserialize
 	static LshModel fromSerialization( const std::string& blob);
+	/// \brief Deserialize
+	static LshModel fromSerialization( const char* blob, std::size_t blobsize);
 
 	/// \brief Calculate similarity hash of a vector
 	/// \param[in] vec input vector

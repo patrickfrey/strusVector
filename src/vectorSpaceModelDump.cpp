@@ -8,34 +8,47 @@
 /// \brief Implementation of the contents dump of a standard vector space model storage
 /// \file vectorSpaceModelDump.cpp
 #include "vectorSpaceModelDump.hpp"
+#include "databaseAdapter.hpp"
+#include "databaseHelpers.hpp"
 #include "strus/databaseOptions.hpp"
 #include "strus/errorBufferInterface.hpp"
 #include "internationalization.hpp"
 #include "errorUtils.hpp"
 #include "utils.hpp"
 #include <string>
+#include <iostream>
+#include <sstream>
 
 using namespace strus;
 
 #define MODULENAME   "standard vector space model"
 
-VectorSpaceModelDump::VectorSpaceModelDump( const DatabaseInterface* database_, const std::string& configsrc, const std::string& keyprefix, ErrorBufferInterface* errorhnd_)
-	:m_database(database_->createClient( configsrc))
-	,m_cursor()
+VectorSpaceModelDump::VectorSpaceModelDump( const DatabaseInterface* database_, const std::string& configsrc, const std::string& keyprefix_, ErrorBufferInterface* errorhnd_)
+	:m_database(database_,configsrc,errorhnd_)
+	,m_chunk()
+	,m_keyprefix(keyprefix_)
 	,m_errorhnd(errorhnd_)
 {
-	m_cursor.reset( m_database->createCursor( DatabaseOptions()));
-	if (!m_cursor.get()) throw strus::runtime_error(_TXT("error creating database cursor"));
-	m_key = m_cursor->seekFirst( keyprefix.c_str(), keyprefix.size());
 }
 
 bool VectorSpaceModelDump::nextChunk( const char*& chunk, std::size_t& chunksize)
 {
 	try
 	{
-		return true;
+		std::ostringstream output;
+		std::size_t rowcnt = 0;
+		if (m_chunk.empty())
+		{
+			if (!m_database.dumpFirst( output, m_keyprefix)) return false;
+			rowcnt += 1;
+		}
+		while (rowcnt++ <= NofKeyValuePairsPerChunk && m_database.dumpNext( output)){}
+		m_chunk = output.str();
+		chunk = m_chunk.c_str();
+		chunksize = m_chunk.size();
+		return (chunksize != 0);
 	}
-	CATCH_ERROR_ARG1_MAP_RETURN( _TXT("error creating '%s' instance: %s"), MODULENAME, *m_errorhnd, false);
+	CATCH_ERROR_ARG1_MAP_RETURN( _TXT("error fetching next chunk of '%s' dump: %s"), MODULENAME, *m_errorhnd, false);
 }
 
 

@@ -260,9 +260,9 @@ std::string SimHash::serialization() const
 	return rt;
 }
 
-SimHash SimHash::createFromSerialization( const std::string& in)
+SimHash SimHash::fromSerialization( const char* in, std::size_t )
 {
-	uint32_t const* nw = (const uint32_t*)(void*)(in.c_str());
+	uint32_t const* nw = (const uint32_t*)(void*)(in);
 	uint32_t size_bits = ByteOrder<uint32_t>::ntoh( *nw++);
 	SimHash rt( size_bits, false);
 	std::size_t ai=0,ae=rt.arsize();
@@ -273,6 +273,11 @@ SimHash SimHash::createFromSerialization( const std::string& in)
 		rt.m_ar[ ai] = val;
 	}
 	return rt;
+}
+
+SimHash SimHash::fromSerialization( const std::string& in)
+{
+	return fromSerialization( in.c_str(), in.size());
 }
 
 #define UINT64_CONST(hi,lo) (((uint64_t)hi << 32) | (uint64_t)lo)

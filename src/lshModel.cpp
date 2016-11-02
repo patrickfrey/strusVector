@@ -303,19 +303,19 @@ std::string LshModel::serialization() const
 	return rt;
 }
 
-LshModel LshModel::fromSerialization( const std::string& dump)
+LshModel LshModel::fromSerialization( const char* blob, std::size_t blobsize)
 {
 	DumpStructHeader hdr;
-	char const* src = dump.c_str();
-	if (dump.size() < sizeof( DumpStructHeader)) throw strus::runtime_error(_TXT("lsh model dump is corrupt (dump header too small)"));
+	char const* src = blob;
+	if (blobsize < sizeof( DumpStructHeader)) throw strus::runtime_error(_TXT("lsh model dump is corrupt (dump header too small)"));
 	std::memcpy( &hdr, src, sizeof( DumpStructHeader));
 	src += sizeof( DumpStructHeader);
 	hdr.conv_ntoh();
 
 	DumpStruct st( hdr.dim, hdr.nofbits, hdr.variations);
-	if (st.contentAllocSize() > (dump.size() - (src - dump.c_str())))
+	if (st.contentAllocSize() > (blobsize - (src - blob)))
 	{
-		throw strus::runtime_error(_TXT("lsh model dump is corrupt (dump too small)"));
+		throw strus::runtime_error(_TXT("LSH model dump is corrupt (dump too small)"));
 	}
 	st.loadValues( src);
 	src += st.contentAllocSize();
@@ -346,6 +346,11 @@ LshModel LshModel::fromSerialization( const std::string& dump)
 		throw strus::runtime_error( _TXT( "lsh model dump is corrupt"));
 	}
 	return LshModel( hdr.dim, hdr.nofbits, hdr.variations, modelMatrix, rotations);
+}
+
+LshModel LshModel::fromSerialization( const std::string& dump)
+{
+	return fromSerialization( dump.c_str(), dump.size());
 }
 
 

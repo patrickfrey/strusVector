@@ -11,6 +11,7 @@
 #include "strus/databaseInterface.hpp"
 #include "strus/databaseClientInterface.hpp"
 #include "strus/databaseTransactionInterface.hpp"
+#include "strus/databaseCursorInterface.hpp"
 #include "strus/reference.hpp"
 #include "strus/base/stdint.h"
 #include "vectorSpaceModelConfig.hpp"
@@ -21,6 +22,7 @@
 #include "stringList.hpp"
 #include <vector>
 #include <string>
+#include <iostream>
 
 namespace strus {
 
@@ -86,6 +88,9 @@ public:
 
 	std::string config() const		{return m_database->config();}
 
+	bool dumpFirst( std::ostream& out, const std::string& keyprefix_);
+	bool dumpNext( std::ostream& out);
+
 public:
 	enum KeyPrefix
 	{
@@ -119,9 +124,12 @@ private:
 
 	void deleteSubTree( const KeyPrefix& prefix);
 
+	void dumpKeyValue( std::ostream& out, const strus::DatabaseCursorInterface::Slice& key, const strus::DatabaseCursorInterface::Slice& value);
+
 private:
 	Reference<DatabaseClientInterface> m_database;
 	Reference<DatabaseTransactionInterface> m_transaction;
+	Reference<DatabaseCursorInterface> m_cursor;
 	ErrorBufferInterface* m_errorhnd;
 };
 

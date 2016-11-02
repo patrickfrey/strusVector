@@ -16,7 +16,10 @@
 #include "strus/databaseCursorInterface.hpp"
 #include "strus/errorBufferInterface.hpp"
 #include "internationalization.hpp"
+#include "simGroup.hpp"
 #include <cstring>
+#include <iostream>
+#include <sstream>
 
 using namespace strus;
 
@@ -214,19 +217,19 @@ static void print_value_seq( const void* sq, unsigned int sqlen)
 #endif
 
 template <typename ScalarType>
-static std::vector<ScalarType> vectorFromSerialization( const std::string& blob)
+static std::vector<ScalarType> vectorFromSerialization( const char* blob, std::size_t blobsize)
 {
 #ifdef STRUS_LOWLEVEL_DEBUG
 	printf("read vector");
 #endif
 	std::vector<ScalarType> rt;
-	rt.reserve( blob.size() / sizeof(ScalarType));
-	if (blob.size() % sizeof(ScalarType) != 0)
+	rt.reserve( blobsize / sizeof(ScalarType));
+	if (blobsize % sizeof(ScalarType) != 0)
 	{
 		throw strus::runtime_error(_TXT("corrupt data in vector serialization"));
 	}
-	ScalarType const* ri = (const ScalarType*)blob.c_str();
-	const ScalarType* re = ri + blob.size() / sizeof(ScalarType);
+	ScalarType const* ri = (const ScalarType*)blob;
+	const ScalarType* re = ri + blobsize / sizeof(ScalarType);
 	for (; ri != re; ++ri)
 	{
 		rt.push_back( ByteOrder<ScalarType>::ntoh( *ri));
@@ -238,6 +241,12 @@ static std::vector<ScalarType> vectorFromSerialization( const std::string& blob)
 	printf("\n");
 #endif
 	return rt;
+}
+
+template <typename ScalarType>
+static std::vector<ScalarType> vectorFromSerialization( const std::string& blob)
+{
+	return vectorFromSerialization<ScalarType>( blob.c_str(), blob.size());
 }
 
 template <typename ScalarType>
@@ -391,7 +400,7 @@ SimHash DatabaseAdapter::readSimhash( const KeyPrefix& prefix, const SampleIndex
 			throw strus::runtime_error(_TXT("accessing sim hash value of undefined feature"));
 		}
 	}
-	return SimHash::createFromSerialization( content);
+	return SimHash::fromSerialization( content);
 }
 
 std::vector<SimHash> DatabaseAdapter::readSimhashVector( const KeyPrefix& prefix) const
@@ -409,7 +418,7 @@ std::vector<SimHash> DatabaseAdapter::readSimhashVector( const KeyPrefix& prefix
 		key_scanner[ sidx];
 		if (sidx != (SampleIndex)rt.size()+1) throw strus::runtime_error( _TXT("keys not ascending in '%s' structure"), "simhash");
 
-		SimHash vec = SimHash::createFromSerialization( cursor->value());
+		SimHash vec = SimHash::fromSerialization( cursor->value());
 		rt.push_back( vec);
 		slice = cursor->seekNext();
 	}
@@ -549,19 +558,12 @@ SimRelationMap DatabaseAdapter::readSimRelationMap() const
 		key_scanner[ sidx];
 		--sidx;
 
-		DatabaseCursorInterface::Slice content = cursor->value();
-		char const* ci = content.ptr();
-		const char* ce = ci + content.size();
-		if ((ce - ci) % (sizeof(SampleIndex)+sizeof(unsigned short)) != 0)
-		{
-			throw strus::runtime_error(_TXT("corrupt row of similarity relation map"));
-		}
+		DatabaseValueScanner value_scanner( cursor->value().ptr(), cursor->value().size());
 		std::vector<SimRelationMap::Element> elems;
-		for (; ci < ce; ci += sizeof(SampleIndex)+sizeof(unsigned short))
+		while (!value_scanner.eof())
 		{
 			SampleIndex col;
 			unsigned short simdist;
-			DatabaseValueScanner value_scanner( ci, (sizeof(SampleIndex)+sizeof(unsigned short)));
 			value_scanner[ col][ simdist];
 			elems.push_back( SimRelationMap::Element( col, simdist));
 		}
@@ -587,9 +589,7 @@ std::vector<SimRelationMap::Element> DatabaseAdapter::readSimRelations( const Sa
 	}
 	else
 	{
-		char const* ci = content.c_str();
-		const char* ce = ci + content.size();
-		DatabaseValueScanner value_scanner( ci, ce-ci);
+		DatabaseValueScanner value_scanner( content.c_str(), content.size());
 		std::vector<SimRelationMap::Element> rt;
 		while (!value_scanner.eof())
 		{
@@ -824,4 +824,158 @@ void DatabaseAdapter::deleteLshModel()
 {
 	deleteSubTree( KeyLshModel);
 }
+
+void DatabaseAdapter::dumpKeyValue( std::ostream& out, const strus::DatabaseCursorInterface::Slice& key, const strus::DatabaseCursorInterface::Slice& value)
+{
+	switch (key.ptr()[0])
+	{
+		case DatabaseAdapter::KeyVersion:
+		{
+			VectorSpaceModelHdr hdr;
+			if (value.size() < sizeof(hdr)) throw strus::runtime_error(_TXT("unknown version format"));
+			std::memcpy( &hdr, value.ptr(), sizeof(hdr));
+			hdr.ntoh();
+			out << hdr.name << " " << hdr.version_major << "." << hdr.version_minor;
+			break;
+		}
+		case DatabaseAdapter::KeyVariable:
+		{
+			uint64_t varvalue;
+			DatabaseValueScanner scanner( value.ptr(), value.size());
+			scanner[ varvalue];
+			out << key.ptr()+1 << " " << varvalue;
+			break;
+		}
+		case DatabaseAdapter::KeySampleVector:
+		{
+			SampleIndex sidx;
+			DatabaseKeyScanner scanner( key.ptr()+1, key.size()-1);
+			scanner[ sidx];
+			out << (sidx-1);
+			std::vector<double> vec = vectorFromSerialization<double>( value.ptr(), value.size());
+			std::vector<double>::const_iterator vi = vec.begin(), ve = vec.end();
+			for (; vi != ve; ++vi)
+			{
+				out << " " << *vi;
+			}
+			break;
+		}
+		case DatabaseAdapter::KeySampleName:
+		{
+			SampleIndex sidx;
+			DatabaseKeyScanner scanner( key.ptr()+1, key.size()-1);
+			scanner[ sidx];
+			out << (sidx-1) << " " << value.ptr();
+			break;
+		}
+		case DatabaseAdapter::KeySampleNameInv:
+		{
+			uint32_t sidx;
+			DatabaseValueScanner scanner( value.ptr(), value.size());
+			scanner[ sidx];
+			out << (key.ptr()+1) << " " << (sidx-1);
+			break;
+		}
+		case DatabaseAdapter::KeySampleSimHash:
+		{
+			SampleIndex sidx;
+			DatabaseKeyScanner scanner( key.ptr()+1, key.size()-1);
+			scanner[ sidx];
+			SimHash sh = SimHash::fromSerialization( value.ptr(), value.size());
+			out << (sidx-1) << " " << sh.tostring();
+			break;
+		}
+		case DatabaseAdapter::KeyResultSimHash:
+		{
+			SampleIndex sidx;
+			DatabaseKeyScanner scanner( key.ptr()+1, key.size()-1);
+			scanner[ sidx];
+			SimHash sh = SimHash::fromSerialization( value.ptr(), value.size());
+			out << sidx << " " << sh.tostring();
+			break;
+		}
+		case DatabaseAdapter::KeyConfig:
+		{
+			out << std::string(value);
+			break;
+		}
+		case DatabaseAdapter::KeyLshModel:
+		{
+			LshModel lshmodel = LshModel::fromSerialization( value.ptr(), value.size());
+			out << std::endl << lshmodel.tostring();
+			break;
+		}
+		case DatabaseAdapter::KeySimRelationMap:
+		{
+			SampleIndex sidx;
+			DatabaseKeyScanner scanner( key.ptr()+1, key.size()-1);
+			scanner[ sidx];
+			out << (sidx-1);
+	
+			DatabaseValueScanner value_scanner( value.ptr(), value.size());
+			std::vector<SimRelationMap::Element> rt;
+			while (!value_scanner.eof())
+			{
+				SampleIndex col;
+				unsigned short simdist;
+				value_scanner[ col][ simdist];
+				out << " " << col << ":" << simdist;
+			}
+			break;
+		}
+		case DatabaseAdapter::KeySampleConceptIndexMap:
+		{
+			SampleIndex sidx;
+			DatabaseKeyScanner scanner( key.ptr()+1, key.size()-1);
+			scanner[ sidx];
+			out << (sidx-1);
+
+			std::vector<ConceptIndex> far = vectorFromSerialization<ConceptIndex>( value);
+			std::vector<ConceptIndex>::const_iterator fi = far.begin(), fe = far.end();
+			for (; fi != fe; ++fi)
+			{
+				out << " " << *fi;
+			}
+			break;
+		}
+		case DatabaseAdapter::KeyConceptSampleIndexMap:
+		{
+			ConceptIndex sidx;
+			DatabaseKeyScanner scanner( key.ptr()+1, key.size()-1);
+			scanner[ sidx];
+			out << sidx;
+
+			std::vector<ConceptIndex> far = vectorFromSerialization<ConceptIndex>( value);
+			std::vector<ConceptIndex>::const_iterator fi = far.begin(), fe = far.end();
+			for (; fi != fe; ++fi)
+			{
+				out << " " << *fi;
+			}
+			break;
+		}
+		default:
+		{
+			throw strus::runtime_error( _TXT( "illegal data base key prefix for this vector space model storage"));
+		}
+	}
+}
+
+bool DatabaseAdapter::dumpFirst( std::ostream& out, const std::string& keyprefix)
+{
+	m_cursor.reset( m_database->createCursor( DatabaseOptions()));
+	if (!m_cursor.get()) throw strus::runtime_error(_TXT("error creating database cursor"));
+	strus::DatabaseCursorInterface::Slice key = m_cursor->seekFirst( keyprefix.c_str(), keyprefix.size());
+	if (!key.defined()) return false;
+	dumpKeyValue( out, key, m_cursor->value());
+	return true;
+}
+
+bool DatabaseAdapter::dumpNext( std::ostream& out)
+{
+	strus::DatabaseCursorInterface::Slice key = m_cursor->seekNext();
+	if (!key.defined()) return false;
+	dumpKeyValue( out, key, m_cursor->value());
+	return true;
+}
+
 

@@ -14,6 +14,7 @@
 #include "strus/databaseClientInterface.hpp"
 #include "strus/databaseCursorInterface.hpp"
 #include "strus/reference.hpp"
+#include "databaseAdapter.hpp"
 #include <string>
 
 namespace strus
@@ -26,16 +27,18 @@ class VectorSpaceModelDump
 	:public VectorSpaceModelDumpInterface
 {
 public:
-	VectorSpaceModelDump( const DatabaseInterface* database_, const std::string& configsrc, const std::string& keyprefix, ErrorBufferInterface* errorhnd_);
+	VectorSpaceModelDump( const DatabaseInterface* database_, const std::string& configsrc, const std::string& keyprefix_, ErrorBufferInterface* errorhnd_);
 	virtual ~VectorSpaceModelDump(){}
 
 	virtual bool nextChunk( const char*& chunk, std::size_t& chunksize);
 
+	/// \brief How many key/value pairs to return in one chunk
+	enum {NofKeyValuePairsPerChunk=256};
+
 private:
-	const DatabaseClientInterface* m_database;
-	Reference<DatabaseCursorInterface> m_cursor;
-	DatabaseCursorInterface::Slice m_key;
+	DatabaseAdapter m_database;
 	std::string m_chunk;
+	std::string m_keyprefix;
 	ErrorBufferInterface* m_errorhnd;			///< error buffer for exception free interface
 };
 
