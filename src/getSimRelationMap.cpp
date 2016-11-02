@@ -10,6 +10,7 @@
 #include "simGroup.hpp"
 #include "utils.hpp"
 #include "random.hpp"
+#include "lshBench.hpp"
 #include "strus/base/string_format.hpp"
 #include "strus/reference.hpp"
 #include <memory>
@@ -193,6 +194,7 @@ private:
 	SimRelationMap m_simrelmap;
 	unsigned int m_threadid;
 };
+
 
 SimRelationMap strus::getSimRelationMap(
 		const std::vector<SimHash>& samplear, SampleIndex idx_begin, SampleIndex idx_end,

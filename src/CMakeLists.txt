@@ -13,9 +13,11 @@ set(
 	simGroup.cpp
 	sampleSimGroupMap.cpp
 	simRelationMap.cpp
+	simRelationMapBuilder.cpp
 	getSimRelationMap.cpp
 	getSimhashValues.cpp
 	lshModel.cpp
+	lshBench.cpp
 	genModel.cpp
 	databaseAdapter.cpp
 	vectorSpaceModelConfig.cpp

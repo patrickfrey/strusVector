@@ -115,6 +115,7 @@ public:
 	/// \brief Deserialize
 	static SimHash fromSerialization( const std::string& blob);
 
+	const uint64_t* ar() const			{return m_ar;}
 	/// \brief Get the size of the array used to represent the sim hash value
 	std::size_t arsize() const			{return (m_size+NofElementBits-1)/NofElementBits;}
 	/// \brief Get the size of the array used to represent the sim hash value
