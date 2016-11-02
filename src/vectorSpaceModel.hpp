@@ -17,9 +17,12 @@ class VectorSpaceModelInstanceInterface;
 /// \brief Forward declaration
 class VectorSpaceModelBuilderInterface;
 /// \brief Forward declaration
+class VectorSpaceModelDumpInterface;
+/// \brief Forward declaration
 class ErrorBufferInterface;
 /// \brief Forward declaration
 class DatabaseInterface;
+
 
 /// \brief Standart vector space model based on LHS with sampling of representants with a genetic algorithm
 class VectorSpaceModel
@@ -35,6 +38,7 @@ public:
 
 	virtual VectorSpaceModelInstanceInterface* createInstance( const std::string& configsrc, const DatabaseInterface* database) const;
 	virtual VectorSpaceModelBuilderInterface* createBuilder( const std::string& configsrc, const DatabaseInterface* database) const;
+	virtual VectorSpaceModelDumpInterface* createDump( const std::string& configsource, const DatabaseInterface* database, const std::string& keyprefix) const;
 
 private:
 	ErrorBufferInterface* m_errorhnd;	///< buffer for reporting errors

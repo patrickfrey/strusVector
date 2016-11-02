@@ -7,6 +7,7 @@
  */
 /// \brief Implementation of the vector space model interface
 #include "vectorSpaceModel.hpp"
+#include "vectorSpaceModelDump.hpp"
 #include "strus/errorBufferInterface.hpp"
 #include "strus/vectorSpaceModelInstanceInterface.hpp"
 #include "strus/vectorSpaceModelBuilderInterface.hpp"
@@ -132,6 +133,8 @@ public:
 			std::vector<std::string> rt;
 			if (utils::caseInsensitiveEquals( name, "featurelsh"))
 			{
+				if (index < 0) throw strus::runtime_error(_TXT("feature index out of range"));
+
 				SimHash simhash = m_database->readSampleSimhash( index);
 				rt.push_back( simhash.tostring());
 			}
@@ -141,11 +144,13 @@ public:
 				{
 					m_individuals.reset( new std::vector<SimHash>( m_database->readResultSimhashVector()));
 				}
-				if (index == 0 || (std::size_t)index > m_individuals->size()) throw strus::runtime_error(_TXT("concept index out of range"));
+				if (index <= 0 || (std::size_t)index > m_individuals->size()) throw strus::runtime_error(_TXT("concept index out of range"));
 				rt.push_back( (*m_individuals)[ index-1].tostring());
 			}
 			else if (utils::caseInsensitiveEquals( name, "simrel"))
 			{
+				if (index < 0) throw strus::runtime_error(_TXT("feature index out of range"));
+
 				std::vector<SimRelationMap::Element> elems = m_database->readSimRelations( index);
 				std::vector<SimRelationMap::Element>::const_iterator ei = elems.begin(), ee = elems.end();
 				for (; ei != ee; ++ei)
@@ -482,4 +487,12 @@ VectorSpaceModelBuilderInterface* VectorSpaceModel::createBuilder( const std::st
 	CATCH_ERROR_ARG1_MAP_RETURN( _TXT("error creating '%s' builder: %s"), MODULENAME, *m_errorhnd, 0);
 }
 
+VectorSpaceModelDumpInterface* VectorSpaceModel::createDump( const std::string& configsource, const DatabaseInterface* database, const std::string& keyprefix) const
+{
+	try
+	{
+		return new VectorSpaceModelDump( database, configsource, keyprefix, m_errorhnd);
+	}
+	CATCH_ERROR_ARG1_MAP_RETURN( _TXT("error creating '%s' builder: %s"), MODULENAME, *m_errorhnd, 0);
+}
 

@@ -19,6 +19,7 @@ set(
 	genModel.cpp
 	databaseAdapter.cpp
 	vectorSpaceModelConfig.cpp
+	vectorSpaceModelDump.cpp
 	vectorSpaceModel.cpp
 )
 
