@@ -217,7 +217,7 @@ static void writeDatabase( const strus::VectorSpaceModelConfig& config, const Te
 		database.writeSample( si, dataset.sampleNames[si], dataset.sampleVectors[si], dataset.sampleSimHashs[si]);
 	}
 	database.writeResultSimhashVector( dataset.sampleSimHashs);
-	database.writeSimRelationMap( dataset.simrelmap, 0);
+	database.writeSimRelationMap( dataset.simrelmap);
 	database.writeSampleConceptIndexMap( dataset.sfmap);
 	database.writeConceptSampleIndexMap( dataset.fsmap);
 	database.writeConfig( config);
