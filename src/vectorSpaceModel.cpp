@@ -177,7 +177,7 @@ public:
 					for (; vi != ve; ++vi)
 					{
 						std::ostringstream elemstr;
-						elemstr << vardefs[index].first << " " << vardefs[index].second;
+						elemstr << vi->first << " " << vi->second;
 						rt.push_back( elemstr.str());
 					}
 				}
