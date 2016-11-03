@@ -187,6 +187,7 @@ std::vector<std::pair<std::string,uint64_t> > DatabaseAdapter::readVariables() c
 		DatabaseValueScanner value_scanner( curvalue.ptr(), curvalue.size());
 		value_scanner[ val];
 		rt.push_back( std::pair<std::string,uint64_t>( name, val));
+		slice = cursor->seekNext();
 	}
 	return rt;
 }
