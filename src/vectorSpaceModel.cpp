@@ -311,10 +311,17 @@ public:
 			unsigned int nofFeaturesAdded = 0;
 			{
 				utils::ScopedLock lock( m_mutex);
-				resetSimRelationMap();
-				m_vecar.push_back( vec);
-				m_namear.push_back( name);
-				nofFeaturesAdded = m_vecar.size();
+				if (m_vecar.size() < m_config.maxfeatures)
+				{
+					resetSimRelationMap();
+					m_vecar.push_back( vec);
+					m_namear.push_back( name);
+					nofFeaturesAdded = m_vecar.size();
+				}
+				else
+				{
+					return;
+				}
 			}
 			if (m_config.commitsize && nofFeaturesAdded >= m_config.commitsize)
 			{

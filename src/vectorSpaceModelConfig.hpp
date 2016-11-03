@@ -8,7 +8,9 @@
 /// \brief Configuration structure for the strus standard vector space model
 #ifndef _STRUS_VECTOR_SPACE_MODEL_CONFIG_HPP_INCLUDED
 #define _STRUS_VECTOR_SPACE_MODEL_CONFIG_HPP_INCLUDED
+#include "simGroup.hpp"
 #include <string>
+#include <limits>
 
 namespace strus {
 
@@ -35,6 +37,7 @@ struct VectorSpaceModelConfig
 		DefaultMaxAge = 20,
 		DefaultIterations = 20,
 		DefaultAssignments = 7,
+		DefaultMaxFeatures = (1<<31),
 		DefaultIsaf = 60,
 		DefaultWithSingletons = 0,
 		DefaultWithProbSim = 1
@@ -74,6 +77,7 @@ struct VectorSpaceModelConfig
 	unsigned int maxage;		///< a factor used to slow down mutation rate
 	unsigned int iterations;	///< number of iterations in the loop
 	unsigned int assignments;	///< maximum number of group assignments for each input vector
+	unsigned int maxfeatures;	///< restrict the number of features loaded
 	float isaf;			///< fraction of elements of a superset that has to be in a subset for declaring the subset as dependent (is a) of the superset
 	bool with_singletons;		///< true, if singleton vectors thould also get into the result
 	bool with_probsim;		///< true, if probabilistic function is used as prefilter for the candidates of the similarity matrix (faster)

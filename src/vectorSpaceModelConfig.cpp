@@ -26,6 +26,7 @@ VectorSpaceModelConfig::VectorSpaceModelConfig( const VectorSpaceModelConfig& o)
 	,mutations(o.mutations),votes(o.votes)
 	,descendants(o.descendants),maxage(o.maxage),iterations(o.iterations)
 	,assignments(o.assignments)
+	,maxfeatures(o.maxfeatures)
 	,isaf(o.isaf)
 	,with_singletons(o.with_singletons)
 	,with_probsim(o.with_probsim)
@@ -39,6 +40,7 @@ VectorSpaceModelConfig::VectorSpaceModelConfig()
 	,mutations(DefaultMutations),votes(DefaultMutationVotes)
 	,descendants(DefaultDescendants),maxage(DefaultMaxAge),iterations(DefaultIterations)
 	,assignments(DefaultAssignments)
+	,maxfeatures(DefaultMaxFeatures)
 	,isaf((float)DefaultIsaf / 100)
 	,with_singletons((bool)DefaultWithSingletons)
 	,with_probsim((bool)DefaultWithProbSim)
@@ -52,6 +54,7 @@ VectorSpaceModelConfig::VectorSpaceModelConfig( const std::string& config, Error
 	,mutations(DefaultMutations),votes(DefaultMutationVotes)
 	,descendants(DefaultDescendants),maxage(DefaultMaxAge),iterations(DefaultIterations)
 	,assignments(DefaultAssignments)
+	,maxfeatures(DefaultMaxFeatures)
 	,isaf((float)DefaultIsaf / 100)
 	,with_singletons((bool)DefaultWithSingletons)
 	,with_probsim((bool)DefaultWithProbSim)
@@ -94,6 +97,7 @@ VectorSpaceModelConfig::VectorSpaceModelConfig( const std::string& config, Error
 	}
 	if (extractUIntFromConfigString( maxage, src, "maxage", errorhnd)){}
 	if (extractUIntFromConfigString( assignments, src, "assignments", errorhnd)){}
+	if (extractUIntFromConfigString( maxfeatures, src, "maxfeatures", errorhnd)){}
 	double val;
 	if (extractFloatFromConfigString( val, src, "isaf", errorhnd)){isaf=(float)val;}
 	if (extractBooleanFromConfigString( with_singletons, src, "singletons", errorhnd)){}
@@ -138,6 +142,7 @@ std::string VectorSpaceModelConfig::tostring() const
 	buf << "maxage=" << maxage << ";" << std::endl;
 	buf << "iterations=" << iterations << ";" << std::endl;
 	buf << "assignments=" << assignments << ";" << std::endl;
+	buf << "maxfeatures=" << maxfeatures << ";" << std::endl;
 	buf << "isaf=" << isaf << ";" << std::endl;
 	buf << "singletons=" << (with_singletons?"yes":"no") << ";" << std::endl;
 	return buf.str();
