@@ -266,8 +266,9 @@ static bool compare( const std::vector<strus::SimHash>& v1, const std::vector<st
 
 static bool compare( const strus::SimRelationMap& m1, const strus::SimRelationMap& m2)
 {
-	if (m1.nofSamples() != m2.nofSamples()) return false;
-	strus::Index si = 0, se = m1.nofSamples();
+	if (m1.endIndex() != m2.endIndex()) return false;
+	if (m1.startIndex() != m2.startIndex()) return false;
+	strus::Index si = m1.startIndex(), se = m1.endIndex();
 	for (; si != se; ++si)
 	{
 		strus::SimRelationMap::Row r1 = m1.row( si);

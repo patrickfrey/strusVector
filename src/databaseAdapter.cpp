@@ -619,21 +619,16 @@ void DatabaseAdapter::writeSimRelationRow( const SampleIndex& sidx, const SimRel
 	m_transaction->write( key.c_str(), key.size(), content.c_str(), content.size());
 }
 
-void DatabaseAdapter::writeSimRelationMap( const SimRelationMap& simrelmap, unsigned int commitsize)
+void DatabaseAdapter::writeSimRelationMap( const SimRelationMap& simrelmap)
 {
-	SampleIndex si = 0, se = simrelmap.nofSamples();
+	SampleIndex si = simrelmap.startIndex(), se = simrelmap.endIndex();
 	for (; si != se; ++si)
 	{
 		SimRelationMap::Row row = simrelmap.row( si);
 		if (row.begin() == row.end()) continue;
 
 		writeSimRelationRow( si, row);
-		if (commitsize && (si+1) % commitsize == 0)
-		{
-			commit();
-		}
 	}
-	if (commitsize) commit();
 }
 
 std::vector<ConceptIndex> DatabaseAdapter::readSampleConceptIndices( const SampleIndex& sidx) const

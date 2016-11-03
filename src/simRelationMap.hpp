@@ -13,6 +13,7 @@
 #include "strus/base/stdint.h"
 #include <vector>
 #include <map>
+#include <limits>
 
 namespace strus {
 
@@ -49,10 +50,10 @@ public:
 public:
 	/// \brief Default constructor
 	SimRelationMap()
-		:m_ar(),m_rowdescrmap(),m_nofSamples(0){}
+		:m_ar(),m_rowdescrmap(),m_startIndex(std::numeric_limits<SampleIndex>::max()),m_endIndex(0){}
 	/// \brief Copy constructor
 	SimRelationMap( const SimRelationMap& o)
-		:m_ar(o.m_ar),m_rowdescrmap(o.m_rowdescrmap),m_nofSamples(o.m_nofSamples){}
+		:m_ar(o.m_ar),m_rowdescrmap(o.m_rowdescrmap),m_startIndex(o.m_startIndex),m_endIndex(o.m_endIndex){}
 
 	/// \brief Access structure for iterating on a row
 	class Row
@@ -98,10 +99,13 @@ public:
 		return m_ar.size();
 	}
 
-	/// \brief Get one more than the maximum number of a sample inserted
-	SampleIndex nofSamples() const
+	SampleIndex endIndex() const
 	{
-		return m_nofSamples;
+		return m_endIndex;
+	}
+	SampleIndex startIndex() const
+	{
+		return (m_startIndex > m_endIndex) ? m_endIndex : m_startIndex;
 	}
 
 	/// \brief Get a similarity relation map containing all elements (b,a) for this containing (a,b)
@@ -117,7 +121,8 @@ public:
 	{
 		m_ar.clear();
 		m_rowdescrmap.clear();
-		m_nofSamples = 0;
+		m_startIndex = std::numeric_limits<SampleIndex>::max();
+		m_endIndex = 0;
 	}
 
 private:
@@ -138,7 +143,8 @@ private:
 private:
 	std::vector<Element> m_ar;
 	RowDescrMap m_rowdescrmap;
-	SampleIndex m_nofSamples;
+	SampleIndex m_startIndex;
+	SampleIndex m_endIndex;
 };
 
 }//namespace

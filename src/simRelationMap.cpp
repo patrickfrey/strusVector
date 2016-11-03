@@ -65,7 +65,8 @@ std::vector<SimRelationMap::Element> SimRelationMap::selectElementSubset( const 
 
 void SimRelationMap::addRow( const SampleIndex& index, std::vector<Element>::const_iterator ai, const std::vector<Element>::const_iterator& ae)
 {
-	if (index >= m_nofSamples) m_nofSamples = index+1;
+	if (index >= m_endIndex) m_endIndex = index+1;
+	if (index < m_startIndex) m_startIndex = index;
 	std::size_t aridx = m_ar.size();
 	if (m_rowdescrmap.find( index) != m_rowdescrmap.end()) throw strus::runtime_error(_TXT("sim relation map row defined twice"));
 	std::size_t asize = ae - ai;
@@ -97,7 +98,7 @@ SimRelationMap SimRelationMap::mirror() const
 {
 	SimRelationMap rt;
 	std::set<SimRelationCell> simRelationMatrix;
-	SampleIndex si = 0, se = nofSamples();
+	SampleIndex si = startIndex(), se = endIndex();
 	for (; si != se; ++si)
 	{
 		Row row_ = row( si);

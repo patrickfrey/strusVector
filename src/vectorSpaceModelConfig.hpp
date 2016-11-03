@@ -36,7 +36,8 @@ struct VectorSpaceModelConfig
 		DefaultIterations = 20,
 		DefaultAssignments = 7,
 		DefaultIsaf = 60,
-		DefaultWithSingletons = 0
+		DefaultWithSingletons = 0,
+		DefaultWithProbSim = 1
 	};
 	VectorSpaceModelConfig( const VectorSpaceModelConfig& o);
 	VectorSpaceModelConfig();
@@ -66,7 +67,7 @@ struct VectorSpaceModelConfig
 	unsigned int raddist;		///< centroid radius distance (smaller than simdist)
 	unsigned int eqdist;		///< maximum LSH edit distance considered as equal
 	unsigned int maxsimsam;		///< maximum number of nearest neighbours put input similarity relation map
-	unsigned int rndsimsam;		///< number of additional random samples put into similarity relation map, if 'maxsimsam' is specified
+	unsigned int rndsimsam;		///< select number of random samples put into similarity relation map besides 'maxsimsam'
 	unsigned int mutations;		///< number of mutations when a genetic code is changed
 	unsigned int votes;		///< number of votes to decide in which direction a mutation should go
 	unsigned int descendants;	///< number of descendants to evaluate the fitest of when trying to change an individual
@@ -75,6 +76,7 @@ struct VectorSpaceModelConfig
 	unsigned int assignments;	///< maximum number of group assignments for each input vector
 	float isaf;			///< fraction of elements of a superset that has to be in a subset for declaring the subset as dependent (is a) of the superset
 	bool with_singletons;		///< true, if singleton vectors thould also get into the result
+	bool with_probsim;		///< true, if probabilistic function is used as prefilter for the candidates of the similarity matrix (faster)
 };
 
 }//namespace

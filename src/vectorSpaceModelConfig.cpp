@@ -28,6 +28,7 @@ VectorSpaceModelConfig::VectorSpaceModelConfig( const VectorSpaceModelConfig& o)
 	,assignments(o.assignments)
 	,isaf(o.isaf)
 	,with_singletons(o.with_singletons)
+	,with_probsim(o.with_probsim)
 	{}
 
 VectorSpaceModelConfig::VectorSpaceModelConfig()
@@ -40,6 +41,7 @@ VectorSpaceModelConfig::VectorSpaceModelConfig()
 	,assignments(DefaultAssignments)
 	,isaf((float)DefaultIsaf / 100)
 	,with_singletons((bool)DefaultWithSingletons)
+	,with_probsim((bool)DefaultWithProbSim)
 	{}
 
 VectorSpaceModelConfig::VectorSpaceModelConfig( const std::string& config, ErrorBufferInterface* errorhnd)
@@ -52,6 +54,7 @@ VectorSpaceModelConfig::VectorSpaceModelConfig( const std::string& config, Error
 	,assignments(DefaultAssignments)
 	,isaf((float)DefaultIsaf / 100)
 	,with_singletons((bool)DefaultWithSingletons)
+	,with_probsim((bool)DefaultWithProbSim)
 {
 	std::string src = config;
 	if (extractStringFromConfigString( logfile, src, "logfile", errorhnd)){}
@@ -94,6 +97,7 @@ VectorSpaceModelConfig::VectorSpaceModelConfig( const std::string& config, Error
 	double val;
 	if (extractFloatFromConfigString( val, src, "isaf", errorhnd)){isaf=(float)val;}
 	if (extractBooleanFromConfigString( with_singletons, src, "singletons", errorhnd)){}
+	if (extractBooleanFromConfigString( with_probsim, src, "probsim", errorhnd)){}
 
 	if (dim == 0 || bits == 0 || variations == 0 || mutations == 0 || descendants == 0 || maxage == 0 || iterations == 0)
 	{

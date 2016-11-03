@@ -65,7 +65,7 @@ public:
 	void writeState( unsigned int state);
 	void writeSample( const SampleIndex& sidx, const std::string& name, const Vector& vec, const SimHash& simHash);
 	void writeResultSimhashVector( const std::vector<SimHash>& ar);
-	void writeSimRelationMap( const SimRelationMap& simrelmap, unsigned int commitsize);
+	void writeSimRelationMap( const SimRelationMap& simrelmap);
 	void writeSimRelationRow( const SampleIndex& sidx, const SimRelationMap::Row& row);
 	void writeSampleConceptIndexMap( const SampleConceptIndexMap& sfmap);
 	void writeConceptSampleIndexMap( const ConceptSampleIndexMap& fsmap);
