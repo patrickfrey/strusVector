@@ -45,6 +45,7 @@ public:
 	SampleIndex readNofSamples() const;
 	ConceptIndex readNofConcepts() const;
 	unsigned int readState() const;
+	std::vector<std::pair<std::string,uint64_t> > readVariables() const;
 
 	SimHash readSampleSimhash( const SampleIndex& sidx) const;
 	std::vector<SimHash> readSampleSimhashVector() const;

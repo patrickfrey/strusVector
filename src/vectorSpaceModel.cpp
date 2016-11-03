@@ -161,6 +161,27 @@ public:
 					rt.push_back( elemstr.str());
 				}
 			}
+			else if (utils::caseInsensitiveEquals( name, "variable"))
+			{
+				std::vector<std::pair<std::string,uint64_t> > vardefs = m_database->readVariables();
+				if (index >= 0)
+				{
+					if ((std::size_t)index >= vardefs.size()) throw strus::runtime_error(_TXT("variable index out of range"));
+					std::ostringstream elemstr;
+					elemstr << vardefs[index].first << " " << vardefs[index].second;
+					rt.push_back( elemstr.str());
+				}
+				else
+				{
+					std::vector<std::pair<std::string,uint64_t> >::const_iterator vi = vardefs.begin(), ve = vardefs.end();
+					for (; vi != ve; ++vi)
+					{
+						std::ostringstream elemstr;
+						elemstr << vardefs[index].first << " " << vardefs[index].second;
+						rt.push_back( elemstr.str());
+					}
+				}
+			}
 			else
 			{
 				throw strus::runtime_error(_TXT("unknonwn feature attribute name '%s'"), name.c_str());
@@ -178,6 +199,7 @@ public:
 			rt.push_back( "featurelsh");
 			rt.push_back( "conceptlsh");
 			rt.push_back( "simrel");
+			rt.push_back( "variable");
 			return rt;
 		}
 		CATCH_ERROR_ARG1_MAP_RETURN( _TXT("error in instance of '%s' getting feature attribute names: %s"), MODULENAME, *m_errorhnd, std::vector<std::string>());

@@ -171,6 +171,26 @@ unsigned int DatabaseAdapter::readVariable( const char* name) const
 	return (unsigned int)rt;
 }
 
+std::vector<std::pair<std::string,uint64_t> > DatabaseAdapter::readVariables() const
+{
+	std::vector<std::pair<std::string,uint64_t> > rt;
+	std::auto_ptr<DatabaseCursorInterface> cursor( m_database->createCursor( DatabaseOptions()));
+	if (!cursor.get()) throw strus::runtime_error(_TXT("failed to create cursor to read variables: %s"), m_errorhnd->fetchError());
+
+	DatabaseKeyBuffer key( KeyVariable);
+	DatabaseCursorInterface::Slice slice = cursor->seekFirst( key.c_str(), key.size());
+	while (slice.defined())
+	{
+		std::string name( slice.ptr()+1, slice.size()-1);
+		uint64_t val;
+		DatabaseCursorInterface::Slice curvalue = cursor->value();
+		DatabaseValueScanner value_scanner( curvalue.ptr(), curvalue.size());
+		value_scanner[ val];
+		rt.push_back( std::pair<std::string,uint64_t>( name, val));
+	}
+	return rt;
+}
+
 void DatabaseAdapter::writeNofSamples( const SampleIndex& nofSamples)
 {
 	if (!m_transaction.get()) beginTransaction();
@@ -558,7 +578,8 @@ SimRelationMap DatabaseAdapter::readSimRelationMap() const
 		key_scanner[ sidx];
 		--sidx;
 
-		DatabaseValueScanner value_scanner( cursor->value().ptr(), cursor->value().size());
+		DatabaseCursorInterface::Slice curvalue = cursor->value();
+		DatabaseValueScanner value_scanner( curvalue.ptr(), curvalue.size());
 		std::vector<SimRelationMap::Element> elems;
 		while (!value_scanner.eof())
 		{
