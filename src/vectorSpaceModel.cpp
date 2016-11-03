@@ -361,6 +361,7 @@ public:
 		if (m_config.with_probsim)
 		{
 			if (logout) logout << string_format( _TXT("use probabilistic prediction of similarity as prefilter"));
+			uint64_t total_nof_similarities = 0;
 			SimRelationMapBuilder simrelbuilder( m_samplear, m_config.maxdist, m_config.maxsimsam, m_config.rndsimsam, m_config.threads);
 			SimRelationMap simrelmap_part;
 			while (simrelbuilder.getNextSimRelationMap( simrelmap_part))
@@ -368,7 +369,7 @@ public:
 				m_database->writeSimRelationMap( simrelmap_part);
 				m_database->commit();
 				total_nof_similarities += simrelmap_part.nofRelationsDetected();
-				if (logout) logout << string_format( _TXT("got total %u features with %uK similarities"), chunkend, (unsigned int)(total_nof_similarities/1024));
+				if (logout) logout << string_format( _TXT("got total %u features with %uK similarities"), simrelmap_part.endIndex(), (unsigned int)(total_nof_similarities/1024));
 			}
 		}
 		else
