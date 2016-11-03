@@ -44,6 +44,8 @@ public:
 		}
 	};
 
+	static std::vector<Element> selectElementSubset( const std::vector<Element>& elemlist, unsigned int maxsimsam, unsigned int rndsimsam, unsigned int rndseed);
+
 public:
 	/// \brief Default constructor
 	SimRelationMap()

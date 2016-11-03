@@ -14,13 +14,14 @@
 #include "strus/base/string_format.hpp"
 #include "strus/reference.hpp"
 #include <memory>
+#include <limits>
 #include <boost/thread.hpp>
 
 using namespace strus;
 
 static std::vector<SimRelationMap::Element> getRow(
 		const std::vector<SimHash>& samplear, SampleIndex sidx,
-		unsigned int maxdist, unsigned int maxsimsam, unsigned int rndsimsam)
+		unsigned int maxdist, unsigned int maxsimsam, unsigned int rndsimsam, unsigned int rndseed)
 {
 	const SimHash& srec = samplear[ sidx];
 	std::vector<SimRelationMap::Element> rt;
@@ -34,43 +35,14 @@ static std::vector<SimRelationMap::Element> getRow(
 			rt.push_back( SimRelationMap::Element( pidx, dist));
 		}
 	}
-	if (maxsimsam != 0 || rndsimsam != 0)
+	if ((maxsimsam != 0 || rndsimsam != 0) && rt.size() > maxsimsam + rndsimsam)
 	{
-		if (rt.size() > maxsimsam + rndsimsam)
-		{
-			std::sort( rt.begin(), rt.end());
-
-			Random rnd;
-			std::vector<SimRelationMap::Element> rt_redu;
-
-			// First part of the result are the 'maxsimsam' best elements:
-			while (rt.size() - maxsimsam < rndsimsam + (rndsimsam >> 1))
-			{
-				// ... reduce the number of random picks to at least 2/3 of the rest to reduce random choice collisions (imagine picking N-1 random elements out of N)
-				maxsimsam += (rndsimsam >> 1);
-				rndsimsam -= (rndsimsam >> 1);
-			}
-			rt_redu.insert( rt_redu.end(), rt.begin(), rt.begin() + maxsimsam);
-
-			// Second part of the result are 'rndsimsam' randomly chosen elements from the rest:
-			std::set<std::size_t> rndchoiceset;
-			std::size_t ri = 0, re = rndsimsam;
-			for (; ri != re; ++ri)
-			{
-				std::size_t choice = rnd.get( maxsimsam, rt.size());
-				while (rndchoiceset.find( choice) != rndchoiceset.end())
-				{
-					// Find element not chosen yet:
-					choice = choice + 1;
-					if (choice > rt.size()) choice = 0;
-				}
-				rndchoiceset.insert( choice);
-				rt_redu.push_back( rt[ choice]);
-			}
-			rt = rt_redu;
-		}
+		return SimRelationMap::selectElementSubset( rt, maxsimsam, rndsimsam, rndseed);
 	}
-	return rt;
+	else
+	{
+		return rt;
+	}
 }
 
 static SimRelationMap getSimRelationMap_singlethread( 
@@ -78,9 +50,11 @@ static SimRelationMap getSimRelationMap_singlethread(
 		unsigned int maxdist, unsigned int maxsimsam, unsigned int rndsimsam)
 {
 	SimRelationMap rt;
+	Random rnd;
 	for (SampleIndex sidx=idx_begin; sidx != idx_end; ++sidx)
 	{
-		rt.addRow( sidx, getRow( samplear, sidx, maxdist, maxsimsam, rndsimsam));
+		unsigned int rndseed = rnd.get( 0, std::numeric_limits<int>::max());
+		rt.addRow( sidx, ::getRow( samplear, sidx, maxdist, maxsimsam, rndsimsam, rndseed));
 	}
 	return rt;
 }
@@ -93,7 +67,10 @@ public:
 			unsigned int maxdist_, unsigned int maxsimsam_, unsigned int rndsimsam_)
 		:m_sampleIndex(idx_begin),m_endSampleIndex(idx_end),m_samplear(samplear_)
 		,m_maxdist(maxdist_),m_maxsimsam(maxsimsam_),m_rndsimsam(rndsimsam_)
-	{}
+	{
+		Random rnd;
+		m_selectseed = rnd.get( 0, std::numeric_limits<int>::max());
+	}
 
 	bool fetch( SampleIndex& index)
 	{
@@ -113,7 +90,7 @@ public:
 
 	std::vector<SimRelationMap::Element> getRow( SampleIndex sidx) const
 	{
-		return ::getRow( *m_samplear, sidx, m_maxdist, m_maxsimsam, m_rndsimsam);
+		return ::getRow( *m_samplear, sidx, m_maxdist, m_maxsimsam, m_rndsimsam, m_selectseed);
 	}
 
 	void reportError( const std::string& msg)
@@ -154,26 +131,27 @@ private:
 	utils::Mutex m_mutex;
 	std::string m_errormsg;
 	SimRelationMap m_simrelmap;
+	unsigned int m_selectseed;
 };
 
 class RowBuilder
 {
 public:
 	RowBuilder( RowBuilderGlobalContext* ctx_, unsigned int threadid_)
-		:m_ctx(ctx_),m_simrelmap(),m_threadid(threadid_){}
+		:m_ctx(ctx_),m_threadid(threadid_){}
 	~RowBuilder(){}
 
 	void run()
 	{
 		try
 		{
+			SimRelationMap simrelmap;
 			SampleIndex sidx = 0;
 			while (m_ctx->fetch( sidx))
 			{
-				m_simrelmap.addRow( sidx, m_ctx->getRow( sidx));
+				simrelmap.addRow( sidx, m_ctx->getRow( sidx));
 			}
-			m_ctx->pushResult( m_simrelmap);
-			m_simrelmap.clear();
+			m_ctx->pushResult( simrelmap);
 		}
 		catch (const std::runtime_error& err)
 		{
@@ -191,7 +169,7 @@ public:
 
 private:
 	RowBuilderGlobalContext* m_ctx;
-	SimRelationMap m_simrelmap;
+	Random m_rnd;
 	unsigned int m_threadid;
 };
 

@@ -9,22 +9,27 @@
 #include "simRelationMapBuilder.hpp"
 #include "simHash.hpp"
 #include "lshBench.hpp"
+#include "utils.hpp"
+#include "strus/base/string_format.hpp"
+#include "strus/reference.hpp"
 #include <vector>
 #include <algorithm>
+#include <limits>
+#include <boost/thread.hpp>
 
 using namespace strus;
 
-#define WEIGHTFACTOR(dd) (dd + dd / 3)
+#define WEIGHTFACTOR(dd) (dd + dd / 2)
 
-// HIER WEITER MULTITHREADING
 
-SimRelationMapBuilder::SimRelationMapBuilder( const std::vector<SimHash>& samplear, unsigned int maxdist_, unsigned int maxsimsam_, unsigned int threads_, unsigned int seed_)
-	:m_base(samplear.data()),m_maxdist(maxdist_),m_maxsimsam(maxsimsam_),m_threads(threads_),m_seed(seed_)
+SimRelationMapBuilder::SimRelationMapBuilder( const std::vector<SimHash>& samplear, unsigned int maxdist_, unsigned int maxsimsam_, unsigned int rndsimsam_, unsigned int threads_)
+	:m_base(samplear.data()),m_maxdist(maxdist_),m_maxsimsam(maxsimsam_),m_rndsimsam(rndsimsam_),m_threads(threads_),m_index(0),m_benchar(),m_rnd()
 {
+	m_selectseed = m_rnd.get(0,std::numeric_limits<unsigned int>::max());
 	std::size_t ofs = 0;
 	while (ofs < samplear.size())
 	{
-		m_benchar.push_back( LshBench( m_base, samplear.size(), m_seed, WEIGHTFACTOR(m_maxdist)));
+		m_benchar.push_back( LshBench( m_base, samplear.size(), m_selectseed, WEIGHTFACTOR(m_maxdist)));
 		ofs += m_benchar.back().init( ofs);
 	}
 }
@@ -53,13 +58,152 @@ SimRelationMap SimRelationMapBuilder::getSimRelationMap( strus::Index idx) const
 	for (; mi != me; ++mi)
 	{
 		std::vector<SimRelationMap::Element>& elems = mi->second;
-		std::sort( elems.begin(), elems.end());
-		if (elems.size() > m_maxsimsam)
+		if ((m_maxsimsam != 0 || m_rndsimsam != 0) && elems.size() > m_maxsimsam + m_rndsimsam)
 		{
-			elems.resize( m_maxsimsam);
+			elems = SimRelationMap::selectElementSubset( elems, m_maxsimsam, m_rndsimsam, m_selectseed);
 		}
 		rt.addRow( mi->first, elems);
 	}
 	return rt;
 }
+
+
+class ThreadGlobalContext
+{
+public:
+	ThreadGlobalContext( SampleIndex idx_begin, SampleIndex idx_end)
+		:m_sampleIndex(idx_begin),m_endSampleIndex(idx_end),m_errormsg(),m_simrelmap()
+	{}
+
+	bool fetch( SampleIndex& index)
+	{
+		index = m_sampleIndex.allocIncrement();
+		if (index >= (SampleIndex)m_endSampleIndex)
+		{
+			m_sampleIndex.decrement();
+			return false;
+		}
+		return true;
+	}
+
+	void reportError( const std::string& msg)
+	{
+		utils::ScopedLock lock( m_mutex);
+		m_errormsg.append( msg);
+		m_errormsg.push_back( '\n');
+	}
+
+	bool hasError() const
+	{
+		return !m_errormsg.empty();
+	}
+
+	const std::string& error() const
+	{
+		return m_errormsg;
+	}
+
+	void pushResult( const SimRelationMap& result)
+	{
+		utils::ScopedLock lock( m_mutex);
+		m_simrelmap.join( result);
+	}
+
+	const SimRelationMap& result()
+	{
+		return m_simrelmap;
+	}
+
+private:
+	utils::AtomicCounter<SampleIndex> m_sampleIndex;
+	std::size_t m_endSampleIndex;
+	utils::Mutex m_mutex;
+	std::string m_errormsg;
+	SimRelationMap m_simrelmap;
+};
+
+
+class ThreadLocalContext
+{
+public:
+	ThreadLocalContext( ThreadGlobalContext* ctx_, const SimRelationMapBuilder* builder_, unsigned int threadid_)
+		:m_ctx(ctx_),m_builder(builder_),m_threadid(threadid_),m_simrelmap(){}
+	~ThreadLocalContext(){}
+
+	void run()
+	{
+		try
+		{
+			SampleIndex sidx = 0;
+			while (m_ctx->fetch( sidx))
+			{
+				m_simrelmap.join( m_builder->getSimRelationMap( sidx));
+			}
+			m_ctx->pushResult( m_simrelmap);
+			m_simrelmap.clear();
+		}
+		catch (const std::runtime_error& err)
+		{
+			m_ctx->reportError( string_format( _TXT("error in thread %u: %s"), m_threadid, err.what()));
+		}
+		catch (const std::bad_alloc&)
+		{
+			m_ctx->reportError( string_format( _TXT("out of memory in thread %u"), m_threadid));
+		}
+		catch (const boost::thread_interrupted&)
+		{
+			m_ctx->reportError( string_format( _TXT("failed to complete calculation: thread %u interrupted"), m_threadid));
+		}
+	}
+
+private:
+	ThreadGlobalContext* m_ctx;
+	const SimRelationMapBuilder* m_builder;
+	unsigned int m_threadid;
+	SimRelationMap m_simrelmap;
+};
+
+
+bool SimRelationMapBuilder::getNextSimRelationMap( SimRelationMap& res)
+{
+	res.clear();
+	if (m_index >= m_benchar.size())
+	{
+		return false;
+	}
+	if (!m_threads)
+	{
+		res = getSimRelationMap( m_index++);
+		return true;
+	}
+	else
+	{
+		unsigned int nt = m_index + m_threads > m_benchar.size() ? (m_benchar.size() - m_index) : m_threads;
+		ThreadGlobalContext threadGlobalContext( m_index, nt);
+
+		std::vector<strus::Reference<ThreadLocalContext> > processorList;
+		processorList.reserve( nt);
+		for (unsigned int ti = 0; ti<nt; ++ti)
+		{
+			processorList.push_back( new ThreadLocalContext( &threadGlobalContext, this, ti+1));
+		}
+		{
+			boost::thread_group tgroup;
+			for (unsigned int ti=0; ti<nt; ++ti)
+			{
+				tgroup.create_thread( boost::bind( &ThreadLocalContext::run, processorList[ti].get()));
+			}
+			tgroup.join_all();
+		}
+		if (threadGlobalContext.hasError())
+		{
+			throw strus::runtime_error("failed to build similarity relation map: %s", threadGlobalContext.error().c_str());
+		}
+		res = threadGlobalContext.result();
+		return true;
+	}
+}
+
+
+
 

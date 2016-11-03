@@ -7,6 +7,7 @@
  */
 /// \brief Structure for storing similarity relations
 #include "simRelationMap.hpp"
+#include "random.hpp"
 #include "internationalization.hpp"
 #include <limits>
 #include <algorithm>
@@ -19,6 +20,48 @@
 #undef STRUS_LOWLEVEL_DEBUG
 
 using namespace strus;
+
+std::vector<SimRelationMap::Element> SimRelationMap::selectElementSubset( const std::vector<SimRelationMap::Element>& elemlist, unsigned int maxsimsam, unsigned int rndsimsam, unsigned int rndseed)
+{
+	if (elemlist.size() > maxsimsam + rndsimsam)
+	{
+		std::vector<SimRelationMap::Element> elemlist_copy( elemlist);
+		std::sort( elemlist_copy.begin(), elemlist_copy.end());
+
+		Random rnd( rndseed);
+		std::vector<SimRelationMap::Element> subset_elemlist;
+
+		// First part of the result are the 'maxsimsam' best elements:
+		while (elemlist_copy.size() - maxsimsam < rndsimsam + (rndsimsam >> 1))
+		{
+			// ... reduce the number of random picks to at least 2/3 of the rest to reduce random choice collisions (imagine picking N-1 random elements out of N)
+			maxsimsam += (rndsimsam >> 1);
+			rndsimsam -= (rndsimsam >> 1);
+		}
+		subset_elemlist.insert( subset_elemlist.end(), elemlist_copy.begin(), elemlist_copy.begin() + maxsimsam);
+
+		// Second part of the result are 'rndsimsam' randomly chosen elements from the rest:
+		std::set<std::size_t> rndchoiceset;
+		std::size_t ri = 0, re = rndsimsam;
+		for (; ri != re; ++ri)
+		{
+			std::size_t choice = rnd.get( maxsimsam, elemlist_copy.size());
+			while (rndchoiceset.find( choice) != rndchoiceset.end())
+			{
+				// Find element not chosen yet:
+				choice = choice + 1;
+				if (choice > elemlist_copy.size()) choice = 0;
+			}
+			rndchoiceset.insert( choice);
+			subset_elemlist.push_back( elemlist_copy[ choice]);
+		}
+		return subset_elemlist;
+	}
+	else
+	{
+		return elemlist;
+	}
+}
 
 void SimRelationMap::addRow( const SampleIndex& index, std::vector<Element>::const_iterator ai, const std::vector<Element>::const_iterator& ae)
 {
