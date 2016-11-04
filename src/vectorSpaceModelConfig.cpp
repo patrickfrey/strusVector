@@ -30,6 +30,8 @@ VectorSpaceModelConfig::VectorSpaceModelConfig( const VectorSpaceModelConfig& o)
 	,isaf(o.isaf)
 	,with_singletons(o.with_singletons)
 	,with_probsim(o.with_probsim)
+	,with_mergesim(o.with_mergesim)
+	,with_forcesim(o.with_forcesim)
 	{}
 
 VectorSpaceModelConfig::VectorSpaceModelConfig()
@@ -44,6 +46,8 @@ VectorSpaceModelConfig::VectorSpaceModelConfig()
 	,isaf((float)DefaultIsaf / 100)
 	,with_singletons((bool)DefaultWithSingletons)
 	,with_probsim((bool)DefaultWithProbSim)
+	,with_mergesim((bool)DefaultWithMergeSim)
+	,with_forcesim((bool)DefaultWithForceSim)
 	{}
 
 VectorSpaceModelConfig::VectorSpaceModelConfig( const std::string& config, ErrorBufferInterface* errorhnd)
@@ -58,6 +62,8 @@ VectorSpaceModelConfig::VectorSpaceModelConfig( const std::string& config, Error
 	,isaf((float)DefaultIsaf / 100)
 	,with_singletons((bool)DefaultWithSingletons)
 	,with_probsim((bool)DefaultWithProbSim)
+	,with_mergesim((bool)DefaultWithMergeSim)
+	,with_forcesim((bool)DefaultWithForceSim)
 {
 	std::string src = config;
 	if (extractStringFromConfigString( logfile, src, "logfile", errorhnd)){}
@@ -102,6 +108,8 @@ VectorSpaceModelConfig::VectorSpaceModelConfig( const std::string& config, Error
 	if (extractFloatFromConfigString( val, src, "isaf", errorhnd)){isaf=(float)val;}
 	if (extractBooleanFromConfigString( with_singletons, src, "singletons", errorhnd)){}
 	if (extractBooleanFromConfigString( with_probsim, src, "probsim", errorhnd)){}
+	if (extractBooleanFromConfigString( with_mergesim, src, "mergesim", errorhnd)){}
+	if (extractBooleanFromConfigString( with_forcesim, src, "forcesim", errorhnd)){}
 
 	if (dim == 0 || bits == 0 || variations == 0 || mutations == 0 || descendants == 0 || maxage == 0 || iterations == 0)
 	{
@@ -145,6 +153,9 @@ std::string VectorSpaceModelConfig::tostring() const
 	buf << "maxfeatures=" << maxfeatures << ";" << std::endl;
 	buf << "isaf=" << isaf << ";" << std::endl;
 	buf << "singletons=" << (with_singletons?"yes":"no") << ";" << std::endl;
+	buf << "probsim=" << (with_probsim?"yes":"no") << ";" << std::endl;
+	buf << "mergesim=" << (with_mergesim?"yes":"no") << ";" << std::endl;
+	buf << "forcesim=" << (with_forcesim?"yes":"no") << ";" << std::endl;
 	return buf.str();
 }
 

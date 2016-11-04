@@ -273,7 +273,7 @@ class VectorSpaceModelBuilder
 {
 public:
 	VectorSpaceModelBuilder( const std::string& config_, const DatabaseInterface* database_, ErrorBufferInterface* errorhnd_)
-		:m_errorhnd(errorhnd_),m_config(config_,errorhnd_)
+		:m_errorhnd(errorhnd_),m_dbi(database_),m_config(config_,errorhnd_)
 		,m_state(0),m_lshmodel(),m_genmodel(),m_samplear()
 	{
 		m_database.reset( new DatabaseAdapter( database_, m_config.databaseConfig, m_errorhnd));
@@ -313,7 +313,6 @@ public:
 				utils::ScopedLock lock( m_mutex);
 				if (m_vecar.size() < m_config.maxfeatures)
 				{
-					resetSimRelationMap();
 					m_vecar.push_back( vec);
 					m_namear.push_back( name);
 					nofFeaturesAdded = m_vecar.size();
@@ -363,26 +362,14 @@ public:
 
 	bool needToCalculateSimRelationMap()
 	{
-		return (m_state < 2);
+		return m_config.with_forcesim || m_database->readNofSamples() >= m_database->readLastSimRelationIndex();
 	}
 
-	void resetSimRelationMap()
-	{
-		if (m_state >= 2)
-		{
-			m_state = 1;
-			m_database->writeState( m_state);
-			m_database->deleteSimRelationMap();
-			m_database->commit();
-		}
-	}
-
-	void buildSimRelationMap()
+	void buildSimRelationMap( bool doMerge)
 	{
 		const char* logfile = m_config.logfile.empty()?0:m_config.logfile.c_str();
 		Logger logout( logfile);
 
-		m_database->deleteSimRelationMap();
 		m_database->writeState( 1);
 		m_database->commit();
 
@@ -391,7 +378,8 @@ public:
 		{
 			if (logout) logout << string_format( _TXT("use probabilistic prediction of similarity as prefilter"));
 			uint64_t total_nof_similarities = 0;
-			SimRelationMapBuilder simrelbuilder( m_samplear, m_config.maxdist, m_config.maxsimsam, m_config.rndsimsam, m_config.threads);
+			const DatabaseInterface* dbi = doMerge?m_dbi:0;
+			SimRelationMapBuilder simrelbuilder( dbi, m_config.databaseConfig, m_samplear, m_config.maxdist, m_config.maxsimsam, m_config.rndsimsam, m_config.threads, m_errorhnd);
 			SimRelationMap simrelmap_part;
 			while (simrelbuilder.getNextSimRelationMap( simrelmap_part))
 			{
@@ -429,7 +417,7 @@ public:
 			m_database->commit();
 			if (needToCalculateSimRelationMap())
 			{
-				buildSimRelationMap();
+				buildSimRelationMap( m_config.with_mergesim);
 			}
 			m_database->deleteSampleConceptIndexMap();
 			m_database->deleteConceptSampleIndexMap();
@@ -459,6 +447,7 @@ public:
 
 private:
 	ErrorBufferInterface* m_errorhnd;
+	const DatabaseInterface* m_dbi;
 	Reference<DatabaseAdapter> m_database;
 	VectorSpaceModelConfig m_config;
 	unsigned int m_state;

@@ -38,6 +38,9 @@ public:
 
 	void findSimCandidates( std::vector<Candidate>& res, const LshBench& o) const;
 
+	strus::Index startIndex() const	{return m_ofs;}
+	strus::Index endIndex() const	{return m_ofs+m_size;}
+
 private:
 	uint64_t selmask( const SimHash& sh) const;
 

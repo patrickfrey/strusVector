@@ -595,6 +595,28 @@ SimRelationMap DatabaseAdapter::readSimRelationMap() const
 	return rt;
 }
 
+SampleIndex DatabaseAdapter::readLastSimRelationIndex() const
+{
+	DatabaseKeyBuffer key( KeySimRelationMap);
+
+	std::auto_ptr<DatabaseCursorInterface> cursor( m_database->createCursor( DatabaseOptions()));
+	if (!cursor.get()) throw strus::runtime_error(_TXT("failed to create cursor to read similarity relation map: %s"), m_errorhnd->fetchError());
+
+	DatabaseCursorInterface::Slice slice = cursor->seekLast( key.c_str(), key.size());
+	if (slice.defined())
+	{
+		SampleIndex sidx;
+		DatabaseKeyScanner key_scanner( slice.ptr()+1, slice.size()-1);
+		key_scanner[ sidx];
+		--sidx;
+		return sidx;
+	}
+	else
+	{
+		return -1;
+	}
+}
+
 std::vector<SimRelationMap::Element> DatabaseAdapter::readSimRelations( const SampleIndex& sidx) const
 {
 	DatabaseKeyBuffer key( KeySimRelationMap);

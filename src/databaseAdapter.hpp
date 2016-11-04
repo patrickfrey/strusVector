@@ -51,6 +51,7 @@ public:
 	std::vector<SimHash> readSampleSimhashVector() const;
 	std::vector<SimHash> readResultSimhashVector() const;
 
+	SampleIndex readLastSimRelationIndex() const;
 	std::vector<SimRelationMap::Element> readSimRelations( const SampleIndex& sidx) const;
 	SimRelationMap readSimRelationMap() const;
 	std::vector<SampleIndex> readConceptSampleIndices( const ConceptIndex& fidx) const;
