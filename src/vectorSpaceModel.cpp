@@ -23,7 +23,6 @@
 #include "simHash.hpp"
 #include "simRelationMap.hpp"
 #include "simRelationMapBuilder.hpp"
-#include "getSimRelationMap.hpp"
 #include "getSimhashValues.hpp"
 #include "lshModel.hpp"
 #include "genModel.hpp"
@@ -373,35 +372,16 @@ public:
 		m_database->writeState( 1);
 		m_database->commit();
 
-		if (logout) logout << string_format( _TXT("calculate similarity relation matrix for %u features"), m_samplear.size());
-		if (m_config.with_probsim)
+		if (logout) logout << string_format( _TXT("calculate similarity relation matrix for %u features (selection %s)"), m_samplear.size(), m_config.with_probsim?_TXT("probabilistic selection"):_TXT("try all"));
+		uint64_t total_nof_similarities = 0;
+		SimRelationMapBuilder simrelbuilder( m_samplear, m_config.maxdist, m_config.maxsimsam, m_config.rndsimsam, m_config.threads, m_config.with_probsim);
+		SimRelationMap simrelmap_part;
+		while (simrelbuilder.getNextSimRelationMap( simrelmap_part))
 		{
-			if (logout) logout << string_format( _TXT("use probabilistic prediction of similarity as prefilter"));
-			uint64_t total_nof_similarities = 0;
-			SimRelationMapBuilder simrelbuilder( m_samplear, m_config.maxdist, m_config.maxsimsam, m_config.rndsimsam, m_config.threads);
-			SimRelationMap simrelmap_part;
-			while (simrelbuilder.getNextSimRelationMap( simrelmap_part))
-			{
-				m_database->writeSimRelationMap( simrelmap_part);
-				m_database->commit();
-				total_nof_similarities += simrelmap_part.nofRelationsDetected();
-				if (logout) logout << string_format( _TXT("got total %u features with %uK similarities"), simrelmap_part.endIndex(), (unsigned int)(total_nof_similarities/1024));
-			}
-		}
-		else
-		{
-			std::size_t si = 0, se = m_samplear.size();
-			uint64_t total_nof_similarities = 0;
-			for (; si < se; si += m_config.commitsize)
-			{
-				std::size_t chunkend = si + m_config.commitsize;
-				if (chunkend > se) chunkend = se;
-				SimRelationMap simrelmap_part = strus::getSimRelationMap( m_samplear, si,  chunkend, m_config.maxdist, m_config.maxsimsam, m_config.rndsimsam, m_config.threads);
-				m_database->writeSimRelationMap( simrelmap_part);
-				m_database->commit();
-				total_nof_similarities += simrelmap_part.nofRelationsDetected();
-				if (logout) logout << string_format( _TXT("got total %u features with %uK similarities"), chunkend, (unsigned int)(total_nof_similarities/1024));
-			}
+			m_database->writeSimRelationMap( simrelmap_part);
+			m_database->commit();
+			total_nof_similarities += simrelmap_part.nofRelationsDetected();
+			if (logout) logout << string_format( _TXT("got total %u features with %uK similarities"), simrelmap_part.endIndex(), (unsigned int)(total_nof_similarities/1024));
 		}
 		m_database->writeState( 2);
 		m_database->commit();

@@ -22,8 +22,8 @@ using namespace strus;
 #define WEIGHTFACTOR(dd) (dd + dd / 2)
 
 
-SimRelationMapBuilder::SimRelationMapBuilder( const std::vector<SimHash>& samplear, unsigned int maxdist_, unsigned int maxsimsam_, unsigned int rndsimsam_, unsigned int threads_)
-	:m_base(samplear.data()),m_maxdist(maxdist_),m_maxsimsam(maxsimsam_),m_rndsimsam(rndsimsam_),m_threads(threads_),m_index(0),m_benchar(),m_rnd()
+SimRelationMapBuilder::SimRelationMapBuilder( const std::vector<SimHash>& samplear, unsigned int maxdist_, unsigned int maxsimsam_, unsigned int rndsimsam_, unsigned int threads_, bool probabilistic_)
+	:m_base(samplear.data()),m_probabilistic(probabilistic_),m_maxdist(maxdist_),m_maxsimsam(maxsimsam_),m_rndsimsam(rndsimsam_),m_threads(threads_),m_index(0),m_benchar(),m_rnd()
 {
 	m_selectseed = m_rnd.get(0,std::numeric_limits<unsigned int>::max());
 	std::size_t ofs = 0;
@@ -36,33 +36,54 @@ SimRelationMapBuilder::SimRelationMapBuilder( const std::vector<SimHash>& sample
 
 SimRelationMap SimRelationMapBuilder::getSimRelationMap( strus::Index idx) const
 {
-	std::vector<LshBench::Candidate> res;
-	std::size_t bi = 0, be = m_benchar.size();
-	for (; bi != be; ++bi)
-	{
-		m_benchar[ idx].findSimCandidates( res, m_benchar[ bi]);
-	}
-	std::vector<LshBench::Candidate>::const_iterator ri = res.begin(), re = res.end();
-	typedef std::map<strus::Index,std::vector<SimRelationMap::Element> > RowMap;
-	RowMap rowmap;
-	for (; ri != re; ++ri)
-	{
-		if (m_base[ ri->row].near( m_base[ri->col], m_maxdist))
-		{
-			unsigned short simdist = m_base[ri->row].dist( m_base[ri->col]);
-			rowmap[ ri->row].push_back( SimRelationMap::Element( ri->row, simdist));
-		}
-	}
 	SimRelationMap rt;
-	RowMap::iterator mi = rowmap.begin(), me = rowmap.end();
-	for (; mi != me; ++mi)
+	if (m_probabilistic)
 	{
-		std::vector<SimRelationMap::Element>& elems = mi->second;
-		if ((m_maxsimsam != 0 || m_rndsimsam != 0) && elems.size() > m_maxsimsam + m_rndsimsam)
+		std::vector<LshBench::Candidate> res;
+		std::size_t bi = 0, be = m_benchar.size();
+		for (; bi != be; ++bi)
 		{
-			elems = SimRelationMap::selectElementSubset( elems, m_maxsimsam, m_rndsimsam, m_selectseed);
+			m_benchar[ idx].findSimCandidates( res, m_benchar[ bi]);
 		}
-		rt.addRow( mi->first, elems);
+		std::vector<LshBench::Candidate>::const_iterator ri = res.begin(), re = res.end();
+		typedef std::map<strus::Index,std::vector<SimRelationMap::Element> > RowMap;
+		RowMap rowmap;
+		for (; ri != re; ++ri)
+		{
+			if (m_base[ ri->row].near( m_base[ri->col], m_maxdist))
+			{
+				unsigned short simdist = m_base[ri->row].dist( m_base[ri->col]);
+				rowmap[ ri->row].push_back( SimRelationMap::Element( ri->row, simdist));
+			}
+		}
+		RowMap::iterator mi = rowmap.begin(), me = rowmap.end();
+		for (; mi != me; ++mi)
+		{
+			std::vector<SimRelationMap::Element>& elems = mi->second;
+			if ((m_maxsimsam != 0 || m_rndsimsam != 0) && elems.size() > m_maxsimsam + m_rndsimsam)
+			{
+				elems = SimRelationMap::selectElementSubset( elems, m_maxsimsam, m_rndsimsam, m_selectseed);
+			}
+			rt.addRow( mi->first, elems);
+		}
+	}
+	else
+	{
+		strus::Index si = m_benchar[ idx].startIndex(), se = m_benchar[ idx].endIndex();
+		for (; si < se; ++si)
+		{
+			std::vector<SimRelationMap::Element> elems;
+			strus::Index oi = 0, oe = m_benchar.back().endIndex();
+			for (; oi < oe; ++oi)
+			{
+				if (si != oi && m_base[ si].near( m_base[oi], m_maxdist))
+				{
+					unsigned short simdist = m_base[si].dist( m_base[oi]);
+					elems.push_back( SimRelationMap::Element( oi, simdist));
+				}
+			}
+			rt.addRow( si, elems);
+		}
 	}
 	return rt;
 }

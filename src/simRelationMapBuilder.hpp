@@ -22,12 +22,13 @@ namespace strus {
 class SimRelationMapBuilder
 {
 public:
-	SimRelationMapBuilder( const std::vector<SimHash>& samplear, unsigned int maxdist_, unsigned int maxsimsam_, unsigned int rndsimsam_, unsigned int threads_);
+	SimRelationMapBuilder( const std::vector<SimHash>& samplear, unsigned int maxdist_, unsigned int maxsimsam_, unsigned int rndsimsam_, unsigned int threads_, bool probabilistic_);
 	bool getNextSimRelationMap( SimRelationMap& res);
 	SimRelationMap getSimRelationMap( strus::Index idx) const;
 
 private:
 	const SimHash* m_base;
+	bool m_probabilistic;
 	unsigned int m_maxdist;
 	unsigned int m_maxsimsam;
 	unsigned int m_rndsimsam;
