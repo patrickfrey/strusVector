@@ -7,14 +7,11 @@
  */
 /// \brief Functions for probabilistic evaluating similarity relations (incl. multithreaded)
 #include "simRelationMapBuilder.hpp"
-#include "databaseAdapter.hpp"
 #include "simHash.hpp"
 #include "lshBench.hpp"
 #include "utils.hpp"
 #include "strus/base/string_format.hpp"
 #include "strus/reference.hpp"
-#include "strus/databaseInterface.hpp"
-#include "strus/errorBufferInterface.hpp"
 #include <vector>
 #include <algorithm>
 #include <limits>
@@ -25,8 +22,8 @@ using namespace strus;
 #define WEIGHTFACTOR(dd) (dd + dd / 2)
 
 
-SimRelationMapBuilder::SimRelationMapBuilder( const DatabaseInterface* database_, const std::string& databaseConfig_, const std::vector<SimHash>& samplear, unsigned int maxdist_, unsigned int maxsimsam_, unsigned int rndsimsam_, unsigned int threads_, ErrorBufferInterface* errorhnd_)
-	:m_errorhnd(errorhnd_),m_database(database_),m_databaseConfig(databaseConfig_),m_base(samplear.data()),m_maxdist(maxdist_),m_maxsimsam(maxsimsam_),m_rndsimsam(rndsimsam_),m_threads(threads_),m_index(0),m_benchar(),m_rnd()
+SimRelationMapBuilder::SimRelationMapBuilder( const std::vector<SimHash>& samplear, unsigned int maxdist_, unsigned int maxsimsam_, unsigned int rndsimsam_, unsigned int threads_)
+	:m_base(samplear.data()),m_maxdist(maxdist_),m_maxsimsam(maxsimsam_),m_rndsimsam(rndsimsam_),m_threads(threads_),m_index(0),m_benchar(),m_rnd()
 {
 	m_selectseed = m_rnd.get(0,std::numeric_limits<unsigned int>::max());
 	std::size_t ofs = 0;
@@ -44,21 +41,6 @@ SimRelationMap SimRelationMapBuilder::getSimRelationMap( strus::Index idx) const
 	for (; bi != be; ++bi)
 	{
 		m_benchar[ idx].findSimCandidates( res, m_benchar[ bi]);
-	}
-	if (m_database)
-	{
-		// If database specified, new sim relation map element candidates are merged with previously defined elements
-		DatabaseAdapter db( m_database, m_databaseConfig, m_errorhnd);
-		strus::Index si = m_benchar[ idx].startIndex(), se = m_benchar[ idx].endIndex();
-		for (; si != se; ++si)
-		{
-			std::vector<SimRelationMap::Element> elems = db.readSimRelations( si);
-			std::vector<SimRelationMap::Element>::const_iterator ei = elems.begin(), ee = elems.end();
-			for (; ei != ee; ++ei)
-			{
-				res.push_back( LshBench::Candidate( si, ei->index));
-			}
-		}
 	}
 	std::vector<LshBench::Candidate>::const_iterator ri = res.begin(), re = res.end();
 	typedef std::map<strus::Index,std::vector<SimRelationMap::Element> > RowMap;

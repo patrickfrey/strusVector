@@ -365,7 +365,7 @@ public:
 		return m_config.with_forcesim || m_database->readNofSamples() >= m_database->readLastSimRelationIndex();
 	}
 
-	void buildSimRelationMap( bool doMerge)
+	void buildSimRelationMap()
 	{
 		const char* logfile = m_config.logfile.empty()?0:m_config.logfile.c_str();
 		Logger logout( logfile);
@@ -378,8 +378,7 @@ public:
 		{
 			if (logout) logout << string_format( _TXT("use probabilistic prediction of similarity as prefilter"));
 			uint64_t total_nof_similarities = 0;
-			const DatabaseInterface* dbi = doMerge?m_dbi:0;
-			SimRelationMapBuilder simrelbuilder( dbi, m_config.databaseConfig, m_samplear, m_config.maxdist, m_config.maxsimsam, m_config.rndsimsam, m_config.threads, m_errorhnd);
+			SimRelationMapBuilder simrelbuilder( m_samplear, m_config.maxdist, m_config.maxsimsam, m_config.rndsimsam, m_config.threads);
 			SimRelationMap simrelmap_part;
 			while (simrelbuilder.getNextSimRelationMap( simrelmap_part))
 			{
@@ -417,7 +416,7 @@ public:
 			m_database->commit();
 			if (needToCalculateSimRelationMap())
 			{
-				buildSimRelationMap( m_config.with_mergesim);
+				buildSimRelationMap();
 			}
 			m_database->deleteSampleConceptIndexMap();
 			m_database->deleteConceptSampleIndexMap();

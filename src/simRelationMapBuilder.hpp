@@ -18,23 +18,15 @@
 
 namespace strus {
 
-/// \brief Forward declaration
-class DatabaseInterface;
-/// \brief Forward declaration
-class ErrorBufferInterface;
-
 /// \brief Class for building a similarity relations matrix fast (probabilistic with possible misses) (incl. multithreaded)
 class SimRelationMapBuilder
 {
 public:
-	SimRelationMapBuilder( const DatabaseInterface* database_, const std::string& databaseConfig_, const std::vector<SimHash>& samplear, unsigned int maxdist_, unsigned int maxsimsam_, unsigned int rndsimsam_, unsigned int threads_, ErrorBufferInterface* errorhnd_);
+	SimRelationMapBuilder( const std::vector<SimHash>& samplear, unsigned int maxdist_, unsigned int maxsimsam_, unsigned int rndsimsam_, unsigned int threads_);
 	bool getNextSimRelationMap( SimRelationMap& res);
 	SimRelationMap getSimRelationMap( strus::Index idx) const;
 
 private:
-	ErrorBufferInterface* m_errorhnd;
-	const DatabaseInterface* m_database;
-	std::string m_databaseConfig;
 	const SimHash* m_base;
 	unsigned int m_maxdist;
 	unsigned int m_maxsimsam;

@@ -41,7 +41,6 @@ struct VectorSpaceModelConfig
 		DefaultIsaf = 60,
 		DefaultWithSingletons = 0,
 		DefaultWithProbSim = 1,
-		DefaultWithMergeSim = 0,
 		DefaultWithForceSim = 0
 	};
 	VectorSpaceModelConfig( const VectorSpaceModelConfig& o);
@@ -83,7 +82,6 @@ struct VectorSpaceModelConfig
 	float isaf;			///< fraction of elements of a superset that has to be in a subset for declaring the subset as dependent (is a) of the superset
 	bool with_singletons;		///< true, if singleton vectors thould also get into the result
 	bool with_probsim;		///< true, if probabilistic function is used as prefilter for the candidates of the similarity matrix (faster)
-	bool with_mergesim;		///< true, if the probabilistic function used as prefilter for the candidates of the similarity matrix should be merged with previously calculated sim relations
 	bool with_forcesim;		///< true, if the similarity relation matrix calculation should be forced
 };
 
