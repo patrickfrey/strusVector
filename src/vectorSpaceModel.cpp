@@ -364,6 +364,74 @@ public:
 		return m_config.with_forcesim || m_database->readNofSamples() >= m_database->readLastSimRelationIndex();
 	}
 
+	void rebuildSimRelationMap()
+	{
+		const char* logfile = m_config.logfile.empty()?0:m_config.logfile.c_str();
+		Logger logout( logfile);
+		unsigned int nof_new_similarities = 0;
+
+		SampleIndex si = 0, se = m_database->readNofSamples();
+		for (; si != se; ++si)
+		{
+			std::vector<strus::Index> conlist = m_database->readSampleConceptIndices( si);
+			std::vector<strus::Index>::const_iterator ci = conlist.begin(), ce = conlist.end();
+			std::map<strus::Index,unsigned short> simmap;
+			for (; ci != ce; ++ci)
+			{
+				std::vector<strus::Index> nblist = m_database->readConceptSampleIndices( *ci);
+				std::vector<strus::Index>::const_iterator ni = nblist.begin(), ne = nblist.end();
+				for (; ni != ne; ++ni)
+				{
+					if (m_samplear[ si].near( m_samplear[*ni], m_config.maxdist))
+					{
+						simmap[ *ni] = m_samplear[ si].dist( m_samplear[*ni]);
+					}
+				}
+			}
+			std::vector<SimRelationMap::Element> elems = m_database->readSimRelations( si);
+			std::vector<SimRelationMap::Element>::const_iterator ei = elems.begin(), ee = elems.end();
+			for (; ei != ee; ++ei)
+			{
+				simmap[ ei->index] = ei->simdist;
+			}
+			unsigned int oldsize = elems.size();
+			elems.clear();
+			std::map<strus::Index,unsigned short>::const_iterator mi = simmap.begin(), me = simmap.end();
+			for (; mi != me; ++mi)
+			{
+				elems.push_back( SimRelationMap::Element( mi->first, mi->second));
+			}
+			nof_new_similarities += elems.size() - oldsize;
+			SimRelationMap simrelmap_part;
+			simrelmap_part.addRow( si, elems);
+			if (m_config.commitsize && si % m_config.commitsize == 0)
+			{
+				if (!commit())
+				{
+					throw strus::runtime_error(_TXT("autocommit failed after %u operations"), m_config.commitsize);
+				}
+				if (logout) logout << string_format( _TXT("updated similarity map of total %u features with %u new similarities"), si, nof_new_similarities);
+			}
+		}
+		if (!commit())
+		{
+			throw strus::runtime_error(_TXT("final autocommit of rebuilding the similarity relation map failed"));
+		}
+		if (logout) logout << string_format( _TXT("updated similarity map of total %u features with %u new similarities"), si, nof_new_similarities);
+	}
+
+	virtual bool rebase()
+	{
+		try
+		{
+			utils::ScopedLock lock( m_mutex);
+			m_database->commit();
+			rebuildSimRelationMap();
+			return true;
+		}
+		CATCH_ERROR_ARG1_MAP_RETURN( _TXT("error rebase step of '%s' builder: %s"), MODULENAME, *m_errorhnd, false);
+	}
+
 	void buildSimRelationMap()
 	{
 		const char* logfile = m_config.logfile.empty()?0:m_config.logfile.c_str();
@@ -421,7 +489,7 @@ public:
 			m_database->commit();
 			return true;
 		}
-		CATCH_ERROR_ARG1_MAP_RETURN( _TXT("error finalizing '%s' builder: %s"), MODULENAME, *m_errorhnd, false);
+		CATCH_ERROR_ARG1_MAP_RETURN( _TXT("error in finalize step of '%s' builder: %s"), MODULENAME, *m_errorhnd, false);
 	}
 
 private:
