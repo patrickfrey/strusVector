@@ -17,59 +17,43 @@
 
 using namespace strus;
 
-VectorSpaceModelConfig::VectorSpaceModelConfig( const VectorSpaceModelConfig& o)
-	:databaseConfig(o.databaseConfig),logfile(o.logfile)
-	,threads(o.threads),commitsize(o.commitsize)
-	,dim(o.dim),bits(o.bits),variations(o.variations)
-	,maxdist(o.maxdist),simdist(o.simdist),raddist(o.raddist),eqdist(o.eqdist)
-	,maxsimsam(o.maxsimsam),rndsimsam(o.rndsimsam)
+GenModelConfig::GenModelConfig( const GenModelConfig& o)
+	:simdist(o.simdist),raddist(o.raddist),eqdist(o.eqdist)
 	,mutations(o.mutations),votes(o.votes)
 	,descendants(o.descendants),maxage(o.maxage),iterations(o.iterations)
 	,assignments(o.assignments)
-	,maxfeatures(o.maxfeatures)
 	,isaf(o.isaf)
 	,with_singletons(o.with_singletons)
-	,with_probsim(o.with_probsim)
-	,with_forcesim(o.with_forcesim)
 	{}
 
-VectorSpaceModelConfig::VectorSpaceModelConfig()
-	:databaseConfig(),logfile(),threads(DefaultThreads),commitsize(DefaultCommitSize)
-	,dim(DefaultDim),bits(DefaultBits),variations(DefaultVariations)
-	,maxdist(DefaultMaxDist),simdist(DefaultSimDist),raddist(DefaultRadDist),eqdist(DefaultEqDist)
-	,maxsimsam(DefaultMaxSimSam),rndsimsam(DefaultRndSimSam)
+GenModelConfig::GenModelConfig()
+	:simdist(DefaultSimDist),raddist(DefaultRadDist),eqdist(DefaultEqDist)
 	,mutations(DefaultMutations),votes(DefaultMutationVotes)
 	,descendants(DefaultDescendants),maxage(DefaultMaxAge),iterations(DefaultIterations)
 	,assignments(DefaultAssignments)
-	,maxfeatures(DefaultMaxFeatures)
 	,isaf((float)DefaultIsaf / 100)
 	,with_singletons((bool)DefaultWithSingletons)
-	,with_probsim((bool)DefaultWithProbSim)
-	,with_forcesim((bool)DefaultWithForceSim)
 	{}
 
-VectorSpaceModelConfig::VectorSpaceModelConfig( const std::string& config, ErrorBufferInterface* errorhnd)
-	:databaseConfig(),logfile(),threads(DefaultThreads),commitsize(DefaultCommitSize)
-	,dim(DefaultDim),bits(DefaultBits),variations(DefaultVariations)
-	,maxdist(DefaultMaxDist),simdist(DefaultSimDist),raddist(DefaultRadDist),eqdist(DefaultEqDist)
-	,maxsimsam(DefaultMaxSimSam),rndsimsam(DefaultRndSimSam)
+
+GenModelConfig::GenModelConfig( const std::string& config, unsigned int maxdist, ErrorBufferInterface* errorhnd)
+	:simdist(DefaultSimDist),raddist(DefaultRadDist),eqdist(DefaultEqDist)
 	,mutations(DefaultMutations),votes(DefaultMutationVotes)
 	,descendants(DefaultDescendants),maxage(DefaultMaxAge),iterations(DefaultIterations)
 	,assignments(DefaultAssignments)
-	,maxfeatures(DefaultMaxFeatures)
 	,isaf((float)DefaultIsaf / 100)
 	,with_singletons((bool)DefaultWithSingletons)
-	,with_probsim((bool)DefaultWithProbSim)
-	,with_forcesim((bool)DefaultWithForceSim)
 {
 	std::string src = config;
-	if (extractStringFromConfigString( logfile, src, "logfile", errorhnd)){}
-	if (extractUIntFromConfigString( threads, src, "threads", errorhnd)){}
-	if (extractUIntFromConfigString( commitsize, src, "commit", errorhnd)){}
-	if (extractUIntFromConfigString( dim, src, "dim", errorhnd)){}
-	if (extractUIntFromConfigString( bits, src, "bit", errorhnd)){}
-	if (extractUIntFromConfigString( variations, src, "var", errorhnd)){}
-	if (extractUIntFromConfigString( maxdist, src, "maxdist", errorhnd)){}
+	parse( src, maxdist, errorhnd);
+	std::string::const_iterator si = src.begin(), se = src.end();
+	for (; si != se && ((unsigned char)*si <= 32 || *si == ';'); ++si)
+	{}
+	if (si != se) throw strus::runtime_error(_TXT("unknown configuration parameter for gen model (vector space model)"));
+}
+
+void GenModelConfig::parse( std::string& src, unsigned int maxdist, ErrorBufferInterface* errorhnd)
+{
 	if (extractUIntFromConfigString( simdist, src, "simdist", errorhnd))
 	{
 		raddist = simdist;
@@ -89,8 +73,6 @@ VectorSpaceModelConfig::VectorSpaceModelConfig( const std::string& config, Error
 	{
 		throw strus::runtime_error(_TXT("the 'eqdist' configuration parameter must not be bigger than 'simdist'"));
 	}
-	if (extractUIntFromConfigString( maxsimsam, src, "maxsimsam", errorhnd)){}
-	if (extractUIntFromConfigString( rndsimsam, src, "rndsimsam", errorhnd)){}
 	if (extractUIntFromConfigString( mutations, src, "mutations", errorhnd)){}
 	if (extractUIntFromConfigString( votes, src, "votes", errorhnd)){}
 	if (extractUIntFromConfigString( descendants, src, "descendants", errorhnd)){}
@@ -100,16 +82,130 @@ VectorSpaceModelConfig::VectorSpaceModelConfig( const std::string& config, Error
 	}
 	if (extractUIntFromConfigString( maxage, src, "maxage", errorhnd)){}
 	if (extractUIntFromConfigString( assignments, src, "assignments", errorhnd)){}
-	if (extractUIntFromConfigString( maxfeatures, src, "maxfeatures", errorhnd)){}
 	double val;
 	if (extractFloatFromConfigString( val, src, "isaf", errorhnd)){isaf=(float)val;}
 	if (extractBooleanFromConfigString( with_singletons, src, "singletons", errorhnd)){}
+
+	if (mutations == 0 || descendants == 0 || maxage == 0 || iterations == 0)
+	{
+		throw strus::runtime_error(_TXT("error in vector space model configuration: mutations, descendants, maxage or iterations values must not be zero"));
+	}
+	if (errorhnd->hasError())
+	{
+		throw strus::runtime_error(_TXT("error loading vector space model configuration: %s"), errorhnd->fetchError());
+	}
+}
+
+bool GenModelConfig::isBuildCompatible( unsigned int maxdist) const
+{
+	return simdist <= maxdist
+		&& raddist <= maxdist
+		&& eqdist <= maxdist
+	;
+}
+
+template <typename ValueType>
+static void printConfigItem( std::ostream& buf, const std::string& name, const ValueType& value, bool eolnsep)
+{
+	buf << name << "=" << value << ";";
+	if (eolnsep) buf << std::endl;
+}
+
+static void printConfig( std::ostream& buf, const std::string& cfg, bool eolnsep)
+{
+	char const* ee = cfg.c_str() + cfg.size();
+	while (ee != cfg.c_str() && ((unsigned char)*(ee-1) <= 32 || *(ee-1) == ';')) --ee;
+	buf << std::string( cfg.c_str(), ee - cfg.c_str()) << ";";
+	if (eolnsep) buf << std::endl;
+}
+
+std::string GenModelConfig::tostring( bool eolnsep) const
+{
+	std::ostringstream buf;
+	buf << std::fixed << std::setprecision(5);
+	printConfigItem( buf, "simdist", simdist, eolnsep);
+	printConfigItem( buf, "raddist", raddist, eolnsep);
+	printConfigItem( buf, "eqdist", eqdist, eolnsep);
+	printConfigItem( buf, "mutations", mutations, eolnsep);
+	printConfigItem( buf, "votes", votes, eolnsep);
+	printConfigItem( buf, "descendants", descendants, eolnsep);
+	printConfigItem( buf, "maxage", maxage, eolnsep);
+	printConfigItem( buf, "iterations", iterations, eolnsep);
+	printConfigItem( buf, "assignments", assignments, eolnsep);
+	printConfigItem( buf, "isaf", isaf, eolnsep);
+	printConfigItem( buf, "singletons", with_singletons, eolnsep);
+	return buf.str();
+}
+
+
+VectorSpaceModelConfig::VectorSpaceModelConfig( const VectorSpaceModelConfig& o)
+	:databaseConfig(o.databaseConfig),logfile(o.logfile)
+	,threads(o.threads),commitsize(o.commitsize)
+	,dim(o.dim),bits(o.bits),variations(o.variations)
+	,maxdist(o.maxdist),gencfg(o.gencfg)
+	,maxsimsam(o.maxsimsam),rndsimsam(o.rndsimsam)
+	,maxfeatures(o.maxfeatures)
+	,with_probsim(o.with_probsim)
+	,with_forcesim(o.with_forcesim)
+	,altgenmap(o.altgenmap)
+	{}
+
+VectorSpaceModelConfig::VectorSpaceModelConfig()
+	:databaseConfig(),logfile(),threads(DefaultThreads),commitsize(DefaultCommitSize)
+	,dim(DefaultDim),bits(DefaultBits),variations(DefaultVariations)
+	,maxdist(DefaultMaxDist),gencfg()
+	,maxsimsam(DefaultMaxSimSam),rndsimsam(DefaultRndSimSam)
+	,maxfeatures(DefaultMaxFeatures)
+	,with_probsim((bool)DefaultWithProbSim)
+	,with_forcesim((bool)DefaultWithForceSim)
+	,altgenmap()
+	{}
+
+VectorSpaceModelConfig::VectorSpaceModelConfig( const std::string& config, ErrorBufferInterface* errorhnd)
+	:databaseConfig(),logfile(),threads(DefaultThreads),commitsize(DefaultCommitSize)
+	,dim(DefaultDim),bits(DefaultBits),variations(DefaultVariations)
+	,maxdist(DefaultMaxDist),gencfg()
+	,maxsimsam(DefaultMaxSimSam),rndsimsam(DefaultRndSimSam)
+	,maxfeatures(DefaultMaxFeatures)
+	,with_probsim((bool)DefaultWithProbSim)
+	,with_forcesim((bool)DefaultWithForceSim)
+{
+	std::string src = config;
+	if (extractStringFromConfigString( logfile, src, "logfile", errorhnd)){}
+	if (extractUIntFromConfigString( threads, src, "threads", errorhnd)){}
+	if (extractUIntFromConfigString( commitsize, src, "commit", errorhnd)){}
+	if (extractUIntFromConfigString( dim, src, "dim", errorhnd)){}
+	if (extractUIntFromConfigString( bits, src, "bit", errorhnd)){}
+	if (extractUIntFromConfigString( variations, src, "var", errorhnd)){}
+	if (extractUIntFromConfigString( maxdist, src, "maxdist", errorhnd)){}
+	gencfg.parse( src, maxdist, errorhnd);
+	if (extractUIntFromConfigString( maxsimsam, src, "maxsimsam", errorhnd)){}
+	if (extractUIntFromConfigString( rndsimsam, src, "rndsimsam", errorhnd)){}
+	if (extractUIntFromConfigString( maxfeatures, src, "maxfeatures", errorhnd)){}
 	if (extractBooleanFromConfigString( with_probsim, src, "probsim", errorhnd)){}
 	if (extractBooleanFromConfigString( with_forcesim, src, "forcesim", errorhnd)){}
-
-	if (dim == 0 || bits == 0 || variations == 0 || mutations == 0 || descendants == 0 || maxage == 0 || iterations == 0)
+	std::string altgencfgstr;
+	while (extractStringFromConfigString( altgencfgstr, src, "altgen", errorhnd))
 	{
-		throw strus::runtime_error(_TXT("error in vector space model configuration: dim, bits, var, mutations, descendants, maxage or iterations values must not be zero"));
+		char const* ee = altgencfgstr.c_str();
+		while (*ee && (unsigned char)*ee <= 32) ++ee;
+		char const* namestart = ee;
+		while (*ee && (unsigned char)*ee != ':' && (unsigned char)*ee != ' ')
+		{
+			if ((*ee|32) < 'a' || (*ee|32) > 'z') throw strus::runtime_error(_TXT("expected identifier at start of alternative gen configuration in vector space model"));
+			++ee;
+		}
+		std::string name( namestart, ee - namestart);
+		while (*ee && (unsigned char)*ee <= 32) ++ee;
+		if (*ee != ':') throw strus::runtime_error(_TXT("expected colon ':' after identifier at start of alternative gen configuration in vector space model"));
+		++ee;
+		GenModelConfig altgencfg( ee, maxdist, errorhnd);
+		if (altgenmap.find( name) != altgenmap.end()) throw strus::runtime_error(_TXT("duplicate definition of alternative gen configuration in vector space model"));
+		altgenmap[ name] = altgencfg;
+	}
+	if (dim == 0 || bits == 0 || variations == 0)
+	{
+		throw strus::runtime_error(_TXT("error in vector space model configuration: dim, bits or var values must not be zero"));
 	}
 	databaseConfig = utils::trim(src);	//... rest is database configuration
 	while (databaseConfig.size() && databaseConfig[ databaseConfig.size()-1] == ';') databaseConfig.resize( databaseConfig.size()-1);
@@ -120,14 +216,32 @@ VectorSpaceModelConfig::VectorSpaceModelConfig( const std::string& config, Error
 	}
 }
 
-std::string VectorSpaceModelConfig::tostring() const
+bool VectorSpaceModelConfig::isBuildCompatible( const VectorSpaceModelConfig& o) const
+{
+	if (dim == o.dim
+		&& bits == o.bits
+		&& variations == o.variations
+		&& maxdist <= o.maxdist
+		&& gencfg.isBuildCompatible( maxdist))
+	{
+		GenModelConfigMap::const_iterator ai = altgenmap.begin(), ae = altgenmap.end();
+		for (; ai != ae; ++ai)
+		{
+			if (!ai->second.isBuildCompatible( maxdist)) return false;
+		}
+		return true;
+	}
+	else
+	{
+		return false;
+	}
+}
+
+std::string VectorSpaceModelConfig::tostring( bool eolnsep) const
 {
 	std::ostringstream buf;
 	buf << std::fixed << std::setprecision(5);
-	buf << databaseConfig;
-	char const* ee = databaseConfig.c_str() + databaseConfig.size();
-	while (ee != databaseConfig.c_str() && ((unsigned char)*(ee-1) <= 32 || *(ee-1) == ';')) --ee;
-	buf << ";" << std::endl;
+	printConfig( buf, databaseConfig, eolnsep);
 	buf << "logfile=" << logfile << ";" << std::endl;
 	buf << "threads=" << threads << ";" << std::endl;
 	buf << "commit=" << commitsize << ";" << std::endl;
@@ -135,20 +249,10 @@ std::string VectorSpaceModelConfig::tostring() const
 	buf << "bit=" << bits << ";" << std::endl;
 	buf << "var=" << variations << ";" << std::endl;
 	buf << "maxdist=" << maxdist << ";" << std::endl;
-	buf << "simdist=" << simdist << ";" << std::endl;
-	buf << "raddist=" << raddist << ";" << std::endl;
-	buf << "eqdist=" << eqdist << ";" << std::endl;
+	printConfig( buf, gencfg.tostring(eolnsep), eolnsep);
 	buf << "maxsimsam=" << maxsimsam << ";" << std::endl;
 	buf << "rndsimsam=" << rndsimsam << ";" << std::endl;
-	buf << "mutations=" << mutations << ";" << std::endl;
-	buf << "votes=" << votes << ";" << std::endl;
-	buf << "descendants=" << descendants << ";" << std::endl;
-	buf << "maxage=" << maxage << ";" << std::endl;
-	buf << "iterations=" << iterations << ";" << std::endl;
-	buf << "assignments=" << assignments << ";" << std::endl;
 	buf << "maxfeatures=" << maxfeatures << ";" << std::endl;
-	buf << "isaf=" << isaf << ";" << std::endl;
-	buf << "singletons=" << (with_singletons?"yes":"no") << ";" << std::endl;
 	buf << "probsim=" << (with_probsim?"yes":"no") << ";" << std::endl;
 	buf << "forcesim=" << (with_forcesim?"yes":"no") << ";" << std::endl;
 	return buf.str();

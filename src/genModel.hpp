@@ -72,6 +72,7 @@ public:
 
 	/// \brief Unsupervised learning of a good group representantion of the sample set passed as argument
 	std::vector<SimHash> run(
+			const std::string& clname,
 			SampleConceptIndexMap& sampleConceptIndexMap,
 			ConceptSampleIndexMap& conceptSampleIndexMap,
 			const std::vector<SimHash>& samples,

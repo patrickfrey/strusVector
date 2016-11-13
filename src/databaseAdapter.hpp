@@ -43,34 +43,37 @@ public:
 	std::string readSampleName( const SampleIndex& sidx) const;
 	SampleIndex readSampleIndex( const std::string& name) const;
 	SampleIndex readNofSamples() const;
-	ConceptIndex readNofConcepts() const;
+	ConceptIndex readNofConcepts( const std::string& clname) const;
 	unsigned int readState() const;
 	std::vector<std::pair<std::string,uint64_t> > readVariables() const;
 
+	std::vector<std::string> readConceptClassNames() const;
+
 	SimHash readSampleSimhash( const SampleIndex& sidx) const;
 	std::vector<SimHash> readSampleSimhashVector() const;
-	std::vector<SimHash> readResultSimhashVector() const;
+	std::vector<SimHash> readConceptSimhashVector( const std::string& clname) const;
 
 	SampleIndex readLastSimRelationIndex() const;
 	std::vector<SimRelationMap::Element> readSimRelations( const SampleIndex& sidx) const;
 	SimRelationMap readSimRelationMap() const;
-	std::vector<SampleIndex> readConceptSampleIndices( const ConceptIndex& fidx) const;
-	ConceptSampleIndexMap readConceptSampleIndexMap();
-	std::vector<ConceptIndex> readSampleConceptIndices( const SampleIndex& sidx) const;
-	SampleConceptIndexMap readSampleConceptIndexMap();
+	std::vector<SampleIndex> readConceptSampleIndices( const std::string& clname, const ConceptIndex& fidx) const;
+	ConceptSampleIndexMap readConceptSampleIndexMap( const std::string& clname);
+	std::vector<ConceptIndex> readSampleConceptIndices( const std::string& clname, const SampleIndex& sidx) const;
+	SampleConceptIndexMap readSampleConceptIndexMap( const std::string& clname);
 	VectorSpaceModelConfig readConfig() const;
 	LshModel readLshModel() const;
 
 	void writeVersion();
 	void writeNofSamples( const SampleIndex& nofSamples);
-	void writeNofConcepts( const ConceptIndex& nofConcepts);
+	void writeNofConcepts( const std::string& clname, const ConceptIndex& nofConcepts);
+	void writeConceptClassNames( const std::vector<std::string>& clnames);
 	void writeState( unsigned int state);
 	void writeSample( const SampleIndex& sidx, const std::string& name, const Vector& vec, const SimHash& simHash);
-	void writeResultSimhashVector( const std::vector<SimHash>& ar);
+	void writeConceptSimhashVector( const std::string& clname, const std::vector<SimHash>& ar);
 	void writeSimRelationMap( const SimRelationMap& simrelmap);
 	void writeSimRelationRow( const SampleIndex& sidx, const SimRelationMap::Row& row);
-	void writeSampleConceptIndexMap( const SampleConceptIndexMap& sfmap);
-	void writeConceptSampleIndexMap( const ConceptSampleIndexMap& fsmap);
+	void writeSampleConceptIndexMap( const std::string& clname, const SampleConceptIndexMap& sfmap);
+	void writeConceptSampleIndexMap( const std::string& clname, const ConceptSampleIndexMap& fsmap);
 	void writeConfig( const VectorSpaceModelConfig& config);
 	void writeLshModel( const LshModel& model);
 
@@ -79,12 +82,13 @@ public:
 
 	void deleteConfig();
 	void deleteVariables();
+	void deleteConceptClassNames();
 	void deleteSamples();
-	void deleteSampleSimhashVector();
-	void deleteResultSimhashVector();
+	void deleteSampleSimhashVectors();
+	void deleteConceptSimhashVectors();
 	void deleteSimRelationMap();
-	void deleteSampleConceptIndexMap();
-	void deleteConceptSampleIndexMap();
+	void deleteSampleConceptIndexMaps();
+	void deleteConceptSampleIndexMaps();
 	void deleteLshModel();
 	void commit();
 
@@ -98,11 +102,12 @@ public:
 	{
 		KeyVersion = 'V',
 		KeyVariable = '*',
+		KeyConceptClassNames = 'K',
 		KeySampleVector = '$',
 		KeySampleName = '@',
 		KeySampleNameInv = '#',
 		KeySampleSimHash = 'S',
-		KeyResultSimHash = 'R',
+		KeyConceptSimhash = 'R',
 		KeyConfig = 'C',
 		KeyLshModel = 'L',
 		KeySimRelationMap = 'M',
@@ -112,17 +117,17 @@ public:
 
 private:
 	void beginTransaction();
-	SimHash readSimhash( const KeyPrefix& prefix, const SampleIndex& sidx) const;
-	std::vector<SimHash> readSimhashVector( const KeyPrefix& prefix) const;
-	unsigned int readVariable( const char* name) const;
-	IndexListMap<strus::Index,strus::Index> readIndexListMap( const KeyPrefix& prefix) const;
+	SimHash readSimhash( const KeyPrefix& prefix, const std::string& clname, const SampleIndex& sidx) const;
+	std::vector<SimHash> readSimhashVector( const KeyPrefix& prefix, const std::string& clname) const;
+	unsigned int readVariable( const std::string& name) const;
+	IndexListMap<strus::Index,strus::Index> readIndexListMap( const KeyPrefix& prefix, const std::string& clname) const;
 
-	void writeSimhash( const KeyPrefix& prefix, const SampleIndex& sidx, const SimHash& simHash);
-	void writeSimhashVector( const KeyPrefix& prefix, const std::vector<SimHash>& ar);
+	void writeSimhash( const KeyPrefix& prefix, const std::string& clname, const SampleIndex& sidx, const SimHash& simHash);
+	void writeSimhashVector( const KeyPrefix& prefix, const std::string& clname, const std::vector<SimHash>& ar);
 	void writeSampleIndex( const SampleIndex& sidx, const std::string& name);
 	void writeSampleName( const SampleIndex& sidx, const std::string& name);
 	void writeSampleVector( const SampleIndex& sidx, const Vector& vec);
-	void writeVariable( const char* name, unsigned int value);
+	void writeVariable( const std::string& name, unsigned int value);
 
 	void deleteSubTree( const KeyPrefix& prefix);
 

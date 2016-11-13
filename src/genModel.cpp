@@ -467,6 +467,7 @@ static void checkSimGroupStructures(
 #endif
 
 std::vector<SimHash> GenModel::run(
+		const std::string& clname,
 		SampleConceptIndexMap& sampleConceptIndexMap,
 		ConceptSampleIndexMap& conceptSampleIndexMap,
 		const std::vector<SimHash>& samplear,
@@ -479,6 +480,7 @@ std::vector<SimHash> GenModel::run(
 	GroupInstanceMap groupInstanceMap;		// map indices to group representant list iterators
 	SampleSimGroupMap sampleSimGroupMap( samplear.size(), m_assignments);	// map of sample idx to group idx
 
+	if (logout) logout << string_format( _TXT("start learning concepts for class %s"), clname.c_str());
 	// Do the iterations of creating new individuals
 	unsigned int iteration=0;
 	for (; iteration != m_iterations; ++iteration)

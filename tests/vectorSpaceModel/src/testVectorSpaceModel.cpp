@@ -31,6 +31,8 @@
 
 #undef STRUS_LOWLEVEL_DEBUG
 
+#define MAIN_CONCEPTNAME ""
+
 static void initRandomNumberGenerator()
 {
 	time_t nowtime;
@@ -281,7 +283,7 @@ int main( int argc, const char** argv)
 		{
 			throw std::runtime_error( "failed to create VSM instance from model stored");
 		}
-		std::cerr << "loaded trained model with " << categorizer->nofConcepts() << " concepts" << std::endl;
+		std::cerr << "loaded trained model with " << categorizer->nofConcepts( MAIN_CONCEPTNAME) << " concepts" << std::endl;
 		typedef strus::SparseDim2Field<unsigned char> ConceptMatrix;
 		typedef std::multimap<strus::Index,strus::Index> ClassesMap;
 		typedef std::pair<strus::Index,strus::Index> ClassesElem;
@@ -294,8 +296,8 @@ int main( int argc, const char** argv)
 		std::vector<std::vector<double> >::const_iterator si = samplear.begin(), se = samplear.end();
 		for (std::size_t sidx=0; si != se; ++si,++sidx)
 		{
-			std::vector<strus::Index> ctgar( categorizer->mapVectorToConcepts( *si));
-			std::vector<strus::Index> ctgar2( categorizer->featureConcepts( sidx));
+			std::vector<strus::Index> ctgar( categorizer->mapVectorToConcepts( MAIN_CONCEPTNAME, *si));
+			std::vector<strus::Index> ctgar2( categorizer->featureConcepts( MAIN_CONCEPTNAME, sidx));
 			std::vector<strus::Index>::const_iterator ci,ce,ca,zi,ze,za;
 			if (use_group_assign)
 			{
@@ -351,7 +353,7 @@ int main( int argc, const char** argv)
 		while (ci != ce)
 		{
 			strus::Index key = ci->first;
-			std::vector<strus::Index> members( categorizer->conceptFeatures( ci->first));
+			std::vector<strus::Index> members( categorizer->conceptFeatures( MAIN_CONCEPTNAME, ci->first));
 			std::vector<strus::Index>::const_iterator mi = members.begin(), me = members.end();
 			std::cout << "(" << key << ") <= ";
 			for (; ci != ce && ci->first == key; ++ci)
@@ -387,7 +389,7 @@ int main( int argc, const char** argv)
 		// Build a similarity matrix defined by concepts shared between input vectors:
 		std::cerr << "build sample to sample concept relation matrix:" << std::endl;
 		strus::SparseDim2Field<unsigned char> outSimMatrix;
-		unsigned int fi=0, fe=categorizer->nofConcepts();
+		unsigned int fi=0, fe=categorizer->nofConcepts( MAIN_CONCEPTNAME);
 		for (; fi != fe; ++fi)
 		{
 			std::vector<unsigned int> conceptMembers;

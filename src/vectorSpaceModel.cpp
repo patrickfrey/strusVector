@@ -35,52 +35,101 @@ using namespace strus;
 
 #undef STRUS_LOWLEVEL_DEBUG
 
+#define MAIN_CONCEPT_CLASSNAME ""
+
 class VectorSpaceModelInstance
 	:public VectorSpaceModelInstanceInterface
 {
 public:
+	typedef Reference<std::vector<SimHash> > SimHashVectorReference;
+
 	VectorSpaceModelInstance( const std::string& config_, const DatabaseInterface* database_, ErrorBufferInterface* errorhnd_)
 		:m_errorhnd(errorhnd_),m_database(),m_config(config_,errorhnd_),m_lshmodel(),m_individuals()
 	{
+		m_conceptClassMap[ MAIN_CONCEPT_CLASSNAME] = m_individuals.size();
+		m_individuals.push_back( SimHashVectorReference());
 		m_database.reset( new DatabaseAdapter( database_, m_config.databaseConfig, m_errorhnd));
 		m_database->checkVersion();
 		if (m_database->isempty()) throw strus::runtime_error(_TXT("try to open a vector space model that is empty, need to be built first"));
 		m_config = m_database->readConfig();
+
+		std::vector<std::string> clnames = m_database->readConceptClassNames();
+		std::vector<std::string>::const_iterator ci = clnames.begin(), ce = clnames.end();
+		for (; ci != ce; ++ci)
+		{
+			m_conceptClassMap[ *ci] = m_individuals.size();
+			m_individuals.push_back( SimHashVectorReference());
+		}
 	}
 
 	virtual ~VectorSpaceModelInstance()
 	{}
 
-	virtual void preload()
+	void loaddata()
 	{
 		if (!m_lshmodel.get())
 		{
 			m_lshmodel.reset( new LshModel( m_database->readLshModel()));
 		}
-		if (!m_individuals.get())
+		conceptClassMap::const_iterator ci = m_conceptClassMap.begin(), ce = m_conceptClassMap.end();
+		for (; ci != ce; ++ci)
 		{
-			m_individuals.reset( new std::vector<SimHash>( m_database->readResultSimhashVector()));
+			SimHashVectorReference& ivec = m_individuals[ci->second];
+			if (!ivec.get())
+			{
+				ivec.reset( new std::vector<SimHash>( m_database->readConceptSimhashVector( ci->first)));
+			}
 		}
 	}
 
-	virtual std::vector<Index> mapVectorToConcepts( const std::vector<double>& vec) const
+	const SimHashVectorReference& loadSimHashVectorRef( const std::string& conceptClass) const
+	{
+		if (!m_lshmodel.get())
+		{
+			m_lshmodel.reset( new LshModel( m_database->readLshModel()));
+		}
+		conceptClassMap::const_iterator ci = m_conceptClassMap.find( conceptClass);
+		if (ci == m_conceptClassMap.end()) throw strus::runtime_error(_TXT("concept class identifier '%s' unknown"), conceptClass.c_str());
+		SimHashVectorReference& ivec = m_individuals[ ci->second];
+		if (!ivec.get())
+		{
+			ivec.reset( new std::vector<SimHash>( m_database->readConceptSimhashVector( ci->first)));
+		}
+		return ivec;
+	}
+
+	virtual void preload()
 	{
 		try
 		{
-			if (!m_lshmodel.get())
-			{
-				m_lshmodel.reset( new LshModel( m_database->readLshModel()));
-			}
-			if (!m_individuals.get())
-			{
-				m_individuals.reset( new std::vector<SimHash>( m_database->readResultSimhashVector()));
-			}
+			loaddata();
+		}
+		CATCH_ERROR_ARG1_MAP( _TXT("error in instance of '%s' when pre-loading data: %s"), MODULENAME, *m_errorhnd);
+	}
+
+	virtual std::vector<std::string> conceptClassNames() const
+	{
+		try
+		{
+			std::vector<std::string> rt = m_database->readConceptClassNames();
+			rt.push_back( MAIN_CONCEPT_CLASSNAME);
+			return rt;
+		}
+		CATCH_ERROR_ARG1_MAP_RETURN( _TXT("error in instance of '%s' getting the list of implemented concept class names: %s"), MODULENAME, *m_errorhnd, std::vector<std::string>());
+	}
+
+	virtual std::vector<Index> mapVectorToConcepts( const std::string& conceptClass, const std::vector<double>& vec) const
+	{
+		try
+		{
+			const SimHashVectorReference& ivec = loadSimHashVectorRef( conceptClass);
+			const GenModelConfig& gencfg = m_config.genModelConfig( conceptClass);
 			std::vector<Index> rt;
 			SimHash hash( m_lshmodel->simHash( arma::normalise( arma::vec( vec))));
-			std::vector<SimHash>::const_iterator ii = m_individuals->begin(), ie = m_individuals->end();
+			std::vector<SimHash>::const_iterator ii = ivec->begin(), ie = ivec->end();
 			for (std::size_t iidx=1; ii != ie; ++ii,++iidx)
 			{
-				if (ii->near( hash, m_config.simdist))
+				if (ii->near( hash, gencfg.simdist))
 				{
 					rt.push_back( iidx);
 				}
@@ -90,11 +139,11 @@ public:
 		CATCH_ERROR_ARG1_MAP_RETURN( _TXT("error in instance of '%s' mapping vector to concepts: %s"), MODULENAME, *m_errorhnd, std::vector<Index>());
 	}
 
-	virtual std::vector<Index> featureConcepts( const Index& index) const
+	virtual std::vector<Index> featureConcepts( const std::string& conceptClass, const Index& index) const
 	{
 		try
 		{
-			return m_database->readSampleConceptIndices( index);
+			return m_database->readSampleConceptIndices( conceptClass, index);
 		}
 		CATCH_ERROR_ARG1_MAP_RETURN( _TXT("error in instance of '%s' retrieving associated concepts by sample index: %s"), MODULENAME, *m_errorhnd, std::vector<Index>());
 	}
@@ -138,14 +187,17 @@ public:
 				SimHash simhash = m_database->readSampleSimhash( index);
 				rt.push_back( simhash.tostring());
 			}
-			else if (utils::caseInsensitiveEquals( name, "conceptlsh"))
+			else if (utils::caseInsensitiveStartsWith( name, "conceptlsh_"))
 			{
-				if (!m_individuals.get())
+				conceptClassMap::const_iterator ci = m_conceptClassMap.find( std::string( name.c_str() + 11/*strlen("conceptlsh_")*/));
+				if (ci == m_conceptClassMap.end()) return rt;
+				SimHashVectorReference& ivec = m_individuals[ci->second];
+				if (!ivec.get())
 				{
-					m_individuals.reset( new std::vector<SimHash>( m_database->readResultSimhashVector()));
+					ivec.reset( new std::vector<SimHash>( m_database->readConceptSimhashVector( ci->first)));
 				}
-				if (index <= 0 || (std::size_t)index > m_individuals->size()) throw strus::runtime_error(_TXT("concept index out of range"));
-				rt.push_back( (*m_individuals)[ index-1].tostring());
+				if (index <= 0 || (std::size_t)index > ivec->size()) throw strus::runtime_error(_TXT("concept index out of range"));
+				rt.push_back( (*ivec)[ index-1].tostring());
 			}
 			else if (utils::caseInsensitiveEquals( name, "simrel"))
 			{
@@ -196,7 +248,11 @@ public:
 		{
 			std::vector<std::string> rt;
 			rt.push_back( "featurelsh");
-			rt.push_back( "conceptlsh");
+			conceptClassMap::const_iterator ci = m_conceptClassMap.begin(), ce = m_conceptClassMap.end();
+			for (; ci != ce; ++ci)
+			{
+				rt.push_back( std::string("conceptlsh_") + ci->first);
+			}
 			rt.push_back( "simrel");
 			rt.push_back( "variable");
 			return rt;
@@ -204,26 +260,28 @@ public:
 		CATCH_ERROR_ARG1_MAP_RETURN( _TXT("error in instance of '%s' getting feature attribute names: %s"), MODULENAME, *m_errorhnd, std::vector<std::string>());
 	}
 
-	virtual std::vector<Index> conceptFeatures( const Index& conceptid) const
+	virtual std::vector<Index> conceptFeatures( const std::string& conceptClass, const Index& conceptid) const
 	{
 		try
 		{
-			return m_database->readConceptSampleIndices( conceptid);
+			return m_database->readConceptSampleIndices( conceptClass, conceptid);
 		}
 		CATCH_ERROR_ARG1_MAP_RETURN( _TXT("error in instance of '%s' getting associated feature indices by learnt concept: %s"), MODULENAME, *m_errorhnd, std::vector<Index>());
 	}
 
-	virtual unsigned int nofConcepts() const
+	virtual unsigned int nofConcepts( const std::string& conceptClass) const
 	{
 		try
 		{
-			if (!m_individuals.get())
+			conceptClassMap::const_iterator ci = m_conceptClassMap.find( conceptClass);
+			if (ci == m_conceptClassMap.end()) return 0;
+			if (!m_individuals[ ci->second].get())
 			{
-				return m_database->readNofConcepts();
+				return m_database->readNofConcepts( conceptClass);
 			}
 			else
 			{
-				return m_individuals->size();
+				return m_individuals[ ci->second]->size();
 			}
 		}
 		CATCH_ERROR_ARG1_MAP_RETURN( _TXT("error in instance of '%s' getting number of concepts learnt: %s"), MODULENAME, *m_errorhnd, 0);
@@ -248,7 +306,9 @@ private:
 	Reference<DatabaseAdapter> m_database;
 	VectorSpaceModelConfig m_config;
 	mutable Reference<LshModel> m_lshmodel;				//< cached model
-	mutable Reference<std::vector<SimHash> > m_individuals;		//< cached concepts
+	mutable std::vector<SimHashVectorReference> m_individuals;	//< cached concept vectors
+	typedef std::map<std::string,std::size_t> conceptClassMap;
+	conceptClassMap m_conceptClassMap;				//< maps names of concept classes to the associated individuals
 };
 
 class SimRelationImpl
@@ -273,7 +333,7 @@ class VectorSpaceModelBuilder
 public:
 	VectorSpaceModelBuilder( const std::string& config_, const DatabaseInterface* database_, ErrorBufferInterface* errorhnd_)
 		:m_errorhnd(errorhnd_),m_dbi(database_),m_config(config_,errorhnd_)
-		,m_state(0),m_lshmodel(),m_genmodel(),m_samplear()
+		,m_state(0),m_lshmodel(),m_genmodelmain(),m_genmodelmap(),m_samplear()
 	{
 		m_database.reset( new DatabaseAdapter( database_, m_config.databaseConfig, m_errorhnd));
 		m_database->checkVersion();
@@ -282,7 +342,12 @@ public:
 		{
 			m_database->writeConfig( m_config);
 			m_lshmodel = LshModel( m_config.dim, m_config.bits, m_config.variations);
-			m_genmodel = GenModel( m_config.threads, m_config.maxdist, m_config.simdist, m_config.raddist, m_config.eqdist, m_config.mutations, m_config.votes, m_config.descendants, m_config.maxage, m_config.iterations, m_config.assignments, m_config.isaf, m_config.with_singletons);
+			m_genmodelmain = GenModel( m_config.threads, m_config.maxdist, m_config.gencfg.simdist, m_config.gencfg.raddist, m_config.gencfg.eqdist, m_config.gencfg.mutations, m_config.gencfg.votes, m_config.gencfg.descendants, m_config.gencfg.maxage, m_config.gencfg.iterations, m_config.gencfg.assignments, m_config.gencfg.isaf, m_config.gencfg.with_singletons);
+			GenModelConfigMap::const_iterator mi = m_config.altgenmap.begin(), me = m_config.altgenmap.end();
+			for (; mi != me; ++mi)
+			{
+				m_genmodelmap[ mi->first] = GenModel( m_config.threads, m_config.maxdist, mi->second.simdist, mi->second.raddist, mi->second.eqdist, mi->second.mutations, mi->second.votes, mi->second.descendants, mi->second.maxage, mi->second.iterations, mi->second.assignments, mi->second.isaf, mi->second.with_singletons);
+			}
 			m_database->writeLshModel( m_lshmodel);
 			m_database->writeState( m_state = 1);
 			m_database->commit();
@@ -295,11 +360,16 @@ public:
 				throw strus::runtime_error(_TXT("loading vector space model with incompatible configuration"));
 			}
 			m_lshmodel = m_database->readLshModel();
-			m_genmodel = GenModel( m_config.threads, m_config.maxdist, m_config.simdist, m_config.raddist, m_config.eqdist, m_config.mutations, m_config.votes, m_config.descendants, m_config.maxage, m_config.iterations, m_config.assignments, m_config.isaf, m_config.with_singletons);
+			m_genmodelmain = GenModel( m_config.threads, m_config.maxdist, m_config.gencfg.simdist, m_config.gencfg.raddist, m_config.gencfg.eqdist, m_config.gencfg.mutations, m_config.gencfg.votes, m_config.gencfg.descendants, m_config.gencfg.maxage, m_config.gencfg.iterations, m_config.gencfg.assignments, m_config.gencfg.isaf, m_config.gencfg.with_singletons);
+			GenModelConfigMap::const_iterator mi = m_config.altgenmap.begin(), me = m_config.altgenmap.end();
+			for (; mi != me; ++mi)
+			{
+				m_genmodelmap[ mi->first] = GenModel( m_config.threads, m_config.maxdist, mi->second.simdist, mi->second.raddist, mi->second.eqdist, mi->second.mutations, mi->second.votes, mi->second.descendants, mi->second.maxage, mi->second.iterations, mi->second.assignments, mi->second.isaf, mi->second.with_singletons);
+			}
 			m_samplear = m_database->readSampleSimhashVector();
 		}
 	}
-	
+
 	virtual ~VectorSpaceModelBuilder()
 	{}
 
@@ -373,12 +443,12 @@ public:
 		SampleIndex si = 0, se = m_database->readNofSamples();
 		for (; si != se; ++si)
 		{
-			std::vector<strus::Index> conlist = m_database->readSampleConceptIndices( si);
+			std::vector<strus::Index> conlist = m_database->readSampleConceptIndices( MAIN_CONCEPT_CLASSNAME, si);
 			std::vector<strus::Index>::const_iterator ci = conlist.begin(), ce = conlist.end();
 			std::map<strus::Index,unsigned short> simmap;
 			for (; ci != ce; ++ci)
 			{
-				std::vector<strus::Index> nblist = m_database->readConceptSampleIndices( *ci);
+				std::vector<strus::Index> nblist = m_database->readConceptSampleIndices( MAIN_CONCEPT_CLASSNAME, *ci);
 				std::vector<strus::Index>::const_iterator ni = nblist.begin(), ne = nblist.end();
 				for (; ni != ne; ++ni)
 				{
@@ -456,6 +526,23 @@ public:
 		if (logout) logout << string_format( _TXT("calculated similarity relation matrix stored to database"));
 	}
 
+	void run_genmodel( const std::string& clname, const GenModel& genmodel)
+	{
+		const char* logfile = m_config.logfile.empty()?0:m_config.logfile.c_str();
+		SimRelationImpl simrelmap( m_database.get());
+
+		SampleConceptIndexMap sampleConceptIndexMap;
+		ConceptSampleIndexMap conceptSampleIndexMap;
+
+		std::vector<SimHash> resultar = genmodel.run(
+				clname, sampleConceptIndexMap, conceptSampleIndexMap,
+				m_samplear, simrelmap, logfile);
+		m_database->writeConceptSimhashVector( clname, resultar);
+		m_database->writeSampleConceptIndexMap( clname, sampleConceptIndexMap);
+		m_database->writeConceptSampleIndexMap( clname, conceptSampleIndexMap);
+		m_database->writeNofConcepts( clname, resultar.size());
+	}
+
 	virtual bool finalize()
 	{
 		try
@@ -466,25 +553,22 @@ public:
 			{
 				buildSimRelationMap();
 			}
-			m_database->deleteSampleConceptIndexMap();
-			m_database->deleteConceptSampleIndexMap();
-			m_database->deleteResultSimhashVector();
+			m_database->deleteSampleConceptIndexMaps();
+			m_database->deleteConceptSampleIndexMaps();
+			m_database->deleteConceptSimhashVectors();
+			m_database->deleteConceptClassNames();
 			m_database->commit();
 
-			std::vector<SimHash> resultar;
-			SampleConceptIndexMap sampleConceptIndexMap;
-			ConceptSampleIndexMap conceptSampleIndexMap;
-
-			const char* logfile = m_config.logfile.empty()?0:m_config.logfile.c_str();
-			SimRelationImpl simrelmap( m_database.get());
-			resultar = m_genmodel.run(
-					sampleConceptIndexMap, conceptSampleIndexMap,
-					m_samplear, simrelmap, logfile);
-			m_database->writeResultSimhashVector( resultar);
-			m_database->writeSampleConceptIndexMap( sampleConceptIndexMap);
-			m_database->writeConceptSampleIndexMap( conceptSampleIndexMap);
+			std::vector<std::string> clnames;
+			run_genmodel( MAIN_CONCEPT_CLASSNAME, m_genmodelmain);
+			GenModelMap::const_iterator mi = m_genmodelmap.begin(), me = m_genmodelmap.end();
+			for (; mi != me; ++mi)
+			{
+				run_genmodel( mi->first, mi->second);
+				clnames.push_back( mi->first);
+			}
 			m_database->writeNofSamples( m_samplear.size());
-			m_database->writeNofConcepts( resultar.size());
+			m_database->writeConceptClassNames( clnames);
 			m_database->writeState( 3);
 			m_database->commit();
 			return true;
@@ -493,13 +577,17 @@ public:
 	}
 
 private:
+	typedef std::map<std::string,GenModel> GenModelMap;
+
+private:
 	ErrorBufferInterface* m_errorhnd;
 	const DatabaseInterface* m_dbi;
 	Reference<DatabaseAdapter> m_database;
 	VectorSpaceModelConfig m_config;
 	unsigned int m_state;
 	LshModel m_lshmodel;
-	GenModel m_genmodel;
+	GenModel m_genmodelmain;
+	GenModelMap m_genmodelmap;
 	utils::Mutex m_mutex;
 	std::vector<SimHash> m_samplear;
 	std::vector<std::vector<double> > m_vecar;

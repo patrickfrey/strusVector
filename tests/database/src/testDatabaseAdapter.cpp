@@ -163,7 +163,7 @@ struct TestDataset
 		,nofSamples(nofSamples_)
 		,state((nofSamples_*17)%3 + 1)
 		,lshmodel( config.dim, config.bits, config.variations)
-		,simrelmap(getSimRelationMap( nofSamples, config.simdist))
+		,simrelmap(getSimRelationMap( nofSamples, config.gencfg.simdist))
 		,sfmap(getSampleConceptIndexMap( nofSamples))
 		,fsmap(getConceptSampleIndexMap( nofSamples))
 		,sampleNames(),sampleVectors(),sampleSimHashs()
@@ -190,6 +190,7 @@ struct TestDataset
 	std::vector< strus::SimHash> sampleSimHashs;
 };
 
+#define MAIN_CONCEPTNAME "x"
 
 static void writeDatabase( const strus::VectorSpaceModelConfig& config, const TestDataset& dataset)
 {
@@ -209,17 +210,17 @@ static void writeDatabase( const strus::VectorSpaceModelConfig& config, const Te
 
 	database.writeVersion();
 	database.writeNofSamples( dataset.nofSamples);
-	database.writeNofConcepts( dataset.nofConcepts);
+	database.writeNofConcepts( MAIN_CONCEPTNAME, dataset.nofConcepts);
 	database.writeState( dataset.state);
 	strus::Index si = 0, se = dataset.nofSamples;
 	for (; si != se; ++si)
 	{
 		database.writeSample( si, dataset.sampleNames[si], dataset.sampleVectors[si], dataset.sampleSimHashs[si]);
 	}
-	database.writeResultSimhashVector( dataset.sampleSimHashs);
 	database.writeSimRelationMap( dataset.simrelmap);
-	database.writeSampleConceptIndexMap( dataset.sfmap);
-	database.writeConceptSampleIndexMap( dataset.fsmap);
+	database.writeConceptSimhashVector( MAIN_CONCEPTNAME, dataset.sampleSimHashs);
+	database.writeSampleConceptIndexMap( MAIN_CONCEPTNAME, dataset.sfmap);
+	database.writeConceptSampleIndexMap( MAIN_CONCEPTNAME, dataset.fsmap);
 	database.writeConfig( config);
 	database.writeLshModel( dataset.lshmodel);
 	database.commit();
@@ -316,7 +317,7 @@ static void readAndCheckDatabase( const strus::VectorSpaceModelConfig& config, c
 
 	database.checkVersion();
 	if (dataset.nofSamples != database.readNofSamples()) throw std::runtime_error("number of samples does not match");
-	if (dataset.nofConcepts != database.readNofConcepts()) throw std::runtime_error("number of concepts does not match");
+	if (dataset.nofConcepts != database.readNofConcepts( MAIN_CONCEPTNAME)) throw std::runtime_error("number of concepts does not match");
 	if (dataset.state != database.readState()) throw std::runtime_error("number of concepts does not match");
 
 	strus::Index si = 0, se = dataset.nofSamples;
@@ -327,11 +328,11 @@ static void readAndCheckDatabase( const strus::VectorSpaceModelConfig& config, c
 		if (database.readSampleIndex( dataset.sampleNames[si]) != si) throw std::runtime_error("sample indices got by name do not match");
 	}
 	if (!compare( dataset.sampleSimHashs, database.readSampleSimhashVector())) throw std::runtime_error("sample sim hash values do not match");
-	if (!compare( dataset.sampleSimHashs, database.readResultSimhashVector())) throw std::runtime_error("result sim hash values do not match");
+	if (!compare( dataset.sampleSimHashs, database.readConceptSimhashVector( MAIN_CONCEPTNAME))) throw std::runtime_error("concept sim hash values do not match");
 
-	if (!compare( dataset.simrelmap, database.readSimRelationMap())) throw std::runtime_error("result sim relation map does not match");
-	if (!compare( dataset.sfmap, database.readSampleConceptIndexMap())) throw std::runtime_error("sample concept index map does not match");
-	if (!compare( dataset.fsmap, database.readConceptSampleIndexMap())) throw std::runtime_error("concept sample index map does not match");
+	if (!compare( dataset.simrelmap, database.readSimRelationMap())) throw std::runtime_error("concept sim relation map does not match");
+	if (!compare( dataset.sfmap, database.readSampleConceptIndexMap( MAIN_CONCEPTNAME))) throw std::runtime_error("sample concept index map does not match");
+	if (!compare( dataset.fsmap, database.readConceptSampleIndexMap( MAIN_CONCEPTNAME))) throw std::runtime_error("concept sample index map does not match");
 	if (config.tostring() != database.readConfig().tostring()) throw std::runtime_error("configuration does not match");
 	if (!compare( dataset.lshmodel, database.readLshModel())) throw std::runtime_error("LSH model does not match");
 }

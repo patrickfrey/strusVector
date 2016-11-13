@@ -10,12 +10,54 @@
 #define _STRUS_VECTOR_SPACE_MODEL_CONFIG_HPP_INCLUDED
 #include "simGroup.hpp"
 #include <string>
+#include <map>
 #include <limits>
 
 namespace strus {
 
 /// \brief Forward declaration
 class ErrorBufferInterface;
+
+struct GenModelConfig
+{
+	enum Defaults {
+		DefaultSimDist = 340,	//< 340 out of 2K (32*64) ~ cosine dist 0.9
+		DefaultRadDist = 320,	//< 340 out of 2K (32*64) ~ cosine dist 0.9
+		DefaultEqDist = 60,
+		DefaultMutations = 50,
+		DefaultMutationVotes = 13,
+		DefaultDescendants = 10,
+		DefaultMaxAge = 20,
+		DefaultIterations = 20,
+		DefaultAssignments = 7,
+		DefaultIsaf = 60,
+		DefaultWithSingletons = 0
+	};
+
+	GenModelConfig( const GenModelConfig& o);
+	GenModelConfig();
+	GenModelConfig( const std::string& config, unsigned int maxdist, ErrorBufferInterface* errorhnd);
+
+	void parse( std::string& src, unsigned int maxdist, ErrorBufferInterface* errorhnd);
+	std::string tostring( bool eolnsep=false) const;
+
+	bool isBuildCompatible( unsigned int maxdist) const;
+
+	unsigned int simdist;		///< maximum distance to be considered similar
+	unsigned int raddist;		///< maximum radius distance of group elements to centroid
+	unsigned int eqdist;		///< maximum distance to be considered equal
+	unsigned int mutations;		///< maximum number of random selected mutation candidates of the non kernel elements of a group
+	unsigned int votes;		///< maximum number of votes to use to determine a mutation direction
+	unsigned int descendants;	///< number of descendants of which the fittest is selected
+	unsigned int maxage;		///< upper bound value used for calculate number of mutations (an older individuum mutates less)
+	unsigned int iterations;	///< number of iterations
+	unsigned int assignments;	///< maximum number of assignments on a sample to a group
+	float isaf;			///< fraction of samples of a superset that has to be in a subset for declaring the subset as dependent (is a) of the superset
+	bool with_singletons;		///< true, if singletons should also get into the result
+};
+
+typedef std::map<std::string,GenModelConfig> GenModelConfigMap;
+
 
 struct VectorSpaceModelConfig
 {
@@ -47,17 +89,22 @@ struct VectorSpaceModelConfig
 	VectorSpaceModelConfig();
 	VectorSpaceModelConfig( const std::string& config, ErrorBufferInterface* errorhnd);
 
-	bool isBuildCompatible( const VectorSpaceModelConfig& o)
+	bool isBuildCompatible( const VectorSpaceModelConfig& o) const;
+	std::string tostring( bool eolnsep=false) const;
+
+	const GenModelConfig& genModelConfig( const std::string& name) const
 	{
-		return dim == o.dim 
-			&& bits == o.bits
-			&& variations == o.variations
-			&& simdist <= o.maxdist
-			&& raddist <= o.maxdist
-			&& eqdist <= o.maxdist
-		;
+		if (name.empty())
+		{
+			return gencfg;
+		}
+		else
+		{
+			GenModelConfigMap::const_iterator ai = altgenmap.find(name);
+			if (ai == altgenmap.end()) throw strus::runtime_error(_TXT("undefined gen config '%s'"), name.c_str());
+			return ai->second;
+		}
 	}
-	std::string tostring() const;
 
 	std::string databaseConfig;	///< path of model
 	std::string logfile;		///< file where to log some status data
@@ -67,22 +114,13 @@ struct VectorSpaceModelConfig
 	unsigned int bits;		///< number of bits to calculate for an LSH per variation
 	unsigned int variations;	///< number of variations
 	unsigned int maxdist;		///< maximum LSH edit distance precalculated in the similarity relation map. Maximum for any other similarity distance (simdist,eqdist,raddist)
-	unsigned int simdist;		///< maximum LSH edit distance considered as similarity
-	unsigned int raddist;		///< centroid radius distance (smaller than simdist)
-	unsigned int eqdist;		///< maximum LSH edit distance considered as equal
+	GenModelConfig gencfg;		///< main configuration for categorization
 	unsigned int maxsimsam;		///< maximum number of nearest neighbours put input similarity relation map
 	unsigned int rndsimsam;		///< select number of random samples put into similarity relation map besides 'maxsimsam'
-	unsigned int mutations;		///< number of mutations when a genetic code is changed
-	unsigned int votes;		///< number of votes to decide in which direction a mutation should go
-	unsigned int descendants;	///< number of descendants to evaluate the fitest of when trying to change an individual
-	unsigned int maxage;		///< a factor used to slow down mutation rate
-	unsigned int iterations;	///< number of iterations in the loop
-	unsigned int assignments;	///< maximum number of group assignments for each input vector
 	unsigned int maxfeatures;	///< restrict the number of features loaded
-	float isaf;			///< fraction of elements of a superset that has to be in a subset for declaring the subset as dependent (is a) of the superset
-	bool with_singletons;		///< true, if singleton vectors thould also get into the result
 	bool with_probsim;		///< true, if probabilistic function is used as prefilter for the candidates of the similarity matrix (faster)
 	bool with_forcesim;		///< true, if the similarity relation matrix calculation should be forced
+	GenModelConfigMap altgenmap;	///< alternative runs of categorization
 };
 
 }//namespace
