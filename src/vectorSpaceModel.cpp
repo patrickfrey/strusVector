@@ -355,6 +355,7 @@ public:
 		else
 		{
 			VectorSpaceModelConfig cfg = m_database->readConfig();
+			m_config = VectorSpaceModelConfig( config_, errorhnd_, cfg);
 			if (!m_config.isBuildCompatible( cfg))
 			{
 				throw strus::runtime_error(_TXT("loading vector space model with incompatible configuration"));

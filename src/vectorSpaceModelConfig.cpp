@@ -160,15 +160,18 @@ VectorSpaceModelConfig::VectorSpaceModelConfig()
 	,altgenmap()
 	{}
 
-VectorSpaceModelConfig::VectorSpaceModelConfig( const std::string& config, ErrorBufferInterface* errorhnd)
-	:databaseConfig(),logfile(),threads(DefaultThreads),commitsize(DefaultCommitSize)
-	,dim(DefaultDim),bits(DefaultBits),variations(DefaultVariations)
-	,maxdist(DefaultMaxDist),gencfg()
-	,maxsimsam(DefaultMaxSimSam),rndsimsam(DefaultRndSimSam)
-	,maxfeatures(DefaultMaxFeatures)
-	,with_probsim((bool)DefaultWithProbSim)
-	,with_forcesim((bool)DefaultWithForceSim)
+VectorSpaceModelConfig::VectorSpaceModelConfig( const std::string& config, ErrorBufferInterface* errorhnd, const VectorSpaceModelConfig& defaultcfg)
+	:databaseConfig(defaultcfg.databaseConfig),logfile(defaultcfg.logfile)
+	,threads(defaultcfg.threads),commitsize(defaultcfg.commitsize)
+	,dim(defaultcfg.dim),bits(defaultcfg.bits),variations(defaultcfg.variations)
+	,maxdist(defaultcfg.maxdist),gencfg(defaultcfg.gencfg)
+	,maxsimsam(defaultcfg.maxsimsam),rndsimsam(defaultcfg.rndsimsam)
+	,maxfeatures(defaultcfg.maxfeatures)
+	,with_probsim(defaultcfg.with_probsim)
+	,with_forcesim(defaultcfg.with_forcesim)
+	,altgenmap(defaultcfg.altgenmap)
 {
+	bool altgenmap_set = false;
 	std::string src = config;
 	if (extractStringFromConfigString( logfile, src, "logfile", errorhnd)){}
 	if (extractUIntFromConfigString( threads, src, "threads", errorhnd)){}
@@ -186,6 +189,11 @@ VectorSpaceModelConfig::VectorSpaceModelConfig( const std::string& config, Error
 	std::string altgencfgstr;
 	while (extractStringFromConfigString( altgencfgstr, src, "altgen", errorhnd))
 	{
+		if (!altgenmap_set)
+		{
+			altgenmap.clear();
+			altgenmap_set = true;
+		}
 		char const* ee = altgencfgstr.c_str();
 		while (*ee && (unsigned char)*ee <= 32) ++ee;
 		char const* namestart = ee;

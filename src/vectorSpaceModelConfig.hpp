@@ -87,7 +87,7 @@ struct VectorSpaceModelConfig
 	};
 	VectorSpaceModelConfig( const VectorSpaceModelConfig& o);
 	VectorSpaceModelConfig();
-	VectorSpaceModelConfig( const std::string& config, ErrorBufferInterface* errorhnd);
+	VectorSpaceModelConfig( const std::string& config, ErrorBufferInterface* errorhnd, const VectorSpaceModelConfig& defaultcfg=VectorSpaceModelConfig());
 
 	bool isBuildCompatible( const VectorSpaceModelConfig& o) const;
 	std::string tostring( bool eolnsep=true) const;
