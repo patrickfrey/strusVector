@@ -35,14 +35,13 @@ GenModelConfig::GenModelConfig()
 	,with_singletons((bool)DefaultWithSingletons)
 	{}
 
-
-GenModelConfig::GenModelConfig( const std::string& config, unsigned int maxdist, ErrorBufferInterface* errorhnd)
-	:simdist(DefaultSimDist),raddist(DefaultRadDist),eqdist(DefaultEqDist)
-	,mutations(DefaultMutations),votes(DefaultMutationVotes)
-	,descendants(DefaultDescendants),maxage(DefaultMaxAge),iterations(DefaultIterations)
-	,assignments(DefaultAssignments)
-	,isaf((float)DefaultIsaf / 100)
-	,with_singletons((bool)DefaultWithSingletons)
+GenModelConfig::GenModelConfig( const std::string& config, unsigned int maxdist, ErrorBufferInterface* errorhnd, const GenModelConfig& defaultcfg)
+	:simdist(defaultcfg.simdist),raddist(defaultcfg.raddist),eqdist(defaultcfg.eqdist)
+	,mutations(defaultcfg.mutations),votes(defaultcfg.votes)
+	,descendants(defaultcfg.descendants),maxage(defaultcfg.maxage),iterations(defaultcfg.iterations)
+	,assignments(defaultcfg.assignments)
+	,isaf(defaultcfg.isaf)
+	,with_singletons(defaultcfg.with_singletons)
 {
 	std::string src = config;
 	parse( src, maxdist, errorhnd);
@@ -199,7 +198,7 @@ VectorSpaceModelConfig::VectorSpaceModelConfig( const std::string& config, Error
 		while (*ee && (unsigned char)*ee <= 32) ++ee;
 		if (*ee != ':') throw strus::runtime_error(_TXT("expected colon ':' after identifier at start of alternative gen configuration in vector space model"));
 		++ee;
-		GenModelConfig altgencfg( ee, maxdist, errorhnd);
+		GenModelConfig altgencfg( ee, maxdist, errorhnd, gencfg);
 		if (altgenmap.find( name) != altgenmap.end()) throw strus::runtime_error(_TXT("duplicate definition of alternative gen configuration in vector space model"));
 		altgenmap[ name] = altgencfg;
 	}

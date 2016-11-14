@@ -36,7 +36,7 @@ struct GenModelConfig
 
 	GenModelConfig( const GenModelConfig& o);
 	GenModelConfig();
-	GenModelConfig( const std::string& config, unsigned int maxdist, ErrorBufferInterface* errorhnd);
+	GenModelConfig( const std::string& config, unsigned int maxdist, ErrorBufferInterface* errorhnd, const GenModelConfig& defaultcfg=GenModelConfig());
 
 	void parse( std::string& src, unsigned int maxdist, ErrorBufferInterface* errorhnd);
 	std::string tostring( bool eolnsep=true) const;
