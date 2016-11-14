@@ -242,19 +242,26 @@ std::string VectorSpaceModelConfig::tostring( bool eolnsep) const
 	std::ostringstream buf;
 	buf << std::fixed << std::setprecision(5);
 	printConfig( buf, databaseConfig, eolnsep);
-	buf << "logfile=" << logfile << ";" << std::endl;
-	buf << "threads=" << threads << ";" << std::endl;
-	buf << "commit=" << commitsize << ";" << std::endl;
-	buf << "dim=" << dim << ";" << std::endl;
-	buf << "bit=" << bits << ";" << std::endl;
-	buf << "var=" << variations << ";" << std::endl;
-	buf << "maxdist=" << maxdist << ";" << std::endl;
+	printConfigItem( buf, "logfile", logfile, eolnsep);
+	printConfigItem( buf, "threads", threads, eolnsep);
+	printConfigItem( buf, "commit", commitsize, eolnsep);
+	printConfigItem( buf, "dim", dim, eolnsep);
+	printConfigItem( buf, "bit", bits, eolnsep);
+	printConfigItem( buf, "var", variations, eolnsep);
+	printConfigItem( buf, "maxdist", maxdist, eolnsep);
 	printConfig( buf, gencfg.tostring(eolnsep), eolnsep);
-	buf << "maxsimsam=" << maxsimsam << ";" << std::endl;
-	buf << "rndsimsam=" << rndsimsam << ";" << std::endl;
-	buf << "maxfeatures=" << maxfeatures << ";" << std::endl;
-	buf << "probsim=" << (with_probsim?"yes":"no") << ";" << std::endl;
-	buf << "forcesim=" << (with_forcesim?"yes":"no") << ";" << std::endl;
+	GenModelConfigMap::const_iterator ai = altgenmap.begin(), ae = altgenmap.end();
+	for (; ai != ae; ++ai)
+	{
+		std::ostringstream subcfg;
+		subcfg << ai->first << ":" << ai->second.tostring( false);
+		printConfigItem( buf, "altgen", subcfg.str(), eolnsep);
+	}
+	printConfigItem( buf, "maxsimsam", maxsimsam, eolnsep);
+	printConfigItem( buf, "rndsimsam", rndsimsam, eolnsep);
+	printConfigItem( buf, "maxfeatures", maxfeatures, eolnsep);
+	printConfigItem( buf, "probsim", (with_probsim?"yes":"no"), eolnsep);
+	printConfigItem( buf, "forcesim", (with_forcesim?"yes":"no"), eolnsep);
 	return buf.str();
 }
 

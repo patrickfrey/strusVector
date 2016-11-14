@@ -39,7 +39,7 @@ struct GenModelConfig
 	GenModelConfig( const std::string& config, unsigned int maxdist, ErrorBufferInterface* errorhnd);
 
 	void parse( std::string& src, unsigned int maxdist, ErrorBufferInterface* errorhnd);
-	std::string tostring( bool eolnsep=false) const;
+	std::string tostring( bool eolnsep=true) const;
 
 	bool isBuildCompatible( unsigned int maxdist) const;
 
@@ -90,7 +90,7 @@ struct VectorSpaceModelConfig
 	VectorSpaceModelConfig( const std::string& config, ErrorBufferInterface* errorhnd);
 
 	bool isBuildCompatible( const VectorSpaceModelConfig& o) const;
-	std::string tostring( bool eolnsep=false) const;
+	std::string tostring( bool eolnsep=true) const;
 
 	const GenModelConfig& genModelConfig( const std::string& name) const
 	{
