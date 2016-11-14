@@ -111,8 +111,10 @@ public:
 	{
 		try
 		{
-			std::vector<std::string> rt = m_database->readConceptClassNames();
+			std::vector<std::string> rt;
 			rt.push_back( MAIN_CONCEPT_CLASSNAME);
+			std::vector<std::string> dbclnames = m_database->readConceptClassNames();
+			rt.insert( rt.end(), dbclnames.begin(), dbclnames.end());
 			return rt;
 		}
 		CATCH_ERROR_ARG1_MAP_RETURN( _TXT("error in instance of '%s' getting the list of implemented concept class names: %s"), MODULENAME, *m_errorhnd, std::vector<std::string>());

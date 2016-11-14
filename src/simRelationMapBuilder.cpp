@@ -199,18 +199,20 @@ bool SimRelationMapBuilder::getNextSimRelationMap( SimRelationMap& res)
 	}
 	else
 	{
-		unsigned int nt = m_index + m_threads > m_benchar.size() ? (m_benchar.size() - m_index) : m_threads;
-		ThreadGlobalContext threadGlobalContext( m_index, nt);
+		unsigned int next_index = m_index + m_threads;
+		if (next_index > m_benchar.size()) next_index = m_benchar.size();
+		ThreadGlobalContext threadGlobalContext( m_index, next_index);
 
 		std::vector<strus::Reference<ThreadLocalContext> > processorList;
-		processorList.reserve( nt);
-		for (unsigned int ti = 0; ti<nt; ++ti)
+		unsigned int ti = 0, te = next_index - m_index;
+		processorList.reserve( te);
+		for (; ti<te; ++ti)
 		{
 			processorList.push_back( new ThreadLocalContext( &threadGlobalContext, this, ti+1));
 		}
 		{
 			boost::thread_group tgroup;
-			for (unsigned int ti=0; ti<nt; ++ti)
+			for (ti=0; ti<te; ++ti)
 			{
 				tgroup.create_thread( boost::bind( &ThreadLocalContext::run, processorList[ti].get()));
 			}
@@ -221,6 +223,7 @@ bool SimRelationMapBuilder::getNextSimRelationMap( SimRelationMap& res)
 			throw strus::runtime_error("failed to build similarity relation map: %s", threadGlobalContext.error().c_str());
 		}
 		res = threadGlobalContext.result();
+		m_index = next_index;
 		return true;
 	}
 }
