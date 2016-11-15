@@ -41,8 +41,6 @@ struct GenModelConfig
 	void parse( std::string& src, unsigned int maxdist, ErrorBufferInterface* errorhnd);
 	std::string tostring( bool eolnsep=true) const;
 
-	bool isBuildCompatible( unsigned int maxdist) const;
-
 	unsigned int simdist;		///< maximum distance to be considered similar
 	unsigned int raddist;		///< maximum radius distance of group elements to centroid
 	unsigned int eqdist;		///< maximum distance to be considered equal

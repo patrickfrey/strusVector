@@ -95,14 +95,6 @@ void GenModelConfig::parse( std::string& src, unsigned int maxdist, ErrorBufferI
 	}
 }
 
-bool GenModelConfig::isBuildCompatible( unsigned int maxdist) const
-{
-	return simdist <= maxdist
-		&& raddist <= maxdist
-		&& eqdist <= maxdist
-	;
-}
-
 template <typename ValueType>
 static void printConfigItem( std::ostream& buf, const std::string& name, const ValueType& value, bool eolnsep)
 {
@@ -225,23 +217,7 @@ VectorSpaceModelConfig::VectorSpaceModelConfig( const std::string& config, Error
 
 bool VectorSpaceModelConfig::isBuildCompatible( const VectorSpaceModelConfig& o) const
 {
-	if (dim == o.dim
-		&& bits == o.bits
-		&& variations == o.variations
-		&& maxdist <= o.maxdist
-		&& gencfg.isBuildCompatible( maxdist))
-	{
-		GenModelConfigMap::const_iterator ai = altgenmap.begin(), ae = altgenmap.end();
-		for (; ai != ae; ++ai)
-		{
-			if (!ai->second.isBuildCompatible( maxdist)) return false;
-		}
-		return true;
-	}
-	else
-	{
-		return false;
-	}
+	return (dim == o.dim && bits == o.bits && variations == o.variations);
 }
 
 std::string VectorSpaceModelConfig::tostring( bool eolnsep) const
