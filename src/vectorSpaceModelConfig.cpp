@@ -261,7 +261,7 @@ std::string VectorSpaceModelConfig::tostring( bool eolnsep) const
 	for (; ai != ae; ++ai)
 	{
 		std::ostringstream subcfg;
-		subcfg << ai->first << ":" << ai->second.tostring( false);
+		subcfg << "\"" << ai->first << ":" << ai->second.tostring( false) << "\"";
 		printConfigItem( buf, "altgen", subcfg.str(), eolnsep);
 	}
 	printConfigItem( buf, "maxsimsam", maxsimsam, eolnsep);

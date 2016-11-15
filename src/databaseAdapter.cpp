@@ -554,7 +554,7 @@ VectorSpaceModelConfig DatabaseAdapter::readConfig() const
 void DatabaseAdapter::writeConfig( const VectorSpaceModelConfig& config)
 {
 	DatabaseKeyBuffer key( KeyConfig);
-	std::string content( config.tostring());
+	std::string content( config.tostring( false));
 
 	if (!m_transaction.get()) beginTransaction();
 	m_transaction->write( key.c_str(), key.size(), content.c_str(), content.size());
