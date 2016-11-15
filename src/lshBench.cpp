@@ -59,7 +59,6 @@ void LshBench::findSimCandidates( std::vector<Candidate>& res, const LshBench& o
 	strus::Index oi = 0, oe = o.m_size;
 	for (; oi != oe; ++oi)
 	{
-		res.reserve( (res.size() / ReserveMemSize + 2) * ReserveMemSize);
 		uint64_t ndsel = o.m_ar[ oi];
 
 		strus::Index ai = 0, ae = m_size;

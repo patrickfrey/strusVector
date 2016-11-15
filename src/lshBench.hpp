@@ -40,6 +40,7 @@ public:
 
 	strus::Index startIndex() const	{return m_ofs;}
 	strus::Index endIndex() const	{return m_ofs+m_size;}
+	unsigned int maxDiff() const	{return m_maxdiff;}
 
 private:
 	uint64_t selmask( const SimHash& sh) const;

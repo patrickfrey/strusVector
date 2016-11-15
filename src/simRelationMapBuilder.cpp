@@ -35,7 +35,7 @@ SimRelationMapBuilder::SimRelationMapBuilder( const std::vector<SimHash>& sample
 		++oi;
 		if (logout) logout << strus::string_format( _TXT("got %u samples in %u benches"), (unsigned int)ofs, oi);
 	}
-	if (logout) logout << strus::string_format( _TXT("got %u samples in %u benches"), (unsigned int)ofs, oi);
+	if (logout) logout << strus::string_format( _TXT("got %u samples in %u benches [maxdiff %u]"), (unsigned int)ofs, oi, m_benchar.back().maxDiff());
 }
 
 SimRelationMap SimRelationMapBuilder::getSimRelationMap( strus::Index idx) const
@@ -45,6 +45,7 @@ SimRelationMap SimRelationMapBuilder::getSimRelationMap( strus::Index idx) const
 	if (m_probabilistic)
 	{
 		std::vector<LshBench::Candidate> res;
+		res.reserve( 128 * LshBench::ReserveMemSize);
 		std::size_t bi = 0, be = m_benchar.size();
 		for (; bi != be; ++bi)
 		{
