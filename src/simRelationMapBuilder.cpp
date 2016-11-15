@@ -22,16 +22,20 @@ using namespace strus;
 #define WEIGHTFACTOR(dd) (dd + dd / 2)
 
 
-SimRelationMapBuilder::SimRelationMapBuilder( const std::vector<SimHash>& samplear, unsigned int maxdist_, unsigned int maxsimsam_, unsigned int rndsimsam_, unsigned int threads_, bool probabilistic_)
+SimRelationMapBuilder::SimRelationMapBuilder( const std::vector<SimHash>& samplear, unsigned int maxdist_, unsigned int maxsimsam_, unsigned int rndsimsam_, unsigned int threads_, bool probabilistic_, Logger& logout)
 	:m_base(samplear.data()),m_probabilistic(probabilistic_),m_maxdist(maxdist_),m_maxsimsam(maxsimsam_),m_rndsimsam(rndsimsam_),m_threads(threads_),m_index(0),m_benchar(),m_rnd()
 {
 	m_selectseed = m_rnd.get(0,std::numeric_limits<unsigned int>::max());
 	std::size_t ofs = 0;
+	unsigned int oi = 0;
 	while (ofs < samplear.size())
 	{
 		m_benchar.push_back( LshBench( m_base, samplear.size(), m_selectseed, WEIGHTFACTOR(m_maxdist)));
 		ofs += m_benchar.back().init( ofs);
+		++oi;
+		if (logout) logout << strus::string_format( _TXT("got %u samples in %u benches"), (unsigned int)ofs, oi);
 	}
+	if (logout) logout << strus::string_format( _TXT("got %u samples in %u benches"), (unsigned int)ofs, oi);
 }
 
 SimRelationMap SimRelationMapBuilder::getSimRelationMap( strus::Index idx) const
@@ -45,6 +49,7 @@ SimRelationMap SimRelationMapBuilder::getSimRelationMap( strus::Index idx) const
 		{
 			m_benchar[ idx].findSimCandidates( res, m_benchar[ bi]);
 		}
+		/*[-]*/std::cout << strus::string_format( _TXT("got %u possible candidate for bench %u"), (unsigned int)res.size(), idx);
 		std::vector<LshBench::Candidate>::const_iterator ri = res.begin(), re = res.end();
 		typedef std::map<strus::Index,std::vector<SimRelationMap::Element> > RowMap;
 		RowMap rowmap;

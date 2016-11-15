@@ -12,6 +12,7 @@
 #include "simHash.hpp"
 #include "lshBench.hpp"
 #include "random.hpp"
+#include "logger.hpp"
 #include <vector>
 #include <string>
 #include <algorithm>
@@ -22,7 +23,7 @@ namespace strus {
 class SimRelationMapBuilder
 {
 public:
-	SimRelationMapBuilder( const std::vector<SimHash>& samplear, unsigned int maxdist_, unsigned int maxsimsam_, unsigned int rndsimsam_, unsigned int threads_, bool probabilistic_);
+	SimRelationMapBuilder( const std::vector<SimHash>& samplear, unsigned int maxdist_, unsigned int maxsimsam_, unsigned int rndsimsam_, unsigned int threads_, bool probabilistic_, Logger& logout);
 	bool getNextSimRelationMap( SimRelationMap& res);
 	SimRelationMap getSimRelationMap( strus::Index idx) const;
 
