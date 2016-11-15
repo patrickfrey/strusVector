@@ -49,7 +49,6 @@ SimRelationMap SimRelationMapBuilder::getSimRelationMap( strus::Index idx) const
 		for (; bi != be; ++bi)
 		{
 			m_benchar[ idx].findSimCandidates( res, m_benchar[ bi]);
-			/*[-]*/std::cout << strus::string_format( _TXT("got %u possible candidate for bench %u"), (unsigned int)res.size(), idx) << std::endl;
 		}
 		/*[-]*/std::cout << strus::string_format( _TXT("got %u possible candidate for bench %u"), (unsigned int)res.size(), idx) << std::endl;
 		std::vector<LshBench::Candidate>::const_iterator ri = res.begin(), re = res.end();
@@ -165,7 +164,7 @@ public:
 			SampleIndex sidx = 0;
 			while (m_ctx->fetch( sidx))
 			{
-				/*[-]*/std::cout << strus::string_format( _TXT("FETCH %u"), sidx);
+				/*[-]*/std::cout << strus::string_format( _TXT("FETCH %u"), sidx) << std::endl;
 				m_simrelmap.join( m_builder->getSimRelationMap( sidx));
 			}
 			/*[-]*/std::cout << strus::string_format( _TXT("DONE run()"), sidx);
