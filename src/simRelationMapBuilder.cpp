@@ -50,7 +50,7 @@ SimRelationMap SimRelationMapBuilder::getSimRelationMap( strus::Index idx) const
 		{
 			m_benchar[ idx].findSimCandidates( res, m_benchar[ bi]);
 		}
-		/*[-]*/std::cout << strus::string_format( _TXT("got %u possible candidate for bench %u"), (unsigned int)res.size(), idx);
+		/*[-]*/std::cout << strus::string_format( _TXT("got %u possible candidate for bench %u"), (unsigned int)res.size(), idx) << std::endl;
 		std::vector<LshBench::Candidate>::const_iterator ri = res.begin(), re = res.end();
 		typedef std::map<strus::Index,std::vector<SimRelationMap::Element> > RowMap;
 		RowMap rowmap;
