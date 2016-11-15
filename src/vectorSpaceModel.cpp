@@ -182,16 +182,16 @@ public:
 		try
 		{
 			std::vector<std::string> rt;
-			if (utils::caseInsensitiveEquals( name, "featurelsh"))
+			if (utils::caseInsensitiveEquals( name, "featlsh"))
 			{
 				if (index < 0) throw strus::runtime_error(_TXT("feature index out of range"));
 
 				SimHash simhash = m_database->readSampleSimhash( index);
 				rt.push_back( simhash.tostring());
 			}
-			else if (utils::caseInsensitiveStartsWith( name, "conceptlsh_"))
+			else if (utils::caseInsensitiveStartsWith( name, "conlsh_"))
 			{
-				conceptClassMap::const_iterator ci = m_conceptClassMap.find( std::string( name.c_str() + 11/*strlen("conceptlsh_")*/));
+				conceptClassMap::const_iterator ci = m_conceptClassMap.find( std::string( name.c_str() + 7/*strlen("conlsh_")*/));
 				if (ci == m_conceptClassMap.end()) return rt;
 				SimHashVectorReference& ivec = m_individuals[ci->second];
 				if (!ivec.get())
@@ -249,11 +249,11 @@ public:
 		try
 		{
 			std::vector<std::string> rt;
-			rt.push_back( "featurelsh");
+			rt.push_back( "featlsh");
 			conceptClassMap::const_iterator ci = m_conceptClassMap.begin(), ce = m_conceptClassMap.end();
 			for (; ci != ce; ++ci)
 			{
-				rt.push_back( std::string("conceptlsh_") + ci->first);
+				rt.push_back( std::string("conlsh_") + ci->first);
 			}
 			rt.push_back( "simrel");
 			rt.push_back( "variable");

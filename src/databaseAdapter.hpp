@@ -137,6 +137,7 @@ private:
 	Reference<DatabaseClientInterface> m_database;
 	Reference<DatabaseTransactionInterface> m_transaction;
 	Reference<DatabaseCursorInterface> m_cursor;
+	std::string m_cursorkey;
 	ErrorBufferInterface* m_errorhnd;
 };
 

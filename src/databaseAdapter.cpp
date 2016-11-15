@@ -355,7 +355,7 @@ void DatabaseAdapter::writeSampleName( const SampleIndex& sidx, const std::strin
 SampleIndex DatabaseAdapter::readSampleIndex( const std::string& name) const
 {
 	std::string key;
-	key.push_back( (char)KeySampleName);
+	key.push_back( (char)KeySampleNameInv);
 	key.append( name);
 
 	std::string blob;
@@ -380,7 +380,7 @@ SampleIndex DatabaseAdapter::readSampleIndex( const std::string& name) const
 void DatabaseAdapter::writeSampleIndex( const SampleIndex& sidx, const std::string& name)
 {
 	std::string key;
-	key.push_back( (char)KeySampleName);
+	key.push_back( (char)KeySampleNameInv);
 	key.append( name);
 
 	if (!m_transaction.get()) beginTransaction();
@@ -917,9 +917,40 @@ void DatabaseAdapter::deleteLshModel()
 	deleteSubTree( KeyLshModel);
 }
 
+struct DatabaseKeyNameTab
+{
+	const char* ar[ 96];
+	DatabaseKeyNameTab()
+	{
+		std::memset( ar, 0, sizeof(ar));
+		ar[ DatabaseAdapter::KeyVersion - 32] = "version";
+		ar[ DatabaseAdapter::KeyVariable - 32] = "variable";
+		ar[ DatabaseAdapter::KeyConceptClassNames - 32] = "classname";
+		ar[ DatabaseAdapter::KeySampleVector - 32] = "featvec";
+		ar[ DatabaseAdapter::KeySampleName - 32] = "featname";
+
+		ar[ DatabaseAdapter::KeySampleNameInv - 32] = "featidx";
+		ar[ DatabaseAdapter::KeySampleSimHash - 32] = "featlsh";
+		ar[ DatabaseAdapter::KeyConceptSimhash - 32] = "conlsh";
+		ar[ DatabaseAdapter::KeyConfig - 32] = "config";
+		ar[ DatabaseAdapter::KeyLshModel - 32] = "lshmodel";
+
+		ar[ DatabaseAdapter::KeySimRelationMap - 32] = "simrel";
+		ar[ DatabaseAdapter::KeySampleConceptIndexMap - 32] = "featcon";
+		ar[ DatabaseAdapter::KeyConceptSampleIndexMap - 32] = "confeat";
+	}
+	const char* operator[]( DatabaseAdapter::KeyPrefix i) const
+	{
+		return ar[i-32];
+	}
+};
+
+static const DatabaseKeyNameTab keyNameTab;
+
 void DatabaseAdapter::dumpKeyValue( std::ostream& out, const strus::DatabaseCursorInterface::Slice& key, const strus::DatabaseCursorInterface::Slice& value)
 {
-	switch (key.ptr()[0])
+	out << keyNameTab[ (KeyPrefix)key.ptr()[0]] << ": ";
+	switch ((KeyPrefix)key.ptr()[0])
 	{
 		case DatabaseAdapter::KeyVersion:
 		{
@@ -935,7 +966,7 @@ void DatabaseAdapter::dumpKeyValue( std::ostream& out, const strus::DatabaseCurs
 			uint64_t varvalue;
 			DatabaseValueScanner scanner( value.ptr(), value.size());
 			scanner[ varvalue];
-			out << key.ptr()+1 << " " << varvalue;
+			out << std::string(key.ptr()+1,key.size()-1) << " " << varvalue << std::endl;
 			break;
 		}
 		case DatabaseAdapter::KeySampleVector:
@@ -950,6 +981,7 @@ void DatabaseAdapter::dumpKeyValue( std::ostream& out, const strus::DatabaseCurs
 			{
 				out << " " << *vi;
 			}
+			out << std::endl;
 			break;
 		}
 		case DatabaseAdapter::KeySampleName:
@@ -957,15 +989,15 @@ void DatabaseAdapter::dumpKeyValue( std::ostream& out, const strus::DatabaseCurs
 			SampleIndex sidx;
 			DatabaseKeyScanner scanner( key.ptr()+1, key.size()-1);
 			scanner[ sidx];
-			out << (sidx-1) << " " << value.ptr();
+			out << (sidx-1) << " " << std::string(value.ptr(),value.size()) << std::endl;
 			break;
 		}
 		case DatabaseAdapter::KeySampleNameInv:
 		{
 			uint32_t sidx;
-			DatabaseValueScanner scanner( value.ptr(), value.size());
+			DatabaseValueScanner scanner(value.ptr(), value.size());
 			scanner[ sidx];
-			out << (key.ptr()+1) << " " << (sidx-1);
+			out << std::string(key.ptr()+1,key.size()-1) << " " << (sidx-1) << std::endl;
 			break;
 		}
 		case DatabaseAdapter::KeySampleSimHash:
@@ -976,7 +1008,7 @@ void DatabaseAdapter::dumpKeyValue( std::ostream& out, const strus::DatabaseCurs
 			DatabaseKeyScanner scanner( key.ptr()+1, key.size()-1);
 			scanner(cl,clsize)[ sidx];
 			SimHash sh = SimHash::fromSerialization( value.ptr(), value.size());
-			out << std::string(cl,clsize) << " " << (sidx-1) << " " << sh.tostring();
+			out << std::string(cl,clsize) << " " << (sidx-1) << " " << sh.tostring() << std::endl;
 			break;
 		}
 		case DatabaseAdapter::KeyConceptSimhash:
@@ -987,7 +1019,7 @@ void DatabaseAdapter::dumpKeyValue( std::ostream& out, const strus::DatabaseCurs
 			DatabaseKeyScanner scanner( key.ptr()+1, key.size()-1);
 			scanner(cl,clsize)[ sidx];
 			SimHash sh = SimHash::fromSerialization( value.ptr(), value.size());
-			out << std::string(cl,clsize) << " " << sidx << " " << sh.tostring();
+			out << std::string(cl,clsize) << " " << sidx << " " << sh.tostring() << std::endl;
 			break;
 		}
 		case DatabaseAdapter::KeyConfig:
@@ -998,7 +1030,7 @@ void DatabaseAdapter::dumpKeyValue( std::ostream& out, const strus::DatabaseCurs
 		case DatabaseAdapter::KeyLshModel:
 		{
 			LshModel lshmodel = LshModel::fromSerialization( value.ptr(), value.size());
-			out << std::endl << lshmodel.tostring();
+			out << std::endl << lshmodel.tostring() << std::endl;
 			break;
 		}
 		case DatabaseAdapter::KeySimRelationMap:
@@ -1017,6 +1049,7 @@ void DatabaseAdapter::dumpKeyValue( std::ostream& out, const strus::DatabaseCurs
 				value_scanner[ col][ simdist];
 				out << " " << col << ":" << simdist;
 			}
+			out << std::endl;
 			break;
 		}
 		case DatabaseAdapter::KeySampleConceptIndexMap:
@@ -1034,6 +1067,7 @@ void DatabaseAdapter::dumpKeyValue( std::ostream& out, const strus::DatabaseCurs
 			{
 				out << " " << *fi;
 			}
+			out << std::endl;
 			break;
 		}
 		case DatabaseAdapter::KeyConceptSampleIndexMap:
@@ -1051,6 +1085,7 @@ void DatabaseAdapter::dumpKeyValue( std::ostream& out, const strus::DatabaseCurs
 			{
 				out << " " << *fi;
 			}
+			out << std::endl;
 			break;
 		}
 		default:
@@ -1064,7 +1099,8 @@ bool DatabaseAdapter::dumpFirst( std::ostream& out, const std::string& keyprefix
 {
 	m_cursor.reset( m_database->createCursor( DatabaseOptions()));
 	if (!m_cursor.get()) throw strus::runtime_error(_TXT("error creating database cursor"));
-	strus::DatabaseCursorInterface::Slice key = m_cursor->seekFirst( keyprefix.c_str(), keyprefix.size());
+	m_cursorkey = keyprefix;
+	strus::DatabaseCursorInterface::Slice key = m_cursor->seekFirst( m_cursorkey.c_str(), m_cursorkey.size());
 	if (!key.defined()) return false;
 	dumpKeyValue( out, key, m_cursor->value());
 	return true;
@@ -1074,6 +1110,7 @@ bool DatabaseAdapter::dumpNext( std::ostream& out)
 {
 	strus::DatabaseCursorInterface::Slice key = m_cursor->seekNext();
 	if (!key.defined()) return false;
+	std::string val( m_cursor->value());
 	dumpKeyValue( out, key, m_cursor->value());
 	return true;
 }
