@@ -441,7 +441,9 @@ public:
 	{
 		const char* logfile = m_config.logfile.empty()?0:m_config.logfile.c_str();
 		Logger logout( logfile);
-		unsigned int nof_new_similarities = 0;
+		Random rnd;
+		unsigned int selectseed = rnd.get(0,std::numeric_limits<unsigned int>::max());
+		SimRelationMap simrelmap_part;
 
 		SampleIndex si = 0, se = m_database->readNofSamples();
 		for (; si != se; ++si)
@@ -467,30 +469,28 @@ public:
 			{
 				simmap[ ei->index] = ei->simdist;
 			}
-			unsigned int oldsize = elems.size();
 			elems.clear();
 			std::map<strus::Index,unsigned short>::const_iterator mi = simmap.begin(), me = simmap.end();
 			for (; mi != me; ++mi)
 			{
 				elems.push_back( SimRelationMap::Element( mi->first, mi->second));
 			}
-			nof_new_similarities += elems.size() - oldsize;
-			SimRelationMap simrelmap_part;
+			if (elems.size() > m_config.maxsimsam + m_config.rndsimsam)
+			{
+				elems = SimRelationMap::selectElementSubset( elems, m_config.maxsimsam, m_config.rndsimsam, selectseed);
+			}
 			simrelmap_part.addRow( si, elems);
 			if (m_config.commitsize && si % m_config.commitsize == 0)
 			{
-				if (!commit())
-				{
-					throw strus::runtime_error(_TXT("autocommit failed after %u operations"), m_config.commitsize);
-				}
-				if (logout) logout << string_format( _TXT("updated similarity map of total %u features with %u new similarities"), si, nof_new_similarities);
+				m_database->writeSimRelationMap( simrelmap_part);
+				m_database->commit();
+				if (logout) logout << string_format( _TXT("updated similarity map of %u features"), si);
+				simrelmap_part.clear();
 			}
 		}
-		if (!commit())
-		{
-			throw strus::runtime_error(_TXT("final autocommit of rebuilding the similarity relation map failed"));
-		}
-		if (logout) logout << string_format( _TXT("updated similarity map of total %u features with %u new similarities"), si, nof_new_similarities);
+		m_database->writeSimRelationMap( simrelmap_part);
+		m_database->commit();
+		if (logout) logout << string_format( _TXT("updated similarity map of total %u features"), si);
 	}
 
 	virtual bool rebase()
