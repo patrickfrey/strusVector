@@ -40,7 +40,6 @@ SimRelationMapBuilder::SimRelationMapBuilder( const std::vector<SimHash>& sample
 
 SimRelationMap SimRelationMapBuilder::getSimRelationMap( strus::Index idx) const
 {
-	/*[-]*/std::cout << strus::string_format( _TXT("call getSimRelationMap %u %u"), idx, m_probabilistic) << std::endl;
 	SimRelationMap rt;
 	if (m_probabilistic)
 	{
@@ -53,7 +52,6 @@ SimRelationMap SimRelationMapBuilder::getSimRelationMap( strus::Index idx) const
 		for (; bi != be; ++bi)
 		{
 			m_benchar[ idx].findSimCandidates( res, m_benchar[ bi]);
-			/*[-]*/std::cout << strus::string_format( _TXT("got %u possible candidate for bench %u"), (unsigned int)res.size(), idx) << std::endl;
 			std::vector<LshBench::Candidate>::const_iterator ri = res.begin(), re = res.end();
 			for (; ri != re; ++ri)
 			{
@@ -66,7 +64,6 @@ SimRelationMap SimRelationMapBuilder::getSimRelationMap( strus::Index idx) const
 			}
 			res.resize(0);
 		}
-		/*[-]*/std::cout << strus::string_format( _TXT("got %u candidate matches for bench %u"), ridx, idx) << std::endl;
 		RowMap::iterator mi = rowmap.begin(), me = rowmap.end();
 		for (; mi != me; ++mi)
 		{
@@ -169,10 +166,8 @@ public:
 			SampleIndex sidx = 0;
 			while (m_ctx->fetch( sidx))
 			{
-				/*[-]*/std::cout << strus::string_format( _TXT("FETCH %u"), sidx) << std::endl;
 				m_simrelmap.join( m_builder->getSimRelationMap( sidx));
 			}
-			/*[-]*/std::cout << strus::string_format( _TXT("DONE run()"), sidx);
 			m_ctx->pushResult( m_simrelmap);
 			m_simrelmap.clear();
 		}
