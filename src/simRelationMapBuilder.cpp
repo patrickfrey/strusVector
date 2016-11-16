@@ -19,7 +19,7 @@
 
 using namespace strus;
 
-#define WEIGHTFACTOR(dd) (dd + dd / 4)
+#define WEIGHTFACTOR(dd) (dd + dd / 2)
 
 
 SimRelationMapBuilder::SimRelationMapBuilder( const std::vector<SimHash>& samplear, unsigned int maxdist_, unsigned int maxsimsam_, unsigned int rndsimsam_, unsigned int threads_, bool probabilistic_, Logger& logout)
@@ -55,10 +55,10 @@ SimRelationMap SimRelationMapBuilder::getSimRelationMap( strus::Index idx) const
 			std::vector<LshBench::Candidate>::const_iterator ri = res.begin(), re = res.end();
 			for (; ri != re; ++ri)
 			{
-				if (m_base[ ri->row].near( m_base[ri->col], m_maxdist))
+				if (m_base[ ri->row].near( m_base[ ri->col], m_maxdist))
 				{
-					unsigned short simdist = m_base[ri->row].dist( m_base[ri->col]);
-					rowmap[ ri->row].push_back( SimRelationMap::Element( ri->row, simdist));
+					unsigned short simdist = m_base[ ri->row].dist( m_base[ ri->col]);
+					rowmap[ ri->row].push_back( SimRelationMap::Element( ri->col, simdist));
 					++ridx;
 				}
 			}

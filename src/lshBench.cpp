@@ -56,15 +56,15 @@ strus::Index LshBench::init( const strus::Index& ofs_)
 
 void LshBench::findSimCandidates( std::vector<Candidate>& res, const LshBench& o) const
 {
-	strus::Index oi = 0, oe = o.m_size;
-	for (; oi != oe; ++oi)
+	strus::Index ai = 0, ae = m_size;
+	for (; ai != ae; ++ai)
 	{
-		uint64_t ndsel = o.m_ar[ oi];
+		uint64_t ndsel = m_ar[ ai];
 
-		strus::Index ai = 0, ae = m_size;
-		for (; ai != ae; ++ai)
+		strus::Index oi = 0, oe = o.m_size;
+		for (; oi != oe; ++oi)
 		{
-			if (strus::BitOperations::bitCount( m_ar[ai] ^ ndsel) <= m_maxdiff)
+			if (strus::BitOperations::bitCount( o.m_ar[ai] ^ ndsel) <= m_maxdiff)
 			{
 				if (m_ofs+ai != o.m_ofs+oi)
 				{
