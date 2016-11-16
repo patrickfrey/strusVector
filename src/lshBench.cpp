@@ -64,7 +64,7 @@ void LshBench::findSimCandidates( std::vector<Candidate>& res, const LshBench& o
 		strus::Index oi = 0, oe = o.m_size;
 		for (; oi != oe; ++oi)
 		{
-			if (strus::BitOperations::bitCount( o.m_ar[ai] ^ ndsel) <= m_maxdiff)
+			if (strus::BitOperations::bitCount( o.m_ar[ oi] ^ ndsel) <= m_maxdiff)
 			{
 				if (m_ofs+ai != o.m_ofs+oi)
 				{
