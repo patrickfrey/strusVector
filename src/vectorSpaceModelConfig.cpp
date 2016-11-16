@@ -164,6 +164,7 @@ VectorSpaceModelConfig::VectorSpaceModelConfig( const std::string& config, Error
 	,altgenmap(defaultcfg.altgenmap)
 {
 	bool altgenmap_set = false;
+	bool condef_set = false;
 	std::string src = config;
 	if (extractStringFromConfigString( logfile, src, "logfile", errorhnd)){}
 	if (extractUIntFromConfigString( threads, src, "threads", errorhnd)){}
@@ -201,6 +202,22 @@ VectorSpaceModelConfig::VectorSpaceModelConfig( const std::string& config, Error
 		GenModelConfig altgencfg( ee, maxdist, errorhnd, gencfg);
 		if (altgenmap.find( name) != altgenmap.end()) throw strus::runtime_error(_TXT("duplicate definition of alternative gen configuration in vector space model"));
 		altgenmap[ name] = altgencfg;
+	}
+	std::string condepdefstr;
+	while (extractStringFromConfigString( condepdefstr, src, "condep", errorhnd))
+	{
+		if (!condef_set)
+		{
+			conceptClassDependecies.clear();
+			condef_set = true;
+		}
+		char const* cc = condepdefstr.c_str();
+		for (; *cc && *cc != ':'; ++cc){}
+		if (!*cc) throw strus::runtime_error(_TXT("illegal concept class dependency definition in config (missing colon ':')"));
+		ConceptClassDependency dep( utils::trim( std::string(condepdefstr.c_str(),cc-condepdefstr.c_str())), utils::trim( std::string(cc+1)));
+		conceptClassDependecies.push_back( dep);
+		if (!dep.first.empty() && altgenmap.find( dep.first) == altgenmap.end()) throw strus::runtime_error(_TXT("undefined concept class '%s' referenced in dependency"), dep.first.c_str());
+		if (!dep.second.empty() && altgenmap.find( dep.second) == altgenmap.end()) throw strus::runtime_error(_TXT("undefined concept class '%s' referenced in dependency"), dep.second.c_str());
 	}
 	if (dim == 0 || bits == 0 || variations == 0)
 	{

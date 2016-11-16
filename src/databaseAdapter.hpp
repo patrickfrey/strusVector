@@ -29,7 +29,6 @@ namespace strus {
 /// \brief Forward declaration
 class ErrorBufferInterface;
 
-
 class DatabaseAdapter
 {
 public:
@@ -56,10 +55,12 @@ public:
 	SampleIndex readLastSimRelationIndex() const;
 	std::vector<SimRelationMap::Element> readSimRelations( const SampleIndex& sidx) const;
 	SimRelationMap readSimRelationMap() const;
-	std::vector<SampleIndex> readConceptSampleIndices( const std::string& clname, const ConceptIndex& fidx) const;
+	std::vector<SampleIndex> readConceptSampleIndices( const std::string& clname, const ConceptIndex& cidx) const;
 	ConceptSampleIndexMap readConceptSampleIndexMap( const std::string& clname);
 	std::vector<ConceptIndex> readSampleConceptIndices( const std::string& clname, const SampleIndex& sidx) const;
 	SampleConceptIndexMap readSampleConceptIndexMap( const std::string& clname);
+	std::vector<ConceptIndex> readConceptDependencies( const std::string& clname, const ConceptIndex& cidx, const std::string& depclname);
+
 	VectorSpaceModelConfig readConfig() const;
 	LshModel readLshModel() const;
 
@@ -74,6 +75,7 @@ public:
 	void writeSimRelationRow( const SampleIndex& sidx, const SimRelationMap::Row& row);
 	void writeSampleConceptIndexMap( const std::string& clname, const SampleConceptIndexMap& sfmap);
 	void writeConceptSampleIndexMap( const std::string& clname, const ConceptSampleIndexMap& fsmap);
+	void writeConceptDependencies( const std::string& clname, const ConceptIndex& cidx, const std::string& depclname, const std::vector<ConceptIndex>& deplist);
 	void writeConfig( const VectorSpaceModelConfig& config);
 	void writeLshModel( const LshModel& model);
 
@@ -89,6 +91,7 @@ public:
 	void deleteSimRelationMap();
 	void deleteSampleConceptIndexMaps();
 	void deleteConceptSampleIndexMaps();
+	void deleteConceptDependencies();
 	void deleteLshModel();
 	void commit();
 
@@ -112,7 +115,8 @@ public:
 		KeyLshModel = 'L',
 		KeySimRelationMap = 'M',
 		KeySampleConceptIndexMap = 'f',
-		KeyConceptSampleIndexMap = 's'
+		KeyConceptSampleIndexMap = 's',
+		KeyConceptDependency = '>'
 	};
 
 private:

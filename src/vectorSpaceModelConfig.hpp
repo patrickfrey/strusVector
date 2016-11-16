@@ -119,6 +119,8 @@ struct VectorSpaceModelConfig
 	bool with_probsim;		///< true, if probabilistic function is used as prefilter for the candidates of the similarity matrix (faster)
 	bool with_forcesim;		///< true, if the similarity relation matrix calculation should be forced
 	GenModelConfigMap altgenmap;	///< alternative runs of categorization
+	typedef std::pair<std::string,std::string> ConceptClassDependency;
+	std::vector<ConceptClassDependency> conceptClassDependecies; ///< Dependencies to calculate between concept classes
 };
 
 }//namespace

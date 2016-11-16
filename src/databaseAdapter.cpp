@@ -733,7 +733,7 @@ std::vector<ConceptIndex> DatabaseAdapter::readSampleConceptIndices( const std::
 		}
 		else
 		{
-			return std::vector<SampleIndex>();
+			return std::vector<ConceptIndex>();
 		}
 	}
 	return vectorFromSerialization<ConceptIndex>( blob);
@@ -755,12 +755,12 @@ void DatabaseAdapter::writeSampleConceptIndexMap( const std::string& clname, con
 	}
 }
 
-std::vector<SampleIndex> DatabaseAdapter::readConceptSampleIndices( const std::string& clname, const ConceptIndex& fidx) const
+std::vector<SampleIndex> DatabaseAdapter::readConceptSampleIndices( const std::string& clname, const ConceptIndex& cidx) const
 {
-	if (fidx == 0) throw strus::runtime_error(_TXT("illegal key (null) for concept"));
+	if (cidx == 0) throw strus::runtime_error(_TXT("illegal key (null) for concept"));
 
 	DatabaseKeyBuffer key( KeyConceptSampleIndexMap);
-	key(clname)[ fidx];
+	key(clname)[ cidx];
 
 	std::string blob;
 	if (!m_database->readValue( key.c_str(), key.size(), blob, DatabaseOptions().useCache()))
@@ -782,18 +782,18 @@ SampleConceptIndexMap DatabaseAdapter::readSampleConceptIndexMap( const std::str
 	return readIndexListMap( KeySampleConceptIndexMap, clname);
 }
 
-void DatabaseAdapter::writeConceptSampleIndexMap( const std::string& clname, const ConceptSampleIndexMap& fsmap)
+void DatabaseAdapter::writeConceptSampleIndexMap( const std::string& clname, const ConceptSampleIndexMap& csmap)
 {
-	ConceptIndex fi = 1, fe = fsmap.maxkey()+1;
-	for (; fi != fe; ++fi)
+	ConceptIndex ci = 1, ce = csmap.maxkey()+1;
+	for (; ci != ce; ++ci)
 	{
 		if (!m_transaction.get()) beginTransaction();
-		std::vector<SampleIndex> members = fsmap.getValues( fi);
+		std::vector<SampleIndex> members = csmap.getValues( ci);
 		if (members.empty()) continue;
 		std::string blob = vectorSerialization<SampleIndex>( members);
 
 		DatabaseKeyBuffer key( KeyConceptSampleIndexMap);
-		key(clname)[ fi];
+		key(clname)[ ci];
 		m_transaction->write( key.c_str(), key.size(), blob.c_str(), blob.size());
 	}
 }
@@ -843,6 +843,34 @@ IndexListMap<strus::Index,strus::Index> DatabaseAdapter::readIndexListMap( const
 	return rt;
 }
 
+std::vector<ConceptIndex> DatabaseAdapter::readConceptDependencies( const std::string& clname, const ConceptIndex& cidx, const std::string& depclname)
+{
+	DatabaseKeyBuffer key( KeyConceptDependency);
+	key(clname)(depclname)[ cidx];
+
+	std::string blob;
+	if (!m_database->readValue( key.c_str(), key.size(), blob, DatabaseOptions().useCache()))
+	{
+		if (m_errorhnd->hasError())
+		{
+			throw strus::runtime_error( _TXT( "failed to read concept cover dependencies from database: %s"), m_errorhnd->fetchError());
+		}
+		else
+		{
+			return std::vector<ConceptIndex>();
+		}
+	}
+	return vectorFromSerialization<ConceptIndex>( blob);
+}
+
+void DatabaseAdapter::writeConceptDependencies( const std::string& clname, const ConceptIndex& cidx, const std::string& depclname, const std::vector<ConceptIndex>& deplist)
+{
+	std::string blob = vectorSerialization<SampleIndex>( deplist);
+	DatabaseKeyBuffer key( KeyConceptDependency);
+	key(clname)(depclname)[ cidx];
+	m_transaction->write( key.c_str(), key.size(), blob.c_str(), blob.size());
+}
+
 void DatabaseAdapter::deleteSubTree( const KeyPrefix& prefix)
 {
 	if (!m_transaction.get()) beginTransaction();
@@ -862,6 +890,7 @@ void DatabaseAdapter::clear()
 	deleteSimRelationMap();
 	deleteSampleConceptIndexMaps();
 	deleteConceptSampleIndexMaps();
+	deleteConceptDependencies();
 }
 
 void DatabaseAdapter::deleteConfig()
@@ -901,7 +930,6 @@ void DatabaseAdapter::deleteSimRelationMap()
 	deleteSubTree( KeySimRelationMap);
 }
 
-
 void DatabaseAdapter::deleteSampleConceptIndexMaps()
 {
 	deleteSubTree( KeySampleConceptIndexMap);
@@ -910,6 +938,11 @@ void DatabaseAdapter::deleteSampleConceptIndexMaps()
 void DatabaseAdapter::deleteConceptSampleIndexMaps()
 {
 	deleteSubTree( KeyConceptSampleIndexMap);
+}
+
+void DatabaseAdapter::deleteConceptDependencies()
+{
+	deleteSubTree( KeyConceptDependency);
 }
 
 void DatabaseAdapter::deleteLshModel()
