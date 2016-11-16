@@ -30,6 +30,8 @@ public:
 		strus::Index row;
 		strus::Index col;
 
+		Candidate()
+			:row(0),col(0){}
 		Candidate( const strus::Index& row_, const strus::Index& col_)
 			:row(row_),col(col_){}
 		Candidate( const Candidate& o)

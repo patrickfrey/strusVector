@@ -44,6 +44,7 @@ SimRelationMap SimRelationMapBuilder::getSimRelationMap( strus::Index idx) const
 	SimRelationMap rt;
 	if (m_probabilistic)
 	{
+		typedef std::map<strus::Index,std::vector<SimRelationMap::Element> > RowMap;
 		RowMap rowmap;
 		std::vector<LshBench::Candidate> res;
 		res.reserve( LshBench::ReserveMemSize);
@@ -54,7 +55,6 @@ SimRelationMap SimRelationMapBuilder::getSimRelationMap( strus::Index idx) const
 			m_benchar[ idx].findSimCandidates( res, m_benchar[ bi]);
 			/*[-]*/std::cout << strus::string_format( _TXT("got %u possible candidate for bench %u"), (unsigned int)res.size(), idx) << std::endl;
 			std::vector<LshBench::Candidate>::const_iterator ri = res.begin(), re = res.end();
-			typedef std::map<strus::Index,std::vector<SimRelationMap::Element> > RowMap;
 			for (; ri != re; ++ri)
 			{
 				if (m_base[ ri->row].near( m_base[ri->col], m_maxdist))
