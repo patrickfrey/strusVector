@@ -11,6 +11,7 @@
 #include "simHash.hpp"
 #include "simGroup.hpp"
 #include "simRelationMap.hpp"
+#include "simRelationReader.hpp"
 #include "indexListMap.hpp"
 #include <vector>
 #include <list>
@@ -29,15 +30,6 @@ typedef IndexListMap<ConceptIndex,SampleIndex> ConceptSampleIndexMap;
 /// \brief Structure for implementing unsupervised learning of SimHash group representants with help of genetic algorithms
 class GenModel
 {
-public:
-	/// \brief Interface to get the most similar elements of sidx in the ascending order of similarity
-	class SimRelationI
-	{
-	public:
-		virtual ~SimRelationI(){}
-		virtual std::vector<SimRelationMap::Element> readSimRelations( const SampleIndex& sidx) const=0;
-	};
-
 public:
 	/// \brief Default constructor
 	GenModel()
@@ -76,7 +68,7 @@ public:
 			SampleConceptIndexMap& sampleConceptIndexMap,
 			ConceptSampleIndexMap& conceptSampleIndexMap,
 			const std::vector<SimHash>& samples,
-			const SimRelationI& simrelmap,
+			const SimRelationReader& simrelreader,
 			const char* logfile) const;
 
 private:

@@ -22,8 +22,8 @@ using namespace strus;
 #define WEIGHTFACTOR(dd) (dd + dd / 2)
 
 
-SimRelationMapBuilder::SimRelationMapBuilder( const std::vector<SimHash>& samplear, unsigned int maxdist_, unsigned int maxsimsam_, unsigned int rndsimsam_, unsigned int threads_, bool probabilistic_, Logger& logout)
-	:m_base(samplear.data()),m_probabilistic(probabilistic_),m_maxdist(maxdist_),m_maxsimsam(maxsimsam_),m_rndsimsam(rndsimsam_),m_threads(threads_),m_index(0),m_benchar(),m_rnd()
+SimRelationMapBuilder::SimRelationMapBuilder( const std::vector<SimHash>& samplear, unsigned int maxdist_, unsigned int maxsimsam_, unsigned int rndsimsam_, unsigned int threads_, bool probabilistic_, Logger& logout, const SimRelationReader* simmapreader_)
+	:m_base(samplear.data()),m_probabilistic(probabilistic_),m_maxdist(maxdist_),m_maxsimsam(maxsimsam_),m_rndsimsam(rndsimsam_),m_threads(threads_),m_index(0),m_benchar(),m_rnd(),m_simmapreader(simmapreader_)
 {
 	m_selectseed = m_rnd.get(0,std::numeric_limits<unsigned int>::max());
 	std::size_t ofs = 0;
@@ -33,9 +33,8 @@ SimRelationMapBuilder::SimRelationMapBuilder( const std::vector<SimHash>& sample
 		m_benchar.push_back( LshBench( m_base, samplear.size(), m_selectseed, WEIGHTFACTOR(m_maxdist)));
 		ofs += m_benchar.back().init( ofs);
 		++oi;
-		if (logout) logout << strus::string_format( _TXT("got %u samples in %u benches"), (unsigned int)ofs, oi);
 	}
-	if (logout) logout << strus::string_format( _TXT("got %u samples in %u benches [maxdiff %u]"), (unsigned int)ofs, oi, m_benchar.back().maxDiff());
+	if (logout) logout << strus::string_format( _TXT("got %u samples in %u benches with maxdiff %u/64"), (unsigned int)ofs, oi, m_benchar.back().maxDiff());
 }
 
 SimRelationMap SimRelationMapBuilder::getSimRelationMap( strus::Index idx) const
@@ -68,11 +67,30 @@ SimRelationMap SimRelationMapBuilder::getSimRelationMap( strus::Index idx) const
 		for (; mi != me; ++mi)
 		{
 			std::vector<SimRelationMap::Element>& elems = mi->second;
-			if ((m_maxsimsam != 0 || m_rndsimsam != 0) && elems.size() > m_maxsimsam + m_rndsimsam)
+			if (m_simmapreader)
 			{
-				elems = SimRelationMap::selectElementSubset( elems, m_maxsimsam, m_rndsimsam, m_selectseed);
+				std::vector<SimRelationMap::Element> prvelems = m_simmapreader->readSimRelations( mi->first);
+				std::vector<SimRelationMap::Element> mrgelems = SimRelationMap::mergeElementLists( elems, prvelems);
+				if ((m_maxsimsam != 0 || m_rndsimsam != 0) && elems.size() > m_maxsimsam + m_rndsimsam)
+				{
+					std::vector<SimRelationMap::Element>
+						selelems = SimRelationMap::selectElementSubset( mrgelems, m_maxsimsam, m_rndsimsam, m_selectseed);
+					rt.addRow( mi->first, selelems);
+				}
+				else
+				{
+					rt.addRow( mi->first, mrgelems);
+				}
 			}
-			rt.addRow( mi->first, elems);
+			else if ((m_maxsimsam != 0 || m_rndsimsam != 0) && elems.size() > m_maxsimsam + m_rndsimsam)
+			{
+				std::vector<SimRelationMap::Element> selelems = SimRelationMap::selectElementSubset( elems, m_maxsimsam, m_rndsimsam, m_selectseed);
+				rt.addRow( mi->first, selelems);
+			}
+			else
+			{
+				rt.addRow( mi->first, elems);
+			}
 		}
 	}
 	else

@@ -46,6 +46,8 @@ public:
 	};
 
 	static std::vector<Element> selectElementSubset( const std::vector<Element>& elemlist, unsigned int maxsimsam, unsigned int rndsimsam, unsigned int rndseed);
+	/// \brief Merge two element lists
+	static std::vector<Element> mergeElementLists( const std::vector<Element>& elemlist1, const std::vector<Element>& elemlist2);
 
 public:
 	/// \brief Default constructor

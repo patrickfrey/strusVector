@@ -9,6 +9,7 @@
 #ifndef _STRUS_VECTOR_SPACE_MODEL_GET_SIMILARITY_RELATION_MAP_BUILDER_HPP_INCLUDED
 #define _STRUS_VECTOR_SPACE_MODEL_GET_SIMILARITY_RELATION_MAP_BUILDER_HPP_INCLUDED
 #include "simRelationMap.hpp"
+#include "simRelationReader.hpp"
 #include "simHash.hpp"
 #include "lshBench.hpp"
 #include "random.hpp"
@@ -23,8 +24,10 @@ namespace strus {
 class SimRelationMapBuilder
 {
 public:
-	SimRelationMapBuilder( const std::vector<SimHash>& samplear, unsigned int maxdist_, unsigned int maxsimsam_, unsigned int rndsimsam_, unsigned int threads_, bool probabilistic_, Logger& logout);
+	SimRelationMapBuilder( const std::vector<SimHash>& samplear, unsigned int maxdist_, unsigned int maxsimsam_, unsigned int rndsimsam_, unsigned int threads_, bool probabilistic_, Logger& logout, const SimRelationReader* simmapreader_);
 	bool getNextSimRelationMap( SimRelationMap& res);
+
+public:/*Internal for thread context*/
 	SimRelationMap getSimRelationMap( strus::Index idx) const;
 
 private:
@@ -38,6 +41,7 @@ private:
 	std::vector<LshBench> m_benchar;
 	Random m_rnd;
 	unsigned int m_selectseed;
+	const SimRelationReader* m_simmapreader;
 };
 
 } //namespace

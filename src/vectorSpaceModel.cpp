@@ -22,6 +22,7 @@
 #include "logger.hpp"
 #include "simHash.hpp"
 #include "simRelationMap.hpp"
+#include "simRelationReader.hpp"
 #include "simRelationMapBuilder.hpp"
 #include "getSimhashValues.hpp"
 #include "lshModel.hpp"
@@ -313,19 +314,58 @@ private:
 	conceptClassMap m_conceptClassMap;				//< maps names of concept classes to the associated individuals
 };
 
-class SimRelationImpl
-	:public GenModel::SimRelationI
+class SimRelationMapReader
+	:public SimRelationReader
 {
 public:
-	explicit SimRelationImpl( const DatabaseAdapter* database_)
-		:database(database_){}
-	virtual ~SimRelationImpl(){}
+	explicit SimRelationMapReader( const DatabaseAdapter* database_)
+		:m_database(database_){}
+	virtual ~SimRelationMapReader(){}
 	virtual std::vector<SimRelationMap::Element> readSimRelations( const SampleIndex& sidx) const
 	{
-		return database->readSimRelations( sidx);
+		return m_database->readSimRelations( sidx);
 	}
 private:
-	const DatabaseAdapter* database;
+	const DatabaseAdapter* m_database;
+};
+
+class SimRelationNeighbourReader
+	:public SimRelationReader
+{
+public:
+	SimRelationNeighbourReader( const DatabaseAdapter* database_, const std::vector<SimHash>* samplear_, unsigned int maxdist_)
+		:m_database(database_),m_samplear(samplear_),m_maxdist(maxdist_){}
+	virtual ~SimRelationNeighbourReader(){}
+
+	virtual std::vector<SimRelationMap::Element> readSimRelations( const SampleIndex& sidx) const
+	{
+		std::vector<SimRelationMap::Element> rt;
+		std::vector<strus::Index> conlist = m_database->readSampleConceptIndices( MAIN_CONCEPT_CLASSNAME, sidx);
+		std::vector<strus::Index>::const_iterator ci = conlist.begin(), ce = conlist.end();
+		std::map<strus::Index,unsigned short> simmap;
+		for (; ci != ce; ++ci)
+		{
+			std::vector<strus::Index> nblist = m_database->readConceptSampleIndices( MAIN_CONCEPT_CLASSNAME, *ci);
+			std::vector<strus::Index>::const_iterator ni = nblist.begin(), ne = nblist.end();
+			for (; ni != ne; ++ni)
+			{
+				if ((*m_samplear)[ sidx].near( (*m_samplear)[*ni], m_maxdist))
+				{
+					simmap[ *ni] = (*m_samplear)[ sidx].dist( (*m_samplear)[*ni]);
+				}
+			}
+		}
+		std::map<strus::Index,unsigned short>::const_iterator mi = simmap.begin(), me = simmap.end();
+		for (; mi != me; ++mi)
+		{
+			rt.push_back( SimRelationMap::Element( mi->first, mi->second));
+		}
+		return rt;
+	}
+private:
+	const DatabaseAdapter* m_database;
+	const std::vector<SimHash>* m_samplear;
+	unsigned int m_maxdist;
 };
 
 
@@ -437,75 +477,7 @@ public:
 		return m_config.with_forcesim || m_database->readNofSamples() >= m_database->readLastSimRelationIndex();
 	}
 
-	void rebuildSimRelationMap()
-	{
-		const char* logfile = m_config.logfile.empty()?0:m_config.logfile.c_str();
-		Logger logout( logfile);
-		Random rnd;
-		unsigned int selectseed = rnd.get(0,std::numeric_limits<unsigned int>::max());
-		SimRelationMap simrelmap_part;
-
-		SampleIndex si = 0, se = m_database->readNofSamples();
-		for (; si != se; ++si)
-		{
-			std::vector<strus::Index> conlist = m_database->readSampleConceptIndices( MAIN_CONCEPT_CLASSNAME, si);
-			std::vector<strus::Index>::const_iterator ci = conlist.begin(), ce = conlist.end();
-			std::map<strus::Index,unsigned short> simmap;
-			for (; ci != ce; ++ci)
-			{
-				std::vector<strus::Index> nblist = m_database->readConceptSampleIndices( MAIN_CONCEPT_CLASSNAME, *ci);
-				std::vector<strus::Index>::const_iterator ni = nblist.begin(), ne = nblist.end();
-				for (; ni != ne; ++ni)
-				{
-					if (m_samplear[ si].near( m_samplear[*ni], m_config.maxdist))
-					{
-						simmap[ *ni] = m_samplear[ si].dist( m_samplear[*ni]);
-					}
-				}
-			}
-			std::vector<SimRelationMap::Element> elems = m_database->readSimRelations( si);
-			std::vector<SimRelationMap::Element>::const_iterator ei = elems.begin(), ee = elems.end();
-			for (; ei != ee; ++ei)
-			{
-				simmap[ ei->index] = ei->simdist;
-			}
-			elems.clear();
-			std::map<strus::Index,unsigned short>::const_iterator mi = simmap.begin(), me = simmap.end();
-			for (; mi != me; ++mi)
-			{
-				elems.push_back( SimRelationMap::Element( mi->first, mi->second));
-			}
-			if (elems.size() > m_config.maxsimsam + m_config.rndsimsam)
-			{
-				elems = SimRelationMap::selectElementSubset( elems, m_config.maxsimsam, m_config.rndsimsam, selectseed);
-			}
-			simrelmap_part.addRow( si, elems);
-			if (m_config.commitsize && si % m_config.commitsize == 0)
-			{
-				m_database->writeSimRelationMap( simrelmap_part);
-				m_database->commit();
-				if (logout) logout << string_format( _TXT("updated similarity map of %u features"), si);
-				simrelmap_part.clear();
-			}
-		}
-		m_database->writeSimRelationMap( simrelmap_part);
-		m_database->commit();
-		if (logout) logout << string_format( _TXT("updated similarity map of total %u features"), si);
-	}
-
-	virtual bool rebase()
-	{
-		try
-		{
-			utils::ScopedLock lock( m_mutex);
-			m_database->commit();
-			rebuildSimRelationMap();
-			return true;
-		}
-		CATCH_ERROR_ARG1_MAP_RETURN( _TXT("error rebase step of '%s' builder: %s"), MODULENAME, *m_errorhnd, false);
-	}
-
-	void buildSimRelationMap()
+	void buildSimRelationMap( const SimRelationReader* simmapreader)
 	{
 		const char* logfile = m_config.logfile.empty()?0:m_config.logfile.c_str();
 		Logger logout( logfile);
@@ -515,7 +487,7 @@ public:
 
 		if (logout) logout << string_format( _TXT("calculate similarity relation matrix for %u features (selection %s)"), m_samplear.size(), m_config.with_probsim?_TXT("probabilistic selection"):_TXT("try all"));
 		uint64_t total_nof_similarities = 0;
-		SimRelationMapBuilder simrelbuilder( m_samplear, m_config.maxdist, m_config.maxsimsam, m_config.rndsimsam, m_config.threads, m_config.with_probsim, logout);
+		SimRelationMapBuilder simrelbuilder( m_samplear, m_config.maxdist, m_config.maxsimsam, m_config.rndsimsam, m_config.threads, m_config.with_probsim, logout, simmapreader);
 		SimRelationMap simrelmap_part;
 		while (simrelbuilder.getNextSimRelationMap( simrelmap_part))
 		{
@@ -529,11 +501,23 @@ public:
 		if (logout) logout << string_format( _TXT("calculated similarity relation matrix stored to database"));
 	}
 
+	virtual bool rebase()
+	{
+		try
+		{
+			utils::ScopedLock lock( m_mutex);
+			m_database->commit();
+			SimRelationNeighbourReader nbreader( m_database.get(), &m_samplear, m_config.maxdist);
+			buildSimRelationMap( &nbreader);
+			return true;
+		}
+		CATCH_ERROR_ARG1_MAP_RETURN( _TXT("error rebase step of '%s' builder: %s"), MODULENAME, *m_errorhnd, false);
+	}
+
 	void run_genmodel( const std::string& clname, const GenModel& genmodel)
 	{
 		const char* logfile = m_config.logfile.empty()?0:m_config.logfile.c_str();
-		SimRelationImpl simrelmap( m_database.get());
-
+		SimRelationMapReader simrelmap( m_database.get());
 		SampleConceptIndexMap sampleConceptIndexMap;
 		ConceptSampleIndexMap conceptSampleIndexMap;
 
@@ -554,7 +538,7 @@ public:
 			m_database->commit();
 			if (needToCalculateSimRelationMap())
 			{
-				buildSimRelationMap();
+				buildSimRelationMap( 0);
 			}
 			m_database->deleteSampleConceptIndexMaps();
 			m_database->deleteConceptSampleIndexMaps();

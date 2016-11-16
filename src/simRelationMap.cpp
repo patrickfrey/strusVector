@@ -21,6 +21,42 @@
 
 using namespace strus;
 
+std::vector<SimRelationMap::Element> SimRelationMap::mergeElementLists( const std::vector<Element>& elemlist1, const std::vector<Element>& elemlist2)
+{
+	std::vector<Element> e1sorted = elemlist1;
+	std::sort( e1sorted.begin(), e1sorted.end());
+	std::vector<Element> e2sorted = elemlist2;
+	std::sort( e2sorted.begin(), e2sorted.end());
+	std::vector<Element> rt;
+	std::vector<Element>::const_iterator ii1 = e1sorted.begin(), ie1 = e1sorted.end();
+	std::vector<Element>::const_iterator ii2 = e2sorted.begin(), ie2 = e2sorted.end();
+	while (ii1 != ie1 && ii2 != ie2)
+	{
+		if (ii1->index < ii2->index)
+		{
+			rt.push_back( *ii1++);
+		}
+		else if (ii1->index > ii2->index)
+		{
+			rt.push_back( *ii2++);
+		}
+		else
+		{
+			rt.push_back( *ii2++);
+			++ii1;
+		}
+	}
+	for (; ii1 != ie1; ++ii1)
+	{
+		rt.push_back( *ii1);
+	}
+	for (; ii2 != ie2; ++ii2)
+	{
+		rt.push_back( *ii2);
+	}
+	return rt;
+}
+
 std::vector<SimRelationMap::Element> SimRelationMap::selectElementSubset( const std::vector<SimRelationMap::Element>& elemlist, unsigned int maxsimsam, unsigned int rndsimsam, unsigned int rndseed)
 {
 	if (elemlist.size() > maxsimsam + rndsimsam)
