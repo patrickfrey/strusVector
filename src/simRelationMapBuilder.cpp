@@ -19,7 +19,7 @@
 
 using namespace strus;
 
-#define WEIGHTFACTOR(dd) (dd + dd / 2)
+#define WEIGHTFACTOR(dd) (dd + dd / 4)
 
 
 SimRelationMapBuilder::SimRelationMapBuilder( const std::vector<SimHash>& samplear, unsigned int maxdist_, unsigned int maxsimsam_, unsigned int rndsimsam_, unsigned int threads_, bool probabilistic_, Logger& logout)
@@ -44,25 +44,29 @@ SimRelationMap SimRelationMapBuilder::getSimRelationMap( strus::Index idx) const
 	SimRelationMap rt;
 	if (m_probabilistic)
 	{
+		RowMap rowmap;
 		std::vector<LshBench::Candidate> res;
-		res.reserve( 128 * LshBench::ReserveMemSize);
+		res.reserve( LshBench::ReserveMemSize);
+		unsigned int ridx = 0;
 		std::size_t bi = 0, be = m_benchar.size();
 		for (; bi != be; ++bi)
 		{
 			m_benchar[ idx].findSimCandidates( res, m_benchar[ bi]);
-		}
-		/*[-]*/std::cout << strus::string_format( _TXT("got %u possible candidate for bench %u"), (unsigned int)res.size(), idx) << std::endl;
-		std::vector<LshBench::Candidate>::const_iterator ri = res.begin(), re = res.end();
-		typedef std::map<strus::Index,std::vector<SimRelationMap::Element> > RowMap;
-		RowMap rowmap;
-		for (; ri != re; ++ri)
-		{
-			if (m_base[ ri->row].near( m_base[ri->col], m_maxdist))
+			/*[-]*/std::cout << strus::string_format( _TXT("got %u possible candidate for bench %u"), (unsigned int)res.size(), idx) << std::endl;
+			std::vector<LshBench::Candidate>::const_iterator ri = res.begin(), re = res.end();
+			typedef std::map<strus::Index,std::vector<SimRelationMap::Element> > RowMap;
+			for (; ri != re; ++ri)
 			{
-				unsigned short simdist = m_base[ri->row].dist( m_base[ri->col]);
-				rowmap[ ri->row].push_back( SimRelationMap::Element( ri->row, simdist));
+				if (m_base[ ri->row].near( m_base[ri->col], m_maxdist))
+				{
+					unsigned short simdist = m_base[ri->row].dist( m_base[ri->col]);
+					rowmap[ ri->row].push_back( SimRelationMap::Element( ri->row, simdist));
+					++ridx;
+				}
 			}
+			res.resize(0);
 		}
+		/*[-]*/std::cout << strus::string_format( _TXT("got %u candidate matches for bench %u"), ridx, idx) << std::endl;
 		RowMap::iterator mi = rowmap.begin(), me = rowmap.end();
 		for (; mi != me; ++mi)
 		{

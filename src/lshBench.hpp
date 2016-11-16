@@ -19,7 +19,7 @@ namespace strus {
 class LshBench
 {
 public:
-	enum {Width=256,ReserveMemSize=2048};
+	enum {Width=256,ReserveMemSize=(1<<14)};
 
 	LshBench( const SimHash* base, const strus::Index& basesize_, unsigned int seed_, unsigned int seeksimdist);
 	LshBench( const LshBench& o);
