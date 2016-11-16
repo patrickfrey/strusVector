@@ -298,7 +298,6 @@ make test
 %{_libdir}/strus/libstrus_vectorspace_std.so.@STRUS_MAJOR_VERSION@.@STRUS_MINOR_VERSION@
 %{_libdir}/strus/libstrus_vectorspace_std.so.@STRUS_MAJOR_VERSION@.@STRUS_MINOR_VERSION@.@STRUS_PATCH_VERSION@
 %{_libdir}/strus/modules/modstrus_storage_vectorspace_std.so
-%{_bindir}/strusInspectVsm
 
 %files devel
 %defattr( -, root, root )
