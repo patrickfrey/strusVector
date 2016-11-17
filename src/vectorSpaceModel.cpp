@@ -217,7 +217,7 @@ public:
 				}
 				else
 				{
-					SampleIndex si = 0, se = readNofSamples();
+					SampleIndex si = 0, se = m_database->readNofSamples();
 					for (; si != se; ++si)
 					{
 						std::vector<SimRelationMap::Element> elems = m_database->readSimRelations( si);
