@@ -406,7 +406,7 @@ class VectorSpaceModelBuilder
 public:
 	VectorSpaceModelBuilder( const std::string& config_, const DatabaseInterface* database_, ErrorBufferInterface* errorhnd_)
 		:m_errorhnd(errorhnd_),m_dbi(database_),m_config(config_,errorhnd_)
-		,m_state(0),m_needToCalculateSimRelationMap(false)
+		,m_state(0),m_needToCalculateSimRelationMap(false),m_haveFeaturesAdded(false)
 		,m_lshmodel(),m_genmodelmain(),m_genmodelmap(),m_samplear()
 	{
 		m_database.reset( new DatabaseAdapter( database_, m_config.databaseConfig, m_errorhnd));
@@ -496,6 +496,7 @@ public:
 			m_database->writeNofSamples( m_samplear.size());
 			m_database->commit();
 
+			m_haveFeaturesAdded |= (m_vecar.size() != 0);
 			m_vecar.clear();
 			m_namear.clear();
 			if (!m_config.logfile.empty())
@@ -585,7 +586,7 @@ private:
 
 		if (logout) logout << string_format( _TXT("calculate similarity relation matrix for %u features (selection %s)"), m_samplear.size(), m_config.with_probsim?_TXT("probabilistic selection"):_TXT("try all"));
 		uint64_t total_nof_similarities = 0;
-		SampleIndex startsampleidx = m_database->readLastSimRelationIndex();
+		SampleIndex startsampleidx = m_haveFeaturesAdded?0:m_database->readLastSimRelationIndex();
 		SimRelationMapBuilder simrelbuilder( m_samplear, startsampleidx, m_config.maxdist, m_config.maxsimsam, m_config.rndsimsam, m_config.threads, m_config.with_probsim, logout, simmapreader);
 		SimRelationMap simrelmap_part;
 		while (simrelbuilder.getNextSimRelationMap( simrelmap_part))
@@ -658,6 +659,7 @@ private:
 	VectorSpaceModelConfig m_config;
 	unsigned int m_state;
 	bool m_needToCalculateSimRelationMap;
+	bool m_haveFeaturesAdded;
 	LshModel m_lshmodel;
 	GenModel m_genmodelmain;
 	GenModelMap m_genmodelmap;
