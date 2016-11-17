@@ -293,6 +293,32 @@ static std::string vectorSerialization( const std::vector<ScalarType>& vec)
 	return rt;
 }
 
+static std::vector<std::string> stringListFromSerialization( const std::string& blob)
+{
+	std::vector<std::string> rt;
+	char const* ci = blob.c_str();
+	char const* ce = std::strchr( ci, '\n');
+	for (; ce; ci = ce+1,ce=std::strchr( ci, '\n'))
+	{
+		rt.push_back( std::string( ci, ce-ci));
+	}
+	rt.push_back( ci);
+	return rt;
+}
+
+static std::string stringListSerialization( const std::vector<std::string>& list)
+{
+	std::string rt;
+	std::vector<std::string>::const_iterator ci = list.begin(), ce = list.end();
+	for (; ci != ce; ++ci)
+	{
+		if (!rt.empty()) rt.push_back('\n');
+		rt.append(*ci);
+	}
+	return rt;
+}
+
+
 DatabaseAdapter::Vector DatabaseAdapter::readSampleVector( const SampleIndex& sidx) const
 {
 	DatabaseKeyBuffer key( KeySampleVector);
@@ -406,7 +432,6 @@ unsigned int DatabaseAdapter::readState() const
 
 std::vector<std::string> DatabaseAdapter::readConceptClassNames() const
 {
-	std::vector<std::string> rt;
 	DatabaseKeyBuffer key( KeyConceptClassNames);
 
 	std::string blob;
@@ -421,27 +446,14 @@ std::vector<std::string> DatabaseAdapter::readConceptClassNames() const
 			return std::vector<std::string>();
 		}
 	}
-	char const* ci = blob.c_str();
-	char const* ce = std::strchr( ci, '\n');
-	for (; ce; ci = ce+1,ce=std::strchr( ci, '\n'))
-	{
-		rt.push_back( std::string( ci, ce-ci));
-	}
-	rt.push_back( ci);
-	return rt;
+	return stringListFromSerialization( blob);
 }
 
 void DatabaseAdapter::writeConceptClassNames( const std::vector<std::string>& clnames)
 {
 	DatabaseKeyBuffer key( KeyConceptClassNames);
 	if (!m_transaction.get()) beginTransaction();
-	std::string buffer;
-	std::vector<std::string>::const_iterator ci = clnames.begin(), ce = clnames.end();
-	for (; ci != ce; ++ci)
-	{
-		if (!buffer.empty()) buffer.push_back('\n');
-		buffer.append(*ci);
-	}
+	std::string buffer = stringListSerialization( clnames);
 	m_transaction->write( key.c_str(), key.size(), buffer.c_str(), buffer.size());
 }
 
@@ -971,6 +983,7 @@ struct DatabaseKeyNameTab
 		ar[ DatabaseAdapter::KeySimRelationMap - 32] = "simrel";
 		ar[ DatabaseAdapter::KeySampleConceptIndexMap - 32] = "featcon";
 		ar[ DatabaseAdapter::KeyConceptSampleIndexMap - 32] = "confeat";
+		ar[ DatabaseAdapter::KeyConceptDependency -32] = "condep";
 	}
 	const char* operator[]( DatabaseAdapter::KeyPrefix i) const
 	{
@@ -1000,6 +1013,16 @@ void DatabaseAdapter::dumpKeyValue( std::ostream& out, const strus::DatabaseCurs
 			DatabaseValueScanner scanner( value.ptr(), value.size());
 			scanner[ varvalue];
 			out << std::string(key.ptr()+1,key.size()-1) << " " << varvalue << std::endl;
+			break;
+		}
+		case DatabaseAdapter::KeyConceptClassNames:
+		{
+			std::vector<std::string> list( stringListFromSerialization( value));
+			std::vector<std::string>::const_iterator ci = list.begin(), ce = list.end();
+			for (; ci != ce; ++ci)
+			{
+				out << " " << *ci;
+			}
 			break;
 		}
 		case DatabaseAdapter::KeySampleVector:
