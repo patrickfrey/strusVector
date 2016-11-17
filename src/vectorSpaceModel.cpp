@@ -382,7 +382,8 @@ class VectorSpaceModelBuilder
 public:
 	VectorSpaceModelBuilder( const std::string& config_, const DatabaseInterface* database_, ErrorBufferInterface* errorhnd_)
 		:m_errorhnd(errorhnd_),m_dbi(database_),m_config(config_,errorhnd_)
-		,m_state(0),m_lshmodel(),m_genmodelmain(),m_genmodelmap(),m_samplear()
+		,m_state(0),m_needToCalculateSimRelationMap(false)
+		,m_lshmodel(),m_genmodelmain(),m_genmodelmap(),m_samplear()
 	{
 		m_database.reset( new DatabaseAdapter( database_, m_config.databaseConfig, m_errorhnd));
 		m_database->checkVersion();
@@ -408,6 +409,10 @@ public:
 			if (!m_config.isBuildCompatible( cfg))
 			{
 				throw strus::runtime_error(_TXT("loading vector space model with incompatible configuration"));
+			}
+			if (m_config.maxdist > cfg.maxdist)
+			{
+				m_needToCalculateSimRelationMap = true;
 			}
 			m_lshmodel = m_database->readLshModel();
 			m_genmodelmain = GenModel( m_config.threads, m_config.maxdist, m_config.gencfg.simdist, m_config.gencfg.raddist, m_config.gencfg.eqdist, m_config.gencfg.mutations, m_config.gencfg.votes, m_config.gencfg.descendants, m_config.gencfg.maxage, m_config.gencfg.iterations, m_config.gencfg.assignments, m_config.gencfg.isaf, m_config.gencfg.with_singletons);
@@ -543,7 +548,7 @@ public:
 private:
 	bool needToCalculateSimRelationMap()
 	{
-		return m_config.with_forcesim || m_database->readNofSamples() >= m_database->readLastSimRelationIndex();
+		return m_needToCalculateSimRelationMap || m_config.with_forcesim || m_database->readNofSamples() >= m_database->readLastSimRelationIndex();
 	}
 
 	void buildSimRelationMap( const SimRelationReader* simmapreader)
@@ -627,6 +632,7 @@ private:
 	Reference<DatabaseAdapter> m_database;
 	VectorSpaceModelConfig m_config;
 	unsigned int m_state;
+	bool m_needToCalculateSimRelationMap;
 	LshModel m_lshmodel;
 	GenModel m_genmodelmain;
 	GenModelMap m_genmodelmap;
