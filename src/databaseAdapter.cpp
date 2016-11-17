@@ -886,7 +886,7 @@ void DatabaseAdapter::writeConceptDependencies( const std::string& clname, const
 void DatabaseAdapter::deleteSubTree( const KeyPrefix& prefix)
 {
 	if (!m_transaction.get()) beginTransaction();
-	DatabaseKeyBuffer key( KeySimRelationMap);
+	DatabaseKeyBuffer key( prefix);
 	m_transaction->removeSubTree( key.c_str(), key.size());
 }
 
