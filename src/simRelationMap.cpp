@@ -86,7 +86,7 @@ std::vector<SimRelationMap::Element> SimRelationMap::selectElementSubset( const 
 			{
 				// Find element not chosen yet:
 				choice = choice + 1;
-				if (choice > elemlist_copy.size()) choice = 0;
+				if (choice >= elemlist_copy.size()) choice = 0;
 			}
 			rndchoiceset.insert( choice);
 			subset_elemlist.push_back( elemlist_copy[ choice]);
