@@ -192,7 +192,8 @@ public:
 			}
 			else if (utils::caseInsensitiveStartsWith( name, "conlsh_"))
 			{
-				conceptClassMap::const_iterator ci = m_conceptClassMap.find( std::string( name.c_str() + 7/*strlen("conlsh_")*/));
+				std::string clname( name.c_str() + 7/*strlen("conlsh_")*/);
+				conceptClassMap::const_iterator ci = m_conceptClassMap.find( clname);
 				if (ci == m_conceptClassMap.end()) return rt;
 				SimHashVectorReference& ivec = m_individuals[ci->second];
 				if (!ivec.get())
@@ -201,6 +202,18 @@ public:
 				}
 				if (index <= 0 || (std::size_t)index > ivec->size()) throw strus::runtime_error(_TXT("concept index out of range"));
 				rt.push_back( (*ivec)[ index-1].tostring());
+			}
+			else if (utils::caseInsensitiveEquals( name, "singletons_"))
+			{
+				std::string clname( name.c_str() + 11/*strlen("singletons_")*/);
+				std::vector<SampleIndex> res = m_database->readConceptSingletons( clname);
+				std::vector<SampleIndex>::const_iterator si = res.begin(), se = res.end();
+				for (; si != se; ++si)
+				{
+					std::ostringstream elemstr;
+					elemstr << *si << " " << m_database->readSampleName( *si);
+					rt.push_back( elemstr.str());
+				}
 			}
 			else if (utils::caseInsensitiveEquals( name, "simrel"))
 			{
@@ -229,6 +242,17 @@ public:
 							rt.push_back( elemstr.str());
 						}
 					}
+				}
+			}
+			else if (utils::caseInsensitiveEquals( name, "simsingletons"))
+			{
+				std::vector<SampleIndex> res = m_database->readSimSingletons();
+				std::vector<SampleIndex>::const_iterator si = res.begin(), se = res.end();
+				for (; si != se; ++si)
+				{
+					std::ostringstream elemstr;
+					elemstr << *si << " " << m_database->readSampleName( *si);
+					rt.push_back( elemstr.str());
 				}
 			}
 			else if (utils::caseInsensitiveEquals( name, "lastsimrelidx"))
@@ -284,8 +308,10 @@ public:
 			for (; ci != ce; ++ci)
 			{
 				rt.push_back( std::string("conlsh_") + ci->first);
+				rt.push_back( std::string("singletons_") + ci->first);
 			}
 			rt.push_back( "simrel");
+			rt.push_back( "simsingletons");
 			rt.push_back( "lastsimrelidx");
 			rt.push_back( "variable");
 			rt.push_back( "state");

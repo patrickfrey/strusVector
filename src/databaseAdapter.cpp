@@ -731,6 +731,44 @@ void DatabaseAdapter::writeSimRelationMap( const SimRelationMap& simrelmap)
 	}
 }
 
+std::vector<SampleIndex> DatabaseAdapter::readSimSingletons() const
+{
+	std::vector<SampleIndex> rt;
+	DatabaseKeyBuffer key( KeySimRelationMap);
+
+	std::auto_ptr<DatabaseCursorInterface> cursor( m_database->createCursor( DatabaseOptions()));
+	if (!cursor.get()) throw strus::runtime_error(_TXT("failed to create cursor to read similarity relation map: %s"), m_errorhnd->fetchError());
+
+	SampleIndex prev_sidx = 0;
+	DatabaseCursorInterface::Slice slice = cursor->seekFirst( key.c_str(), key.size());
+	while (slice.defined())
+	{
+		SampleIndex sidx;
+		DatabaseKeyScanner key_scanner( slice.ptr()+1, slice.size()-1);
+		key_scanner[ sidx];
+		--sidx;
+
+		for (SampleIndex si=prev_sidx; si < sidx; ++si)
+		{
+			rt.push_back( si);
+		}
+		DatabaseCursorInterface::Slice curvalue = cursor->value();
+		DatabaseValueScanner value_scanner( curvalue.ptr(), curvalue.size());
+		if (value_scanner.eof())
+		{
+			rt.push_back( sidx);
+		}
+		prev_sidx = sidx;
+		slice = cursor->seekNext();
+	}
+	SampleIndex end_sidx = readNofSamples();
+	for (SampleIndex si=prev_sidx; si < end_sidx; ++si)
+	{
+		rt.push_back( si);
+	}
+	return rt;
+}
+
 std::vector<ConceptIndex> DatabaseAdapter::readSampleConceptIndices( const std::string& clname, const SampleIndex& sidx) const
 {
 	DatabaseKeyBuffer key( KeySampleConceptIndexMap);
@@ -789,7 +827,7 @@ std::vector<SampleIndex> DatabaseAdapter::readConceptSampleIndices( const std::s
 	return vectorFromSerialization<SampleIndex>( blob);
 }
 
-SampleConceptIndexMap DatabaseAdapter::readSampleConceptIndexMap( const std::string& clname)
+SampleConceptIndexMap DatabaseAdapter::readSampleConceptIndexMap( const std::string& clname) const
 {
 	return readIndexListMap( KeySampleConceptIndexMap, clname);
 }
@@ -810,7 +848,7 @@ void DatabaseAdapter::writeConceptSampleIndexMap( const std::string& clname, con
 	}
 }
 
-ConceptSampleIndexMap DatabaseAdapter::readConceptSampleIndexMap( const std::string& clname)
+ConceptSampleIndexMap DatabaseAdapter::readConceptSampleIndexMap( const std::string& clname) const
 {
 	return readIndexListMap( KeyConceptSampleIndexMap, clname);
 }
@@ -855,7 +893,48 @@ IndexListMap<strus::Index,strus::Index> DatabaseAdapter::readIndexListMap( const
 	return rt;
 }
 
-std::vector<ConceptIndex> DatabaseAdapter::readConceptDependencies( const std::string& clname, const ConceptIndex& cidx, const std::string& depclname)
+std::vector<SampleIndex> DatabaseAdapter::readConceptSingletons( const std::string& clname) const
+{
+	std::vector<SampleIndex> rt;
+	DatabaseKeyBuffer key( KeySampleConceptIndexMap);
+	key(clname);
+
+	std::auto_ptr<DatabaseCursorInterface> cursor( m_database->createCursor( DatabaseOptions()));
+	if (!cursor.get()) throw strus::runtime_error(_TXT("failed to create cursor to read similarity relation map: %s"), m_errorhnd->fetchError());
+
+	SampleIndex prev_sidx = 0;
+	DatabaseCursorInterface::Slice slice = cursor->seekFirst( key.c_str(), key.size());
+	while (slice.defined())
+	{
+		const char* cl;
+		std::size_t clsize;
+		SampleIndex sidx;
+		DatabaseKeyScanner key_scanner( slice.ptr()+1, slice.size()-1);
+		key_scanner(cl,clsize)[ sidx];
+		--sidx;
+
+		for (SampleIndex si=prev_sidx; si < sidx; ++si)
+		{
+			rt.push_back( si);
+		}
+		DatabaseCursorInterface::Slice curvalue = cursor->value();
+		DatabaseValueScanner value_scanner( curvalue.ptr(), curvalue.size());
+		if (value_scanner.eof())
+		{
+			rt.push_back( sidx);
+		}
+		prev_sidx = sidx;
+		slice = cursor->seekNext();
+	}
+	SampleIndex end_sidx = readNofConcepts( clname);
+	for (SampleIndex si=prev_sidx; si < end_sidx; ++si)
+	{
+		rt.push_back( si);
+	}
+	return rt;
+}
+
+std::vector<ConceptIndex> DatabaseAdapter::readConceptDependencies( const std::string& clname, const ConceptIndex& cidx, const std::string& depclname) const
 {
 	DatabaseKeyBuffer key( KeyConceptDependency);
 	key(clname)(depclname)[ cidx];

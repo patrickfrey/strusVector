@@ -80,7 +80,7 @@ static std::string groupMembersString(
 	GroupInstanceMap::const_iterator group_slot = groupInstanceMap.find( group_id);
 	if (group_slot == groupInstanceMap.end())
 	{
-		throw strus::runtime_error(_TXT("illegal reference in group map (%s): %u"), "tryLeaveUnfitestGroup", group_id);
+		throw strus::runtime_error(_TXT("illegal reference in group map (%s): %u"), "groupMembersString", group_id);
 	}
 	GroupInstanceList::const_iterator group_inst = group_slot->second;
 	SimGroup::const_iterator mi = group_inst->begin(), me = group_inst->end();

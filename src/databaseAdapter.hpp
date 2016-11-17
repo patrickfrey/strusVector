@@ -55,11 +55,13 @@ public:
 	SampleIndex readLastSimRelationIndex() const;
 	std::vector<SimRelationMap::Element> readSimRelations( const SampleIndex& sidx) const;
 	SimRelationMap readSimRelationMap() const;
+	std::vector<SampleIndex> readSimSingletons() const;
 	std::vector<SampleIndex> readConceptSampleIndices( const std::string& clname, const ConceptIndex& cidx) const;
-	ConceptSampleIndexMap readConceptSampleIndexMap( const std::string& clname);
+	ConceptSampleIndexMap readConceptSampleIndexMap( const std::string& clname) const;
 	std::vector<ConceptIndex> readSampleConceptIndices( const std::string& clname, const SampleIndex& sidx) const;
-	SampleConceptIndexMap readSampleConceptIndexMap( const std::string& clname);
-	std::vector<ConceptIndex> readConceptDependencies( const std::string& clname, const ConceptIndex& cidx, const std::string& depclname);
+	SampleConceptIndexMap readSampleConceptIndexMap( const std::string& clname) const;
+	std::vector<SampleIndex> readConceptSingletons( const std::string& clname) const;
+	std::vector<ConceptIndex> readConceptDependencies( const std::string& clname, const ConceptIndex& cidx, const std::string& depclname) const;
 
 	VectorSpaceModelConfig readConfig() const;
 	LshModel readLshModel() const;
