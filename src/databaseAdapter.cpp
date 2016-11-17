@@ -1145,7 +1145,7 @@ void DatabaseAdapter::dumpKeyValue( std::ostream& out, const strus::DatabaseCurs
 		}
 		default:
 		{
-			throw strus::runtime_error( _TXT( "illegal data base key prefix for this vector space model storage"));
+			throw strus::runtime_error( _TXT( "illegal data base key prefix '%c' for this vector space model storage"), (char)((KeyPrefix)key.ptr()[0]));
 		}
 	}
 }
