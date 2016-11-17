@@ -204,15 +204,31 @@ public:
 			}
 			else if (utils::caseInsensitiveEquals( name, "simrel"))
 			{
-				if (index < 0) throw strus::runtime_error(_TXT("feature index out of range"));
-
-				std::vector<SimRelationMap::Element> elems = m_database->readSimRelations( index);
-				std::vector<SimRelationMap::Element>::const_iterator ei = elems.begin(), ee = elems.end();
-				for (; ei != ee; ++ei)
+				if (index >= 0)
 				{
-					std::ostringstream elemstr;
-					elemstr << ei->index << " " << ei->simdist;
-					rt.push_back( elemstr.str());
+					std::vector<SimRelationMap::Element> elems = m_database->readSimRelations( index);
+					std::vector<SimRelationMap::Element>::const_iterator ei = elems.begin(), ee = elems.end();
+					for (; ei != ee; ++ei)
+					{
+						std::ostringstream elemstr;
+						elemstr << ei->index << " " << ei->simdist;
+						rt.push_back( elemstr.str());
+					}
+				}
+				else
+				{
+					SampleIndex si = 0, se = readNofSamples();
+					for (; si != se; ++si)
+					{
+						std::vector<SimRelationMap::Element> elems = m_database->readSimRelations( si);
+						std::vector<SimRelationMap::Element>::const_iterator ei = elems.begin(), ee = elems.end();
+						for (; ei != ee; ++ei)
+						{
+							std::ostringstream elemstr;
+							elemstr << si << " " << ei->index << " " << ei->simdist;
+							rt.push_back( elemstr.str());
+						}
+					}
 				}
 			}
 			else if (utils::caseInsensitiveEquals( name, "variable"))
@@ -248,7 +264,7 @@ public:
 			}
 			return rt;
 		}
-		CATCH_ERROR_ARG1_MAP_RETURN( _TXT("error in instance of '%s' getting feature attribute names: %s"), MODULENAME, *m_errorhnd, std::vector<std::string>());
+		CATCH_ERROR_ARG1_MAP_RETURN( _TXT("error in instance of '%s' getting attributes: %s"), MODULENAME, *m_errorhnd, std::vector<std::string>());
 	}
 
 	virtual std::vector<std::string> attributeNames() const
