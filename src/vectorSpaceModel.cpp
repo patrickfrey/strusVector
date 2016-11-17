@@ -231,6 +231,13 @@ public:
 					}
 				}
 			}
+			else if (utils::caseInsensitiveEquals( name, "lastsimrelidx"))
+			{
+				std::ostringstream elemstr;
+				SampleIndex sidx = m_database->readLastSimRelationIndex();
+				elemstr << sidx;
+				rt.push_back( elemstr.str());
+			}
 			else if (utils::caseInsensitiveEquals( name, "variable"))
 			{
 				std::vector<std::pair<std::string,uint64_t> > vardefs = m_database->readVariables();
@@ -279,6 +286,7 @@ public:
 				rt.push_back( std::string("conlsh_") + ci->first);
 			}
 			rt.push_back( "simrel");
+			rt.push_back( "lastsimrelidx");
 			rt.push_back( "variable");
 			rt.push_back( "state");
 			return rt;
