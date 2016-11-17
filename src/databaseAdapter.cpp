@@ -1112,6 +1112,28 @@ void DatabaseAdapter::dumpKeyValue( std::ostream& out, const strus::DatabaseCurs
 			scanner(cl,clsize)[ sidx];
 			out << std::string(cl,clsize) << " " << sidx;
 
+			std::vector<SampleIndex> far = vectorFromSerialization<SampleIndex>( value);
+			std::vector<SampleIndex>::const_iterator fi = far.begin(), fe = far.end();
+			for (; fi != fe; ++fi)
+			{
+				out << " " << *fi;
+			}
+			out << std::endl;
+			break;
+		}
+		case DatabaseAdapter::KeyConceptDependency:
+		{
+			const char* cl;
+			std::size_t clsize;
+			const char* depcl;
+			std::size_t depclsize;
+			ConceptIndex sidx;
+			DatabaseKeyScanner scanner( key.ptr()+1, key.size()-1);
+			scanner(cl,clsize)(depcl,depclsize)[ sidx];
+			std::string clstr( cl,clsize);
+			std::string depclstr( depcl,depclsize);
+			out << (clsize?clstr:std::string("_")) << " " << (depclsize?depclstr:std::string("_")) << " " << sidx;
+
 			std::vector<ConceptIndex> far = vectorFromSerialization<ConceptIndex>( value);
 			std::vector<ConceptIndex>::const_iterator fi = far.begin(), fe = far.end();
 			for (; fi != fe; ++fi)
