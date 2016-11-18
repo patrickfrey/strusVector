@@ -982,6 +982,7 @@ void DatabaseAdapter::clear()
 	deleteSampleConceptIndexMaps();
 	deleteConceptSampleIndexMaps();
 	deleteConceptDependencies();
+	writeState( 0);
 }
 
 void DatabaseAdapter::deleteConfig()

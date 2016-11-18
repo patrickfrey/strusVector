@@ -231,7 +231,7 @@ int main( int argc, const char** argv)
 				snprintf( nam, sizeof(nam), "_%u", (unsigned int)sidx);
 				builder->addFeature( nam, vec);
 			}
-			if (!builder->commit())
+			if (!builder->done())
 			{
 				throw std::runtime_error( "building example vector set for VSM failed");
 			}
@@ -269,7 +269,7 @@ int main( int argc, const char** argv)
 		}
 		// Build the model:
 		std::cerr << "building model" << std::endl;
-		if (!builder->finalize())
+		if (!builder->run("finalize"))
 		{
 			throw std::runtime_error( "error in finalize VSM");
 		}

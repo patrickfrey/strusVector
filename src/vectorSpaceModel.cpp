@@ -498,7 +498,7 @@ public:
 			}
 			if (m_config.commitsize && nofFeaturesAdded >= m_config.commitsize)
 			{
-				if (!commit())
+				if (!done())
 				{
 					throw strus::runtime_error(_TXT("autocommit failed after %u operations"), m_config.commitsize);
 				}
@@ -507,7 +507,7 @@ public:
 		CATCH_ERROR_ARG1_MAP( _TXT("error adding sample vector to '%s' builder: %s"), MODULENAME, *m_errorhnd);
 	}
 
-	virtual bool commit()
+	virtual bool done()
 	{
 		try
 		{
@@ -535,68 +535,104 @@ public:
 		CATCH_ERROR_ARG1_MAP_RETURN( _TXT("error in vector space model database commit of '%s' builder: %s"), MODULENAME, *m_errorhnd, false);
 	}
 
-	virtual bool rebase()
+	virtual bool run( const std::string& command)
 	{
 		try
 		{
-			utils::ScopedLock lock( m_mutex);
-			m_database->commit();
-			SimRelationNeighbourReader nbreader( m_database.get(), &m_samplear, m_config.maxdist);
-			buildSimRelationMap( &nbreader);
-			return true;
+			if (utils::caseInsensitiveEquals( command, "rebase"))
+			{
+				rebase();
+				return true;
+			}
+			else if (utils::caseInsensitiveEquals( command, "condep"))
+			{
+				buildConceptDependencies();
+				return true;
+			}
+			else if (utils::caseInsensitiveEquals( command, "clear"))
+			{
+				m_database->clear();
+				m_database->commit();
+				return true;
+			}
+			else if (utils::caseInsensitiveEquals( command, "finalize"))
+			{
+				finalize();
+				return true;
+			}
+			else
+			{
+				throw strus::runtime_error(_TXT("unknown command '%s'"), command.c_str());
+			}
 		}
-		CATCH_ERROR_ARG1_MAP_RETURN( _TXT("error rebase step of '%s' builder: %s"), MODULENAME, *m_errorhnd, false);
+		CATCH_ERROR_ARG1_MAP_RETURN( _TXT("error executing command of '%s' builder: %s"), MODULENAME, *m_errorhnd, false);
 	}
 
-	virtual bool finalize()
+	virtual std::vector<std::string> commands() const
 	{
-		try
-		{
-			utils::ScopedLock lock( m_mutex);
-			m_database->commit();
-			if (needToCalculateSimRelationMap())
-			{
-				buildSimRelationMap( 0);
-			}
-			m_database->deleteSampleConceptIndexMaps();
-			m_database->deleteConceptSampleIndexMaps();
-			m_database->deleteConceptDependencies();
-			m_database->deleteConceptSimhashVectors();
-			m_database->deleteConceptClassNames();
-			m_database->commit();
-
-			std::vector<std::string> clnames;
-			run_genmodel( MAIN_CONCEPT_CLASSNAME, m_genmodelmain);
-			GenModelMap::const_iterator mi = m_genmodelmap.begin(), me = m_genmodelmap.end();
-			for (; mi != me; ++mi)
-			{
-				run_genmodel( mi->first, mi->second);
-				clnames.push_back( mi->first);
-			}
-			m_database->writeNofSamples( m_samplear.size());
-			m_database->writeConceptClassNames( clnames);
-			m_database->writeState( 3);
-			m_database->commit();
-			{
-				const char* logfile = m_config.logfile.empty()?0:m_config.logfile.c_str();
-				Logger logout( logfile);
-				if (logout) logout << _TXT("writing concept class dependencies");
-				std::vector<VectorSpaceModelConfig::ConceptClassDependency>::const_iterator
-					ci = m_config.conceptClassDependecies.begin(), ce = m_config.conceptClassDependecies.end();
-				for (; ci != ce; ++ci)
-				{
-					writeDependencyLinks( ci->first, ci->second);
-					m_database->commit();
-				}
-			}
-			m_database->writeState( 4);
-			m_database->commit();
-			return true;
-		}
-		CATCH_ERROR_ARG1_MAP_RETURN( _TXT("error in finalize step of '%s' builder: %s"), MODULENAME, *m_errorhnd, false);
+		std::vector<std::string> rt;
+		rt.push_back( "rebase");
+		rt.push_back( "clear");
+		rt.push_back( "condep");
+		rt.push_back( "finalize");
+		return rt;
 	}
-
+	
 private:
+	void rebase()
+	{
+		utils::ScopedLock lock( m_mutex);
+		m_database->commit();
+		SimRelationNeighbourReader nbreader( m_database.get(), &m_samplear, m_config.maxdist);
+		buildSimRelationMap( &nbreader);
+	}
+
+	void finalize()
+	{
+		utils::ScopedLock lock( m_mutex);
+		m_database->commit();
+		if (needToCalculateSimRelationMap())
+		{
+			buildSimRelationMap( 0);
+		}
+		m_database->deleteSampleConceptIndexMaps();
+		m_database->deleteConceptSampleIndexMaps();
+		m_database->deleteConceptDependencies();
+		m_database->deleteConceptSimhashVectors();
+		m_database->deleteConceptClassNames();
+		m_database->commit();
+
+		std::vector<std::string> clnames;
+		run_genmodel( MAIN_CONCEPT_CLASSNAME, m_genmodelmain);
+		GenModelMap::const_iterator mi = m_genmodelmap.begin(), me = m_genmodelmap.end();
+		for (; mi != me; ++mi)
+		{
+			run_genmodel( mi->first, mi->second);
+			clnames.push_back( mi->first);
+		}
+		m_database->writeNofSamples( m_samplear.size());
+		m_database->writeConceptClassNames( clnames);
+		m_database->writeState( 3);
+		m_database->commit();
+		buildConceptDependencies();
+		m_database->writeState( 4);
+		m_database->commit();
+	}
+
+	void buildConceptDependencies()
+	{
+		const char* logfile = m_config.logfile.empty()?0:m_config.logfile.c_str();
+		Logger logout( logfile);
+		if (logout) logout << _TXT("writing concept class dependencies");
+		std::vector<VectorSpaceModelConfig::ConceptClassDependency>::const_iterator
+			ci = m_config.conceptClassDependecies.begin(), ce = m_config.conceptClassDependecies.end();
+		for (; ci != ce; ++ci)
+		{
+			writeDependencyLinks( ci->first, ci->second);
+			m_database->commit();
+		}
+	}
+
 	bool needToCalculateSimRelationMap()
 	{
 		return m_needToCalculateSimRelationMap || m_config.with_forcesim || m_database->readNofSamples() >= m_database->readLastSimRelationIndex();
