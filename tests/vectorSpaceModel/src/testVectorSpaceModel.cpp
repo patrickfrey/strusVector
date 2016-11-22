@@ -128,7 +128,7 @@ int main( int argc, const char** argv)
 
 		initRandomNumberGenerator();
 		std::string config( DEFAULT_CONFIG);
-		unsigned int nofFeatures = 100000;
+		unsigned int nofFeatures = 1000;
 		unsigned int dim = 0;
 		bool use_model_built = false;
 		bool use_group_assign = false;
@@ -236,7 +236,7 @@ int main( int argc, const char** argv)
 				else
 				{
 					std::size_t idx = rand() % sidx;
-					double sim = 0.90 + (rand() % 120) * 0.001;
+					double sim = 0.90 + (rand() % 100) * 0.001;
 					vec = createSimilarVector( samplear[ idx], sim);
 				}
 				samplear.push_back( vec);
