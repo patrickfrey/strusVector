@@ -50,14 +50,10 @@ public:
 	{
 	public:
 		Lock( const SharedArrayMutex* arraymut_, unsigned int idx_)
-			:utils::RecursiveUniqueLock( arraymut_->mutex(idx_)),m_arraymut(arraymut_),m_idx(idx_)
-		{
-			utils::RecursiveUniqueLock::lock();
-		}
-		~Lock()
-		{
-			utils::RecursiveUniqueLock::unlock();
-		}
+			:utils::RecursiveUniqueLock( arraymut_->mutex(idx_))
+			,m_arraymut(arraymut_),m_idx(idx_){}
+		~Lock(){}
+
 		void skip( unsigned int idx_)
 		{
 			if ((idx_-m_arraymut->m_startidx) / m_arraymut->m_mod != (m_idx-m_arraymut->m_startidx) / m_arraymut->m_mod)

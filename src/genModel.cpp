@@ -22,7 +22,7 @@
 #include <algorithm>
 
 using namespace strus;
-#undef STRUS_LOWLEVEL_DEBUG
+#define STRUS_LOWLEVEL_DEBUG
 
 static void GenGroupProcedure_greedyChaseFreeFeatures( const GenGroupParameter* parameter, SimGroupIdAllocator* groupIdAllocator, GenGroupContext* genGroupContext, const SimRelationReader* simrelreader, std::size_t startidx, std::size_t endidx)
 {
@@ -116,19 +116,19 @@ std::vector<SimHash> GenModel::run(
 		if (groupContext.logout()) groupContext.logout() << string_format( _TXT("starting iteration %u"), iteration);
 
 #ifdef STRUS_LOWLEVEL_DEBUG
-		checkSimGroupStructures( groupInstanceList, groupInstanceMap, sampleSimGroupMap, samplear.size());
+		groupContext.checkSimGroupStructures();
 #endif
 		if (groupContext.logout()) groupContext.logout() << _TXT("chasing free elements");
-		threadContext.run( &GenGroupProcedure_greedyChaseFreeFeatures, samplear.size());
+		threadContext.run( &GenGroupProcedure_greedyChaseFreeFeatures, 0, samplear.size());
 
 		if (groupContext.logout()) groupContext.logout() << string_format( _TXT("interchanging elements out of %u"), glbcntalloc.nofGroupIdsAllocated());
-		threadContext.run( &GenGroupProcedure_greedyNeighbourGroupInterchange, glbcntalloc.nofGroupIdsAllocated());
+		threadContext.run( &GenGroupProcedure_greedyNeighbourGroupInterchange, 1, glbcntalloc.nofGroupIdsAllocated()+1);
 
 		if (groupContext.logout()) groupContext.logout() << _TXT("improving fitness of individuals");
-		threadContext.run( &GenGroupProcedure_improveGroups, glbcntalloc.nofGroupIdsAllocated());
+		threadContext.run( &GenGroupProcedure_improveGroups, 1, glbcntalloc.nofGroupIdsAllocated()+1);
 
 		if (groupContext.logout()) groupContext.logout() << _TXT("solving neighbours clashes");
-		threadContext.run( &GenGroupProcedure_similarNeighbourGroupElimination, glbcntalloc.nofGroupIdsAllocated());
+		threadContext.run( &GenGroupProcedure_similarNeighbourGroupElimination, 1, glbcntalloc.nofGroupIdsAllocated()+1);
 	}/*for (; iteration...*/
 
 	if (groupContext.logout()) groupContext.logout() << _TXT("eliminating redundant (dependent) groups");

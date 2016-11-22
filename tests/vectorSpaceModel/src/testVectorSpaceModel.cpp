@@ -94,20 +94,29 @@ static strus::ErrorBufferInterface* g_errorhnd = 0;
 
 #define DEFAULT_CONFIG \
 	"path=vsmodel;"\
+	"threads=0;"\
 	"logfile=-;"\
 	"dim=300;"\
 	"bit=64;"\
 	"var=32;"\
+	"maxdist=400;"\
 	"simdist=340;"\
 	"raddist=250;"\
 	"eqdist=80;"\
 	"mutations=20;"\
 	"votes=5;"\
 	"descendants=5;"\
-	"maxage=20;"\
-	"iterations=20;"\
+	"maxage=30;"\
+	"iterations=40;"\
 	"assignments=7;"\
-	"singletons=no"
+	"isaf=0.6;"\
+	"eqdiff=0.15;"\
+	"maxfeatures=1000000;"\
+	"maxconcepts=4000000;"\
+	"singletons=no;"\
+	"probsim=yes;"\
+	"forcesim=no"
+
 
 int main( int argc, const char** argv)
 {
@@ -119,7 +128,7 @@ int main( int argc, const char** argv)
 
 		initRandomNumberGenerator();
 		std::string config( DEFAULT_CONFIG);
-		unsigned int nofFeatures = 1000;
+		unsigned int nofFeatures = 100000;
 		unsigned int dim = 0;
 		bool use_model_built = false;
 		bool use_group_assign = false;
@@ -194,7 +203,11 @@ int main( int argc, const char** argv)
 		{
 			(void)g_errorhnd->fetchError();
 		}
-
+		// Creating repository for vector space model:
+		if (!vmodel->createRepository( config, dbi.get()))
+		{
+			throw std::runtime_error( g_errorhnd->fetchError());
+		}
 		// Build the test vectors:
 		std::vector<std::vector<double> > samplear;
 		if (use_model_built)

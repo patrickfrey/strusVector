@@ -49,3 +49,25 @@ void SimGroupIdAllocator::free( const ConceptIndex& idx)
 	m_freeList.push_back( idx);
 }
 
+SimGroupMap::SimGroupMap()
+	:m_cnt(0),m_armem(0),m_ar(0),m_arsize(0){}
+
+SimGroupMap::SimGroupMap( GlobalCountAllocator* cnt_, std::size_t maxNofGroups)
+	:m_cnt(cnt_),m_armem(0),m_ar(0),m_arsize(maxNofGroups)
+{
+	m_armem = utils::aligned_malloc( m_arsize * sizeof(SimGroupRef), 128);
+	if (!m_armem) throw std::bad_alloc();
+	m_ar = new (m_armem) SimGroupRef[ m_arsize];
+}
+
+SimGroupMap::~SimGroupMap()
+{
+	std::size_t ai = 0, ae = m_arsize;
+	for (;ai != ae; ++ai)
+	{
+		m_ar[ai].~SimGroupRef();
+	}
+	utils::aligned_free( m_armem);
+	m_armem = 0;
+}
+

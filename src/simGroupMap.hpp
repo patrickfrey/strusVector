@@ -10,6 +10,7 @@
 #define _STRUS_VECTOR_SPACE_MODEL_SIM_GROUP_MAP_HPP_INCLUDED
 #include "simGroup.hpp"
 #include "utils.hpp"
+#include "internationalization.hpp"
 #include <vector>
 
 namespace strus {
@@ -53,30 +54,39 @@ typedef utils::SharedPtr<SimGroup> SimGroupRef;
 class SimGroupMap
 {
 public:
-	SimGroupMap()
-		:m_cnt(0),m_armem(0),m_ar(0),m_arsize(0){}
-
-	SimGroupMap( GlobalCountAllocator* cnt_, std::size_t maxNofGroups)
-		:m_cnt(cnt_),m_armem(0),m_ar(0),m_arsize(maxNofGroups)
-	{
-		m_armem = (SimGroup**)utils::aligned_malloc( m_arsize * sizeof(SimGroupRef), 128);
-		if (!m_armem) throw std::bad_alloc();
-		m_ar = new (m_armem) SimGroupRef[ m_arsize];
-	}
-	~SimGroupMap()
-	{
-		delete m_ar;
-		utils::aligned_free( m_armem);
-	}
+	SimGroupMap();
+	SimGroupMap( GlobalCountAllocator* cnt_, std::size_t maxNofGroups);
+	~SimGroupMap();
 
 	const SimGroupRef& get( const ConceptIndex& cidx) const
 	{
-		return m_ar[ cidx];
+		if (!cidx || (std::size_t)cidx > m_arsize)
+		{
+			throw strus::runtime_error(_TXT("array bound read in similarity group map"));
+		}
+		return m_ar[ cidx-1];
 	}
 
 	void setGroup( const ConceptIndex& cidx, const SimGroupRef& group)
 	{
+		if (!cidx || (std::size_t)cidx > m_arsize)
+		{
+			throw strus::runtime_error(_TXT("array bound write in similarity group map"));
+		}
+		if (cidx != group->id())
+		{
+			throw strus::runtime_error(_TXT("internal: wrong group assignment"));
+		}
 		m_ar[ cidx-1] = group;
+	}
+
+	void resetGroup( const ConceptIndex& cidx)
+	{
+		if (!cidx || (std::size_t)cidx > m_arsize)
+		{
+			throw strus::runtime_error(_TXT("array bound write in similarity group map"));
+		}
+		m_ar[ cidx-1].reset();
 	}
 
 	ConceptIndex nofGroupIdsAllocated() const
@@ -88,6 +98,10 @@ public:
 	{
 		return m_cnt;
 	}
+
+private:
+	SimGroupMap( const SimGroupMap&){};	//< non copyable
+	void operator=( const SimGroupMap&){};	//< non copyable
 
 private:
 	GlobalCountAllocator* m_cnt;		//< global allocator of group ids

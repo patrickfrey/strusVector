@@ -31,7 +31,8 @@ public:
 			const SimRelationReader* simrelreader_,
 			const GenGroupParameter* parameter_,
 			unsigned int nofThreads_);
-	void run( GenGroupProcedure proc, std::size_t nofidx);
+
+	void run( GenGroupProcedure proc, std::size_t startidx, std::size_t endidx);
 
 private:
 	GlobalCountAllocator* m_glbcnt;

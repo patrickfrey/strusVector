@@ -341,9 +341,11 @@ static void readAndCheckDatabase( const strus::VectorSpaceModelConfig& config, c
 #define DEFAULT_CONFIG \
 	"path=vsmodel;"\
 	"logfile=-;"\
+	"commit=717;"\
 	"dim=121;"\
 	"bit=7;"\
 	"var=13;"\
+	"maxdist=23;"\
 	"simdist=13;"\
 	"raddist=7;"\
 	"eqdist=3;"\
@@ -353,7 +355,15 @@ static void readAndCheckDatabase( const strus::VectorSpaceModelConfig& config, c
 	"maxage=21;"\
 	"iterations=23;"\
 	"assignments=7;"\
-	"singletons=no"
+	"isaf=0.5;"\
+	"eqdiff=0.25;"\
+	"maxsimsam=44;"\
+	"rndsimsam=55;"\
+	"maxfeatures=301;"\
+	"maxconcepts=1001;"\
+	"singletons=no;"\
+	"probsim=yes;"\
+	"forcesim=no"
 
 int main( int argc, const char** argv)
 {

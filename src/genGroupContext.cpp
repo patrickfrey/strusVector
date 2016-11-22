@@ -121,7 +121,7 @@ void GenGroupContext::checkSimGroupStructures()
 				errbuf << string_format( _TXT("entry not found for group %u in group instance map (check structures)"), *ci) << std::endl;
 				haserr = true;
 			}
-			if (!group->isMember( si))
+			else if (!group->isMember( si))
 			{
 				errbuf << string_format( _TXT("illegal entry %u in sim group map (check structures), expected to be member of group %u"), si, group->id()) << std::endl;
 				haserr = true;
@@ -149,7 +149,7 @@ void GenGroupContext::removeGroup( SimGroupIdAllocator& localAllocator, const Co
 		SharedSampleSimGroupMap::Lock LOCK( &m_sampleSimGroupMap, *mi);
 		m_sampleSimGroupMap.remove( LOCK, group_id);
 	}
-	m_groupMap.setGroup( group_id, SimGroupRef());
+	m_groupMap.resetGroup( group_id);
 	localAllocator.free( group_id);
 }
 
