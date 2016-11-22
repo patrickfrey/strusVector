@@ -81,6 +81,9 @@ private:
 };
 
 
+typedef IndexListMap<SampleIndex,ConceptIndex> SampleConceptIndexMap;
+typedef IndexListMap<ConceptIndex,SampleIndex> ConceptSampleIndexMap;
+
 }//namespace
 #endif
 

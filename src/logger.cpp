@@ -15,6 +15,10 @@
 
 using namespace strus;
 
+Logger::Logger()
+	:m_logout(&std::cerr)
+{}
+
 Logger::Logger( const char* logfile)
 	:m_logout(0)
 {

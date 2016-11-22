@@ -22,7 +22,7 @@ GenModelConfig::GenModelConfig( const GenModelConfig& o)
 	,mutations(o.mutations),votes(o.votes)
 	,descendants(o.descendants),maxage(o.maxage),iterations(o.iterations)
 	,assignments(o.assignments)
-	,isaf(o.isaf)
+	,isaf(o.isaf),eqdiff(o.eqdiff)
 	,with_singletons(o.with_singletons)
 	{}
 
@@ -31,7 +31,7 @@ GenModelConfig::GenModelConfig()
 	,mutations(DefaultMutations),votes(DefaultMutationVotes)
 	,descendants(DefaultDescendants),maxage(DefaultMaxAge),iterations(DefaultIterations)
 	,assignments(DefaultAssignments)
-	,isaf((float)DefaultIsaf / 100)
+	,isaf((float)DefaultIsaf / 100),eqdiff((float)DefaultEqdiff / 100)
 	,with_singletons((bool)DefaultWithSingletons)
 	{}
 
@@ -40,7 +40,7 @@ GenModelConfig::GenModelConfig( const std::string& config, unsigned int maxdist,
 	,mutations(defaultcfg.mutations),votes(defaultcfg.votes)
 	,descendants(defaultcfg.descendants),maxage(defaultcfg.maxage),iterations(defaultcfg.iterations)
 	,assignments(defaultcfg.assignments)
-	,isaf(defaultcfg.isaf)
+	,isaf(defaultcfg.isaf),eqdiff(defaultcfg.eqdiff)
 	,with_singletons(defaultcfg.with_singletons)
 {
 	std::string src = config;
@@ -83,6 +83,7 @@ void GenModelConfig::parse( std::string& src, unsigned int maxdist, ErrorBufferI
 	if (extractUIntFromConfigString( assignments, src, "assignments", errorhnd)){}
 	double val;
 	if (extractFloatFromConfigString( val, src, "isaf", errorhnd)){isaf=(float)val;}
+	if (extractFloatFromConfigString( val, src, "eqdiff", errorhnd)){isaf=(float)val;}
 	if (extractBooleanFromConfigString( with_singletons, src, "singletons", errorhnd)){}
 
 	if (mutations == 0 || descendants == 0 || maxage == 0 || iterations == 0)
@@ -124,6 +125,7 @@ std::string GenModelConfig::tostring( bool eolnsep) const
 	printConfigItem( buf, "iterations", iterations, eolnsep);
 	printConfigItem( buf, "assignments", assignments, eolnsep);
 	printConfigItem( buf, "isaf", isaf, eolnsep);
+	printConfigItem( buf, "eqdiff", eqdiff, eolnsep);
 	printConfigItem( buf, "singletons", with_singletons, eolnsep);
 	return buf.str();
 }
@@ -135,7 +137,7 @@ VectorSpaceModelConfig::VectorSpaceModelConfig( const VectorSpaceModelConfig& o)
 	,dim(o.dim),bits(o.bits),variations(o.variations)
 	,maxdist(o.maxdist),gencfg(o.gencfg)
 	,maxsimsam(o.maxsimsam),rndsimsam(o.rndsimsam)
-	,maxfeatures(o.maxfeatures)
+	,maxfeatures(o.maxfeatures),maxconcepts(o.maxconcepts)
 	,with_probsim(o.with_probsim)
 	,with_forcesim(o.with_forcesim)
 	,altgenmap(o.altgenmap)
@@ -146,7 +148,7 @@ VectorSpaceModelConfig::VectorSpaceModelConfig()
 	,dim(DefaultDim),bits(DefaultBits),variations(DefaultVariations)
 	,maxdist(DefaultMaxDist),gencfg()
 	,maxsimsam(DefaultMaxSimSam),rndsimsam(DefaultRndSimSam)
-	,maxfeatures(DefaultMaxFeatures)
+	,maxfeatures(DefaultMaxFeatures),maxconcepts(0)
 	,with_probsim((bool)DefaultWithProbSim)
 	,with_forcesim((bool)DefaultWithForceSim)
 	,altgenmap()
@@ -158,7 +160,7 @@ VectorSpaceModelConfig::VectorSpaceModelConfig( const std::string& config, Error
 	,dim(defaultcfg.dim),bits(defaultcfg.bits),variations(defaultcfg.variations)
 	,maxdist(defaultcfg.maxdist),gencfg(defaultcfg.gencfg)
 	,maxsimsam(defaultcfg.maxsimsam),rndsimsam(defaultcfg.rndsimsam)
-	,maxfeatures(defaultcfg.maxfeatures)
+	,maxfeatures(defaultcfg.maxfeatures),maxconcepts(defaultcfg.maxconcepts)
 	,with_probsim(defaultcfg.with_probsim)
 	,with_forcesim(defaultcfg.with_forcesim)
 	,altgenmap(defaultcfg.altgenmap)
@@ -177,6 +179,12 @@ VectorSpaceModelConfig::VectorSpaceModelConfig( const std::string& config, Error
 	if (extractUIntFromConfigString( maxsimsam, src, "maxsimsam", errorhnd)){}
 	if (extractUIntFromConfigString( rndsimsam, src, "rndsimsam", errorhnd)){}
 	if (extractUIntFromConfigString( maxfeatures, src, "maxfeatures", errorhnd)){}
+	if (extractUIntFromConfigString( maxconcepts, src, "maxconcepts", errorhnd)){}
+	if (!maxconcepts)
+	{
+		maxconcepts = (maxfeatures / 2) * gencfg.assignments + 2;
+		if (maxfeatures > maxconcepts) throw strus::runtime_error(_TXT("maxconcepts has to be specified, because default maxconcepts = (maxfeatures * assignments / 2) exceeds domain"));
+	}
 	if (extractBooleanFromConfigString( with_probsim, src, "probsim", errorhnd)){}
 	if (extractBooleanFromConfigString( with_forcesim, src, "forcesim", errorhnd)){}
 	std::string altgencfgstr;
@@ -260,6 +268,7 @@ std::string VectorSpaceModelConfig::tostring( bool eolnsep) const
 	printConfigItem( buf, "maxsimsam", maxsimsam, eolnsep);
 	printConfigItem( buf, "rndsimsam", rndsimsam, eolnsep);
 	printConfigItem( buf, "maxfeatures", maxfeatures, eolnsep);
+	printConfigItem( buf, "maxconcepts", maxconcepts, eolnsep);
 	printConfigItem( buf, "probsim", (with_probsim?"yes":"no"), eolnsep);
 	printConfigItem( buf, "forcesim", (with_forcesim?"yes":"no"), eolnsep);
 	return buf.str();

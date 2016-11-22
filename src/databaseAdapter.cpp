@@ -220,8 +220,6 @@ void DatabaseAdapter::writeSample( const SampleIndex& sidx, const std::string& n
 	writeSimhash( KeySampleSimHash, std::string(), sidx, simHash);
 }
 
-enum {SimHashBlockSize=128};
-
 #ifdef STRUS_LOWLEVEL_DEBUG
 static void print_value_seq( const void* sq, unsigned int sqlen)
 {
@@ -926,7 +924,7 @@ std::vector<SampleIndex> DatabaseAdapter::readConceptSingletons( const std::stri
 		prev_sidx = sidx;
 		slice = cursor->seekNext();
 	}
-	SampleIndex end_sidx = readNofConcepts( clname);
+	SampleIndex end_sidx = readNofSamples();
 	for (SampleIndex si=prev_sidx; si < end_sidx; ++si)
 	{
 		rt.push_back( si);

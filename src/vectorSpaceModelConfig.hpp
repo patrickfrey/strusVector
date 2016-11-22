@@ -31,6 +31,7 @@ struct GenModelConfig
 		DefaultIterations = 20,
 		DefaultAssignments = 7,
 		DefaultIsaf = 60,
+		DefaultEqdiff = 25,
 		DefaultWithSingletons = 0
 	};
 
@@ -51,6 +52,7 @@ struct GenModelConfig
 	unsigned int iterations;	///< number of iterations
 	unsigned int assignments;	///< maximum number of assignments on a sample to a group
 	float isaf;			///< fraction of samples of a superset that has to be in a subset for declaring the subset as dependent (is a) of the superset
+	float eqdiff;			///< fraction of maximum elements that can to differ for sets to considered to be equal (unfittest competitor elimination)
 	bool with_singletons;		///< true, if singletons should also get into the result
 };
 
@@ -66,19 +68,9 @@ struct VectorSpaceModelConfig
 		DefaultBits = 64,
 		DefaultVariations = 32,
 		DefaultMaxDist = 640,	//< 640 out of 2K (32*64)
-		DefaultSimDist = 340,	//< 340 out of 2K (32*64) ~ cosine dist 0.9
-		DefaultRadDist = 320,	//< 340 out of 2K (32*64) ~ cosine dist 0.9
-		DefaultEqDist = 60,
 		DefaultMaxSimSam = 0,
 		DefaultRndSimSam = 0,
-		DefaultMutations = 50,
-		DefaultMutationVotes = 13,
-		DefaultDescendants = 10,
-		DefaultMaxAge = 20,
-		DefaultIterations = 20,
-		DefaultAssignments = 7,
 		DefaultMaxFeatures = (1<<31),
-		DefaultIsaf = 60,
 		DefaultWithSingletons = 0,
 		DefaultWithProbSim = 1,
 		DefaultWithForceSim = 0
@@ -116,6 +108,7 @@ struct VectorSpaceModelConfig
 	unsigned int maxsimsam;		///< maximum number of nearest neighbours put input similarity relation map
 	unsigned int rndsimsam;		///< select number of random samples put into similarity relation map besides 'maxsimsam'
 	unsigned int maxfeatures;	///< restrict the number of features loaded
+	unsigned int maxconcepts;	///< restrict the number of concepts created (also temporarily)
 	bool with_probsim;		///< true, if probabilistic function is used as prefilter for the candidates of the similarity matrix (faster)
 	bool with_forcesim;		///< true, if the similarity relation matrix calculation should be forced
 	GenModelConfigMap altgenmap;	///< alternative runs of categorization

@@ -11,12 +11,16 @@ set(
 	random.cpp
 	simHash.cpp
 	simGroup.cpp
+	simGroupMap.cpp
+	dependencyGraph.cpp
 	sampleSimGroupMap.cpp
 	simRelationMap.cpp
 	simRelationMapBuilder.cpp
 	getSimhashValues.cpp
 	lshModel.cpp
 	lshBench.cpp
+	genGroupContext.cpp
+	genGroupThreadContext.cpp
 	genModel.cpp
 	databaseAdapter.cpp
 	vectorSpaceModelConfig.cpp

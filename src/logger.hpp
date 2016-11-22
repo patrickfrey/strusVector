@@ -16,6 +16,7 @@ namespace strus {
 class Logger
 {
 public:
+	Logger();
 	Logger( const char* logfile);
 	Logger& operator << (const std::string& line);
 
@@ -23,6 +24,10 @@ public:
 	{
 		return m_logout != 0;
 	}
+
+private:
+	Logger( const Logger&){}		//< non copyable
+	void operator=(const Logger&){}		//< non copyable
 
 private:
 	std::ostream* m_logout;

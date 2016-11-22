@@ -20,12 +20,8 @@
 
 namespace strus {
 
-/// \brief Some constants that are not configurable yet
-#define STRUS_VECTOR_MAXAGE_MATURE_PERCENTAGE 30   // define what precentage of age compared with maxage is considered mature
-#define STRUS_VECTOR_BAD_FITNESS_FRACTION     0.6  // factor of fitness considered bad compared with the best fitness of the group, used to decide wheter a 'mature' group can be left when maximum capacity of releations is reached
-
-typedef IndexListMap<SampleIndex,ConceptIndex> SampleConceptIndexMap;
-typedef IndexListMap<ConceptIndex,SampleIndex> ConceptSampleIndexMap;
+/// \brief Factor used to calculate the maximum number of concepts from the number of samples if maxnofconcepts is not specified
+#define FEATURE_MAXNOFCONCEPT_RELATION 16
 
 /// \brief Structure for implementing unsupervised learning of SimHash group representants with help of genetic algorithms
 class GenModel
@@ -37,16 +33,16 @@ public:
 		,m_maxdist(0),m_simdist(0),m_raddist(0),m_eqdist(0)
 		,m_mutations(0),m_votes(0)
 		,m_descendants(0),m_maxage(0),m_iterations(0)
-		,m_assignments(0),m_isaf(0.0)
+		,m_assignments(0),m_isaf(0.0),m_eqdiff(0.0)
 		,m_with_singletons(0)
 		{}
 	/// \brief Constructor
-	GenModel( unsigned int threads_, unsigned int maxdist_, unsigned int simdist_, unsigned int raddist_, unsigned int eqdist_, unsigned int mutations_, unsigned int votes_, unsigned int descendants_, unsigned int maxage_, unsigned int iterations_, unsigned int assignments_, float isaf_, bool with_singletons_)
+	GenModel( unsigned int threads_, unsigned int maxdist_, unsigned int simdist_, unsigned int raddist_, unsigned int eqdist_, unsigned int mutations_, unsigned int votes_, unsigned int descendants_, unsigned int maxage_, unsigned int iterations_, unsigned int assignments_, float isaf_, float eqdiff_, bool with_singletons_)
 		:m_threads(threads_)
 		,m_maxdist(maxdist_),m_simdist(simdist_),m_raddist(raddist_),m_eqdist(eqdist_)
 		,m_mutations(mutations_),m_votes(votes_)
 		,m_descendants(descendants_),m_maxage(maxage_),m_iterations(iterations_)
-		,m_assignments(assignments_),m_isaf(isaf_)
+		,m_assignments(assignments_),m_isaf(isaf_),m_eqdiff(eqdiff_)
 		,m_with_singletons(with_singletons_)
 		{}
 	/// \brief Copy constructor
@@ -55,7 +51,7 @@ public:
 		,m_maxdist(o.m_maxdist),m_simdist(o.m_simdist),m_raddist(o.m_raddist),m_eqdist(o.m_eqdist)
 		,m_mutations(o.m_mutations),m_votes(o.m_votes)
 		,m_descendants(o.m_descendants),m_maxage(o.m_maxage),m_iterations(o.m_iterations)
-		,m_assignments(o.m_assignments),m_isaf(o.m_isaf)
+		,m_assignments(o.m_assignments),m_isaf(o.m_isaf),m_eqdiff(o.m_eqdiff)
 		,m_with_singletons(o.m_with_singletons)
 		{}
 
@@ -64,11 +60,14 @@ public:
 
 	/// \brief Unsupervised learning of a good group representantion of the sample set passed as argument
 	std::vector<SimHash> run(
-			const std::string& clname,
+			std::vector<SampleIndex>& singletons,
 			SampleConceptIndexMap& sampleConceptIndexMap,
 			ConceptSampleIndexMap& conceptSampleIndexMap,
+			const std::string& clname,
 			const std::vector<SimHash>& samples,
+			unsigned int maxconcepts_,
 			const SimRelationReader& simrelreader,
+			unsigned int nofThreads,
 			const char* logfile) const;
 
 private:
@@ -84,6 +83,7 @@ private:
 	unsigned int m_iterations;		///< number of iterations
 	unsigned int m_assignments;		///< maximum number of assignments on a sample to a group
 	float m_isaf;				///< fraction of samples of a superset that has to be in a subset for declaring the subset as dependent (is a) of the superset
+	float m_eqdiff;				///< fraction of maximum elements that can to differ for sets to considered to be equal (unfittest competitor elimination)
 	bool m_with_singletons;			///< true, if singletons should also get into the result
 };
 

@@ -442,11 +442,11 @@ public:
 		{
 			m_database->writeConfig( m_config);
 			m_lshmodel = LshModel( m_config.dim, m_config.bits, m_config.variations);
-			m_genmodelmain = GenModel( m_config.threads, m_config.maxdist, m_config.gencfg.simdist, m_config.gencfg.raddist, m_config.gencfg.eqdist, m_config.gencfg.mutations, m_config.gencfg.votes, m_config.gencfg.descendants, m_config.gencfg.maxage, m_config.gencfg.iterations, m_config.gencfg.assignments, m_config.gencfg.isaf, m_config.gencfg.with_singletons);
+			m_genmodelmain = GenModel( m_config.threads, m_config.maxdist, m_config.gencfg.simdist, m_config.gencfg.raddist, m_config.gencfg.eqdist, m_config.gencfg.mutations, m_config.gencfg.votes, m_config.gencfg.descendants, m_config.gencfg.maxage, m_config.gencfg.iterations, m_config.gencfg.assignments, m_config.gencfg.isaf, m_config.gencfg.eqdiff, m_config.gencfg.with_singletons);
 			GenModelConfigMap::const_iterator mi = m_config.altgenmap.begin(), me = m_config.altgenmap.end();
 			for (; mi != me; ++mi)
 			{
-				m_genmodelmap[ mi->first] = GenModel( m_config.threads, m_config.maxdist, mi->second.simdist, mi->second.raddist, mi->second.eqdist, mi->second.mutations, mi->second.votes, mi->second.descendants, mi->second.maxage, mi->second.iterations, mi->second.assignments, mi->second.isaf, mi->second.with_singletons);
+				m_genmodelmap[ mi->first] = GenModel( m_config.threads, m_config.maxdist, mi->second.simdist, mi->second.raddist, mi->second.eqdist, mi->second.mutations, mi->second.votes, mi->second.descendants, mi->second.maxage, mi->second.iterations, mi->second.assignments, mi->second.isaf, mi->second.eqdiff, mi->second.with_singletons);
 			}
 			m_database->writeLshModel( m_lshmodel);
 			m_database->writeState( m_state = 1);
@@ -465,11 +465,11 @@ public:
 				m_needToCalculateSimRelationMap = true;
 			}
 			m_lshmodel = m_database->readLshModel();
-			m_genmodelmain = GenModel( m_config.threads, m_config.maxdist, m_config.gencfg.simdist, m_config.gencfg.raddist, m_config.gencfg.eqdist, m_config.gencfg.mutations, m_config.gencfg.votes, m_config.gencfg.descendants, m_config.gencfg.maxage, m_config.gencfg.iterations, m_config.gencfg.assignments, m_config.gencfg.isaf, m_config.gencfg.with_singletons);
+			m_genmodelmain = GenModel( m_config.threads, m_config.maxdist, m_config.gencfg.simdist, m_config.gencfg.raddist, m_config.gencfg.eqdist, m_config.gencfg.mutations, m_config.gencfg.votes, m_config.gencfg.descendants, m_config.gencfg.maxage, m_config.gencfg.iterations, m_config.gencfg.assignments, m_config.gencfg.isaf, m_config.gencfg.eqdiff, m_config.gencfg.with_singletons);
 			GenModelConfigMap::const_iterator mi = m_config.altgenmap.begin(), me = m_config.altgenmap.end();
 			for (; mi != me; ++mi)
 			{
-				m_genmodelmap[ mi->first] = GenModel( m_config.threads, m_config.maxdist, mi->second.simdist, mi->second.raddist, mi->second.eqdist, mi->second.mutations, mi->second.votes, mi->second.descendants, mi->second.maxage, mi->second.iterations, mi->second.assignments, mi->second.isaf, mi->second.with_singletons);
+				m_genmodelmap[ mi->first] = GenModel( m_config.threads, m_config.maxdist, mi->second.simdist, mi->second.raddist, mi->second.eqdist, mi->second.mutations, mi->second.votes, mi->second.descendants, mi->second.maxage, mi->second.iterations, mi->second.assignments, mi->second.isaf, mi->second.eqdiff, mi->second.with_singletons);
 			}
 			m_samplear = m_database->readSampleSimhashVector();
 		}
@@ -539,7 +539,12 @@ public:
 	{
 		try
 		{
-			if (utils::caseInsensitiveEquals( command, "rebase"))
+			if (command.empty() || utils::caseInsensitiveEquals( command, "finalize"))
+			{
+				finalize();
+				return true;
+			}
+			else if (utils::caseInsensitiveEquals( command, "rebase"))
 			{
 				rebase();
 				return true;
@@ -553,11 +558,6 @@ public:
 			{
 				m_database->clear();
 				m_database->commit();
-				return true;
-			}
-			else if (utils::caseInsensitiveEquals( command, "finalize"))
-			{
-				finalize();
 				return true;
 			}
 			else
@@ -667,12 +667,14 @@ private:
 	{
 		const char* logfile = m_config.logfile.empty()?0:m_config.logfile.c_str();
 		SimRelationMapReader simrelmap( m_database.get());
+		std::vector<SampleIndex> singletons;
 		SampleConceptIndexMap sampleConceptIndexMap;
 		ConceptSampleIndexMap conceptSampleIndexMap;
 
 		std::vector<SimHash> resultar = genmodel.run(
-				clname, sampleConceptIndexMap, conceptSampleIndexMap,
-				m_samplear, simrelmap, logfile);
+				singletons, sampleConceptIndexMap, conceptSampleIndexMap,
+				clname, m_samplear, m_config.maxconcepts, simrelmap, m_config.threads, logfile);
+
 		m_database->writeConceptSimhashVector( clname, resultar);
 		m_database->writeSampleConceptIndexMap( clname, sampleConceptIndexMap);
 		m_database->writeConceptSampleIndexMap( clname, conceptSampleIndexMap);

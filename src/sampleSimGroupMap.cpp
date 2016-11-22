@@ -8,7 +8,9 @@
 /// \brief Structure for a map of sample indices to similarity groups they are members of
 #include "sampleSimGroupMap.hpp"
 #include "internationalization.hpp"
+#include "cacheLineSize.hpp"
 #include "errorUtils.hpp"
+#include "utils.hpp"
 #include <cstring>
 
 using namespace strus;
@@ -20,14 +22,15 @@ void SampleSimGroupMap::init()
 	{
 		throw std::bad_alloc();
 	}
-	m_nodear = (Node*)std::malloc( m_nodearsize * sizeof(Node));
-	m_refs = (ConceptIndex*)std::calloc( m_nodearsize * m_maxnodesize, sizeof(ConceptIndex));
+	m_nodear = (Node*)utils::aligned_malloc( m_nodearsize * sizeof(Node), CacheLineSize);
+	m_refs = (ConceptIndex*)utils::aligned_malloc( m_nodearsize * m_maxnodesize * sizeof(ConceptIndex), CacheLineSize);
 	if (!m_nodear || !m_refs)
 	{
-		if (m_nodear) std::free(m_nodear);
-		if (m_refs) std::free(m_refs);
+		if (m_nodear) utils::aligned_free(m_nodear);
+		if (m_refs) utils::aligned_free(m_refs);
 		throw std::bad_alloc();
 	}
+	std::memset( m_refs, 0, m_nodearsize * m_maxnodesize * sizeof(ConceptIndex));
 	std::size_t ni = 0, ne = m_nodearsize;
 	std::size_t refidx = 0;
 	for (; ni != ne; ++ni,refidx += m_maxnodesize)
@@ -51,28 +54,27 @@ SampleSimGroupMap::SampleSimGroupMap( const SampleSimGroupMap& o)
 
 SampleSimGroupMap::~SampleSimGroupMap()
 {
-	if (m_nodear) std::free(m_nodear);
-	if (m_refs) std::free(m_refs);
+	if (m_nodear) utils::aligned_free( m_nodear);
+	if (m_refs) utils::aligned_free( m_refs);
 }
 
-bool SampleSimGroupMap::shares( const std::size_t& ndidx1, const std::size_t& ndidx2) const
+bool SampleSimGroupMap::shares( const std::size_t& ndidx, const ConceptIndex* car, std::size_t carsize) const
 {
 	std::size_t i1=0, i2=0;
-	const Node& nd1 = m_nodear[ ndidx1];
-	const Node& nd2 = m_nodear[ ndidx2];
-	while (i1<(std::size_t)m_maxnodesize && i2<(std::size_t)m_maxnodesize)
+	const Node& nd = m_nodear[ ndidx];
+	while (i1<(std::size_t)nd.size && i2<carsize)
 	{
-		if (nd1.groupidx[i1] < nd2.groupidx[i2])
+		if (nd.groupidx[i1] < car[i2])
 		{
 			++i1;
 		}
-		else if (nd1.groupidx[i1] > nd2.groupidx[i2])
+		else if (nd.groupidx[i1] > car[i2])
 		{
 			++i2;
 		}
 		else
 		{
-			return (nd1.groupidx[i1] != 0);
+			return true;
 		}
 	}
 	return false;
@@ -161,4 +163,13 @@ void SampleSimGroupMap::Node::check( ConceptIndex maxnodesize) const
 	}
 }
 
+void SharedSampleSimGroupMap::check() const
+{
+	std::size_t ni = 0, ne = nofNodes();
+	for (; ni != ne; ++ni)
+	{
+		Lock nd( this, ni);
+		Parent::checkNode( ni);
+	}
+}
 

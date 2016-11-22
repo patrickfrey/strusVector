@@ -13,6 +13,7 @@
 #include <boost/unordered_map.hpp>
 #include <boost/atomic.hpp>
 #include <boost/thread/mutex.hpp>
+#include <boost/thread/recursive_mutex.hpp>
 #include <boost/thread/condition_variable.hpp> 
 
 namespace strus {
@@ -106,8 +107,10 @@ public:
 };
 
 typedef boost::mutex Mutex;
+typedef boost::recursive_mutex RecursiveMutex;
 typedef boost::mutex::scoped_lock ScopedLock;
 typedef boost::unique_lock<boost::mutex> UniqueLock;
+typedef boost::unique_lock<boost::recursive_mutex> RecursiveUniqueLock;
 typedef boost::condition_variable ConditionVariable;
 
 }} //namespace

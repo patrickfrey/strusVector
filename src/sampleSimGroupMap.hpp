@@ -9,6 +9,8 @@
 #ifndef _STRUS_VECTOR_SPACE_MODEL_SAMPLE_TO_SIM_GROUP_MAP_HPP_INCLUDED
 #define _STRUS_VECTOR_SPACE_MODEL_SAMPLE_TO_SIM_GROUP_MAP_HPP_INCLUDED
 #include "simGroup.hpp"
+#include "sharedArrayMutex.hpp"
+#include "utils.hpp"
 #include <map>
 #include <cstring>
 
@@ -29,7 +31,7 @@ public:
 	bool contains( const std::size_t& ndidx, const ConceptIndex& groupidx) const
 		{return m_nodear[ndidx].contains( groupidx);}
 	/// \brief Evaluate if the two samples share a group reference
-	bool shares( const std::size_t& ndidx1, const std::size_t& ndidx2) const;
+	bool shares( const std::size_t& ndidx, const ConceptIndex* car, std::size_t carsize) const;
 	/// \brief Remove sample reference relationship to a group
 	bool remove( const std::size_t& ndidx, const ConceptIndex& groupidx)
 		{return m_nodear[ndidx].remove( groupidx);}
@@ -42,6 +44,11 @@ public:
 	/// \brief Evaluate, how many relations exist for a node
 	unsigned int nofElements( const std::size_t& ndidx) const
 		{return m_nodear[ndidx].size;}
+	/// \brief Get the number of nodes
+	std::size_t nofNodes() const
+		{return m_nodearsize;}
+	void checkNode( const std::size_t& ndidx) const
+		{m_nodear[ndidx].check( m_maxnodesize);}
 
 	class const_node_iterator
 	{
@@ -91,6 +98,52 @@ private:
 	ConceptIndex* m_refs;
 	std::size_t m_nodearsize;
 	ConceptIndex m_maxnodesize;
+};
+
+
+class SharedSampleSimGroupMap
+	:protected SampleSimGroupMap, public SharedArrayMutex
+{
+public:
+	typedef SharedArrayMutex::Lock Lock;
+	typedef SampleSimGroupMap Parent;
+
+public:
+	SharedSampleSimGroupMap()
+		:Parent(0,0),SharedArrayMutex(1,0){}
+	explicit SharedSampleSimGroupMap( std::size_t nofNodes_, std::size_t maxNodeSize_)
+		:Parent( nofNodes_, maxNodeSize_),SharedArrayMutex(nofNodes_,0){}
+	~SharedSampleSimGroupMap(){}
+
+	void check() const;
+	bool insert( const Lock& nd, const ConceptIndex& groupidx)
+		{return Parent::insert( nd.id(), groupidx);}
+	/// \brief Evaluate if a sample references a group
+	bool contains( const Lock& nd, const ConceptIndex& groupidx) const
+		{return Parent::contains( nd.id(), groupidx);}
+	/// \brief Evaluate if the two samples share a group reference
+	bool shares( const Lock& nd1, const ConceptIndex* car, std::size_t carsize) const
+		{return Parent::shares( nd1.id(), car, carsize);}
+	/// \brief Remove sample reference relationship to a group
+	bool remove( const Lock& nd, const ConceptIndex& groupidx)
+		{return Parent::remove( nd.id(), groupidx);}
+	/// \brief Evaluate, if there is space left for adding a new relation
+	bool hasSpace( const Lock& nd) const
+		{return Parent::hasSpace( nd.id());}
+	/// \brief Evaluate, how much space is left for adding new relations
+	unsigned int sizeSpace( const Lock& nd) const
+		{return Parent::sizeSpace( nd.id());}
+	/// \brief Evaluate, how many relations exist for a node
+	unsigned int nofElements( const Lock& nd) const
+		{return Parent::nofElements( nd.id());}
+	std::size_t nofNodes() const
+		{return Parent::nofNodes();}
+
+	typedef Parent::const_node_iterator const_node_iterator;
+
+	std::vector<ConceptIndex> nodes( const Lock& nd) const		{return std::vector<ConceptIndex>( &*Parent::node_begin(nd.id()), &*Parent::node_end(nd.id()));}
+
+	const SampleSimGroupMap& base() const				{return *this;}
 };
 
 }//namespace
