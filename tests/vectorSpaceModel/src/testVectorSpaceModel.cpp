@@ -350,14 +350,18 @@ int main( int argc, const char** argv)
 				++zi;
 			}
 			std::cout << std::endl;
-			std::cout << " " << sidx << "  => ";
-			std::size_t zidx = 0;
-			for (zi = za; zi != ze; ++zi,++zidx)
+
+			if (!use_group_assign)
 			{
-				if (zidx) std::cout << ", ";
-				std::cout << *zi;
+				std::cout << " " << sidx << "  => ";
+				std::size_t zidx = 0;
+				for (zi = za; zi != ze; ++zi,++zidx)
+				{
+					if (zidx) std::cout << ", ";
+					std::cout << *zi;
+				}
+				std::cout << std::endl;
 			}
-			std::cout << std::endl;
 		}
 		// Output classes:
 		unsigned int memberAssozMisses = 0;
