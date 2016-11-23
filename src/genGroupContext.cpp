@@ -137,7 +137,8 @@ void GenGroupContext::checkSimGroupStructures()
 void GenGroupContext::removeGroup( SimGroupIdAllocator& localAllocator, const ConceptIndex& group_id)
 {
 #ifdef STRUS_LOWLEVEL_DEBUG
-	std::cerr << string_format( _TXT("remove group %u"), group_id) << " {" << groupMembersString( group_id) << "}" << std::endl;
+	std::string memberstr = groupMembersString( group_id);
+	std::cerr << string_format( _TXT("remove group %u {%s}"), group_id, memberstr.c_str()) << std::endl;
 #endif
 	SimGroupRef group = m_groupMap.get( group_id);
 	if (!group.get()) return;
@@ -157,6 +158,8 @@ bool GenGroupContext::tryAddGroupMember(
 		unsigned int descendants, unsigned int mutations, unsigned int votes,
 		unsigned int maxage)
 {
+	SimGroupRef group = m_groupMap.get( group_id);
+	if (!group.get()) return false;
 	{
 		SharedSampleSimGroupMap::Lock LOCK( &m_sampleSimGroupMap, newmember);
 		if (!m_sampleSimGroupMap.insert( LOCK, group_id))
@@ -164,9 +167,6 @@ bool GenGroupContext::tryAddGroupMember(
 			return false;
 		}
 	}
-	SimGroupRef group = m_groupMap.get( group_id);
-	if (!group.get()) return false;
-
 	SimGroupRef newgroup( new SimGroup(*group));
 	newgroup->addMember( newmember);
 	newgroup->mutate( *m_samplear, descendants, age_mutations( *newgroup, maxage, mutations), age_mutation_votes( *newgroup, maxage, votes));
@@ -319,39 +319,47 @@ bool GenGroupContext::greedyNeighbourGroupInterchange(
 		SimGroupRef sim_group = m_groupMap.get( *ni);
 		if (!sim_group.get()) continue;
 
-		SimGroupRef newgroup;
 		if (sim_group->gencode().near( group->gencode(), parameter.eqdist))
 		{
-			newgroup.reset( new SimGroup( *group));
-
 			// Try to swallow members in sim_gi as long as it is in eqdist:
 			SimGroup::const_iterator mi = sim_group->begin(), me = sim_group->end();
-			for (; mi != me; ++mi)
+			std::size_t midx = 0;
+			while (mi != me)
 			{
-				if (!newgroup->isMember( *mi))
+				if (!group->isMember( *mi))
 				{
+					// Add eqdist member of sim_group to newgroup:
+					SimGroupRef newgroup( new SimGroup(*group));
 					{
 						SharedSampleSimGroupMap::Lock SLOCK( &m_sampleSimGroupMap, *mi);
 						if (!m_sampleSimGroupMap.insert( SLOCK, group->id())) continue;
 					}
-					// Add eqdist member of sim_group to newgroup:
 					newgroup->addMember( *mi);
 					if (newgroup->mutate( *m_samplear, parameter.descendants, age_mutations( *newgroup, parameter.maxage, parameter.mutations), age_mutation_votes( *newgroup, parameter.maxage, parameter.votes)))
 					{
 						++mutationcnt;
 					}
-					if (!sim_group->gencode().near( newgroup->gencode(), parameter.eqdist))
+					m_groupMap.setGroup( group_id, group = newgroup);
+					if (!sim_group->gencode().near( group->gencode(), parameter.eqdist))
 					{
 						break;
 					}
+					++midx;
+
+					// Skip to current element:
+					mi = sim_group->begin(), me = sim_group->end();
+					std::size_t mcnt = 0;
+					for (; mi != me && mcnt < midx; ++mi,++mcnt){}
+				}
+				else
+				{
+					++mi;
+					++midx;
 				}
 			}
-			m_groupMap.setGroup( group_id, newgroup);
+			
 		}
-		group = m_groupMap.get( group_id);
-		if (!group.get()) return true;
-
-		if (sim_group.get() && group.get() && group->gencode().near( sim_group->gencode(), parameter.simdist))
+		if (group->gencode().near( sim_group->gencode(), parameter.simdist))
 		{
 			// Try add one member of sim_gi to gi that is similar to gi:
 			SimGroup::const_iterator mi = sim_group->begin(), me = sim_group->end();
