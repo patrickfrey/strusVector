@@ -28,7 +28,6 @@ void GenGroupThreadContext::run( GenGroupProcedure proc, std::size_t startidx, s
 	if (m_nofThreads && (endidx - startidx > CacheLineSize))
 	{
 		boost::thread_group tgroup;
-		std::size_t startidx = 0;
 		std::size_t chunksize = (endidx - startidx + m_nofThreads - 1) / m_nofThreads;
 		while (chunksize % CacheLineSize != 0) ++chunksize;
 

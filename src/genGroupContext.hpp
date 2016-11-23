@@ -72,12 +72,6 @@ public:
 			const SampleIndex& main_sampleidx, const SampleIndex& search_sampleidx, 
 			unsigned short min_dist) const;
 
-	///\brief Try to find a group with a high age with a low fitness factor and leave it
-	bool tryLeaveUnfitestGroup(
-			SimGroupIdAllocator& groupIdAllocator,
-			const SampleIndex& sampleidx,
-			unsigned int maxage);
-
 	/// \brief Find the closest sample to a given sample that is not yet in a group with this sample and can still be assigned to a new group
 	bool findClosestFreeSample(
 			SimRelationMap::Element& res,
@@ -108,6 +102,12 @@ public:
 
 	/// \brief Remove unfitter of element pairs in eqdist that share most of the elements
 	bool similarNeighbourGroupElimination(
+			SimGroupIdAllocator& groupIdAllocator,
+			const ConceptIndex& group_id,
+			const GenGroupParameter& parameter);
+
+	/// \brief Eliminate groups with high age and a low fitness factor that are occupying capacity needed
+	bool unfittestGroupElimination(
 			SimGroupIdAllocator& groupIdAllocator,
 			const ConceptIndex& group_id,
 			const GenGroupParameter& parameter);

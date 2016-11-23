@@ -111,7 +111,7 @@ bool SampleSimGroupMap::Node::insert( const ConceptIndex& gidx, std::size_t maxn
 {
 	if (size == (ConceptIndex)maxnodesize)
 	{
-		throw strus::runtime_error(_TXT("try to insert in full sampleSimGroupMap node"));
+		return false;
 	}
 	for (ConceptIndex ii=0; ii<size; ++ii)
 	{

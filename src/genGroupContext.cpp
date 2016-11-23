@@ -158,22 +158,29 @@ bool GenGroupContext::tryAddGroupMember(
 		unsigned int descendants, unsigned int mutations, unsigned int votes,
 		unsigned int maxage)
 {
+	{
+		SharedSampleSimGroupMap::Lock LOCK( &m_sampleSimGroupMap, newmember);
+		if (!m_sampleSimGroupMap.insert( LOCK, group_id))
+		{
+			return false;
+		}
+	}
 	SimGroupRef group = m_groupMap.get( group_id);
 	if (!group.get()) return false;
 
 	SimGroupRef newgroup( new SimGroup(*group));
 	newgroup->addMember( newmember);
 	newgroup->mutate( *m_samplear, descendants, age_mutations( *newgroup, maxage, mutations), age_mutation_votes( *newgroup, maxage, votes));
-	if (newgroup->fitness( *m_samplear) >= group->fitness( *m_samplear))
+	if (newgroup->fitness( *m_samplear) > group->fitness( *m_samplear))
+	{
+		return true;
+	}
+	else
 	{
 		SharedSampleSimGroupMap::Lock LOCK( &m_sampleSimGroupMap, newmember);
-		if (m_sampleSimGroupMap.insert( LOCK, group->id()))
-		{
-			m_groupMap.setGroup( group->id(), newgroup);
-			return true;
-		}
+		(void)m_sampleSimGroupMap.remove( LOCK, group_id);
+		return false;
 	}
-	return false;
 }
 
 ConceptIndex GenGroupContext::getSampleClosestSimGroup(
@@ -199,69 +206,6 @@ ConceptIndex GenGroupContext::getSampleClosestSimGroup(
 		}
 	}
 	return rt;
-}
-
-bool GenGroupContext::tryLeaveUnfitestGroup(
-		SimGroupIdAllocator& groupIdAllocator,
-		const SampleIndex& sampleidx,
-		unsigned int maxage)
-{
-	double minFitness = std::numeric_limits<double>::max();
-	double maxFitness = 0.0;
-	ConceptIndex unfitestGroup_id = 0;
-	bool doRemoveUnfitestGroup = false;
-
-	std::vector<ConceptIndex> gar;
-	{
-		SharedSampleSimGroupMap::Lock SLOCK( &m_sampleSimGroupMap, sampleidx);
-		gar = m_sampleSimGroupMap.nodes( SLOCK);
-	}
-	std::vector<ConceptIndex>::const_iterator gi = gar.begin(), ge = gar.end();
-	for (; gi != ge; ++gi)
-	{
-		SimGroupRef group = m_groupMap.get( *gi);
-		if (!group.get()) continue;
-
-		double fitness = group->fitness( *m_samplear);
-		if (fitness > maxFitness)
-		{
-			maxFitness = fitness;
-		}
-		if (group->age() >= ((maxage * STRUS_VECTOR_MAXAGE_MATURE_PERCENTAGE) / 100) && fitness < minFitness)
-		{
-			minFitness = fitness;
-			unfitestGroup_id = *gi;
-		}
-	}
-	if (unfitestGroup_id && minFitness < maxFitness * STRUS_VECTOR_BAD_FITNESS_FRACTION)
-	{
-		{
-			SimGroupRef group = m_groupMap.get( unfitestGroup_id);
-			if (group.get())
-			{
-				SimGroupRef newgroup( new SimGroup( *group));
-				{
-					SharedSampleSimGroupMap::Lock SLOCK( &m_sampleSimGroupMap, sampleidx);
-					m_sampleSimGroupMap.remove( SLOCK, unfitestGroup_id);
-				}
-				newgroup->removeMember( sampleidx);
-				if (newgroup->size() < 2)
-				{
-					doRemoveUnfitestGroup = true;
-				}
-				else
-				{
-					m_groupMap.setGroup( unfitestGroup_id, newgroup);
-				}
-			}
-		}
-		if (doRemoveUnfitestGroup)
-		{
-			removeGroup( groupIdAllocator, unfitestGroup_id);
-		}
-		return true;
-	}
-	return false;
 }
 
 bool GenGroupContext::findClosestFreeSample( SimRelationMap::Element& res, const SampleIndex& sampleidx, const SimRelationReader& simrelreader, unsigned int simdist)
@@ -295,18 +239,6 @@ bool GenGroupContext::greedyChaseFreeFeatures(
 		const GenGroupParameter& parameter,
 		unsigned int& mutationcnt)
 {
-	bool doTryLeaveUnfitestGroup = false;
-	{
-		SharedSampleSimGroupMap::Lock SLOCK( &m_sampleSimGroupMap, sidx);
-		doTryLeaveUnfitestGroup = !m_sampleSimGroupMap.hasSpace( SLOCK);
-	}
-	if (doTryLeaveUnfitestGroup)
-	{
-		if (!tryLeaveUnfitestGroup( groupIdAllocator, sidx, parameter.maxage))
-		{
-			return false;
-		}
-	}
 	// Find the closest neighbour, that is not yet in a group with this sample:
 	SimRelationMap::Element neighbour;
 	if (findClosestFreeSample( neighbour, sidx, simrelreader, parameter.simdist))
@@ -427,10 +359,6 @@ bool GenGroupContext::greedyNeighbourGroupInterchange(
 			{
 				if (group->gencode().near( (*m_samplear)[*mi], parameter.simdist) && !group->isMember( *mi))
 				{
-					{
-						SharedSampleSimGroupMap::Lock SLOCK( &m_sampleSimGroupMap, *mi);
-						if (!m_sampleSimGroupMap.hasSpace( SLOCK)) continue;
-					}
 					if (tryAddGroupMember( group_id, *mi, parameter.descendants, parameter.mutations, parameter.votes, parameter.maxage))
 					{
 						group = m_groupMap.get( group_id);
@@ -511,6 +439,74 @@ bool GenGroupContext::similarNeighbourGroupElimination(
 		}
 	}
 	return false;
+}
+
+bool GenGroupContext::unfittestGroupElimination(
+		SimGroupIdAllocator& groupIdAllocator,
+		const ConceptIndex& group_id,
+		const GenGroupParameter& parameter)
+{
+	bool rt = false;
+	bool doRemoveGroup = false;
+
+	SimGroupRef group = m_groupMap.get( group_id);
+	if (!group.get()) return false;
+
+	SimGroup::const_iterator mi = group->begin(), me = group->end();
+	for (; mi != me; ++mi)
+	{
+		double minFitness = std::numeric_limits<double>::max();
+		double maxFitness = 0.0;
+		ConceptIndex unfitestGroup_id = 0;
+
+		std::vector<ConceptIndex> gar;
+		{
+			SharedSampleSimGroupMap::Lock SLOCK( &m_sampleSimGroupMap, *mi);
+			if (m_sampleSimGroupMap.hasSpace( SLOCK)) continue;
+			gar = m_sampleSimGroupMap.nodes( SLOCK);
+		}
+		std::vector<ConceptIndex>::const_iterator gi = gar.begin(), ge = gar.end();
+		for (; gi != ge; ++gi)
+		{
+			SimGroupRef member_group = m_groupMap.get( *gi);
+			if (!member_group.get()) continue;
+
+			double fitness = member_group->fitness( *m_samplear);
+			if (fitness > maxFitness)
+			{
+				maxFitness = fitness;
+			}
+			if (member_group->age() >= ((parameter.maxage * STRUS_VECTOR_MAXAGE_MATURE_PERCENTAGE) / 100) && fitness < minFitness)
+			{
+				minFitness = fitness;
+				unfitestGroup_id = *gi;
+			}
+		}
+		if (unfitestGroup_id == group_id && minFitness < maxFitness * STRUS_VECTOR_BAD_FITNESS_FRACTION)
+		{
+			SimGroupRef newgroup( new SimGroup( *group));
+			{
+				SharedSampleSimGroupMap::Lock SLOCK( &m_sampleSimGroupMap, *mi);
+				m_sampleSimGroupMap.remove( SLOCK, group_id);
+			}
+			newgroup->removeMember( *mi);
+			if (newgroup->size() < 2)
+			{
+				doRemoveGroup = true;
+				break;
+			}
+			else
+			{
+				m_groupMap.setGroup( group_id, newgroup);
+			}
+			rt = true;
+		}
+	}
+	if (doRemoveGroup)
+	{
+		removeGroup( groupIdAllocator, group_id);
+	}
+	return rt;
 }
 
 void GenGroupContext::eliminateRedundantGroups( const GenGroupParameter& parameter)

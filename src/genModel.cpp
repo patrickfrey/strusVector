@@ -68,6 +68,17 @@ static void GenGroupProcedure_similarNeighbourGroupElimination( const GenGroupPa
 	if (genGroupContext->logout()) genGroupContext->logout() << string_format( _TXT("neighbour elimination step triggered %u successful removals"), eliminationcnt);
 }
 
+static void GenGroupProcedure_unfittestGroupElimination( const GenGroupParameter* parameter, SimGroupIdAllocator* groupIdAllocator, GenGroupContext* genGroupContext, const SimRelationReader* simrelreader, std::size_t startidx, std::size_t endidx)
+{
+	unsigned int eliminationcnt = 0;
+	ConceptIndex gi = startidx, ge = endidx;
+	for (; gi != ge; ++gi)
+	{
+		eliminationcnt += genGroupContext->unfittestGroupElimination( *groupIdAllocator, gi, *parameter) ? 1:0;
+	}
+	if (genGroupContext->logout()) genGroupContext->logout() << string_format( _TXT("unfittest group elimination step triggered %u successful removals"), eliminationcnt);
+}
+
 
 std::vector<SimHash> GenModel::run(
 		std::vector<SampleIndex>& singletons,
@@ -127,8 +138,11 @@ std::vector<SimHash> GenModel::run(
 		if (groupContext.logout()) groupContext.logout() << _TXT("improving fitness of individuals");
 		threadContext.run( &GenGroupProcedure_improveGroups, 1, glbcntalloc.nofGroupIdsAllocated()+1);
 
-		if (groupContext.logout()) groupContext.logout() << _TXT("solving neighbours clashes");
+		if (groupContext.logout()) groupContext.logout() << _TXT("solving neighbour clashes");
 		threadContext.run( &GenGroupProcedure_similarNeighbourGroupElimination, 1, glbcntalloc.nofGroupIdsAllocated()+1);
+
+		if (groupContext.logout()) groupContext.logout() << _TXT("reduce membership in groups with low fitness where capacity is needed");
+		threadContext.run( &GenGroupProcedure_unfittestGroupElimination, 1, glbcntalloc.nofGroupIdsAllocated()+1);
 	}/*for (; iteration...*/
 
 	if (groupContext.logout()) groupContext.logout() << _TXT("eliminating redundant (dependent) groups");
