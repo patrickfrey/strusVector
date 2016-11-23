@@ -32,7 +32,7 @@ static void GenGroupProcedure_greedyChaseFreeFeatures( const GenGroupParameter* 
 	{
 		genGroupContext->greedyChaseFreeFeatures( *groupIdAllocator, si, *simrelreader, *parameter, mutationcnt);
 	}
-	if (genGroupContext->logout()) genGroupContext->logout() << string_format( _TXT("free feature chase step triggered %u successful mutations"), mutationcnt);
+	if (mutationcnt && genGroupContext->logout()) genGroupContext->logout() << string_format( _TXT("free feature chase step triggered %u successful mutations"), mutationcnt);
 }
 
 static void GenGroupProcedure_greedyNeighbourGroupInterchange( const GenGroupParameter* parameter, SimGroupIdAllocator* groupIdAllocator, GenGroupContext* genGroupContext, const SimRelationReader* simrelreader, std::size_t startidx, std::size_t endidx)
@@ -43,7 +43,7 @@ static void GenGroupProcedure_greedyNeighbourGroupInterchange( const GenGroupPar
 	{
 		genGroupContext->greedyNeighbourGroupInterchange( *groupIdAllocator, gi, *parameter, mutationcnt);
 	}
-	if (genGroupContext->logout()) genGroupContext->logout() << string_format( _TXT("group interchange step triggered %u successful mutations"), mutationcnt);
+	if (mutationcnt && genGroupContext->logout()) genGroupContext->logout() << string_format( _TXT("group interchange step triggered %u successful mutations"), mutationcnt);
 }
 
 static void GenGroupProcedure_improveGroups( const GenGroupParameter* parameter, SimGroupIdAllocator* groupIdAllocator, GenGroupContext* genGroupContext, const SimRelationReader* simrelreader, std::size_t startidx, std::size_t endidx)
@@ -54,7 +54,7 @@ static void GenGroupProcedure_improveGroups( const GenGroupParameter* parameter,
 	{
 		mutationcnt += genGroupContext->improveGroup( *groupIdAllocator, gi, *parameter) ? 1:0;
 	}
-	if (genGroupContext->logout()) genGroupContext->logout() << string_format( _TXT("group improve step triggered %u successful mutations"), mutationcnt);
+	if (mutationcnt && genGroupContext->logout()) genGroupContext->logout() << string_format( _TXT("group improve step triggered %u successful mutations"), mutationcnt);
 }
 
 static void GenGroupProcedure_similarNeighbourGroupElimination( const GenGroupParameter* parameter, SimGroupIdAllocator* groupIdAllocator, GenGroupContext* genGroupContext, const SimRelationReader* simrelreader, std::size_t startidx, std::size_t endidx)
@@ -65,7 +65,7 @@ static void GenGroupProcedure_similarNeighbourGroupElimination( const GenGroupPa
 	{
 		eliminationcnt += genGroupContext->similarNeighbourGroupElimination( *groupIdAllocator, gi, *parameter) ? 1:0;
 	}
-	if (genGroupContext->logout()) genGroupContext->logout() << string_format( _TXT("neighbour elimination step triggered %u successful removals"), eliminationcnt);
+	if (eliminationcnt && genGroupContext->logout()) genGroupContext->logout() << string_format( _TXT("neighbour elimination step triggered %u successful removals"), eliminationcnt);
 }
 
 static void GenGroupProcedure_unfittestGroupElimination( const GenGroupParameter* parameter, SimGroupIdAllocator* groupIdAllocator, GenGroupContext* genGroupContext, const SimRelationReader* simrelreader, std::size_t startidx, std::size_t endidx)
@@ -76,7 +76,7 @@ static void GenGroupProcedure_unfittestGroupElimination( const GenGroupParameter
 	{
 		eliminationcnt += genGroupContext->unfittestGroupElimination( *groupIdAllocator, gi, *parameter) ? 1:0;
 	}
-	if (genGroupContext->logout()) genGroupContext->logout() << string_format( _TXT("unfittest group elimination step triggered %u successful removals"), eliminationcnt);
+	if (eliminationcnt && genGroupContext->logout()) genGroupContext->logout() << string_format( _TXT("unfittest group elimination step triggered %u successful removals"), eliminationcnt);
 }
 
 

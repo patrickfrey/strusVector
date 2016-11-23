@@ -67,11 +67,10 @@ std::string GenGroupContext::groupMembersString( const ConceptIndex& group_id) c
 
 void GenGroupContext::checkSimGroupStructures()
 {
-
-	std::cerr << _TXT( "check structures ...") << std::endl;
 	m_sampleSimGroupMap.check();
 	std::ostringstream errbuf;
-	bool haserr = false;
+	enum {MaxNofErrors = 30};
+	unsigned int nofErrors = 0;
 
 	ConceptIndex gi = 1, ge = m_groupMap.nofGroupIdsAllocated()+1;
 	for (; gi != ge; ++gi)
@@ -80,23 +79,27 @@ void GenGroupContext::checkSimGroupStructures()
 		if (!group.get()) continue;
 		if (group->id() != gi)
 		{
-			errbuf << string_format( _TXT("group has id %u that is not matching to index %u"), group->id(), gi) << std::endl;
-			haserr = true;
+			throw strus::runtime_error( _TXT("group has id %u that is not matching to index %u"), group->id(), gi);
 		}
-		std::cerr << string_format( _TXT( "group %u has members "), group->id());
 		SimGroup::const_iterator mi = group->begin(), me = group->end();
 		for (unsigned int midx=0; mi != me; ++mi,++midx)
 		{
-			if (midx) std::cerr << ", ";
-			std::cerr << *mi;
 			SharedSampleSimGroupMap::Lock LOCK( &m_sampleSimGroupMap, *mi);
 			if (!m_sampleSimGroupMap.contains( LOCK, group->id()))
 			{
-				errbuf << string_format( _TXT("missing element group relation in sampleSimGroupMap %u in group %u"), *mi, group->id()) << std::endl;
-				haserr = true;
+				std::vector<ConceptIndex> car = m_sampleSimGroupMap.nodes( LOCK);
+				std::ostringstream carbuf;
+				std::vector<ConceptIndex>::const_iterator ci = car.begin(), ce = car.end();
+				for (unsigned int cidx=0; ci != ce; ++ci,++cidx)
+				{
+					if (cidx) carbuf << ", ";
+					carbuf << *ci;
+				}
+				std::string conceptstr( carbuf.str());
+				if (m_logout) m_logout << string_format( _TXT("missing element group %u relation of feature %u {%s}"), group->id(), *mi, conceptstr.c_str());
+				if (++nofErrors > MaxNofErrors) throw strus::runtime_error(_TXT("internal: errors in sim group structures"));
 			}
 		}
-		std::cerr << std::endl;
 		group->check();
 	}
 	SampleIndex si=0, se=m_samplear->size();
@@ -107,31 +110,27 @@ void GenGroupContext::checkSimGroupStructures()
 			SharedSampleSimGroupMap::Lock LOCK( &m_sampleSimGroupMap, si);
 			car = m_sampleSimGroupMap.nodes( LOCK);
 		}
-		if (car.size()) std::cerr << string_format( _TXT("sample %u is in groups: "), si);
 		unsigned int cidx=0;
 		std::vector<ConceptIndex>::const_iterator ci = car.begin(), ce = car.end();
 		for (; ci != ce; ++ci,++cidx)
 		{
-			if (cidx) std::cerr << ", ";
-			std::cerr << *ci;
-
 			SimGroupRef group = m_groupMap.get( *ci);
 			if (!group.get())
 			{
-				errbuf << string_format( _TXT("entry not found for group %u in group instance map (check structures)"), *ci) << std::endl;
-				haserr = true;
+				if (m_logout) m_logout << string_format( _TXT("entry not found for group %u in group instance map (check structures)"), *ci);
+				if (++nofErrors > MaxNofErrors) throw strus::runtime_error(_TXT("internal: errors in sim group structures"));
 			}
 			else if (!group->isMember( si))
 			{
-				errbuf << string_format( _TXT("illegal entry %u in sim group map (check structures), expected to be member of group %u"), si, group->id()) << std::endl;
-				haserr = true;
+				std::string members = groupMembersString( *ci);
+				if (m_logout) m_logout << string_format( _TXT("illegal entry %u in sim group map (check structures), expected to be member of group %u {%s}"), si, group->id(), members.c_str());
+				if (++nofErrors > MaxNofErrors) throw strus::runtime_error(_TXT("internal: errors in sim group structures"));
 			}
 		}
-		if (cidx) std::cerr << std::endl;
 	}
-	if (haserr)
+	if (nofErrors)
 	{
-		throw std::runtime_error( errbuf.str());
+		throw strus::runtime_error(_TXT("internal: %u errors in sim group structures"), nofErrors);
 	}
 }
 
@@ -146,8 +145,8 @@ void GenGroupContext::removeGroup( SimGroupIdAllocator& localAllocator, const Co
 	SimGroup::const_iterator mi = group->begin(), me = group->end();
 	for (; mi != me; ++mi)
 	{
-		SharedSampleSimGroupMap::Lock LOCK( &m_sampleSimGroupMap, *mi);
-		m_sampleSimGroupMap.remove( LOCK, group_id);
+		SharedSampleSimGroupMap::Lock SLOCK( &m_sampleSimGroupMap, *mi);
+		m_sampleSimGroupMap.remove( SLOCK, group_id);
 	}
 	m_groupMap.resetGroup( group_id);
 	localAllocator.free( group_id);
@@ -173,12 +172,13 @@ bool GenGroupContext::tryAddGroupMember(
 	newgroup->mutate( *m_samplear, descendants, age_mutations( *newgroup, maxage, mutations), age_mutation_votes( *newgroup, maxage, votes));
 	if (newgroup->fitness( *m_samplear) > group->fitness( *m_samplear))
 	{
+		m_groupMap.setGroup( group_id, newgroup);
 		return true;
 	}
 	else
 	{
-		SharedSampleSimGroupMap::Lock LOCK( &m_sampleSimGroupMap, newmember);
-		(void)m_sampleSimGroupMap.remove( LOCK, group_id);
+		SharedSampleSimGroupMap::Lock SLOCK( &m_sampleSimGroupMap, newmember);
+		(void)m_sampleSimGroupMap.remove( SLOCK, group_id);
 		return false;
 	}
 }
@@ -490,14 +490,11 @@ bool GenGroupContext::unfittestGroupElimination(
 				m_sampleSimGroupMap.remove( SLOCK, group_id);
 			}
 			newgroup->removeMember( *mi);
+			m_groupMap.setGroup( group_id, group = newgroup);
 			if (newgroup->size() < 2)
 			{
 				doRemoveGroup = true;
 				break;
-			}
-			else
-			{
-				m_groupMap.setGroup( group_id, newgroup);
 			}
 			rt = true;
 		}
