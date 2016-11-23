@@ -453,7 +453,7 @@ bool GenGroupContext::unfittestGroupElimination(
 	if (!group.get()) return false;
 
 	SimGroup::const_iterator mi = group->begin(), me = group->end();
-	for (; mi != me; ++mi)
+	while (mi != me)
 	{
 		double minFitness = std::numeric_limits<double>::max();
 		double maxFitness = 0.0;
@@ -462,7 +462,11 @@ bool GenGroupContext::unfittestGroupElimination(
 		std::vector<ConceptIndex> gar;
 		{
 			SharedSampleSimGroupMap::Lock SLOCK( &m_sampleSimGroupMap, *mi);
-			if (m_sampleSimGroupMap.hasSpace( SLOCK)) continue;
+			if (m_sampleSimGroupMap.hasSpace( SLOCK))
+			{
+				++mi;
+				continue;
+			}
 			gar = m_sampleSimGroupMap.nodes( SLOCK);
 		}
 		std::vector<ConceptIndex>::const_iterator gi = gar.begin(), ge = gar.end();
@@ -491,12 +495,18 @@ bool GenGroupContext::unfittestGroupElimination(
 			}
 			newgroup->removeMember( *mi);
 			m_groupMap.setGroup( group_id, group = newgroup);
-			if (newgroup->size() < 2)
+			rt = true;
+			if (group->size() < 2)
 			{
 				doRemoveGroup = true;
 				break;
 			}
-			rt = true;
+			mi = group->begin();
+			me = group->end();
+		}
+		else
+		{
+			++mi;
 		}
 	}
 	if (doRemoveGroup)
