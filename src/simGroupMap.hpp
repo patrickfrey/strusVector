@@ -11,6 +11,7 @@
 #include "simGroup.hpp"
 #include "utils.hpp"
 #include "internationalization.hpp"
+#include "cacheLineSize.hpp"
 #include <vector>
 
 namespace strus {
@@ -78,7 +79,7 @@ private:
 private:
 	struct Block
 	{
-		enum {Size=(1<<14)};
+		enum {Size=CacheLineSize};
 		SimGroupRef ar[Size];
 
 		Block(){}

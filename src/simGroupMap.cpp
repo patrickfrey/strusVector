@@ -8,6 +8,7 @@
 /// \brief Collection of similarity groups for thread safe access
 #include "simGroupMap.hpp"
 #include "cacheLineSize.hpp"
+#include "strus/base/string_format.hpp"
 
 using namespace strus;
 using namespace strus::utils;
@@ -86,6 +87,7 @@ const SimGroupRef& SimGroupMap::get( const ConceptIndex& cidx) const
 
 void SimGroupMap::setGroup( const ConceptIndex& cidx, const SimGroupRef& group)
 {
+	/*[-]*/std::cerr << string_format( "set group %u ", cidx) << std::endl;
 	std::size_t blockidx = (cidx-1) / Block::Size;
 	std::size_t blockofs = (cidx-1) % Block::Size;
 	if (blockidx > m_arsize)
@@ -95,13 +97,15 @@ void SimGroupMap::setGroup( const ConceptIndex& cidx, const SimGroupRef& group)
 	BlockRef blk = m_ar[ blockidx];
 	if (!blk.get())
 	{
-		blk = m_ar[ blockidx] = BlockRef( new Block());
+		m_ar[ blockidx].reset( new Block());
+		blk = m_ar[ blockidx];
 	}
 	blk->ar[ blockofs] = group;
 }
 
 void SimGroupMap::resetGroup( const ConceptIndex& cidx)
 {
+	/*[-]*/std::cerr << string_format( "reset group %u ", cidx) << std::endl;
 	std::size_t blockidx = (cidx-1) / Block::Size;
 	std::size_t blockofs = (cidx-1) % Block::Size;
 	if (blockidx > m_arsize)
