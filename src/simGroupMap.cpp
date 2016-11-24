@@ -87,7 +87,6 @@ const SimGroupRef& SimGroupMap::get( const ConceptIndex& cidx) const
 
 void SimGroupMap::setGroup( const ConceptIndex& cidx, const SimGroupRef& group)
 {
-	/*[-]*/std::cerr << string_format( "set group %u ", cidx) << std::endl;
 	std::size_t blockidx = (cidx-1) / Block::Size;
 	std::size_t blockofs = (cidx-1) % Block::Size;
 	if (blockidx > m_arsize)
@@ -105,7 +104,6 @@ void SimGroupMap::setGroup( const ConceptIndex& cidx, const SimGroupRef& group)
 
 void SimGroupMap::resetGroup( const ConceptIndex& cidx)
 {
-	/*[-]*/std::cerr << string_format( "reset group %u ", cidx) << std::endl;
 	std::size_t blockidx = (cidx-1) / Block::Size;
 	std::size_t blockofs = (cidx-1) % Block::Size;
 	if (blockidx > m_arsize)
