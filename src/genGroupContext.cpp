@@ -159,7 +159,10 @@ bool GenGroupContext::tryAddGroupMember(
 		unsigned int maxage)
 {
 	SimGroupRef group = m_groupMap.get( group_id);
-	if (!group.get()) return false;
+	if (!group.get())
+	{
+		return false;
+	}
 	{
 		SharedSampleSimGroupMap::Lock LOCK( &m_sampleSimGroupMap, newmember);
 		if (!m_sampleSimGroupMap.insert( LOCK, group_id))
@@ -232,82 +235,115 @@ bool GenGroupContext::findClosestFreeSample( SimRelationMap::Element& res, const
 	return false;
 }
 
+void GenGroupContext::tryGroupAssignments(
+		std::size_t threadid,
+		const GenGroupParameter& parameter)
+{
+	try
+	{
+		const std::vector<SampleSimGroupAssignment>& alist = m_groupAssignQueue.get( threadid);
+		std::vector<SampleSimGroupAssignment>::const_iterator ai = alist.begin(), ae = alist.end();
+		for (; ai != ae; ++ai)
+		{
+			SimGroupRef group = m_groupMap.get( ai->conceptIndex);
+			if (!group.get()) continue; 
+	
+			SimGroupRef newgroup( new SimGroup(*group));
+			{
+				SharedSampleSimGroupMap::Lock SLOCK( &m_sampleSimGroupMap, ai->sampleIndex);
+				if (!m_sampleSimGroupMap.insert( SLOCK, ai->conceptIndex)) continue;
+			}
+			newgroup->addMember( ai->sampleIndex);
+			newgroup->mutate( *m_samplear, parameter.descendants, age_mutations( *newgroup, parameter.maxage, parameter.mutations), age_mutation_votes( *newgroup, parameter.maxage, parameter.votes));
+			m_groupMap.setGroup( ai->conceptIndex, newgroup);
+		}
+		if (!alist.empty() && m_logout) m_logout << string_format( _TXT("assigned %u features to concepts"), alist.size());
+	}
+	catch (const std::bad_alloc& err)
+	{
+		reportError( _TXT("memory allocation error"));
+	}
+	catch (const std::runtime_error& err)
+	{
+		reportError( err.what());
+	}
+}
+
 bool GenGroupContext::greedyChaseFreeFeatures(
 		SimGroupIdAllocator& groupIdAllocator,
 		const SampleIndex& sidx,
 		const SimRelationReader& simrelreader,
-		const GenGroupParameter& parameter,
-		unsigned int& mutationcnt)
+		const GenGroupParameter& parameter)
 {
 	// Find the closest neighbour, that is not yet in a group with this sample:
 	SimRelationMap::Element neighbour;
 	if (findClosestFreeSample( neighbour, sidx, simrelreader, parameter.simdist))
 	{
-		// Try to find a group the visited sample belongs to that is closer to the
-		// found candidate than the visited sample:
+		// Try to find a group the current feature belongs to that is closer to the
+		// candidate feature:
 		ConceptIndex bestmatch_simgroup = getSampleClosestSimGroup( sidx, neighbour.index, neighbour.simdist);
 		if (bestmatch_simgroup)
 		{
-			// ...if we found such a group, we try to add the candidate there instead:
-			if (!tryAddGroupMember( bestmatch_simgroup, neighbour.index, parameter.descendants, parameter.mutations, parameter.votes, parameter.maxage))
+			// ...if we found such a group, we check if the candidate could be added there instead:
+			SimGroupRef group = m_groupMap.get( bestmatch_simgroup);
+			if (group.get())
 			{
-				bestmatch_simgroup = 0;
+				SimGroupRef testgroup( new SimGroup(*group));
+				testgroup->addMember( neighbour.index);
+				testgroup->mutate( *m_samplear, parameter.descendants, age_mutations( *testgroup, parameter.maxage, parameter.mutations), age_mutation_votes( *testgroup, parameter.maxage, parameter.votes));
+				if (testgroup->fitness( *m_samplear) > group->fitness( *m_samplear))
+				{
+					// ... we have to go over a queue to avoid inconsistencies
+					m_groupAssignQueue.push( neighbour.index, bestmatch_simgroup);
+					return false;
+				}
 			}
 		}
-		if (bestmatch_simgroup)
+
+		// ...if we did not find a close group, then we found a new one with the two elements as members:
+		ConceptIndex newidx = groupIdAllocator.alloc();
+		SimGroupRef newgroup( new SimGroup( *m_samplear, sidx, neighbour.index, newidx));
+		(void)newgroup->mutate( *m_samplear, parameter.descendants, age_mutations( *newgroup, parameter.maxage, parameter.mutations), age_mutation_votes( *newgroup, parameter.maxage, parameter.votes));
+		bool success = true;
 		{
+			SharedSampleSimGroupMap::Lock SLOCK( &m_sampleSimGroupMap, neighbour.index);
+			success &= m_sampleSimGroupMap.insert( SLOCK, newidx);
+		}
+		if (success)
+		{
+			SharedSampleSimGroupMap::Lock SLOCK( &m_sampleSimGroupMap, sidx);
+			success &= m_sampleSimGroupMap.insert( SLOCK, newidx);
+		}
+		if (success)
+		{
+			m_groupMap.setGroup( newidx, newgroup);
 			return true;
 		}
 		else
 		{
-			// ...if we did not find such a group we found a new one with the two elements as members:
-			ConceptIndex newidx = groupIdAllocator.alloc();
-			SimGroupRef newgroup( new SimGroup( *m_samplear, sidx, neighbour.index, newidx));
-			if (newgroup->mutate( *m_samplear, parameter.descendants, age_mutations( *newgroup, parameter.maxage, parameter.mutations), age_mutation_votes( *newgroup, parameter.maxage, parameter.votes)))
-			{
-				++mutationcnt;
-			}
-			bool success = true;
-			{
-				SharedSampleSimGroupMap::Lock SLOCK( &m_sampleSimGroupMap, neighbour.index);
-				success &= m_sampleSimGroupMap.insert( SLOCK, newidx);
-			}
-			if (success)
 			{
 				SharedSampleSimGroupMap::Lock SLOCK( &m_sampleSimGroupMap, sidx);
-				success &= m_sampleSimGroupMap.insert( SLOCK, newidx);
+				m_sampleSimGroupMap.remove( SLOCK, newidx);
 			}
-			if (success)
 			{
-				m_groupMap.setGroup( newidx, newgroup);
-				return true;
+				SharedSampleSimGroupMap::Lock SLOCK( &m_sampleSimGroupMap, neighbour.index);
+				m_sampleSimGroupMap.remove( SLOCK, newidx);
 			}
-			else
-			{
-				{
-					SharedSampleSimGroupMap::Lock SLOCK( &m_sampleSimGroupMap, sidx);
-					m_sampleSimGroupMap.remove( SLOCK, newidx);
-				}
-				{
-					SharedSampleSimGroupMap::Lock SLOCK( &m_sampleSimGroupMap, neighbour.index);
-					m_sampleSimGroupMap.remove( SLOCK, newidx);
-				}
-				groupIdAllocator.free( newidx);
-				return false;
-			}
+			groupIdAllocator.free( newidx);
+			return false;
 		}
 	}
 	return false;
 }
 
-bool GenGroupContext::greedyNeighbourGroupInterchange(
+void GenGroupContext::greedyNeighbourGroupInterchange(
 		SimGroupIdAllocator& groupIdAllocator,
 		const ConceptIndex& group_id,
 		const GenGroupParameter& parameter,
-		unsigned int& mutationcnt)
+		unsigned int& interchangecnt)
 {
 	SimGroupRef group = m_groupMap.get( group_id);
-	if (!group.get()) return false;
+	if (!group.get()) return;
 
 	// Go through all neighbour groups that are in a distance closer to eqdist
 	// and integrate their elements as long as it keeps the neighbour group in eqdist.
@@ -335,11 +371,9 @@ bool GenGroupContext::greedyNeighbourGroupInterchange(
 						if (!m_sampleSimGroupMap.insert( SLOCK, group->id())) continue;
 					}
 					newgroup->addMember( *mi);
-					if (newgroup->mutate( *m_samplear, parameter.descendants, age_mutations( *newgroup, parameter.maxage, parameter.mutations), age_mutation_votes( *newgroup, parameter.maxage, parameter.votes)))
-					{
-						++mutationcnt;
-					}
+					(void)newgroup->mutate( *m_samplear, parameter.descendants, age_mutations( *newgroup, parameter.maxage, parameter.mutations), age_mutation_votes( *newgroup, parameter.maxage, parameter.votes));
 					m_groupMap.setGroup( group_id, group = newgroup);
+					++interchangecnt;
 					if (!sim_group->gencode().near( group->gencode(), parameter.eqdist))
 					{
 						break;
@@ -369,14 +403,12 @@ bool GenGroupContext::greedyNeighbourGroupInterchange(
 				{
 					if (tryAddGroupMember( group_id, *mi, parameter.descendants, parameter.mutations, parameter.votes, parameter.maxage))
 					{
-						group = m_groupMap.get( group_id);
-						if (!group.get()) return true;
+						++interchangecnt;
 					}
 				}
 			}
 		}
 	}
-	return false;
 }
 
 bool GenGroupContext::improveGroup(

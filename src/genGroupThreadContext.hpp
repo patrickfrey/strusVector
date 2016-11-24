@@ -11,6 +11,7 @@
 #include "simGroupMap.hpp"
 #include "simRelationReader.hpp"
 #include "genGroupContext.hpp"
+#include "sampleSimGroupAssignmentQueue.hpp"
 #include <vector>
 
 namespace strus {
@@ -33,12 +34,14 @@ public:
 			unsigned int nofThreads_);
 
 	void run( GenGroupProcedure proc, std::size_t startidx, std::size_t endidx);
+	void runGroupAssignments();
 
 private:
 	GlobalCountAllocator* m_glbcnt;
 	unsigned int m_nofThreads;
 	GenGroupContext* m_groupctx;
 	const SimRelationReader* m_simrelreader;
+	SampleSimGroupAssignmentDispQueue m_groupAssignQueue;	//< queue for cross assignements to groups
 	std::vector<SimGroupIdAllocator> m_allocators;
 	const GenGroupParameter* m_parameter;
 };

@@ -15,6 +15,7 @@
 #include "simRelationMap.hpp"
 #include "simRelationReader.hpp"
 #include "sampleSimGroupMap.hpp"
+#include "sampleSimGroupAssignmentQueue.hpp"
 #include "sharedArrayMutex.hpp"
 #include "indexListMap.hpp"
 #include "utils.hpp"
@@ -48,12 +49,14 @@ struct GenGroupParameter
 class GenGroupContext
 {
 public:
-	GenGroupContext( GlobalCountAllocator* cnt_, const std::vector<SimHash>& samplear_, std::size_t maxNofGroups_, unsigned int assignments_, const char* logfile_)
+	GenGroupContext( GlobalCountAllocator* cnt_, const std::vector<SimHash>& samplear_, std::size_t maxNofGroups_, unsigned int assignments_, unsigned int nofThreads_, const char* logfile_)
 		:m_logout( logfile_)
 		,m_cntalloc(cnt_)
 		,m_samplear(&samplear_)
 		,m_groupMap(cnt_,maxNofGroups_)
-		,m_sampleSimGroupMap( samplear_.size(), assignments_){}
+		,m_sampleSimGroupMap(samplear_.size(), assignments_)
+		,m_groupAssignQueue(nofThreads_?nofThreads_:1)
+		,m_error(){}
 
 	std::vector<ConceptIndex> getNeighbourGroups( const SimGroup& group);
 
@@ -79,20 +82,24 @@ public:
 			const SimRelationReader& simrelreader,
 			unsigned int simdist);
 
+	/// \brief Try to make the assignments referenced by thread id of new elements to groups
+	void tryGroupAssignments(
+			std::size_t threadid,
+			const GenGroupParameter& parameter);
+
 	/// \brief Try to group a free feature with its closest free neighbour or attach it to the closest group
 	bool greedyChaseFreeFeatures(
 			SimGroupIdAllocator& groupIdAllocator,
 			const SampleIndex& sidx,
 			const SimRelationReader& simrelreader,
-			const GenGroupParameter& parameter,
-			unsigned int& mutationcnt);
+			const GenGroupParameter& parameter);
 
 	/// \brief Make elements interchange between neighbour groups with unification of too similar groups:
-	bool greedyNeighbourGroupInterchange(
+	void greedyNeighbourGroupInterchange(
 			SimGroupIdAllocator& groupIdAllocator,
 			const ConceptIndex& gi,
 			const GenGroupParameter& parameter,
-			unsigned int& mutationcnt);
+			unsigned int& interchangecnt);
 
 	/// \brief Remove unfitter of element pairs in eqdist that share most of the elements
 	bool improveGroup(
@@ -137,21 +144,28 @@ public:
 	{
 		return (m_error.empty()) ? 0:m_error.c_str();
 	}
+	std::string fetchError()
+	{
+		std::string rt = m_error;
+		m_error.clear();
+		return rt;
+	}
 	const std::vector<SimHash>& samplear() const
 	{
 		return *m_samplear;
 	}
 
 private:
-	GenGroupContext( const GenGroupContext&){}	//< non copyable
-	void operator=( const GenGroupContext&){}	//< non copyable
+	GenGroupContext( const GenGroupContext&){}		//< non copyable
+	void operator=( const GenGroupContext&){}		//< non copyable
 
 private:
-	Logger m_logout;				//< logger for monitoring progress
-	GlobalCountAllocator* m_cntalloc;		//< global allocator of group indices
-	const std::vector<SimHash>* m_samplear;		//< array of features (samples)
-	SimGroupMap m_groupMap;				//< map of similarity groups
-	SharedSampleSimGroupMap m_sampleSimGroupMap;	//< map of sample idx to group idx
+	Logger m_logout;					//< logger for monitoring progress
+	GlobalCountAllocator* m_cntalloc;			//< global allocator of group indices
+	const std::vector<SimHash>* m_samplear;			//< array of features (samples)
+	SimGroupMap m_groupMap;					//< map of similarity groups
+	SharedSampleSimGroupMap m_sampleSimGroupMap;		//< map of sample idx to group idx
+	SampleSimGroupAssignmentDispQueue m_groupAssignQueue;	//< queue for cross assignements to groups
 	utils::Mutex m_errmutex;
 	std::string m_error;
 };

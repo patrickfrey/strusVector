@@ -14,6 +14,7 @@ set(
 	simGroupMap.cpp
 	dependencyGraph.cpp
 	sampleSimGroupMap.cpp
+	sampleSimGroupAssignmentQueue.cpp
 	simRelationMap.cpp
 	simRelationMapBuilder.cpp
 	getSimhashValues.cpp

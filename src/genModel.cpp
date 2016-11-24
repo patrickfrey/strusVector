@@ -26,57 +26,112 @@ using namespace strus;
 
 static void GenGroupProcedure_greedyChaseFreeFeatures( const GenGroupParameter* parameter, SimGroupIdAllocator* groupIdAllocator, GenGroupContext* genGroupContext, const SimRelationReader* simrelreader, std::size_t startidx, std::size_t endidx)
 {
-	unsigned int mutationcnt = 0;
-	SampleIndex si = startidx, se = endidx;
-	for (; si != se; ++si)
+	try
 	{
-		genGroupContext->greedyChaseFreeFeatures( *groupIdAllocator, si, *simrelreader, *parameter, mutationcnt);
+		unsigned int newgroupcnt = 0;
+		SampleIndex si = startidx, se = endidx;
+		for (; si != se; ++si)
+		{
+			newgroupcnt += genGroupContext->greedyChaseFreeFeatures( *groupIdAllocator, si, *simrelreader, *parameter) ? 1:0;
+		}
+		if (newgroupcnt && genGroupContext->logout()) genGroupContext->logout() << string_format( _TXT("free feature chase step triggered creation of %u new groups"), newgroupcnt);
 	}
-	if (mutationcnt && genGroupContext->logout()) genGroupContext->logout() << string_format( _TXT("free feature chase step triggered %u successful mutations"), mutationcnt);
+	catch (const std::bad_alloc& err)
+	{
+		genGroupContext->reportError( _TXT("memory allocation error"));
+	}
+	catch (const std::runtime_error& err)
+	{
+		genGroupContext->reportError( err.what());
+	}
 }
 
 static void GenGroupProcedure_greedyNeighbourGroupInterchange( const GenGroupParameter* parameter, SimGroupIdAllocator* groupIdAllocator, GenGroupContext* genGroupContext, const SimRelationReader* simrelreader, std::size_t startidx, std::size_t endidx)
 {
-	unsigned int mutationcnt = 0;
-	ConceptIndex gi = startidx, ge = endidx;
-	for (; gi != ge; ++gi)
+	try
 	{
-		genGroupContext->greedyNeighbourGroupInterchange( *groupIdAllocator, gi, *parameter, mutationcnt);
+		unsigned int interchangecnt = 0;
+		ConceptIndex gi = startidx, ge = endidx;
+		for (; gi != ge; ++gi)
+		{
+			genGroupContext->greedyNeighbourGroupInterchange( *groupIdAllocator, gi, *parameter, interchangecnt);
+		}
+		if (interchangecnt && genGroupContext->logout()) genGroupContext->logout() << string_format( _TXT("neighbour groups interchanged %u features"), interchangecnt);
 	}
-	if (mutationcnt && genGroupContext->logout()) genGroupContext->logout() << string_format( _TXT("group interchange step triggered %u successful mutations"), mutationcnt);
+	catch (const std::bad_alloc& err)
+	{
+		genGroupContext->reportError( _TXT("memory allocation error"));
+	}
+	catch (const std::runtime_error& err)
+	{
+		genGroupContext->reportError( err.what());
+	}
 }
 
 static void GenGroupProcedure_improveGroups( const GenGroupParameter* parameter, SimGroupIdAllocator* groupIdAllocator, GenGroupContext* genGroupContext, const SimRelationReader* simrelreader, std::size_t startidx, std::size_t endidx)
 {
-	unsigned int mutationcnt = 0;
-	ConceptIndex gi = startidx, ge = endidx;
-	for (; gi != ge; ++gi)
+	try
 	{
-		mutationcnt += genGroupContext->improveGroup( *groupIdAllocator, gi, *parameter) ? 1:0;
+		unsigned int mutationcnt = 0;
+		ConceptIndex gi = startidx, ge = endidx;
+		for (; gi != ge; ++gi)
+		{
+			mutationcnt += genGroupContext->improveGroup( *groupIdAllocator, gi, *parameter) ? 1:0;
+		}
+		if (mutationcnt && genGroupContext->logout()) genGroupContext->logout() << string_format( _TXT("group improve step triggered %u successful mutations"), mutationcnt);
 	}
-	if (mutationcnt && genGroupContext->logout()) genGroupContext->logout() << string_format( _TXT("group improve step triggered %u successful mutations"), mutationcnt);
+	catch (const std::bad_alloc& err)
+	{
+		genGroupContext->reportError( _TXT("memory allocation error"));
+	}
+	catch (const std::runtime_error& err)
+	{
+		genGroupContext->reportError( err.what());
+	}
 }
 
 static void GenGroupProcedure_similarNeighbourGroupElimination( const GenGroupParameter* parameter, SimGroupIdAllocator* groupIdAllocator, GenGroupContext* genGroupContext, const SimRelationReader* simrelreader, std::size_t startidx, std::size_t endidx)
 {
-	unsigned int eliminationcnt = 0;
-	ConceptIndex gi = startidx, ge = endidx;
-	for (; gi != ge; ++gi)
+	try
 	{
-		eliminationcnt += genGroupContext->similarNeighbourGroupElimination( *groupIdAllocator, gi, *parameter) ? 1:0;
+		unsigned int eliminationcnt = 0;
+		ConceptIndex gi = startidx, ge = endidx;
+		for (; gi != ge; ++gi)
+		{
+			eliminationcnt += genGroupContext->similarNeighbourGroupElimination( *groupIdAllocator, gi, *parameter) ? 1:0;
+		}
+		if (eliminationcnt && genGroupContext->logout()) genGroupContext->logout() << string_format( _TXT("neighbour elimination step triggered %u successful removals"), eliminationcnt);
 	}
-	if (eliminationcnt && genGroupContext->logout()) genGroupContext->logout() << string_format( _TXT("neighbour elimination step triggered %u successful removals"), eliminationcnt);
+	catch (const std::bad_alloc& err)
+	{
+		genGroupContext->reportError( _TXT("memory allocation error"));
+	}
+	catch (const std::runtime_error& err)
+	{
+		genGroupContext->reportError( err.what());
+	}
 }
 
 static void GenGroupProcedure_unfittestGroupElimination( const GenGroupParameter* parameter, SimGroupIdAllocator* groupIdAllocator, GenGroupContext* genGroupContext, const SimRelationReader* simrelreader, std::size_t startidx, std::size_t endidx)
 {
-	unsigned int eliminationcnt = 0;
-	ConceptIndex gi = startidx, ge = endidx;
-	for (; gi != ge; ++gi)
+	try
 	{
-		eliminationcnt += genGroupContext->unfittestGroupElimination( *groupIdAllocator, gi, *parameter) ? 1:0;
+		unsigned int eliminationcnt = 0;
+		ConceptIndex gi = startidx, ge = endidx;
+		for (; gi != ge; ++gi)
+		{
+			eliminationcnt += genGroupContext->unfittestGroupElimination( *groupIdAllocator, gi, *parameter) ? 1:0;
+		}
+		if (eliminationcnt && genGroupContext->logout()) genGroupContext->logout() << string_format( _TXT("unfittest group elimination step triggered %u successful removals"), eliminationcnt);
 	}
-	if (eliminationcnt && genGroupContext->logout()) genGroupContext->logout() << string_format( _TXT("unfittest group elimination step triggered %u successful removals"), eliminationcnt);
+	catch (const std::bad_alloc& err)
+	{
+		genGroupContext->reportError( _TXT("memory allocation error"));
+	}
+	catch (const std::runtime_error& err)
+	{
+		genGroupContext->reportError( err.what());
+	}
 }
 
 
@@ -94,7 +149,7 @@ std::vector<SimHash> GenModel::run(
 	unsigned int maxconcepts = maxconcepts_ ? maxconcepts_ : samplear.size() * FEATURE_MAXNOFCONCEPT_RELATION;
 	GlobalCountAllocator glbcntalloc( maxconcepts);
 	GenGroupParameter genParameter;
-	GenGroupContext groupContext( &glbcntalloc, samplear, maxconcepts, m_assignments, logfile);
+	GenGroupContext groupContext( &glbcntalloc, samplear, maxconcepts, m_assignments, nofThreads, logfile);
 	GenGroupThreadContext threadContext( &glbcntalloc, &groupContext, &simrelreader, &genParameter, nofThreads);
 
 	genParameter.simdist = m_simdist;
@@ -132,6 +187,12 @@ std::vector<SimHash> GenModel::run(
 		if (groupContext.logout()) groupContext.logout() << _TXT("chasing free elements");
 		threadContext.run( &GenGroupProcedure_greedyChaseFreeFeatures, 0, samplear.size());
 
+		groupContext.logout() << _TXT("run group interchange assignments");
+		threadContext.runGroupAssignments();
+
+		if (groupContext.logout()) groupContext.logout() << _TXT("improving fitness of individuals");
+		threadContext.run( &GenGroupProcedure_improveGroups, 1, glbcntalloc.nofGroupIdsAllocated()+1);
+
 		if (groupContext.logout()) groupContext.logout() << string_format( _TXT("interchanging elements out of %u"), glbcntalloc.nofGroupIdsAllocated());
 		threadContext.run( &GenGroupProcedure_greedyNeighbourGroupInterchange, 1, glbcntalloc.nofGroupIdsAllocated()+1);
 
@@ -141,7 +202,7 @@ std::vector<SimHash> GenModel::run(
 		if (groupContext.logout()) groupContext.logout() << _TXT("solving neighbour clashes");
 		threadContext.run( &GenGroupProcedure_similarNeighbourGroupElimination, 1, glbcntalloc.nofGroupIdsAllocated()+1);
 
-		if (groupContext.logout()) groupContext.logout() << _TXT("reduce membership in groups with low fitness where capacity is needed");
+		if (groupContext.logout()) groupContext.logout() << _TXT("improving capacity");
 		threadContext.run( &GenGroupProcedure_unfittestGroupElimination, 1, glbcntalloc.nofGroupIdsAllocated()+1);
 	}/*for (; iteration...*/
 

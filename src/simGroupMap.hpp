@@ -58,42 +58,14 @@ public:
 	SimGroupMap( GlobalCountAllocator* cnt_, std::size_t maxNofGroups);
 	~SimGroupMap();
 
-	const SimGroupRef& get( const ConceptIndex& cidx) const
-	{
-		if (!cidx || (std::size_t)cidx > m_arsize)
-		{
-			throw strus::runtime_error(_TXT("array bound read in similarity group map"));
-		}
-		return m_ar[ cidx-1];
-	}
-
-	void setGroup( const ConceptIndex& cidx, const SimGroupRef& group)
-	{
-		if (!cidx || (std::size_t)cidx > m_arsize)
-		{
-			throw strus::runtime_error(_TXT("array bound write in similarity group map"));
-		}
-		if (cidx != group->id())
-		{
-			throw strus::runtime_error(_TXT("internal: wrong group assignment"));
-		}
-		m_ar[ cidx-1] = group;
-	}
-
-	void resetGroup( const ConceptIndex& cidx)
-	{
-		if (!cidx || (std::size_t)cidx > m_arsize)
-		{
-			throw strus::runtime_error(_TXT("array bound write in similarity group map"));
-		}
-		m_ar[ cidx-1].reset();
-	}
+	const SimGroupRef& get( const ConceptIndex& cidx) const;
+	void setGroup( const ConceptIndex& cidx, const SimGroupRef& group);
+	void resetGroup( const ConceptIndex& cidx);
 
 	ConceptIndex nofGroupIdsAllocated() const
 	{
 		return m_cnt->nofGroupIdsAllocated();
 	}
-
 	GlobalCountAllocator* idAllocator()
 	{
 		return m_cnt;
@@ -104,10 +76,22 @@ private:
 	void operator=( const SimGroupMap&){};	//< non copyable
 
 private:
+	struct Block
+	{
+		enum {Size=(1<<14)};
+		SimGroupRef ar[Size];
+
+		Block(){}
+		~Block(){}
+	};
+	typedef utils::SharedPtr<Block> BlockRef;
+
+private:
+	SimGroupRef m_null;
 	GlobalCountAllocator* m_cnt;		//< global allocator of group ids
-	void* m_armem;				//< aligned memory for array of groups
-	SimGroupRef* m_ar;			//< array of groups
-	std::size_t m_arsize;			//< size of array of groups (maximum number of groups -> not growing)
+	void* m_armem;				//< aligned memory for array of blocks
+	BlockRef* m_ar;				//< array of blocks
+	std::size_t m_arsize;			//< size of array of blocks (maximum number of groups -> not growing)
 };
 
 }//namespace
