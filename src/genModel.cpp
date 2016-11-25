@@ -213,13 +213,13 @@ std::vector<SimHash> GenModel::run(
 		if (groupContext.logout()) groupContext.logout() << _TXT("chasing free elements");
 		threadContext.run( &GenGroupProcedure_greedyChaseFreeFeatures, 0, samplear.size());
 
-		groupContext.logout() << _TXT("run group interchange assignments");
+		groupContext.logout() << _TXT("run interchange assignments");
 		threadContext.runGroupAssignments();
 
 		if (groupContext.logout()) groupContext.logout() << _TXT("improving fitness of individuals");
 		threadContext.run( &GenGroupProcedure_improveGroups, 1, glbcntalloc.nofGroupIdsAllocated()+1);
 
-		if (groupContext.logout()) groupContext.logout() << string_format( _TXT("interchanging elements out of %u"), glbcntalloc.nofGroupIdsAllocated());
+		if (groupContext.logout()) groupContext.logout() << string_format( _TXT("interchanging elements of %u individuals"), glbcntalloc.nofGroupIdsAllocated());
 		threadContext.run( &GenGroupProcedure_greedyNeighbourGroupInterchange, 1, glbcntalloc.nofGroupIdsAllocated()+1);
 
 		if (groupContext.logout()) groupContext.logout() << _TXT("improving fitness of individuals");

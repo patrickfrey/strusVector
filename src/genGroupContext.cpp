@@ -173,7 +173,7 @@ bool GenGroupContext::tryAddGroupMember(
 	}
 	SimGroupRef newgroup( new SimGroup(*group));
 	newgroup->addMember( newmember);
-	newgroup->mutate( *m_samplear, descendants, age_mutations( *newgroup, maxage, mutations), age_mutation_votes( *newgroup, maxage, votes));
+	newgroup->doMutation( *m_samplear, descendants, age_mutations( *newgroup, maxage, mutations), age_mutation_votes( *newgroup, maxage, votes));
 	if (newgroup->fitness( *m_samplear) > group->fitness( *m_samplear))
 	{
 		m_groupMap.setGroup( group_id, newgroup);
@@ -255,7 +255,7 @@ void GenGroupContext::tryGroupAssignments(
 				if (!m_sampleSimGroupMap.insert( SLOCK, ai->conceptIndex)) continue;
 			}
 			newgroup->addMember( ai->sampleIndex);
-			newgroup->mutate( *m_samplear, parameter.descendants, age_mutations( *newgroup, parameter.maxage, parameter.mutations), age_mutation_votes( *newgroup, parameter.maxage, parameter.votes));
+			newgroup->doMutation( *m_samplear, parameter.descendants, age_mutations( *newgroup, parameter.maxage, parameter.mutations), age_mutation_votes( *newgroup, parameter.maxage, parameter.votes));
 			m_groupMap.setGroup( ai->conceptIndex, newgroup);
 		}
 		if (!alist.empty() && m_logout) m_logout << string_format( _TXT("assigned %u features to concepts"), alist.size());
@@ -296,7 +296,7 @@ bool GenGroupContext::greedyChaseFreeFeatures(
 			{
 				SimGroupRef testgroup( new SimGroup(*group));
 				testgroup->addMember( neighbour.index);
-				testgroup->mutate( *m_samplear, parameter.descendants, age_mutations( *testgroup, parameter.maxage, parameter.mutations), age_mutation_votes( *testgroup, parameter.maxage, parameter.votes));
+				testgroup->doMutation( *m_samplear, parameter.descendants, age_mutations( *testgroup, parameter.maxage, parameter.mutations), age_mutation_votes( *testgroup, parameter.maxage, parameter.votes));
 				if (testgroup->fitness( *m_samplear) > group->fitness( *m_samplear))
 				{
 					// ... we have to go over a queue to avoid inconsistencies
@@ -309,7 +309,7 @@ bool GenGroupContext::greedyChaseFreeFeatures(
 		// ...if we did not find a close group, then we found a new one with the two elements as members:
 		ConceptIndex newidx = groupIdAllocator.alloc();
 		SimGroupRef newgroup( new SimGroup( *m_samplear, sidx, neighbour.index, newidx));
-		(void)newgroup->mutate( *m_samplear, parameter.descendants, age_mutations( *newgroup, parameter.maxage, parameter.mutations), age_mutation_votes( *newgroup, parameter.maxage, parameter.votes));
+		(void)newgroup->doMutation( *m_samplear, parameter.descendants, age_mutations( *newgroup, parameter.maxage, parameter.mutations), age_mutation_votes( *newgroup, parameter.maxage, parameter.votes));
 		bool success = true;
 		{
 			SharedSampleSimGroupMap::Lock SLOCK( &m_sampleSimGroupMap, neighbour.index);
@@ -377,7 +377,7 @@ void GenGroupContext::greedyNeighbourGroupInterchange(
 						if (!m_sampleSimGroupMap.insert( SLOCK, group->id())) continue;
 					}
 					newgroup->addMember( *mi);
-					(void)newgroup->mutate( *m_samplear, parameter.descendants, age_mutations( *newgroup, parameter.maxage, parameter.mutations), age_mutation_votes( *newgroup, parameter.maxage, parameter.votes));
+					(void)newgroup->doMutation( *m_samplear, parameter.descendants, age_mutations( *newgroup, parameter.maxage, parameter.mutations), age_mutation_votes( *newgroup, parameter.maxage, parameter.votes));
 					m_groupMap.setGroup( group_id, group = newgroup);
 					++interchangecnt;
 					if (!sim_group->gencode().near( group->gencode(), parameter.eqdist))
@@ -424,33 +424,38 @@ bool GenGroupContext::improveGroup(
 {
 	SimGroupRef group = m_groupMap.get( group_id);
 	if (!group.get()) return false;
+	SimGroupRef newgroup( group->createMutation( *m_samplear, parameter.descendants, age_mutations( *group, parameter.maxage, parameter.mutations), age_mutation_votes( *group, parameter.maxage, parameter.votes)));
+	if (!newgroup.get()) return false;
 
-	bool rt = group->mutate( *m_samplear, parameter.descendants, age_mutations( *group, parameter.maxage, parameter.mutations), age_mutation_votes( *group, parameter.maxage, parameter.votes));
-
-	SimGroup::const_iterator mi = group->begin(), me = group->end();
+	SimGroup::const_iterator mi = newgroup->begin(), me = newgroup->end();
 	for (std::size_t midx=0; mi != me; ++mi,++midx)
 	{
-		if (!group->gencode().near( (*m_samplear)[ *mi], parameter.simdist))
+		if (!newgroup->gencode().near( (*m_samplear)[ *mi], parameter.simdist))
 		{
 			// Dropped members that got too far out of the group:
 			SampleIndex member = *mi;
-			mi = group->removeMemberItr( mi);
+			mi = newgroup->removeMemberItr( mi);
 			--mi;
 			--midx;
 			{
 				SharedSampleSimGroupMap::Lock SLOCK( &m_sampleSimGroupMap, member);
-				m_sampleSimGroupMap.remove( SLOCK, group->id());
+				m_sampleSimGroupMap.remove( SLOCK, newgroup->id());
 			}
-			if (group->size() < 2) break;
-			group->mutate( *m_samplear, parameter.descendants, age_mutations( *group, parameter.maxage, parameter.mutations), age_mutation_votes( *group, parameter.maxage, parameter.votes));
+			if (newgroup->size() < 2) break;
+			newgroup->doMutation( *m_samplear, parameter.descendants, age_mutations( *group, parameter.maxage, parameter.mutations), age_mutation_votes( *group, parameter.maxage, parameter.votes));
 		}
 	}
-	if (group->size() < 2)
+	if (newgroup->size() < 2)
 	{
 		// Delete group that lost too many members:
-		removeGroup( groupIdAllocator, group->id());
+		removeGroup( groupIdAllocator, group_id);
+		return false;
 	}
-	return rt;
+	else
+	{
+		m_groupMap.setGroup( group_id, newgroup);
+		return true;
+	}
 }
 
 bool GenGroupContext::similarNeighbourGroupElimination(

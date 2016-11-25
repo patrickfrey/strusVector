@@ -31,6 +31,8 @@ public:
 		:m_id(o.m_id),m_gencode(o.m_gencode),m_age(o.m_age),m_members(o.m_members),m_nofmembers(o.m_nofmembers),m_fitness(o.m_fitness),m_fitness_valid(o.m_fitness_valid){}
 	SimGroup( const SimGroup& o, const ConceptIndex& id_)
 		:m_id(id_),m_gencode(o.m_gencode),m_age(o.m_age),m_members(o.m_members),m_nofmembers(o.m_nofmembers),m_fitness(o.m_fitness),m_fitness_valid(o.m_fitness_valid){}
+	SimGroup( const SimGroup& o, const SimHash& gencode_, double fitness_)
+		:m_id(o.m_id),m_gencode(gencode_),m_age(o.m_age),m_members(o.m_members),m_nofmembers(o.m_nofmembers),m_fitness(fitness_),m_fitness_valid(true){}
 
 	const ConceptIndex& id() const					{return m_id;}
 	const SimHash& gencode() const					{return m_gencode;}
@@ -61,9 +63,27 @@ public:
 	/// \param[in] samplear global array of samples the reference system of this individual is based on
 	double fitness( const std::vector<SimHash>& samplear) const;
 
-	/// \brief Do a mutation step
+	/// \brief Try to create a mutation with better fitness than this SimGroup
 	/// \param[in] samplear global array of samples the reference system of this individual is based on
-	bool mutate( const std::vector<SimHash>& samplear,
+	/// \param[in] descendants number of descendants to try
+	/// \param[in] maxNofMutations maximum number of mutations
+	/// \param[in] maxNofVotes maximum number of votes when polling for a mutation decision
+	/// \return the mutated group (with ownership) or 0 if not succeeded
+	SimGroup* createMutation(
+			const std::vector<SimHash>& samplear,
+			unsigned int descendants,
+			unsigned int maxNofMutations,
+			unsigned int maxNofVotes) const;
+
+	
+	/// \brief Try to do a mutation step with better fitness on this SimGroup
+	/// \param[in] samplear global array of samples the reference system of this individual is based on
+	/// \param[in] descendants number of descendants to try
+	/// \param[in] maxNofMutations maximum number of mutations
+	/// \param[in] maxNofVotes maximum number of votes when polling for a mutation decision
+	/// \return true if succeeded
+	bool doMutation(
+			const std::vector<SimHash>& samplear,
 			unsigned int descendants,
 			unsigned int maxNofMutations,
 			unsigned int maxNofVotes);
@@ -83,7 +103,7 @@ private:
 	/// \param[in] samplear global array of samples the reference system of this individual is based on
 	/// \param[in] maxNofMutations maximum number of bit mutations to do
 	/// \param[in] maxNofVotes number of elements used for a vote for a mutation direction
-	SimHash mutation( const std::vector<SimHash>& samplear, unsigned int maxNofMutations, unsigned int maxNofVotes) const;
+	SimHash mutationGencode( const std::vector<SimHash>& samplear, unsigned int maxNofMutations, unsigned int maxNofVotes) const;
 	/// \brief Calculate an initial individual (kernel + some random values)
 	/// \param[in] samplear global array of samples the reference system of this individual is based on
 	SimHash inithash( const std::vector<SimHash>& samplear) const;
