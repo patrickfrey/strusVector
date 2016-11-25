@@ -14,6 +14,7 @@
 #include "dependencyGraph.hpp"
 #include "internationalization.hpp"
 #include "strus/base/string_format.hpp"
+#include "strus/errorBufferInterface.hpp"
 #include <ctime>
 #include <cmath>
 #include <iostream>
@@ -24,7 +25,7 @@
 using namespace strus;
 #define STRUS_LOWLEVEL_DEBUG
 
-static void GenGroupProcedure_greedyChaseFreeFeatures( const GenGroupParameter* parameter, SimGroupIdAllocator* groupIdAllocator, GenGroupContext* genGroupContext, const SimRelationReader* simrelreader, std::size_t startidx, std::size_t endidx)
+static void GenGroupProcedure_greedyChaseFreeFeatures( const GenGroupParameter* parameter, SimGroupIdAllocator* groupIdAllocator, GenGroupContext* genGroupContext, const SimRelationReader* simrelreader, std::size_t startidx, std::size_t endidx, ErrorBufferInterface* errorhnd)
 {
 	try
 	{
@@ -44,9 +45,14 @@ static void GenGroupProcedure_greedyChaseFreeFeatures( const GenGroupParameter* 
 	{
 		genGroupContext->reportError( err.what());
 	}
+	catch (const std::logic_error& err)
+	{
+		genGroupContext->reportError( err.what());
+	}
+	errorhnd->releaseContext();
 }
 
-static void GenGroupProcedure_greedyNeighbourGroupInterchange( const GenGroupParameter* parameter, SimGroupIdAllocator* groupIdAllocator, GenGroupContext* genGroupContext, const SimRelationReader* simrelreader, std::size_t startidx, std::size_t endidx)
+static void GenGroupProcedure_greedyNeighbourGroupInterchange( const GenGroupParameter* parameter, SimGroupIdAllocator* groupIdAllocator, GenGroupContext* genGroupContext, const SimRelationReader* simrelreader, std::size_t startidx, std::size_t endidx, ErrorBufferInterface* errorhnd)
 {
 	try
 	{
@@ -66,9 +72,14 @@ static void GenGroupProcedure_greedyNeighbourGroupInterchange( const GenGroupPar
 	{
 		genGroupContext->reportError( err.what());
 	}
+	catch (const std::logic_error& err)
+	{
+		genGroupContext->reportError( err.what());
+	}
+	errorhnd->releaseContext();
 }
 
-static void GenGroupProcedure_improveGroups( const GenGroupParameter* parameter, SimGroupIdAllocator* groupIdAllocator, GenGroupContext* genGroupContext, const SimRelationReader* simrelreader, std::size_t startidx, std::size_t endidx)
+static void GenGroupProcedure_improveGroups( const GenGroupParameter* parameter, SimGroupIdAllocator* groupIdAllocator, GenGroupContext* genGroupContext, const SimRelationReader* simrelreader, std::size_t startidx, std::size_t endidx, ErrorBufferInterface* errorhnd)
 {
 	try
 	{
@@ -88,9 +99,14 @@ static void GenGroupProcedure_improveGroups( const GenGroupParameter* parameter,
 	{
 		genGroupContext->reportError( err.what());
 	}
+	catch (const std::logic_error& err)
+	{
+		genGroupContext->reportError( err.what());
+	}
+	errorhnd->releaseContext();
 }
 
-static void GenGroupProcedure_similarNeighbourGroupElimination( const GenGroupParameter* parameter, SimGroupIdAllocator* groupIdAllocator, GenGroupContext* genGroupContext, const SimRelationReader* simrelreader, std::size_t startidx, std::size_t endidx)
+static void GenGroupProcedure_similarNeighbourGroupElimination( const GenGroupParameter* parameter, SimGroupIdAllocator* groupIdAllocator, GenGroupContext* genGroupContext, const SimRelationReader* simrelreader, std::size_t startidx, std::size_t endidx, ErrorBufferInterface* errorhnd)
 {
 	try
 	{
@@ -110,9 +126,14 @@ static void GenGroupProcedure_similarNeighbourGroupElimination( const GenGroupPa
 	{
 		genGroupContext->reportError( err.what());
 	}
+	catch (const std::logic_error& err)
+	{
+		genGroupContext->reportError( err.what());
+	}
+	errorhnd->releaseContext();
 }
 
-static void GenGroupProcedure_unfittestGroupElimination( const GenGroupParameter* parameter, SimGroupIdAllocator* groupIdAllocator, GenGroupContext* genGroupContext, const SimRelationReader* simrelreader, std::size_t startidx, std::size_t endidx)
+static void GenGroupProcedure_unfittestGroupElimination( const GenGroupParameter* parameter, SimGroupIdAllocator* groupIdAllocator, GenGroupContext* genGroupContext, const SimRelationReader* simrelreader, std::size_t startidx, std::size_t endidx, ErrorBufferInterface* errorhnd)
 {
 	try
 	{
@@ -132,6 +153,11 @@ static void GenGroupProcedure_unfittestGroupElimination( const GenGroupParameter
 	{
 		genGroupContext->reportError( err.what());
 	}
+	catch (const std::logic_error& err)
+	{
+		genGroupContext->reportError( err.what());
+	}
+	errorhnd->releaseContext();
 }
 
 
@@ -149,8 +175,8 @@ std::vector<SimHash> GenModel::run(
 	unsigned int maxconcepts = maxconcepts_ ? maxconcepts_ : samplear.size() * FEATURE_MAXNOFCONCEPT_RELATION;
 	GlobalCountAllocator glbcntalloc( maxconcepts);
 	GenGroupParameter genParameter;
-	GenGroupContext groupContext( &glbcntalloc, samplear, maxconcepts, m_assignments, nofThreads, logfile);
-	GenGroupThreadContext threadContext( &glbcntalloc, &groupContext, &simrelreader, &genParameter, nofThreads);
+	GenGroupContext groupContext( &glbcntalloc, samplear, maxconcepts, m_assignments, nofThreads, logfile, m_errorhnd);
+	GenGroupThreadContext threadContext( &glbcntalloc, &groupContext, &simrelreader, &genParameter, nofThreads, m_errorhnd);
 
 	genParameter.simdist = m_simdist;
 	genParameter.descendants = m_descendants;

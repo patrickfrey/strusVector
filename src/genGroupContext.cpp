@@ -9,6 +9,7 @@
 #include "genGroupContext.hpp"
 #include "dependencyGraph.hpp"
 #include "strus/base/string_format.hpp"
+#include "strus/errorBufferInterface.hpp"
 
 using namespace strus;
 using namespace strus::utils;
@@ -267,6 +268,11 @@ void GenGroupContext::tryGroupAssignments(
 	{
 		reportError( err.what());
 	}
+	catch (const std::logic_error& err)
+	{
+		reportError( err.what());
+	}
+	m_errorhnd->releaseContext();
 }
 
 bool GenGroupContext::greedyChaseFreeFeatures(

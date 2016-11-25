@@ -26,6 +26,9 @@
 
 namespace strus {
 
+/// \brief Forward declaration
+class ErrorBufferInterface;
+
 /// \brief Some constants that are not configurable yet
 #define STRUS_VECTOR_MAXAGE_MATURE_PERCENTAGE 30   // define what precentage of age compared with maxage is considered mature
 #define STRUS_VECTOR_BAD_FITNESS_FRACTION     0.6  // factor of fitness considered bad compared with the best fitness of the group, used to decide wheter a 'mature' group can be left when maximum capacity of releations is reached
@@ -49,8 +52,9 @@ struct GenGroupParameter
 class GenGroupContext
 {
 public:
-	GenGroupContext( GlobalCountAllocator* cnt_, const std::vector<SimHash>& samplear_, std::size_t maxNofGroups_, unsigned int assignments_, unsigned int nofThreads_, const char* logfile_)
-		:m_logout( logfile_)
+	GenGroupContext( GlobalCountAllocator* cnt_, const std::vector<SimHash>& samplear_, std::size_t maxNofGroups_, unsigned int assignments_, unsigned int nofThreads_, const char* logfile_, ErrorBufferInterface* errorhnd_)
+		:m_errorhnd(errorhnd_)
+		,m_logout( logfile_)
 		,m_cntalloc(cnt_)
 		,m_samplear(&samplear_)
 		,m_groupMap(cnt_,maxNofGroups_)
@@ -160,6 +164,7 @@ private:
 	void operator=( const GenGroupContext&){}		//< non copyable
 
 private:
+	ErrorBufferInterface* m_errorhnd;			//< buffer for errors in thread context
 	Logger m_logout;					//< logger for monitoring progress
 	GlobalCountAllocator* m_cntalloc;			//< global allocator of group indices
 	const std::vector<SimHash>* m_samplear;			//< array of features (samples)

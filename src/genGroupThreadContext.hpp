@@ -16,12 +16,16 @@
 
 namespace strus {
 
+/// \brief Forward declaration
+class ErrorBufferInterface;
+
 typedef void (*GenGroupProcedure)( 
 		const GenGroupParameter* parameter,
 		SimGroupIdAllocator* groupIdAllocator,
 		GenGroupContext* genGroupContext,
 		const SimRelationReader* simrelreader,
-		std::size_t startidx, std::size_t endidx);
+		std::size_t startidx, std::size_t endidx,
+		ErrorBufferInterface* errorhnd);
 
 class GenGroupThreadContext
 {
@@ -31,12 +35,14 @@ public:
 			GenGroupContext* groupctx_,
 			const SimRelationReader* simrelreader_,
 			const GenGroupParameter* parameter_,
-			unsigned int nofThreads_);
+			unsigned int nofThreads_,
+			ErrorBufferInterface* errorhnd_);
 
 	void run( GenGroupProcedure proc, std::size_t startidx, std::size_t endidx);
 	void runGroupAssignments();
 
 private:
+	ErrorBufferInterface* m_errorhnd;
 	GlobalCountAllocator* m_glbcnt;
 	unsigned int m_nofThreads;
 	GenGroupContext* m_groupctx;

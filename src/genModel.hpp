@@ -20,6 +20,9 @@
 
 namespace strus {
 
+/// \brief Forward declaration
+class ErrorBufferInterface;
+
 /// \brief Factor used to calculate the maximum number of concepts from the number of samples if maxnofconcepts is not specified
 #define FEATURE_MAXNOFCONCEPT_RELATION 16
 
@@ -29,7 +32,8 @@ class GenModel
 public:
 	/// \brief Default constructor
 	GenModel()
-		:m_threads(0)
+		:m_errorhnd(0)
+		,m_threads(0)
 		,m_maxdist(0),m_simdist(0),m_raddist(0),m_eqdist(0)
 		,m_mutations(0),m_votes(0)
 		,m_descendants(0),m_maxage(0),m_iterations(0)
@@ -37,8 +41,9 @@ public:
 		,m_with_singletons(0)
 		{}
 	/// \brief Constructor
-	GenModel( unsigned int threads_, unsigned int maxdist_, unsigned int simdist_, unsigned int raddist_, unsigned int eqdist_, unsigned int mutations_, unsigned int votes_, unsigned int descendants_, unsigned int maxage_, unsigned int iterations_, unsigned int assignments_, float isaf_, float eqdiff_, bool with_singletons_)
-		:m_threads(threads_)
+	GenModel( unsigned int threads_, unsigned int maxdist_, unsigned int simdist_, unsigned int raddist_, unsigned int eqdist_, unsigned int mutations_, unsigned int votes_, unsigned int descendants_, unsigned int maxage_, unsigned int iterations_, unsigned int assignments_, float isaf_, float eqdiff_, bool with_singletons_, ErrorBufferInterface* errorhnd_)
+		:m_errorhnd(errorhnd_)
+		,m_threads(threads_)
 		,m_maxdist(maxdist_),m_simdist(simdist_),m_raddist(raddist_),m_eqdist(eqdist_)
 		,m_mutations(mutations_),m_votes(votes_)
 		,m_descendants(descendants_),m_maxage(maxage_),m_iterations(iterations_)
@@ -47,7 +52,8 @@ public:
 		{}
 	/// \brief Copy constructor
 	GenModel( const GenModel& o)
-		:m_threads(o.m_threads)
+		:m_errorhnd(o.m_errorhnd)
+		,m_threads(o.m_threads)
 		,m_maxdist(o.m_maxdist),m_simdist(o.m_simdist),m_raddist(o.m_raddist),m_eqdist(o.m_eqdist)
 		,m_mutations(o.m_mutations),m_votes(o.m_votes)
 		,m_descendants(o.m_descendants),m_maxage(o.m_maxage),m_iterations(o.m_iterations)
@@ -71,6 +77,7 @@ public:
 			const char* logfile) const;
 
 private:
+	ErrorBufferInterface* m_errorhnd;	///< interface for error messages
 	unsigned int m_threads;			///< maximum number of threads to use (0 = no threading)
 	unsigned int m_maxdist;			///< maximum distance
 	unsigned int m_simdist;			///< maximum distance to be considered similar

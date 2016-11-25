@@ -11,6 +11,7 @@
 #include "utils.hpp"
 #include "strus/base/string_format.hpp"
 #include "strus/reference.hpp"
+#include "strus/errorBufferInterface.hpp"
 #include <memory>
 #include <iostream>
 #include <boost/thread.hpp>
@@ -130,9 +131,11 @@ public:
 		{
 			m_ctx->reportError( string_format( _TXT("failed to complete calculation: thread %u interrupted"), m_threadid));
 		}
+		m_errorhnd->releaseContext();
 	}
 
 private:
+	ErrorBufferInterface* m_errorhnd;
 	SimhashBuilderGlobalContext* m_ctx;
 	const LshModel* m_lshModel;
 	bool m_terminated;

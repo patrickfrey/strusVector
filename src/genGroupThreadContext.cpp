@@ -7,14 +7,16 @@
  */
 /// \brief Multithreading context for the genetic algorithms
 #include "genGroupThreadContext.hpp"
+#include "strus/errorBufferInterface.hpp"
 #include "cacheLineSize.hpp"
 #include "utils.hpp"
 #include <boost/thread.hpp>
 
 using namespace strus;
 
-GenGroupThreadContext::GenGroupThreadContext( GlobalCountAllocator* glbcnt_, GenGroupContext* groupctx_, const SimRelationReader* simrelreader_, const GenGroupParameter* parameter_, unsigned int nofThreads_)
-	:m_glbcnt(glbcnt_),m_nofThreads(nofThreads_)
+GenGroupThreadContext::GenGroupThreadContext( GlobalCountAllocator* glbcnt_, GenGroupContext* groupctx_, const SimRelationReader* simrelreader_, const GenGroupParameter* parameter_, unsigned int nofThreads_, ErrorBufferInterface* errorhnd_)
+	:m_errorhnd(errorhnd_)
+	,m_glbcnt(glbcnt_),m_nofThreads(nofThreads_)
 	,m_groupctx(groupctx_),m_simrelreader(simrelreader_)
 	,m_allocators(),m_parameter(parameter_)
 {
@@ -43,13 +45,13 @@ void GenGroupThreadContext::run( GenGroupProcedure proc, std::size_t startidx, s
 			std::size_t endchunkidx = startchunkidx + chunksize;
 			if (endchunkidx > endidx) endchunkidx = endidx;
 
-			tgroup.create_thread( boost::bind( proc, m_parameter, &m_allocators[ti], m_groupctx, m_simrelreader, startchunkidx, endchunkidx));
+			tgroup.create_thread( boost::bind( proc, m_parameter, &m_allocators[ti], m_groupctx, m_simrelreader, startchunkidx, endchunkidx, m_errorhnd));
 		}
 		tgroup.join_all();
 	}
 	else
 	{
-		proc( m_parameter, &m_allocators[0], m_groupctx, m_simrelreader, startidx, endidx);
+		proc( m_parameter, &m_allocators[0], m_groupctx, m_simrelreader, startidx, endidx, m_errorhnd);
 	}
 	const char* err = m_groupctx->lastError();
 	if (err)
