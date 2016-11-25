@@ -635,7 +635,22 @@ private:
 
 	bool needToCalculateSimRelationMap()
 	{
-		return m_needToCalculateSimRelationMap || m_config.with_forcesim || m_database->readNofSamples() >= m_database->readLastSimRelationIndex();
+		unsigned int nofSamples = m_database->readNofSamples();
+		unsigned int lastSimIndex = m_database->readLastSimRelationIndex();
+		if (m_needToCalculateSimRelationMap || m_config.with_forcesim || nofSamples >= lastSimIndex)
+		{
+			const char* logfile = m_config.logfile.empty()?0:m_config.logfile.c_str();
+			if (logfile)
+			{
+				Logger logout( logfile);
+				logout << string_format( _TXT("need to calculate sim relation map (%s) forcesim=%s, nof samples=%u, last sim index=%u"), (m_needToCalculateSimRelationMap?"true":"false"), (m_config.with_forcesim?"true":"false"), nofSamples, lastSimIndex);
+			}
+			return true;
+		}
+		else
+		{
+			return false;
+		}
 	}
 
 	void buildSimRelationMap( const SimRelationReader* simmapreader)
