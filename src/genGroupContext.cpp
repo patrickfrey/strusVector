@@ -14,7 +14,7 @@
 using namespace strus;
 using namespace strus::utils;
 
-#define STRUS_LOWLEVEL_DEBUG
+#undef STRUS_LOWLEVEL_DEBUG
 
 
 static unsigned int age_mutations( const SimGroup& group, unsigned int maxage, unsigned int conf_mutations)
