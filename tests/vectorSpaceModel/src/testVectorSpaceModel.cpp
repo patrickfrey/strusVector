@@ -123,7 +123,7 @@ int main( int argc, const char** argv)
 	try
 	{
 		int rt = 0;
-		g_errorhnd = strus::createErrorBuffer_standard( 0, 0);
+		g_errorhnd = strus::createErrorBuffer_standard( 0, 1);
 		if (!g_errorhnd) throw std::runtime_error("failed to create error buffer structure");
 
 		initRandomNumberGenerator();
@@ -191,8 +191,16 @@ int main( int argc, const char** argv)
 		}
 		std::cerr << "model config: " << config << std::endl;
 		std::string configsrc = config;
+		unsigned int nofThreads=1;
+		(void)extractUIntFromConfigString( nofThreads, configsrc, "threads", g_errorhnd);
 		if (!extractUIntFromConfigString( dim, configsrc, "dim", g_errorhnd)) throw std::runtime_error("configuration parameter 'dim' is not specified");
 
+		if (nofThreads > 1)
+		{
+			delete g_errorhnd;
+			g_errorhnd = strus::createErrorBuffer_standard( 0, nofThreads);
+			if (!g_errorhnd) throw std::runtime_error("failed to create error buffer structure");
+		}
 		// Build all objects:
 		std::auto_ptr<strus::DatabaseInterface> dbi( strus::createDatabaseType_leveldb( g_errorhnd));
 		std::auto_ptr<strus::VectorSpaceModelInterface> vmodel( createVectorSpaceModel_std( g_errorhnd));
