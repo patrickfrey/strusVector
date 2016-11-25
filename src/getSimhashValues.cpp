@@ -93,8 +93,10 @@ private:
 class SimhashBuilder
 {
 public:
-	SimhashBuilder( SimhashBuilderGlobalContext* ctx_, const LshModel* lshModel_, unsigned int threadid_)
-		:m_ctx(ctx_),m_lshModel(lshModel_),m_terminated(false),m_threadid(threadid_){}
+	SimhashBuilder( SimhashBuilderGlobalContext* ctx_, const LshModel* lshModel_, unsigned int threadid_, ErrorBufferInterface* errorhnd_)
+		:m_errorhnd(errorhnd_)
+		,m_ctx(ctx_),m_lshModel(lshModel_)
+		,m_terminated(false),m_threadid(threadid_){}
 	~SimhashBuilder(){}
 
 	void sigStop()
@@ -146,7 +148,8 @@ private:
 std::vector<SimHash> strus::getSimhashValues(
 		const LshModel& lshmodel,
 		const std::vector<std::vector<double> >& vecar,
-		unsigned int threads)
+		unsigned int threads,
+		ErrorBufferInterface* errorhnd)
 {
 	if (!threads)
 	{
@@ -168,7 +171,7 @@ std::vector<SimHash> strus::getSimhashValues(
 		for (unsigned int ti = 0; ti<threads; ++ti)
 		{
 			processorList.push_back(
-				new SimhashBuilder( &context, &lshmodel, ti+1));
+				new SimhashBuilder( &context, &lshmodel, ti+1, errorhnd));
 		}
 		{
 			boost::thread_group tgroup;

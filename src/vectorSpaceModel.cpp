@@ -512,7 +512,7 @@ public:
 		try
 		{
 			utils::ScopedLock lock( m_mutex);
-			std::vector<SimHash> shar = strus::getSimhashValues( m_lshmodel, m_vecar, m_config.threads);
+			std::vector<SimHash> shar = strus::getSimhashValues( m_lshmodel, m_vecar, m_config.threads, m_errorhnd);
 			std::size_t si = 0, se = m_vecar.size();
 			for (; si != se; ++si)
 			{

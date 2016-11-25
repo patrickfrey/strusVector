@@ -14,17 +14,22 @@
 namespace strus {
 
 /// \brief Forward declaration
+class ErrorBufferInterface;
+
+/// \brief Forward declaration
 class LshModel;
 
 /// \brief Calculation of similarity LSH values of an array with possibly multiple threads
 /// \param[in] lshmodel defines the mapping of vectors to LSH values
 /// \param[in] vectors array of vectors to process
 /// \param[in] threads number of threads to use, 0 for no threading at all
+/// \param[in] errorhnd error buffer interface
 /// \return similarity LSH values
 std::vector<SimHash> getSimhashValues(
 		const LshModel& lshmodel,
 		const std::vector<std::vector<double> >& vecar,
-		unsigned int threads);
+		unsigned int threads,
+		ErrorBufferInterface* errorhnd);
 
 } //namespace
 #endif
