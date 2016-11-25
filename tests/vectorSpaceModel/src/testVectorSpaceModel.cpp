@@ -198,7 +198,7 @@ int main( int argc, const char** argv)
 		if (nofThreads > 1)
 		{
 			delete g_errorhnd;
-			g_errorhnd = strus::createErrorBuffer_standard( 0, nofThreads);
+			g_errorhnd = strus::createErrorBuffer_standard( 0, nofThreads+2);
 			if (!g_errorhnd) throw std::runtime_error("failed to create error buffer structure");
 		}
 		// Build all objects:
