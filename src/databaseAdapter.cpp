@@ -26,6 +26,7 @@ using namespace strus;
 #define VARIABLE_NOF_SAMPLES  "samples"
 #define VARIABLE_NOF_CONCEPTS "concepts"
 #define VARIABLE_STATE "state"
+#define VARIABLE_NOF_SIMRELATIONS "simrelations"
 
 #undef STRUS_LOWLEVEL_DEBUG
 
@@ -196,6 +197,12 @@ void DatabaseAdapter::writeNofSamples( const SampleIndex& nofSamples)
 {
 	if (!m_transaction.get()) beginTransaction();
 	writeVariable( VARIABLE_NOF_SAMPLES, nofSamples);
+}
+
+void DatabaseAdapter::writeNofSimRelations( const SampleIndex& nofSamples)
+{
+	if (!m_transaction.get()) beginTransaction();
+	return writeVariable( VARIABLE_NOF_SIMRELATIONS, nofSamples);
 }
 
 void DatabaseAdapter::writeNofConcepts( const std::string& clname, const ConceptIndex& nofConcepts)
@@ -416,6 +423,11 @@ void DatabaseAdapter::writeSampleIndex( const SampleIndex& sidx, const std::stri
 SampleIndex DatabaseAdapter::readNofSamples() const
 {
 	return readVariable( VARIABLE_NOF_SAMPLES);
+}
+
+SampleIndex DatabaseAdapter::readNofSimRelations() const
+{
+	return readVariable( VARIABLE_NOF_SIMRELATIONS);
 }
 
 ConceptIndex DatabaseAdapter::readNofConcepts( const std::string& clname) const

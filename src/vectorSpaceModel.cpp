@@ -255,11 +255,12 @@ public:
 					rt.push_back( elemstr.str());
 				}
 			}
-			else if (utils::caseInsensitiveEquals( name, "lastsimrelidx"))
+			else if (utils::caseInsensitiveEquals( name, "nofsimrel"))
 			{
 				std::ostringstream elemstr;
 				SampleIndex sidx = m_database->readLastSimRelationIndex();
-				elemstr << sidx;
+				SampleIndex nofSamples = m_database->readNofSimRelations();
+				elemstr << sidx << " " << nofSamples;
 				rt.push_back( elemstr.str());
 			}
 			else if (utils::caseInsensitiveEquals( name, "variable"))
@@ -312,7 +313,7 @@ public:
 			}
 			rt.push_back( "simrel");
 			rt.push_back( "simsingletons");
-			rt.push_back( "lastsimrelidx");
+			rt.push_back( "nofsimrel");
 			rt.push_back( "variable");
 			rt.push_back( "state");
 			return rt;
@@ -691,14 +692,14 @@ private:
 	bool needToCalculateSimRelationMap()
 	{
 		unsigned int nofSamples = m_database->readNofSamples();
-		unsigned int lastSimIndex = m_database->readLastSimRelationIndex();
-		if (m_needToCalculateSimRelationMap || m_config.with_forcesim || nofSamples >= lastSimIndex)
+		unsigned int simNofSamples = m_database->readNofSimRelations();
+		if (m_needToCalculateSimRelationMap || m_config.with_forcesim || nofSamples > simNofSamples)
 		{
 			const char* logfile = m_config.logfile.empty()?0:m_config.logfile.c_str();
 			if (logfile)
 			{
 				Logger logout( logfile);
-				logout << string_format( _TXT("need to calculate sim relation map (%s) forcesim=%s, nof samples=%u, last sim index=%u"), (m_needToCalculateSimRelationMap?"true":"false"), (m_config.with_forcesim?"true":"false"), nofSamples, lastSimIndex);
+				logout << string_format( _TXT("need to calculate sim relation map (%s) forcesim=%s, nof samples %u / %u"), (m_needToCalculateSimRelationMap?"true":"false"), (m_config.with_forcesim?"true":"false"), nofSamples, simNofSamples);
 			}
 			return true;
 		}
@@ -728,6 +729,7 @@ private:
 			total_nof_similarities += simrelmap_part.nofRelationsDetected();
 			if (logout) logout << string_format( _TXT("got total %u features with %uK similarities"), simrelmap_part.endIndex(), (unsigned int)(total_nof_similarities/1024));
 		}
+		m_database->writeNofSimRelations( m_samplear.size());
 		m_database->writeState( 2);
 		m_database->commit();
 		if (logout) logout << string_format( _TXT("calculated similarity relation matrix stored to database"));

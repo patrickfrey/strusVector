@@ -42,6 +42,7 @@ public:
 	std::string readSampleName( const SampleIndex& sidx) const;
 	SampleIndex readSampleIndex( const std::string& name) const;
 	SampleIndex readNofSamples() const;
+	SampleIndex readNofSimRelations() const;
 	ConceptIndex readNofConcepts( const std::string& clname) const;
 	unsigned int readState() const;
 	std::vector<std::pair<std::string,uint64_t> > readVariables() const;
@@ -69,6 +70,7 @@ public:
 	void writeVersion();
 	void writeNofSamples( const SampleIndex& nofSamples);
 	void writeNofConcepts( const std::string& clname, const ConceptIndex& nofConcepts);
+	void writeNofSimRelations( const SampleIndex& nofSamples);
 	void writeConceptClassNames( const std::vector<std::string>& clnames);
 	void writeState( unsigned int state);
 	void writeSample( const SampleIndex& sidx, const std::string& name, const Vector& vec, const SimHash& simHash);
