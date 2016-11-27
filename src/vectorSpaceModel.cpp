@@ -203,7 +203,7 @@ public:
 				if (index <= 0 || (std::size_t)index > ivec->size()) throw strus::runtime_error(_TXT("concept index out of range"));
 				rt.push_back( (*ivec)[ index-1].tostring());
 			}
-			else if (utils::caseInsensitiveEquals( name, "singletons_"))
+			else if (utils::caseInsensitiveStartsWith( name, "singletons_"))
 			{
 				std::string clname( name.c_str() + 11/*strlen("singletons_")*/);
 				std::vector<SampleIndex> res = m_database->readConceptSingletons( clname);
