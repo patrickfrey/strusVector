@@ -244,6 +244,7 @@ void GenGroupContext::tryGroupAssignments(
 	{
 		const std::vector<SampleSimGroupAssignment>& alist = m_groupAssignQueue.get( threadid);
 		std::vector<SampleSimGroupAssignment>::const_iterator ai = alist.begin(), ae = alist.end();
+		unsigned int aidx = 0;
 		for (; ai != ae; ++ai)
 		{
 			SimGroupRef group = m_groupMap.get( ai->conceptIndex);
@@ -254,11 +255,15 @@ void GenGroupContext::tryGroupAssignments(
 				SharedSampleSimGroupMap::Lock SLOCK( &m_sampleSimGroupMap, ai->sampleIndex);
 				if (!m_sampleSimGroupMap.insert( SLOCK, ai->conceptIndex)) continue;
 			}
-			newgroup->addMember( ai->sampleIndex);
+			if (!newgroup->addMember( ai->sampleIndex))
+			{
+				continue;
+			}
 			newgroup->doMutation( *m_samplear, parameter.descendants, age_mutations( *newgroup, parameter.maxage, parameter.mutations), age_mutation_votes( *newgroup, parameter.maxage, parameter.votes));
 			m_groupMap.setGroup( ai->conceptIndex, newgroup);
+			++aidx;
 		}
-		if (!alist.empty() && m_logout) m_logout << string_format( _TXT("assigned %u features to concepts"), alist.size());
+		if (!alist.empty() && m_logout) m_logout << string_format( _TXT("assigned %u features to concepts"), aidx);
 	}
 	catch (const std::bad_alloc& err)
 	{
