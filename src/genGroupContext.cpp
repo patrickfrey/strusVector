@@ -66,13 +66,17 @@ std::vector<ConceptIndex> GenGroupContext::getNeighbourGroups( const SimGroup& g
 				SimGroupRef nbgroup = m_groupMap.get( *si);
 				if (nbgroup.get() && nbgroup->gencode().near( group.gencode(), nbdist))
 				{
-					neighbour_groups.insert( NBGroupStruct( nbdist, *si));
-					++nof_neighbour_groups;
-					if (nof_neighbour_groups >= maxnofresults)
+					if (neighbour_groups.insert( NBGroupStruct( nbdist, *si)).second)
+					{
+						++nof_neighbour_groups;
+					}
+					if (maxnofresults && nof_neighbour_groups >= maxnofresults)
 					{
 						if (nof_neighbour_groups > maxnofresults)
 						{
-							neighbour_groups.erase( --neighbour_groups.end());
+							std::set<NBGroupStruct>::iterator last = neighbour_groups.end();
+							neighbour_groups.erase( --last);
+							--nof_neighbour_groups;
 						}
 						nbdist = neighbour_groups.rbegin()->dist;
 					}
@@ -414,8 +418,7 @@ void GenGroupContext::greedyNeighbourGroupInterchange(
 		{
 			// Try to swallow members in sim_gi as long as it is in eqdist:
 			SimGroup::const_iterator mi = sim_group->begin(), me = sim_group->end();
-			std::size_t midx = 0;
-			while (mi != me)
+			for (; mi != me; ++mi)
 			{
 				if (!group->isMember( *mi))
 				{
@@ -433,17 +436,6 @@ void GenGroupContext::greedyNeighbourGroupInterchange(
 					{
 						break;
 					}
-					++midx;
-
-					// Skip to current element:
-					mi = sim_group->begin(), me = sim_group->end();
-					std::size_t mcnt = 0;
-					for (; mi != me && mcnt < midx; ++mi,++mcnt){}
-				}
-				else
-				{
-					++mi;
-					++midx;
 				}
 			}
 			

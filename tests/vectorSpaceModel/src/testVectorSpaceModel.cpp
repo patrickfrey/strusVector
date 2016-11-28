@@ -290,9 +290,9 @@ int main( int argc, const char** argv)
 		}
 		// Build the model:
 		std::cerr << "building model" << std::endl;
-		if (!builder->run("finalize"))
+		if (!builder->run(""))
 		{
-			throw std::runtime_error( "error in finalize VSM");
+			throw std::runtime_error( "error running VSM builder");
 		}
 		builder.reset();
 		std::cerr << "builder closed" << std::endl;
