@@ -1,0 +1,36 @@
+
+bool GenGroupContext::findClosestGroup( ConceptIndex& res, unsigned short& simdist, const SampleIndex& sampleidx, const SimRelationReader& simrelreader, unsigned short maxsimdist)
+{
+	std::vector<SimRelationMap::Element> elements = simrelreader.readSimRelations( sampleidx);
+	std::vector<SimRelationMap::Element>::const_iterator ri = elements.begin(), re = elements.end();
+	for (; ri != re; ++ri)
+	{
+		std::vector<ConceptIndex> nodes;
+		{
+			SharedSampleSimGroupMap::Lock SLOCK( &m_sampleSimGroupMap, ri->index);
+			nodes = m_sampleSimGroupMap.nodes( SLOCK);
+		}
+		std::vector<ConceptIndex>::const_iterator ni = nodes.begin(), ne = nodes.end();
+		for (; ni != ne; ++ni)
+		{
+			bool doTake = false;
+			{
+				SharedSampleSimGroupMap::Lock SLOCK( &m_sampleSimGroupMap, sampleidx);
+				doTake = (m_sampleSimGroupMap.hasSpace( SLOCK) && !m_sampleSimGroupMap.contains( SLOCK, *ni));
+			}
+			if (doTake)
+			{
+				SimGroupRef group = m_groupMap.get( *ni);
+				if (!group.get()) continue;
+				res = *ni;
+				simdist = (*m_samples)[ sampleidx].dist( *group);
+				if (maxsimdist < simdist) continue;
+				return true;
+			}
+		}
+	}
+	return false;
+}
+
+
+
