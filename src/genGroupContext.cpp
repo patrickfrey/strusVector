@@ -8,6 +8,7 @@
 /// \brief Structure for thread safe operations on representants of similarity classes with help of genetic algorithms
 #include "genGroupContext.hpp"
 #include "dependencyGraph.hpp"
+#include "random.hpp"
 #include "strus/base/string_format.hpp"
 #include "strus/errorBufferInterface.hpp"
 
@@ -16,6 +17,7 @@ using namespace strus::utils;
 
 #undef STRUS_LOWLEVEL_DEBUG
 
+static Random g_random;
 
 static unsigned int age_mutations( const SimGroup& group, unsigned int maxage, unsigned int conf_mutations)
 {
@@ -310,37 +312,42 @@ bool GenGroupContext::greedyChaseFreeFeatures(
 				}
 			}
 		}
-
 		// ...if we did not find a close group, then we found a new one with the two elements as members:
-		ConceptIndex newidx = groupIdAllocator.alloc();
-		SimGroupRef newgroup( new SimGroup( *m_samplear, sidx, neighbour.index, newidx));
+		ConceptIndex newgroupidx = groupIdAllocator.alloc();
+		SimGroupRef newgroup( new SimGroup( *m_samplear, sidx, neighbour.index, newgroupidx));
 		(void)newgroup->doMutation( *m_samplear, parameter.descendants, age_mutations( *newgroup, parameter.maxage, parameter.mutations), age_mutation_votes( *newgroup, parameter.maxage, parameter.votes));
 		bool success = true;
 		{
 			SharedSampleSimGroupMap::Lock SLOCK( &m_sampleSimGroupMap, neighbour.index);
-			success &= m_sampleSimGroupMap.insert( SLOCK, newidx);
+			success &= m_sampleSimGroupMap.insert( SLOCK, newgroupidx);
 		}
 		if (success)
 		{
 			SharedSampleSimGroupMap::Lock SLOCK( &m_sampleSimGroupMap, sidx);
-			success &= m_sampleSimGroupMap.insert( SLOCK, newidx);
+			success &= m_sampleSimGroupMap.insert( SLOCK, newgroupidx);
 		}
 		if (success)
 		{
-			m_groupMap.setGroup( newidx, newgroup);
+			m_groupMap.setGroup( newgroupidx, newgroup);
+			while (parameter.greediness
+				&& g_random.get( 0, parameter.greediness) == 0
+				&& findClosestFreeSample( neighbour, sidx, simrelreader, parameter.simdist)
+				&& tryAddGroupMember( newgroupidx, neighbour.index, parameter.descendants,
+							parameter.mutations, parameter.votes,
+							parameter.maxage)){}
 			return true;
 		}
 		else
 		{
 			{
 				SharedSampleSimGroupMap::Lock SLOCK( &m_sampleSimGroupMap, sidx);
-				m_sampleSimGroupMap.remove( SLOCK, newidx);
+				m_sampleSimGroupMap.remove( SLOCK, newgroupidx);
 			}
 			{
 				SharedSampleSimGroupMap::Lock SLOCK( &m_sampleSimGroupMap, neighbour.index);
-				m_sampleSimGroupMap.remove( SLOCK, newidx);
+				m_sampleSimGroupMap.remove( SLOCK, newgroupidx);
 			}
-			groupIdAllocator.free( newidx);
+			groupIdAllocator.free( newgroupidx);
 			return false;
 		}
 	}

@@ -21,7 +21,7 @@ GenModelConfig::GenModelConfig( const GenModelConfig& o)
 	:simdist(o.simdist),raddist(o.raddist),eqdist(o.eqdist)
 	,mutations(o.mutations),votes(o.votes)
 	,descendants(o.descendants),maxage(o.maxage),iterations(o.iterations)
-	,assignments(o.assignments)
+	,assignments(o.assignments),greediness(o.greediness)
 	,isaf(o.isaf),eqdiff(o.eqdiff)
 	,with_singletons(o.with_singletons)
 	{}
@@ -30,7 +30,7 @@ GenModelConfig::GenModelConfig()
 	:simdist(DefaultSimDist),raddist(DefaultRadDist),eqdist(DefaultEqDist)
 	,mutations(DefaultMutations),votes(DefaultMutationVotes)
 	,descendants(DefaultDescendants),maxage(DefaultMaxAge),iterations(DefaultIterations)
-	,assignments(DefaultAssignments)
+	,assignments(DefaultAssignments),greediness(DefaultGreediness)
 	,isaf((float)DefaultIsaf / 100),eqdiff((float)DefaultEqdiff / 100)
 	,with_singletons((bool)DefaultWithSingletons)
 	{}
@@ -39,7 +39,7 @@ GenModelConfig::GenModelConfig( const std::string& config, unsigned int maxdist,
 	:simdist(defaultcfg.simdist),raddist(defaultcfg.raddist),eqdist(defaultcfg.eqdist)
 	,mutations(defaultcfg.mutations),votes(defaultcfg.votes)
 	,descendants(defaultcfg.descendants),maxage(defaultcfg.maxage),iterations(defaultcfg.iterations)
-	,assignments(defaultcfg.assignments)
+	,assignments(defaultcfg.assignments),greediness(defaultcfg.greediness)
 	,isaf(defaultcfg.isaf),eqdiff(defaultcfg.eqdiff)
 	,with_singletons(defaultcfg.with_singletons)
 {
@@ -81,6 +81,7 @@ void GenModelConfig::parse( std::string& src, unsigned int maxdist, ErrorBufferI
 	}
 	if (extractUIntFromConfigString( maxage, src, "maxage", errorhnd)){}
 	if (extractUIntFromConfigString( assignments, src, "assignments", errorhnd)){}
+	if (extractUIntFromConfigString( greediness, src, "greediness", errorhnd)){}
 	double val;
 	if (extractFloatFromConfigString( val, src, "isaf", errorhnd)){isaf=(float)val;}
 	if (extractFloatFromConfigString( val, src, "eqdiff", errorhnd)){isaf=(float)val;}

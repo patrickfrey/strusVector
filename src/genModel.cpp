@@ -179,10 +179,12 @@ std::vector<SimHash> GenModel::run(
 	GenGroupThreadContext threadContext( &glbcntalloc, &groupContext, &simrelreader, &genParameter, nofThreads, m_errorhnd);
 
 	genParameter.simdist = m_simdist;
+	genParameter.eqdist = m_eqdist;
 	genParameter.descendants = m_descendants;
 	genParameter.mutations = m_mutations;
 	genParameter.votes = m_votes;
 	genParameter.maxage = m_maxage;
+	genParameter.greediness = m_greediness;
 	genParameter.isaf = m_isaf;
 	genParameter.eqdiff = m_eqdiff;
 	genParameter.with_singletons = m_with_singletons;

@@ -30,6 +30,7 @@ struct GenModelConfig
 		DefaultMaxAge = 20,
 		DefaultIterations = 20,
 		DefaultAssignments = 7,
+		DefaultGreediness = 3,
 		DefaultIsaf = 60,
 		DefaultEqdiff = 25,
 		DefaultWithSingletons = 0
@@ -51,6 +52,7 @@ struct GenModelConfig
 	unsigned int maxage;		///< upper bound value used for calculate number of mutations (an older individuum mutates less)
 	unsigned int iterations;	///< number of iterations
 	unsigned int assignments;	///< maximum number of assignments on a sample to a group
+	unsigned int greediness;	///< non-negative integer specifying the greediness of collecting near elements into a newly created group (ascending)
 	float isaf;			///< fraction of samples of a superset that has to be in a subset for declaring the subset as dependent (is a) of the superset
 	float eqdiff;			///< fraction of maximum elements that can to differ for sets to considered to be equal (unfittest competitor elimination)
 	bool with_singletons;		///< true, if singletons should also get into the result
