@@ -58,6 +58,8 @@ public:
 
 	/// \brief Get the number of members that differ (edit distance)
 	unsigned int diffMembers( const SimGroup& o, unsigned int maxdiff) const;
+	/// \brief Evaluate if this group contains all members of a group
+	bool contains( const SimGroup& o) const;
 
 	/// \brief Calculate the fitness of this individual
 	/// \param[in] samplear global array of samples the reference system of this individual is based on

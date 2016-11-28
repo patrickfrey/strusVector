@@ -247,8 +247,8 @@ void GenGroupContext::tryGroupAssignments(
 		for (; ai != ae; ++ai)
 		{
 			SimGroupRef group = m_groupMap.get( ai->conceptIndex);
-			if (!group.get()) continue; 
-	
+			if (!group.get() || !(*m_samplear)[ai->sampleIndex].near( group->gencode(), parameter.simdist)) continue; 
+
 			SimGroupRef newgroup( new SimGroup(*group));
 			{
 				SharedSampleSimGroupMap::Lock SLOCK( &m_sampleSimGroupMap, ai->sampleIndex);
@@ -477,13 +477,22 @@ bool GenGroupContext::similarNeighbourGroupElimination(
 
 		if (group->gencode().near( group->gencode(), parameter.eqdist))
 		{
-			// Eliminate similar group that contains most of this group members and that has a smaller fitness:
-			float eqdiff = (float)std::min( group->size(), sim_group->size()) * parameter.eqdiff;
-			if (group->diffMembers( *sim_group, eqdiff) < (unsigned int)eqdiff)
+			// Eliminate group that is completely contained in another group with a higher fitness:
+			if (sim_group->contains( *group))
 			{
 				if (sim_group->fitness( *m_samplear) > group->fitness( *m_samplear))
 				{
-					removeGroup( groupIdAllocator, group->id());
+					removeGroup( groupIdAllocator, group_id);
+					return true;
+				}
+			}
+			// Eliminate group that if it overlaps for most (specified by parameter eqdiff) elements and has a smaller fitness:
+			float maxeditdist = (unsigned int)((float)std::min( group->size(), sim_group->size()) * parameter.eqdiff);
+			if (group->diffMembers( *sim_group, maxeditdist) < maxeditdist)
+			{
+				if (sim_group->fitness( *m_samplear) > group->fitness( *m_samplear))
+				{
+					removeGroup( groupIdAllocator, group_id);
 					return true;
 				}
 			}

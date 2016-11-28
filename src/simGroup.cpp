@@ -261,6 +261,30 @@ bool SimGroup::doMutation(
 	return false;
 }
 
+bool SimGroup::contains( const SimGroup& o) const
+{
+	std::set<SampleIndex>::const_iterator
+		ai = m_members.begin(), ae = m_members.end(),
+		oi = o.m_members.begin(), oe = o.m_members.end();
+	while (ai != ae && oi != oe)
+	{
+		if (*ai > *oi)
+		{
+			return false;
+		}
+		else if (*ai < *oi)
+		{
+			++ai;
+		}
+		else
+		{
+			++ai;
+			++oi;
+		}
+	}
+	return (oi != oe);
+}
+
 unsigned int SimGroup::diffMembers( const SimGroup& o, unsigned int maxdiff) const
 {
 	unsigned int rt = 0;
