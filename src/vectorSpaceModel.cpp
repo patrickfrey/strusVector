@@ -550,6 +550,16 @@ public:
 				rebase();
 				return true;
 			}
+			else if (utils::caseInsensitiveEquals( command, "base"))
+			{
+				buildSimilarityRelationMap();
+				return true;
+			}
+			else if (utils::caseInsensitiveEquals( command, "learn"))
+			{
+				learnConcepts();
+				return true;
+			}
 			else if (utils::caseInsensitiveEquals( command, "condep"))
 			{
 				buildConceptDependencies();
