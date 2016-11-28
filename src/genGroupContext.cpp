@@ -29,9 +29,27 @@ static unsigned int age_mutation_votes( const SimGroup& group, unsigned int maxa
 	return conf_votes * (std::min( group.age(), maxage) / maxage) + 1;
 }
 
-std::vector<ConceptIndex> GenGroupContext::getNeighbourGroups( const SimGroup& group, unsigned short nbdist) const
+struct NBGroupStruct
 {
-	std::set<ConceptIndex> neighbour_groups;
+	unsigned short dist;
+	ConceptIndex gid;
+
+	NBGroupStruct( unsigned short dist_, const ConceptIndex& gid_)
+		:dist(dist_),gid(gid_){}
+	NBGroupStruct( const NBGroupStruct& o)
+		:dist(o.dist),gid(o.gid){}
+
+	bool operator< ( const NBGroupStruct& o) const
+	{
+		if (dist == o.dist) return gid < o.gid;
+		return dist < o.dist;
+	}
+};
+
+std::vector<ConceptIndex> GenGroupContext::getNeighbourGroups( const SimGroup& group, unsigned short nbdist, unsigned int maxnofresults) const
+{
+	std::set<NBGroupStruct> neighbour_groups;
+	unsigned int nof_neighbour_groups = 0;
 	SimGroup::const_iterator mi = group.begin(), me = group.end();
 	for (; mi != me; ++mi)
 	{
@@ -48,12 +66,27 @@ std::vector<ConceptIndex> GenGroupContext::getNeighbourGroups( const SimGroup& g
 				SimGroupRef nbgroup = m_groupMap.get( *si);
 				if (nbgroup.get() && nbgroup->gencode().near( group.gencode(), nbdist))
 				{
-					neighbour_groups.insert( *si);
+					neighbour_groups.insert( NBGroupStruct( nbdist, *si));
+					++nof_neighbour_groups;
+					if (nof_neighbour_groups >= maxnofresults)
+					{
+						if (nof_neighbour_groups > maxnofresults)
+						{
+							neighbour_groups.erase( --neighbour_groups.end());
+						}
+						nbdist = neighbour_groups.rbegin()->dist;
+					}
 				}
 			}
 		}
 	}
-	return std::vector<ConceptIndex>( neighbour_groups.begin(), neighbour_groups.end());
+	std::vector<ConceptIndex> rt;
+	std::set<NBGroupStruct>::const_iterator ni = neighbour_groups.begin(), ne = neighbour_groups.end();
+	for (; ni != ne; ++ni)
+	{
+		rt.push_back( ni->gid);
+	}
+	return rt;
 }
 
 std::string GenGroupContext::groupMembersString( const ConceptIndex& group_id) const
@@ -370,7 +403,7 @@ void GenGroupContext::greedyNeighbourGroupInterchange(
 	// Go through all neighbour groups that are in a distance closer to eqdist
 	// and integrate their elements as long as it keeps the neighbour group in eqdist.
 	// Then try to integrate elements of groups that are closer to simdist:
-	std::vector<ConceptIndex> neighbour_groups( getNeighbourGroups( *group, parameter.simdist));
+	std::vector<ConceptIndex> neighbour_groups( getNeighbourGroups( *group, parameter.simdist, parameter.greediness));
 	std::vector<ConceptIndex>::const_iterator ni = neighbour_groups.begin(), ne = neighbour_groups.end();
 	for (; ni != ne; ++ni)
 	{
@@ -484,7 +517,7 @@ bool GenGroupContext::similarNeighbourGroupElimination(
 
 	// Go through all neighbour groups that are in a distance closer to eqdist
 	// and delete them if most of the members are all within the group:
-	std::vector<ConceptIndex> neighbour_groups = getNeighbourGroups( *group, parameter.eqdist);
+	std::vector<ConceptIndex> neighbour_groups = getNeighbourGroups( *group, parameter.eqdist, parameter.greediness);
 	std::vector<ConceptIndex>::const_iterator ni = neighbour_groups.begin(), ne = neighbour_groups.end();
 	for (; ni != ne; ++ni)
 	{

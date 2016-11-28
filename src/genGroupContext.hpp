@@ -65,7 +65,7 @@ public:
 		,m_groupAssignQueue(nofThreads_?nofThreads_:1)
 		,m_error(){}
 
-	std::vector<ConceptIndex> getNeighbourGroups( const SimGroup& group, unsigned short nbdist) const;
+	std::vector<ConceptIndex> getNeighbourGroups( const SimGroup& group, unsigned short nbdist, unsigned int maxnofresults) const;
 
 	void removeGroup(
 			SimGroupIdAllocator& localAllocator, const ConceptIndex& group_id);
