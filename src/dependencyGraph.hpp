@@ -17,17 +17,16 @@ namespace strus {
 class SampleSimGroupMap;
 class SimGroupMap;
 
+/// \brief Dependency from first to second (second contains all elements of first)
 typedef std::pair<ConceptIndex,ConceptIndex> Dependency;
 typedef std::set<Dependency> DependencyGraph;
 
 /// \brief Build a directed graph of dependencies of groups derived from the map of samples to groups.
 /// \note A group is dependent on another if every of its member is also member of the other group
-DependencyGraph buildGroupDependencyGraph( std::size_t nofSamples, std::size_t nofGroups, const SampleSimGroupMap& sampleSimGroupMap);
-
-DependencyGraph reduceGroupDependencyGraphToIsa( DependencyGraph& graph, const SimGroupMap& groupMap, float isaf);
+DependencyGraph buildGroupDependencyGraph( std::size_t nofSamples, std::size_t nofGroups, const SampleSimGroupMap& sampleSimGroupMap, const SimGroupMap& groupMap, float isaf);
 
 /// \brief Eliminate circular dependencies from a directed graph represented as set
-void eliminateCircularReferences( DependencyGraph& graph);
+void eliminateCircularReferences( DependencyGraph& graph, const SimGroupMap& groupMap);
 
 }//namespace
 #endif

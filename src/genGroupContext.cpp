@@ -579,8 +579,7 @@ bool GenGroupContext::unfittestGroupElimination(
 void GenGroupContext::eliminateRedundantGroups( const GenGroupParameter& parameter)
 {
 	if (m_logout) m_logout << string_format( _TXT("build the dependency graph of about %u groups"), m_groupMap.nofGroupIdsAllocated());
-	DependencyGraph groupDependencyGraph = buildGroupDependencyGraph( m_samplear->size(), m_groupMap.nofGroupIdsAllocated(), m_sampleSimGroupMap.base());
-	groupDependencyGraph = reduceGroupDependencyGraphToIsa( groupDependencyGraph, m_groupMap, parameter.isaf);
+	DependencyGraph groupDependencyGraph = buildGroupDependencyGraph( m_samplear->size(), m_groupMap.nofGroupIdsAllocated(), m_sampleSimGroupMap.base(), m_groupMap, parameter.isaf);
 #ifdef STRUS_LOWLEVEL_DEBUG
 	std::cerr << _TXT("dependencies before elimination:") << std::endl;
 	{
@@ -592,7 +591,7 @@ void GenGroupContext::eliminateRedundantGroups( const GenGroupParameter& paramet
 	}
 #endif
 	if (m_logout) m_logout << _TXT("eliminate circular references from the graph");
-	eliminateCircularReferences( groupDependencyGraph);
+	eliminateCircularReferences( groupDependencyGraph, m_groupMap);
 	if (m_logout) m_logout << string_format( _TXT("got %u dependencies after elimination"), groupDependencyGraph.size());
 #ifdef STRUS_LOWLEVEL_DEBUG
 	{
