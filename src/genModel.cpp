@@ -258,6 +258,7 @@ std::string GenModel::tostring() const
 		<< ", votes=" << m_votes << std::endl
 		<< ", descendants=" << m_descendants << std::endl
 		<< ", maxage=" << m_maxage << std::endl
+		<< ", greediness=" << m_greediness << std::endl
 		<< ", iterations=" << m_iterations << std::endl
 		<< ", assignments=" << m_assignments << std::endl
 		<< ", isaf=" << m_isaf << std::endl

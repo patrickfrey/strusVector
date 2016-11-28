@@ -123,6 +123,7 @@ std::string GenModelConfig::tostring( bool eolnsep) const
 	printConfigItem( buf, "votes", votes, eolnsep);
 	printConfigItem( buf, "descendants", descendants, eolnsep);
 	printConfigItem( buf, "maxage", maxage, eolnsep);
+	printConfigItem( buf, "greediness", greediness, eolnsep);
 	printConfigItem( buf, "iterations", iterations, eolnsep);
 	printConfigItem( buf, "assignments", assignments, eolnsep);
 	printConfigItem( buf, "isaf", isaf, eolnsep);
