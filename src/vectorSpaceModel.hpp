@@ -40,6 +40,9 @@ public:
 	virtual VectorSpaceModelBuilderInterface* createBuilder( const std::string& configsrc, const DatabaseInterface* database) const;
 	virtual VectorSpaceModelDumpInterface* createDump( const std::string& configsource, const DatabaseInterface* database, const std::string& keyprefix) const;
 
+	virtual std::vector<std::string> builderCommands() const;
+	virtual std::string builderCommandDescription( const std::string& command) const;
+
 private:
 	ErrorBufferInterface* m_errorhnd;	///< buffer for reporting errors
 };

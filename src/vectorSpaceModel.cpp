@@ -579,54 +579,6 @@ public:
 		CATCH_ERROR_ARG1_MAP_RETURN( _TXT("error executing command of '%s' builder: %s"), MODULENAME, *m_errorhnd, false);
 	}
 
-	virtual std::vector<std::string> commands() const
-	{
-		std::vector<std::string> rt;
-		rt.push_back( "base");
-		rt.push_back( "rebase");
-		rt.push_back( "learn");
-		rt.push_back( "finalize");
-		rt.push_back( "clear");
-		rt.push_back( "condep");
-		return rt;
-	}
-
-	virtual std::string commandDescription( const std::string& command) const
-	{
-		try
-		{
-			if (command.empty() || utils::caseInsensitiveEquals( command, "finalize"))
-			{
-				return _TXT("Calculate sparse similarity relation matrix if needed (base) and do learn concepts.");
-			}
-			else if (utils::caseInsensitiveEquals( command, "learn"))
-			{
-				return _TXT("Learn concepts.");
-			}
-			else if (utils::caseInsensitiveEquals( command, "base"))
-			{
-				return _TXT("Calculate sparse similarity relation matrix that is the base datastructure for concept learning.");
-			}
-			else if (utils::caseInsensitiveEquals( command, "rebase"))
-			{
-				return _TXT("Recalculate sparse similarity relation matrix that is the base datastructure for concept learning taking data created during the learning step into account. Makes only sense if the similarity relation matrix was calculated with heuristics (configuration probsim=yes).");
-			}
-			else if (utils::caseInsensitiveEquals( command, "condep"))
-			{
-				return _TXT("Recalculate concept dependencies.");
-			}
-			else if (utils::caseInsensitiveEquals( command, "clear"))
-			{
-				return _TXT("Reset the database, delete all vectors inserted and data accumulated by the builder.");
-			}
-			else
-			{
-				throw strus::runtime_error(_TXT("unknown command '%s'"), command.c_str());
-			}
-		}
-		CATCH_ERROR_ARG1_MAP_RETURN( _TXT("error getting description of command of '%s' builder: %s"), MODULENAME, *m_errorhnd, std::string());
-	}
-
 private:
 	void rebase()
 	{
@@ -879,5 +831,57 @@ VectorSpaceModelDumpInterface* VectorSpaceModel::createDump( const std::string& 
 		return new VectorSpaceModelDump( database, configsource, keyprefix, m_errorhnd);
 	}
 	CATCH_ERROR_ARG1_MAP_RETURN( _TXT("error creating '%s' builder: %s"), MODULENAME, *m_errorhnd, 0);
+}
+
+std::vector<std::string> VectorSpaceModel::builderCommands() const
+{
+	try
+	{
+		std::vector<std::string> rt;
+		rt.push_back( "base");
+		rt.push_back( "rebase");
+		rt.push_back( "learn");
+		rt.push_back( "finalize");
+		rt.push_back( "clear");
+		rt.push_back( "condep");
+		return rt;
+	}
+	CATCH_ERROR_ARG1_MAP_RETURN( _TXT("error getting list of commands of '%s' builder: %s"), MODULENAME, *m_errorhnd, std::vector<std::string>());
+}
+
+std::string VectorSpaceModel::builderCommandDescription( const std::string& command) const
+{
+	try
+	{
+		if (command.empty() || utils::caseInsensitiveEquals( command, "finalize"))
+		{
+			return _TXT("Calculate sparse similarity relation matrix if needed (base) and do learn concepts.");
+		}
+		else if (utils::caseInsensitiveEquals( command, "learn"))
+		{
+			return _TXT("Learn concepts.");
+		}
+		else if (utils::caseInsensitiveEquals( command, "base"))
+		{
+			return _TXT("Calculate sparse similarity relation matrix that is the base datastructure for concept learning.");
+		}
+		else if (utils::caseInsensitiveEquals( command, "rebase"))
+		{
+			return _TXT("Recalculate sparse similarity relation matrix that is the base datastructure for concept learning taking data created during the learning step into account. Makes only sense if the similarity relation matrix was calculated with heuristics (configuration probsim=yes).");
+		}
+		else if (utils::caseInsensitiveEquals( command, "condep"))
+		{
+			return _TXT("Recalculate concept dependencies.");
+		}
+		else if (utils::caseInsensitiveEquals( command, "clear"))
+		{
+			return _TXT("Reset the database, delete all vectors inserted and data accumulated by the builder.");
+		}
+		else
+		{
+			throw strus::runtime_error(_TXT("unknown command '%s'"), command.c_str());
+		}
+	}
+	CATCH_ERROR_ARG1_MAP_RETURN( _TXT("error getting description of command of '%s' builder: %s"), MODULENAME, *m_errorhnd, std::string());
 }
 
