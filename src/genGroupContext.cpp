@@ -263,7 +263,7 @@ void GenGroupContext::tryGroupAssignments(
 			m_groupMap.setGroup( ai->conceptIndex, newgroup);
 			++aidx;
 		}
-		if (!alist.empty() && m_logout) m_logout << string_format( _TXT("assigned %u features to concepts"), aidx);
+		if (aidx && m_logout) m_logout << string_format( _TXT("assigned %u features to concepts"), aidx);
 	}
 	catch (const std::bad_alloc& err)
 	{
