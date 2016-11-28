@@ -29,7 +29,7 @@ static unsigned int age_mutation_votes( const SimGroup& group, unsigned int maxa
 	return conf_votes * (std::min( group.age(), maxage) / maxage) + 1;
 }
 
-std::vector<ConceptIndex> GenGroupContext::getNeighbourGroups( const SimGroup& group)
+std::vector<ConceptIndex> GenGroupContext::getNeighbourGroups( const SimGroup& group, unsigned short nbdist) const
 {
 	std::set<ConceptIndex> neighbour_groups;
 	SimGroup::const_iterator mi = group.begin(), me = group.end();
@@ -45,7 +45,11 @@ std::vector<ConceptIndex> GenGroupContext::getNeighbourGroups( const SimGroup& g
 		{
 			if (*si != group.id())
 			{
-				neighbour_groups.insert( *si);
+				SimGroupRef nbgroup = m_groupMap.get( *si);
+				if (nbgroup.get() && nbgroup->gencode().near( group.gencode(), nbdist))
+				{
+					neighbour_groups.insert( *si);
+				}
 			}
 		}
 	}
@@ -366,7 +370,7 @@ void GenGroupContext::greedyNeighbourGroupInterchange(
 	// Go through all neighbour groups that are in a distance closer to eqdist
 	// and integrate their elements as long as it keeps the neighbour group in eqdist.
 	// Then try to integrate elements of groups that are closer to simdist:
-	std::vector<ConceptIndex> neighbour_groups( getNeighbourGroups( *group));
+	std::vector<ConceptIndex> neighbour_groups( getNeighbourGroups( *group, parameter.simdist));
 	std::vector<ConceptIndex>::const_iterator ni = neighbour_groups.begin(), ne = neighbour_groups.end();
 	for (; ni != ne; ++ni)
 	{
@@ -480,7 +484,7 @@ bool GenGroupContext::similarNeighbourGroupElimination(
 
 	// Go through all neighbour groups that are in a distance closer to eqdist
 	// and delete them if most of the members are all within the group:
-	std::vector<ConceptIndex> neighbour_groups = getNeighbourGroups( *group);
+	std::vector<ConceptIndex> neighbour_groups = getNeighbourGroups( *group, parameter.eqdist);
 	std::vector<ConceptIndex>::const_iterator ni = neighbour_groups.begin(), ne = neighbour_groups.end();
 	for (; ni != ne; ++ni)
 	{
