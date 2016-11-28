@@ -540,7 +540,7 @@ public:
 	{
 		try
 		{
-			if (command.empty() || utils::caseInsensitiveEquals( command, "finalize"))
+			if (command.empty())
 			{
 				finalize();
 				return true;
@@ -841,7 +841,6 @@ std::vector<std::string> VectorSpaceModel::builderCommands() const
 		rt.push_back( "base");
 		rt.push_back( "rebase");
 		rt.push_back( "learn");
-		rt.push_back( "finalize");
 		rt.push_back( "clear");
 		rt.push_back( "condep");
 		return rt;
@@ -853,9 +852,9 @@ std::string VectorSpaceModel::builderCommandDescription( const std::string& comm
 {
 	try
 	{
-		if (command.empty() || utils::caseInsensitiveEquals( command, "finalize"))
+		if (command.empty())
 		{
-			return _TXT("Calculate sparse similarity relation matrix if needed (base) and do learn concepts.");
+			return _TXT("Short cut for subsequent call of 'base' and 'learn'. Calculate sparse similarity relation matrix if needed (=base) and do learn concepts (=learn).");
 		}
 		else if (utils::caseInsensitiveEquals( command, "learn"))
 		{
