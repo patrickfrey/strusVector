@@ -69,9 +69,10 @@ void GenGroupThreadContext::runGroupAssignments()
 		unsigned int ti=0, te=m_nofThreads;
 		for (ti=0; ti<te; ++ti)
 		{
-			tgroup.create_thread( boost::bind( &GenGroupContext::tryGroupAssignments, m_groupctx, ti, *m_parameter));
+			/*[-]*/m_groupctx->tryGroupAssignments( ti, *m_parameter);
+			//[+] tgroup.create_thread( boost::bind( &GenGroupContext::tryGroupAssignments, m_groupctx, ti, *m_parameter));
 		}
-		tgroup.join_all();
+		//[+] tgroup.join_all();
 	}
 	else
 	{
