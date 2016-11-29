@@ -16,7 +16,7 @@
 using namespace strus;
 using namespace strus::utils;
 
-#define STRUS_LOWLEVEL_DEBUG
+#undef STRUS_LOWLEVEL_DEBUG
 
 static Random g_random;
 
@@ -52,36 +52,36 @@ std::vector<ConceptIndex> GenGroupContext::getNeighbourGroups( const SimGroup& g
 	std::set<NBGroupStruct> neighbour_groups;
 	unsigned int nof_neighbour_groups = 0;
 	SimGroup::const_iterator mi = group.begin(), me = group.end();
+	std::set<ConceptIndex> nodes;
 	for (; mi != me; ++mi)
 	{
-		std::vector<ConceptIndex> nodes;
+		std::vector<ConceptIndex> mi_nodes;
 		{
 			SharedSampleSimGroupMap::Lock SLOCK( &m_sampleSimGroupMap, *mi);
-			nodes = m_sampleSimGroupMap.nodes( SLOCK);
+			mi_nodes = m_sampleSimGroupMap.nodes( SLOCK);
 		}
-		std::vector<ConceptIndex>::const_iterator si = nodes.begin(), se = nodes.end();
-		for (; si != se; ++si)
+		std::vector<ConceptIndex>::const_iterator ni = mi_nodes.begin(), ne = mi_nodes.end();
+		for (; ni != ne; ++ni) if (*ni != group.id()) nodes.insert( *ni);
+	}
+	std::set<ConceptIndex>::const_iterator si = nodes.begin(), se = nodes.end();
+	for (; si != se; ++si)
+	{
+		SimGroupRef nbgroup = m_groupMap.get( *si);
+		if (nbgroup.get() && nbgroup->gencode().near( group.gencode(), nbdist))
 		{
-			if (*si != group.id())
+			if (neighbour_groups.insert( NBGroupStruct( nbdist, *si)).second)
 			{
-				SimGroupRef nbgroup = m_groupMap.get( *si);
-				if (nbgroup.get() && nbgroup->gencode().near( group.gencode(), nbdist))
+				++nof_neighbour_groups;
+			}
+			if (maxnofresults && nof_neighbour_groups >= maxnofresults)
+			{
+				if (nof_neighbour_groups > maxnofresults)
 				{
-					if (neighbour_groups.insert( NBGroupStruct( nbdist, *si)).second)
-					{
-						++nof_neighbour_groups;
-					}
-					if (maxnofresults && nof_neighbour_groups >= maxnofresults)
-					{
-						if (nof_neighbour_groups > maxnofresults)
-						{
-							std::set<NBGroupStruct>::iterator last = neighbour_groups.end();
-							neighbour_groups.erase( --last);
-							--nof_neighbour_groups;
-						}
-						nbdist = neighbour_groups.rbegin()->dist;
-					}
+					std::set<NBGroupStruct>::iterator last = neighbour_groups.end();
+					neighbour_groups.erase( --last);
+					--nof_neighbour_groups;
 				}
+				nbdist = neighbour_groups.rbegin()->dist;
 			}
 		}
 	}
@@ -455,9 +455,10 @@ void GenGroupContext::greedyNeighbourGroupInterchange(
 						throw strus::runtime_error(_TXT("internal: inconsistency in group reference not in sim group map, but element part of group"));
 					}
 					(void)newgroup->doMutation( *m_samplear, parameter.descendants, age_mutations( *newgroup, parameter.maxage, parameter.mutations), age_mutation_votes( *newgroup, parameter.maxage, parameter.votes));
-					m_groupMap.setGroup( group_id, group = newgroup);
+					m_groupMap.setGroup( group_id, newgroup);
+					group = m_groupMap.get( group_id);
 					++interchangecnt;
-					if (!sim_group->gencode().near( group->gencode(), parameter.eqdist))
+					if (!group.get() || !sim_group->gencode().near( group->gencode(), parameter.eqdist))
 					{
 						break;
 					}
@@ -465,7 +466,7 @@ void GenGroupContext::greedyNeighbourGroupInterchange(
 			}
 			
 		}
-		if (group->gencode().near( sim_group->gencode(), parameter.simdist))
+		if (group.get() && group->gencode().near( sim_group->gencode(), parameter.simdist))
 		{
 			// Try add one member of sim_gi to gi that is similar to gi:
 			SimGroup::const_iterator mi = sim_group->begin(), me = sim_group->end();
@@ -478,6 +479,8 @@ void GenGroupContext::greedyNeighbourGroupInterchange(
 						++interchangecnt;
 					}
 				}
+				group = m_groupMap.get( group_id);
+				if (!group.get()) break;
 			}
 		}
 	}

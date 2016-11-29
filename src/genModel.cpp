@@ -23,7 +23,7 @@
 #include <algorithm>
 
 using namespace strus;
-#undef STRUS_LOWLEVEL_DEBUG
+#define STRUS_LOWLEVEL_DEBUG
 
 static void GenGroupProcedure_greedyChaseFreeFeatures( const GenGroupParameter* parameter, GlobalCountAllocator* glbcnt, GenGroupContext* genGroupContext, const SimRelationReader* simrelreader, std::size_t startidx, std::size_t endidx, ErrorBufferInterface* errorhnd)
 {
@@ -214,9 +214,6 @@ std::vector<SimHash> GenModel::run(
 
 		if (groupContext.logout()) groupContext.logout() << string_format( _TXT("starting iteration %u"), iteration);
 
-#ifdef STRUS_LOWLEVEL_DEBUG
-		groupContext.checkSimGroupStructures();
-#endif
 		if (groupContext.logout()) groupContext.logout() << _TXT("chasing free elements");
 		threadContext.run( &GenGroupProcedure_greedyChaseFreeFeatures, 0, samplear.size());
 
@@ -240,6 +237,11 @@ std::vector<SimHash> GenModel::run(
 
 		if (groupContext.logout()) groupContext.logout() << _TXT("garbage collection of groupids leaked");
 		groupContext.garbageCollectSimGroupIds();
+
+#ifdef STRUS_LOWLEVEL_DEBUG
+		if (groupContext.logout()) groupContext.logout() << _TXT("checking consistency of structures");
+		groupContext.checkSimGroupStructures();
+#endif
 	}/*for (; iteration...*/
 
 	if (groupContext.logout()) groupContext.logout() << _TXT("eliminating redundant (dependent) groups");

@@ -34,7 +34,10 @@ public:
 	ConceptIndex operator[]( const ConceptIndex& cid) const
 	{
 		if (cid == 0 || (std::size_t)cid > m_ar.size()) throw strus::runtime_error(_TXT("array bound read in sim group id map"));
-		if (m_ar[ cid-1] == 0) throw strus::runtime_error(_TXT("access unknown concept id"));
+		if (m_ar[ cid-1] == 0)
+		{
+			throw strus::runtime_error(_TXT("access unknown concept id"));
+		}
 		return m_ar[ cid-1];
 	}
 
