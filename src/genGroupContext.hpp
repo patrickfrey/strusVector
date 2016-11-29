@@ -30,7 +30,6 @@ namespace strus {
 class ErrorBufferInterface;
 
 /// \brief Some constants that are not configurable yet
-#define STRUS_VECTOR_MAXAGE_MATURE_PERCENTAGE 30   // define what precentage of age compared with maxage is considered mature
 #define STRUS_VECTOR_BAD_FITNESS_FRACTION     0.6  // factor of fitness considered bad compared with the best fitness of the group, used to decide wheter a 'mature' group can be left when maximum capacity of releations is reached
 
 struct GenGroupParameter
