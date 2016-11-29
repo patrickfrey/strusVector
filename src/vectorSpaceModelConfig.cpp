@@ -84,7 +84,7 @@ void GenModelConfig::parse( std::string& src, unsigned int maxdist, ErrorBufferI
 	if (extractUIntFromConfigString( greediness, src, "greediness", errorhnd)){}
 	double val;
 	if (extractFloatFromConfigString( val, src, "isaf", errorhnd)){isaf=(float)val;}
-	if (extractFloatFromConfigString( val, src, "eqdiff", errorhnd)){isaf=(float)val;}
+	if (extractFloatFromConfigString( val, src, "eqdiff", errorhnd)){eqdiff=(float)val;}
 	if (extractBooleanFromConfigString( with_singletons, src, "singletons", errorhnd)){}
 
 	if (mutations == 0 || descendants == 0 || maxage == 0 || iterations == 0)

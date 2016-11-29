@@ -9,6 +9,7 @@
 #ifndef _STRUS_VECTOR_SPACE_MODEL_SAMPLE_TO_SIM_GROUP_MAP_HPP_INCLUDED
 #define _STRUS_VECTOR_SPACE_MODEL_SAMPLE_TO_SIM_GROUP_MAP_HPP_INCLUDED
 #include "simGroup.hpp"
+#include "simGroupIdMap.hpp"
 #include "sharedArrayMutex.hpp"
 #include "utils.hpp"
 #include <map>
@@ -75,6 +76,8 @@ public:
 	const_node_iterator node_begin( std::size_t ndidx) const	{const Node& nd = m_nodear[ ndidx]; return const_node_iterator( nd.groupidx);}
 	const_node_iterator node_end( std::size_t ndidx) const		{const Node& nd = m_nodear[ ndidx]; return const_node_iterator( nd.groupidx + nd.size);}
 
+	void rewrite( const SimGroupIdMap& groupIdMap);
+
 private:
 	void init();
 
@@ -93,6 +96,7 @@ private:
 		bool remove( const ConceptIndex& gix);
 		bool contains( const ConceptIndex& gidx) const;
 		void check( ConceptIndex maxnodesize) const;
+		void rewrite( const SimGroupIdMap& groupIdMap);
 	};
 	Node* m_nodear;
 	ConceptIndex* m_refs;
@@ -143,7 +147,10 @@ public:
 
 	std::vector<ConceptIndex> nodes( const Lock& nd) const		{return std::vector<ConceptIndex>( &*Parent::node_begin(nd.id()), &*Parent::node_end(nd.id()));}
 
+	/// \brief Access to base data structure for non threadsafe access
 	const SampleSimGroupMap& base() const				{return *this;}
+	/// \brief Access to base data structure for non threadsafe access
+	SampleSimGroupMap& base()					{return *this;}
 };
 
 }//namespace

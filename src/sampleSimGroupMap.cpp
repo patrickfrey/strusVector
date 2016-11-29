@@ -163,6 +163,24 @@ void SampleSimGroupMap::Node::check( ConceptIndex maxnodesize) const
 	}
 }
 
+void SampleSimGroupMap::Node::rewrite( const SimGroupIdMap& groupIdMap)
+{
+	ConceptIndex ii = 0;
+	for (; ii<size; ++ii)
+	{
+		groupidx[ii] = groupIdMap[ groupidx[ii]];
+	}
+}
+
+void SampleSimGroupMap::rewrite( const SimGroupIdMap& groupIdMap)
+{
+	std::size_t ni = 0, ne = m_nodearsize;
+	for (; ni != ne; ++ni)
+	{
+		m_nodear[ni].rewrite( groupIdMap);
+	}
+}
+
 void SharedSampleSimGroupMap::check() const
 {
 	std::size_t ni = 0, ne = nofNodes();

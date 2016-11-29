@@ -24,6 +24,11 @@ ConceptIndex GlobalCountAllocator::get( unsigned int cnt)
 	return rt;
 }
 
+void GlobalCountAllocator::setCounter( const ConceptIndex& value)
+{
+	m_cnt.set( ((value-1 + CacheLineSize-1) / CacheLineSize) * CacheLineSize + 1);
+}
+
 ConceptIndex SimGroupIdAllocator::alloc()
 {
 	ConceptIndex rt;
@@ -51,10 +56,10 @@ void SimGroupIdAllocator::free( const ConceptIndex& idx)
 }
 
 SimGroupMap::SimGroupMap()
-	:m_null(),m_cnt(0),m_armem(0),m_ar(0),m_arsize(0){}
+	:m_null(),m_armem(0),m_ar(0),m_arsize(0){}
 
-SimGroupMap::SimGroupMap( GlobalCountAllocator* cnt_, std::size_t maxNofGroups)
-	:m_null(),m_cnt(cnt_),m_armem(0),m_ar(0),m_arsize((maxNofGroups + Block::Size - 1) / Block::Size)
+SimGroupMap::SimGroupMap( std::size_t maxNofGroups)
+	:m_null(),m_armem(0),m_ar(0),m_arsize((maxNofGroups + Block::Size - 1) / Block::Size)
 {
 	m_armem = utils::aligned_malloc( m_arsize * sizeof(BlockRef), CacheLineSize);
 	if (!m_armem) throw std::bad_alloc();
@@ -116,5 +121,4 @@ void SimGroupMap::resetGroup( const ConceptIndex& cidx)
 		blk->ar[ blockofs].reset();
 	}
 }
-
 

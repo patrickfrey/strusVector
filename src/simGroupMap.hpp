@@ -29,6 +29,8 @@ public:
 		return m_cnt.value()-1;
 	}
 
+	void setCounter( const ConceptIndex& value);
+
 private:
 	utils::AtomicCounter<ConceptIndex> m_cnt;
 	ConceptIndex m_maxNofCount;
@@ -56,21 +58,12 @@ class SimGroupMap
 {
 public:
 	SimGroupMap();
-	SimGroupMap( GlobalCountAllocator* cnt_, std::size_t maxNofGroups);
+	SimGroupMap( std::size_t maxNofGroups);
 	~SimGroupMap();
 
 	const SimGroupRef& get( const ConceptIndex& cidx) const;
 	void setGroup( const ConceptIndex& cidx, const SimGroupRef& group);
 	void resetGroup( const ConceptIndex& cidx);
-
-	ConceptIndex nofGroupIdsAllocated() const
-	{
-		return m_cnt->nofGroupIdsAllocated();
-	}
-	GlobalCountAllocator* idAllocator()
-	{
-		return m_cnt;
-	}
 
 private:
 	SimGroupMap( const SimGroupMap&){};	//< non copyable
@@ -89,7 +82,6 @@ private:
 
 private:
 	SimGroupRef m_null;
-	GlobalCountAllocator* m_cnt;		//< global allocator of group ids
 	void* m_armem;				//< aligned memory for array of blocks
 	BlockRef* m_ar;				//< array of blocks
 	std::size_t m_arsize;			//< size of array of blocks (maximum number of groups -> not growing)

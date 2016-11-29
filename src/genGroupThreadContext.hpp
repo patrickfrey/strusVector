@@ -21,7 +21,7 @@ class ErrorBufferInterface;
 
 typedef void (*GenGroupProcedure)( 
 		const GenGroupParameter* parameter,
-		SimGroupIdAllocator* groupIdAllocator,
+		GlobalCountAllocator* glbcnt,
 		GenGroupContext* genGroupContext,
 		const SimRelationReader* simrelreader,
 		std::size_t startidx, std::size_t endidx,
@@ -47,8 +47,6 @@ private:
 	unsigned int m_nofThreads;
 	GenGroupContext* m_groupctx;
 	const SimRelationReader* m_simrelreader;
-	SampleSimGroupAssignmentDispQueue m_groupAssignQueue;	//< queue for cross assignements to groups
-	std::vector<SimGroupIdAllocator> m_allocators;
 	const GenGroupParameter* m_parameter;
 };
 

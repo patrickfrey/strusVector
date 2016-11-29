@@ -59,9 +59,9 @@ public:
 		,m_logout( logfile_)
 		,m_cntalloc(cnt_)
 		,m_samplear(&samplear_)
-		,m_groupMap(cnt_,maxNofGroups_)
+		,m_groupMap(maxNofGroups_)
 		,m_sampleSimGroupMap(samplear_.size(), assignments_)
-		,m_groupAssignQueue(nofThreads_?nofThreads_:1)
+		,m_groupAssignQueue()
 		,m_error(){}
 
 	std::vector<ConceptIndex> getNeighbourGroups( const SimGroup& group, unsigned short nbdist, unsigned int maxnofresults) const;
@@ -90,7 +90,8 @@ public:
 
 	/// \brief Try to make the assignments referenced by thread id of new elements to groups
 	void tryGroupAssignments(
-			std::size_t threadid,
+			std::vector<SampleSimGroupAssignment>::const_iterator start_itr,
+			std::vector<SampleSimGroupAssignment>::const_iterator end_itr,
 			const GenGroupParameter& parameter);
 
 	/// \brief Try to group a free feature with its closest free neighbour or attach it to the closest group
@@ -125,6 +126,9 @@ public:
 			const ConceptIndex& group_id,
 			const GenGroupParameter& parameter);
 
+	/// \brief Garbage collection of allocated and leaked sim group idenitifiers
+	void garbageCollectSimGroupIds();
+
 	/// \brief Remove groups that are dependent of others
 	void eliminateRedundantGroups( const GenGroupParameter& parameter);
 
@@ -135,6 +139,9 @@ public:
 			SampleConceptIndexMap& sampleConceptIndexMap,
 			ConceptSampleIndexMap& conceptSampleIndexMap,
 			const GenGroupParameter& parameter);
+
+	/// \brief Fetch all assignment instructions collected in the queue and clear the queue
+	std::vector<SampleSimGroupAssignment> fetchGroupAssignments();
 
 	Logger& logout()
 	{
@@ -172,7 +179,7 @@ private:
 	const std::vector<SimHash>* m_samplear;			//< array of features (samples)
 	SimGroupMap m_groupMap;					//< map of similarity groups
 	SharedSampleSimGroupMap m_sampleSimGroupMap;		//< map of sample idx to group idx
-	SampleSimGroupAssignmentDispQueue m_groupAssignQueue;	//< queue for cross assignements to groups
+	SampleSimGroupAssignmentQueue m_groupAssignQueue;	//< queue for cross assignements to groups
 	utils::Mutex m_errmutex;
 	std::string m_error;
 };

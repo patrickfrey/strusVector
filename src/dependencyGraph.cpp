@@ -18,7 +18,7 @@ using namespace strus::utils;
 typedef std::pair<ConceptIndex,ConceptIndex> Dependency;
 typedef std::set<Dependency> DependencyGraph;
 
-DependencyGraph strus::buildGroupDependencyGraph( std::size_t nofSamples, std::size_t nofGroups, const SampleSimGroupMap& sampleSimGroupMap, const SimGroupMap& groupMap, float isaf)
+DependencyGraph strus::buildGroupDependencyGraph( std::size_t nofSamples, const SampleSimGroupMap& sampleSimGroupMap, const SimGroupMap& groupMap, float isaf)
 {
 	DependencyGraph rt;
 	SampleIndex si=0, se=nofSamples;
@@ -83,7 +83,7 @@ void strus::eliminateCircularReferences( DependencyGraph& graph, const SimGroupM
 			if (dep_hi != graph.end())
 			{
 				// Found a circular reference, eliminate the dependency to the current node:
-				if (hi == dep_hi) throw strus::runtime_error(_TXT("internal: found group dependency to itself"));
+				if (hi == dep_hi) --hi; // ... ensure that the next time we get on for loop increment, we get to the correct follow element.
 				graph.erase( dep_hi);
 			}
 			// Expand the set of vertices directed to from the follow arcs of the processed edge:
@@ -97,7 +97,7 @@ void strus::eliminateCircularReferences( DependencyGraph& graph, const SimGroupM
 					SimGroupRef group_second = groupMap.get( next_hi->second);
 					if (group_first.get() && group_second.get() && group_first->size() == group_second->size())
 					{
-						queue.push_back( hi->second);
+						queue.push_back( next_hi->second);
 					}
 				}
 			}

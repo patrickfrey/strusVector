@@ -21,9 +21,9 @@ class SimGroupMap;
 typedef std::pair<ConceptIndex,ConceptIndex> Dependency;
 typedef std::set<Dependency> DependencyGraph;
 
-/// \brief Build a directed graph of dependencies of groups derived from the map of samples to groups.
-/// \note A group is dependent on another if every of its member is also member of the other group
-DependencyGraph buildGroupDependencyGraph( std::size_t nofSamples, std::size_t nofGroups, const SampleSimGroupMap& sampleSimGroupMap, const SimGroupMap& groupMap, float isaf);
+/// \brief Build a directed graph of dependencies of groups derived from the maps of samples and groups.
+/// \note A group is dependent on another if every of its member is also member of the other group and it has a sufficient fraction of members of the group it is a subset of (isaf parameter)
+DependencyGraph buildGroupDependencyGraph( std::size_t nofSamples, const SampleSimGroupMap& sampleSimGroupMap, const SimGroupMap& groupMap, float isaf);
 
 /// \brief Eliminate circular dependencies from a directed graph represented as set
 void eliminateCircularReferences( DependencyGraph& graph, const SimGroupMap& groupMap);

@@ -9,13 +9,14 @@
 #include "genGroupContext.hpp"
 #include "dependencyGraph.hpp"
 #include "random.hpp"
+#include "simGroupIdMap.hpp"
 #include "strus/base/string_format.hpp"
 #include "strus/errorBufferInterface.hpp"
 
 using namespace strus;
 using namespace strus::utils;
 
-#undef STRUS_LOWLEVEL_DEBUG
+#define STRUS_LOWLEVEL_DEBUG
 
 static Random g_random;
 
@@ -116,7 +117,7 @@ void GenGroupContext::checkSimGroupStructures()
 	enum {MaxNofErrors = 30};
 	unsigned int nofErrors = 0;
 
-	ConceptIndex gi = 1, ge = m_groupMap.nofGroupIdsAllocated()+1;
+	ConceptIndex gi = 1, ge = m_cntalloc->nofGroupIdsAllocated()+1;
 	for (; gi != ge; ++gi)
 	{
 		SimGroupRef group = m_groupMap.get( gi);
@@ -289,13 +290,13 @@ bool GenGroupContext::findClosestFreeSample( SimRelationMap::Element& res, const
 }
 
 void GenGroupContext::tryGroupAssignments(
-		std::size_t threadid,
+		std::vector<SampleSimGroupAssignment>::const_iterator start_itr,
+		std::vector<SampleSimGroupAssignment>::const_iterator end_itr,
 		const GenGroupParameter& parameter)
 {
 	try
 	{
-		const std::vector<SampleSimGroupAssignment>& alist = m_groupAssignQueue.get( threadid);
-		std::vector<SampleSimGroupAssignment>::const_iterator ai = alist.begin(), ae = alist.end();
+		std::vector<SampleSimGroupAssignment>::const_iterator ai = start_itr, ae = end_itr;
 		unsigned int aidx = 0;
 		for (; ai != ae; ++ai)
 		{
@@ -645,10 +646,32 @@ bool GenGroupContext::unfittestGroupElimination(
 	return rt;
 }
 
+void GenGroupContext::garbageCollectSimGroupIds()
+{
+	SimGroupIdMap groupIdMap;
+	ConceptIndex gi = 1, ge = m_cntalloc->nofGroupIdsAllocated()+1;
+	for (; gi != ge; ++gi)
+	{
+		SimGroupRef group = m_groupMap.get( gi);
+		if (group.get())
+		{
+			ConceptIndex new_gi = groupIdMap.allocate( gi);
+			if (gi != new_gi)
+			{
+				group->setId( new_gi);
+				m_groupMap.setGroup( new_gi, group);
+				m_groupMap.resetGroup( gi);
+			}
+		}
+	}
+	m_sampleSimGroupMap.base().rewrite( groupIdMap);
+	m_cntalloc->setCounter( groupIdMap.endIndex());
+}
+
 void GenGroupContext::eliminateRedundantGroups( const GenGroupParameter& parameter)
 {
-	if (m_logout) m_logout << string_format( _TXT("build the dependency graph of about %u groups"), m_groupMap.nofGroupIdsAllocated());
-	DependencyGraph groupDependencyGraph = buildGroupDependencyGraph( m_samplear->size(), m_groupMap.nofGroupIdsAllocated(), m_sampleSimGroupMap.base(), m_groupMap, parameter.isaf);
+	if (m_logout) m_logout << string_format( _TXT("build the dependency graph of about %u groups"), m_cntalloc->nofGroupIdsAllocated());
+	DependencyGraph groupDependencyGraph = buildGroupDependencyGraph( m_samplear->size(), m_sampleSimGroupMap.base(), m_groupMap, parameter.isaf);
 #ifdef STRUS_LOWLEVEL_DEBUG
 	std::cerr << _TXT("dependencies before elimination:") << std::endl;
 	{
@@ -714,8 +737,8 @@ void GenGroupContext::collectResults(
 	if (m_logout) m_logout << string_format( _TXT("found %u singletons"), singletons.size());
 
 	// Add the groups to the result and collect group members into conceptSampleIndexMap:
-	std::vector<ConceptIndex> gidmap( m_groupMap.nofGroupIdsAllocated(), 0);
-	ConceptIndex gi = 1, ge = m_groupMap.nofGroupIdsAllocated()+1;
+	std::vector<ConceptIndex> gidmap( m_cntalloc->nofGroupIdsAllocated(), 0);
+	ConceptIndex gi = 1, ge = m_cntalloc->nofGroupIdsAllocated()+1;
 	for (; gi != ge; ++gi)
 	{
 		const SimGroupRef& group = m_groupMap.get( gi);
@@ -764,7 +787,7 @@ void GenGroupContext::collectResults(
 
 #ifdef STRUS_LOWLEVEL_DEBUG
 	std::cerr << string_format( _TXT("got %u categories"), results.size()) << std::endl;
-	gi = 1, ge = m_groupMap.nofGroupIdsAllocated()+1;
+	gi = 1, ge = m_cntalloc->nofGroupIdsAllocated()+1;
 	for (; gi != ge; ++gi)
 	{
 		const SimGroupRef& group = m_groupMap.get( gi);
@@ -782,4 +805,9 @@ void GenGroupContext::collectResults(
 #endif
 }
 
+
+std::vector<SampleSimGroupAssignment> GenGroupContext::fetchGroupAssignments()
+{
+	return m_groupAssignQueue.fetchAll();
+}
 

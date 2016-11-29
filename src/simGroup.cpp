@@ -282,7 +282,7 @@ bool SimGroup::contains( const SimGroup& o) const
 			++oi;
 		}
 	}
-	return (oi != oe);
+	return (oi == oe);
 }
 
 unsigned int SimGroup::diffMembers( const SimGroup& o, unsigned int maxdiff) const

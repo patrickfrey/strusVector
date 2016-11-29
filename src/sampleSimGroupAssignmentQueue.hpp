@@ -24,6 +24,11 @@ public:
 		:sampleIndex(sampleIndex_),conceptIndex(conceptIndex_){}
 	SampleSimGroupAssignment( const SampleSimGroupAssignment& o)
 		:sampleIndex(o.sampleIndex),conceptIndex(o.conceptIndex){}
+
+	bool operator < (const SampleSimGroupAssignment& o) const
+	{
+		return (conceptIndex == o.conceptIndex) ? (sampleIndex < o.sampleIndex) : (conceptIndex < o.conceptIndex);
+	}
 };
 
 class SampleSimGroupAssignmentQueue
@@ -31,46 +36,13 @@ class SampleSimGroupAssignmentQueue
 public:
 	SampleSimGroupAssignmentQueue(){}
 
-	void push( const SampleIndex& sampleIndex, const ConceptIndex& conceptIndex)
-	{
-		utils::ScopedLock lock( m_mutex);
-		m_ar.push_back( SampleSimGroupAssignment( sampleIndex, conceptIndex));
-	}
+	void push( const SampleIndex& sampleIndex, const ConceptIndex& conceptIndex);
 
-	void clear()
-	{
-		utils::ScopedLock lock( m_mutex);
-		m_ar.clear();
-	}
-
-	const std::vector<SampleSimGroupAssignment>& get() const	{return m_ar;}
+	std::vector<SampleSimGroupAssignment> fetchAll();
 
 private:
 	std::vector<SampleSimGroupAssignment> m_ar;
 	utils::Mutex m_mutex;
-};
-
-class SampleSimGroupAssignmentDispQueue
-{
-public:
-	explicit SampleSimGroupAssignmentDispQueue( std::size_t arsize_=1);
-	~SampleSimGroupAssignmentDispQueue();
-
-	void setChunkSize( std::size_t chunksize_)
-	{
-		m_chunksize = chunksize_;
-	}
-
-	void push( const SampleIndex& sampleIndex, const ConceptIndex& conceptIndex);
-
-	const std::vector<SampleSimGroupAssignment>& get( std::size_t idx) const;
-
-	void clear();
-
-private:
-	SampleSimGroupAssignmentQueue** m_ar;
-	std::size_t m_arsize;
-	std::size_t m_chunksize;
 };
 
 }//namespace
