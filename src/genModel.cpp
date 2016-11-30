@@ -259,9 +259,9 @@ std::vector<SimHash> GenModel::run(
 
 		STRUS_CHECK_CONSISTENCY_IF_LOWLEVEL_DEBUG
 
-		if (groupContext.logout()) groupContext.logout() << _TXT("improving capacity");
+		if (groupContext.logout()) groupContext.logout() << _TXT("improving capacity of group elements");
 		threadContext.run( &GenGroupProcedure_unfittestGroupElimination, 1, glbcntalloc.nofGroupIdsAllocated()+1);
-		if (groupContext.logout()) groupContext.logout().printAccuLine( _TXT("improving capacity triggered %u successful removals"));
+		if (groupContext.logout()) groupContext.logout().printAccuLine( _TXT("successful withdrawal of %u group elements from their unfittest group"));
 
 		if (groupContext.logout()) groupContext.logout() << _TXT("garbage collection of groupids leaked");
 		ConceptIndex nofGroups;
