@@ -23,7 +23,7 @@
 #include <algorithm>
 
 using namespace strus;
-#undef STRUS_LOWLEVEL_DEBUG
+#define STRUS_LOWLEVEL_DEBUG
 
 static void GenGroupProcedure_greedyChaseFreeFeatures( const GenGroupParameter* parameter, GlobalCountAllocator* glbcnt, GenGroupContext* genGroupContext, const SimRelationReader* simrelreader, std::size_t startidx, std::size_t endidx, ErrorBufferInterface* errorhnd)
 {
