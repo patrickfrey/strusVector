@@ -56,14 +56,14 @@ void SimGroupIdAllocator::free( const ConceptIndex& idx)
 }
 
 SimGroupMap::SimGroupMap()
-	:m_armem(0),m_ar(0),m_arsize(0){}
+	:m_null(),m_armem(0),m_ar(0),m_arsize(0){}
 
 SimGroupMap::SimGroupMap( std::size_t maxNofGroups)
-	:m_armem(0),m_ar(0),m_arsize(((maxNofGroups + CacheLineSize - 1) / CacheLineSize) * CacheLineSize)
+	:m_null(),m_armem(0),m_ar(0),m_arsize((maxNofGroups + Block::Size - 1) / Block::Size)
 {
-	m_armem = utils::aligned_malloc( m_arsize * sizeof(SimGroupRef), CacheLineSize);
+	m_armem = utils::aligned_malloc( m_arsize * sizeof(BlockRef), CacheLineSize);
 	if (!m_armem) throw std::bad_alloc();
-	m_ar = new (m_armem) SimGroupRef[ m_arsize];
+	m_ar = new (m_armem) BlockRef[ m_arsize];
 }
 
 SimGroupMap::~SimGroupMap()
@@ -71,37 +71,54 @@ SimGroupMap::~SimGroupMap()
 	std::size_t ai = 0, ae = m_arsize;
 	for (;ai != ae; ++ai)
 	{
-		m_ar[ai].~SimGroupRef();
+		m_ar[ai].~BlockRef();
 	}
 	utils::aligned_free( m_armem);
 	m_armem = 0;
 }
 
-SimGroupRef SimGroupMap::get( const ConceptIndex& cidx) const
+const SimGroupRef& SimGroupMap::get( const ConceptIndex& cidx) const
 {
-	if (cidx == 0 || (std::size_t)cidx > m_arsize)
+	std::size_t blockidx = (cidx-1) / Block::Size;
+	std::size_t blockofs = (cidx-1) % Block::Size;
+	if (blockidx > m_arsize)
 	{
 		throw strus::runtime_error(_TXT("array bound read in similarity group map"));
 	}
-	return m_ar[ cidx-1];
+	BlockRef blk = m_ar[ blockidx];
+	if (!blk.get()) return m_null;
+	return blk->ar[ blockofs];
 }
 
 void SimGroupMap::setGroup( const ConceptIndex& cidx, const SimGroupRef& group)
 {
-	if (cidx == 0 || (std::size_t)cidx > m_arsize)
+	std::size_t blockidx = (cidx-1) / Block::Size;
+	std::size_t blockofs = (cidx-1) % Block::Size;
+	if (blockidx > m_arsize)
 	{
 		throw strus::runtime_error(_TXT("array bound write in similarity group map"));
 	}
-	m_ar[ cidx-1] = group;
+	BlockRef blk = m_ar[ blockidx];
+	if (!blk.get())
+	{
+		m_ar[ blockidx].reset( new Block());
+		blk = m_ar[ blockidx];
+	}
+	blk->ar[ blockofs] = group;
 }
 
 void SimGroupMap::resetGroup( const ConceptIndex& cidx)
 {
-	if (cidx == 0 || (std::size_t)cidx > m_arsize)
+	std::size_t blockidx = (cidx-1) / Block::Size;
+	std::size_t blockofs = (cidx-1) % Block::Size;
+	if (blockidx > m_arsize)
 	{
 		throw strus::runtime_error(_TXT("array bound write in similarity group map"));
 	}
-	m_ar[ cidx-1].reset();
+	BlockRef blk = m_ar[ blockidx];
+	if (blk.get())
+	{
+		blk->ar[ blockofs].reset();
+	}
 }
-
 

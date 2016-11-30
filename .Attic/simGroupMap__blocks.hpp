@@ -58,10 +58,10 @@ class SimGroupMap
 {
 public:
 	SimGroupMap();
-	explicit SimGroupMap( std::size_t maxNofGroups);
+	SimGroupMap( std::size_t maxNofGroups);
 	~SimGroupMap();
 
-	SimGroupRef get( const ConceptIndex& cidx) const;
+	const SimGroupRef& get( const ConceptIndex& cidx) const;
 	void setGroup( const ConceptIndex& cidx, const SimGroupRef& group);
 	void resetGroup( const ConceptIndex& cidx);
 
@@ -70,9 +70,21 @@ private:
 	void operator=( const SimGroupMap&){};	//< non copyable
 
 private:
-	void* m_armem;				//< aligned memory for array of sim groups
-	SimGroupRef* m_ar;			//< array of sim groups
-	std::size_t m_arsize;			//< size of array of sim groups (maximum number of groups -> not growing)
+	struct Block
+	{
+		enum {Size=CacheLineSize};
+		SimGroupRef ar[Size];
+
+		Block(){}
+		~Block(){}
+	};
+	typedef utils::SharedPtr<Block> BlockRef;
+
+private:
+	SimGroupRef m_null;
+	void* m_armem;				//< aligned memory for array of blocks
+	BlockRef* m_ar;				//< array of blocks
+	std::size_t m_arsize;			//< size of array of blocks (maximum number of groups -> not growing)
 };
 
 }//namespace
