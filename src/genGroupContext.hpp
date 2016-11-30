@@ -127,7 +127,9 @@ public:
 			const GenGroupParameter& parameter);
 
 	/// \brief Garbage collection of allocated and leaked sim group idenitifiers
-	void garbageCollectSimGroupIds();
+	/// \param[out] nofGroups number of active groups counted
+	void garbageCollectSimGroupIds(
+			ConceptIndex& nofGroups);
 
 	/// \brief Remove groups that are dependent of others
 	void eliminateRedundantGroups( const GenGroupParameter& parameter);

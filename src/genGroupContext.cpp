@@ -658,7 +658,7 @@ bool GenGroupContext::unfittestGroupElimination(
 	return rt;
 }
 
-void GenGroupContext::garbageCollectSimGroupIds()
+void GenGroupContext::garbageCollectSimGroupIds( ConceptIndex& nofGroups)
 {
 	SimGroupIdMap groupIdMap;
 	ConceptIndex gi = 1, ge = m_cntalloc->nofGroupIdsAllocated()+1;
@@ -674,6 +674,7 @@ void GenGroupContext::garbageCollectSimGroupIds()
 				m_groupMap.setGroup( new_gi, group);
 				m_groupMap.resetGroup( gi);
 			}
+			nofGroups = new_gi;
 		}
 	}
 	m_sampleSimGroupMap.base().rewrite( groupIdMap);

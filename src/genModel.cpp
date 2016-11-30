@@ -200,7 +200,7 @@ std::vector<SimHash> GenModel::run(
 #ifdef STRUS_LOWLEVEL_DEBUG
 #define STRUS_CHECK_CONSISTENCY_IF_LOWLEVEL_DEBUG \
 		if (groupContext.logout()) groupContext.logout() << _TXT("checking consistency of structures"); \
-		groupContext.garbageCollectSimGroupIds(); \
+		{ConceptIndex nofGroups; groupContext.garbageCollectSimGroupIds( nofGroups);} \
 		groupContext.checkSimGroupStructures();
 #else
 #define STRUS_CHECK_CONSISTENCY_IF_LOWLEVEL_DEBUG
@@ -264,7 +264,9 @@ std::vector<SimHash> GenModel::run(
 		if (groupContext.logout()) groupContext.logout().printAccuLine( _TXT("improving capacity triggered %u successful removals"));
 
 		if (groupContext.logout()) groupContext.logout() << _TXT("garbage collection of groupids leaked");
-		groupContext.garbageCollectSimGroupIds();
+		ConceptIndex nofGroups;
+		groupContext.garbageCollectSimGroupIds( nofGroups);
+		if (groupContext.logout()) groupContext.logout() << _TXT("got %u active groups");
 
 #ifdef STRUS_LOWLEVEL_DEBUG
 		if (groupContext.logout()) groupContext.logout() << _TXT("checking consistency of structures");
