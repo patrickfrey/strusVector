@@ -578,68 +578,77 @@ bool GenGroupContext::unfittestGroupElimination(
 		const GenGroupParameter& parameter)
 {
 	bool rt = false;
-	bool doRemoveGroup = false;
-
 	SimGroupRef group = m_groupMap.get( group_id);
 	if (!group.get()) return false;
 
 	std::vector<SampleIndex> dropMembers;
+	std::set<ConceptIndex> nodes;
 	SimGroup::const_iterator mi = group->begin(), me = group->end();
 	for (; mi != me; ++mi)
 	{
-		double minFitness = std::numeric_limits<double>::max();
-		double maxFitness = 0.0;
-		ConceptIndex unfitestGroup_id = 0;
-
-		std::vector<ConceptIndex> gar;
+		std::vector<ConceptIndex> mi_nodes;
 		{
 			SharedSampleSimGroupMap::Lock SLOCK( &m_sampleSimGroupMap, *mi);
 			if (m_sampleSimGroupMap.hasSpace( SLOCK)) continue;
-			gar = m_sampleSimGroupMap.nodes( SLOCK);
+			mi_nodes = m_sampleSimGroupMap.nodes( SLOCK);
 		}
-		std::vector<ConceptIndex>::const_iterator gi = gar.begin(), ge = gar.end();
-		for (; gi != ge; ++gi)
-		{
-			SimGroupRef member_group = m_groupMap.get( *gi);
-			if (!member_group.get()) continue;
+		dropMembers.push_back( *mi);
+		std::vector<ConceptIndex>::const_iterator ni = mi_nodes.begin(), ne = mi_nodes.end();
+		for (; ni != ne; ++ni) nodes.insert( *ni);
+	}
+	double minFitness = std::numeric_limits<double>::max();
+	double maxFitness = 0.0;
+	ConceptIndex unfitestGroup_id = 0;
+	std::set<ConceptIndex>::const_iterator ni = nodes.begin(), ne = nodes.end();
+	for (; ni != ne; ++ni)
+	{
+		SimGroupRef member_group = m_groupMap.get( *ni);
+		if (!member_group.get()) continue;
 
-			double fitness = member_group->fitness( *m_samplear);
-			if (fitness > maxFitness)
-			{
-				maxFitness = fitness;
-			}
-			if (fitness < minFitness)
-			{
-				minFitness = fitness;
-				unfitestGroup_id = *gi;
-			}
-		}
-		if (unfitestGroup_id == group_id && minFitness < maxFitness * STRUS_VECTOR_BAD_FITNESS_FRACTION)
+		double fitness = member_group->fitness( *m_samplear);
+		if (fitness > maxFitness)
 		{
-			dropMembers.push_back( *mi);
+			maxFitness = fitness;
+		}
+		if (fitness < minFitness)
+		{
+			minFitness = fitness;
+			unfitestGroup_id = *ni;
 		}
 	}
-	std::vector<SampleIndex>::const_iterator di = dropMembers.begin(), de = dropMembers.end();
-	for (; di != de; ++di)
+	bool doRemoveMember = false;
+	SampleIndex toRemoveMember = 0;
+	if (unfitestGroup_id == group_id && minFitness < maxFitness * STRUS_VECTOR_BAD_FITNESS_FRACTION)
 	{
+		std::vector<SampleIndex>::const_iterator di = dropMembers.begin(), de = dropMembers.end();
+		for (; di != de; ++di)
 		{
 			SharedSampleSimGroupMap::Lock SLOCK( &m_sampleSimGroupMap, *di);
-			if (!m_sampleSimGroupMap.remove( SLOCK, group_id))
+			if (m_sampleSimGroupMap.contains( SLOCK, group_id))
 			{
-				throw strus::runtime_error(_TXT("internal: inconsistency in sim group map, group member not found"));
+				doRemoveMember = true;
+				toRemoveMember = *di;
+				break;
 			}
 		}
+	}
+	bool doRemoveGroup = false;
+	if (doRemoveMember)
+	{
 		SimGroupRef newgroup( new SimGroup( *group));
-		if (!newgroup->removeMember( *di))
+		if (newgroup->removeMember( toRemoveMember))
 		{
-			throw strus::runtime_error(_TXT("internal: inconsistency in group, member not found"));
-		}
-		m_groupMap.setGroup( group_id, group = newgroup);
-		rt = true;
-		if (group->size() < 2)
-		{
-			doRemoveGroup = true;
-			break;
+			SharedSampleSimGroupMap::Lock SLOCK( &m_sampleSimGroupMap, toRemoveMember);
+			if (!m_sampleSimGroupMap.remove( SLOCK, group_id))
+			{
+				throw strus::runtime_error(_TXT("internal: inconsistency in group, member not in sim group map (unfittest group elimination)"));
+			}
+			m_groupMap.setGroup( group_id, newgroup);
+			rt = true;
+			if (newgroup->size() < 2)
+			{
+				doRemoveGroup = true;
+			}
 		}
 	}
 	if (doRemoveGroup)
