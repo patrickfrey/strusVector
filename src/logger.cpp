@@ -45,15 +45,37 @@ Logger::Logger( const char* logfile)
 
 Logger& Logger::operator << (const std::string& line)
 {
-	time_t tim;
-	struct tm timrec;
-	char timstr[ 64];
-
-	tim = time( NULL);
-	localtime_r( &tim, &timrec);
-	::strftime( timstr, sizeof(timstr), "%Y-%m-%d %H:%M:%S", &timrec);
-	std::string logline( string_format( "%s %s", timstr, line.c_str()));
-	if (m_logout) (*m_logout) << logline << std::endl;
+	if (m_logout)
+	{
+		time_t tim;
+		struct tm timrec;
+		char timstr[ 64];
+	
+		tim = time( NULL);
+		localtime_r( &tim, &timrec);
+		::strftime( timstr, sizeof(timstr), "%Y-%m-%d %H:%M:%S", &timrec);
+		std::string logline( string_format( "%s %s", timstr, line.c_str()));
+		utils::ScopedLock lock( m_mutex);
+		(*m_logout) << logline << std::endl;
+	}
 	return *this;
+}
+
+void Logger::countItems( unsigned int addcnt)
+{
+	utils::ScopedLock lock( m_mutex);
+	m_count += addcnt;
+}
+
+void Logger::printAccuLine( const char* format)
+{
+	unsigned int count_value;
+	{
+		utils::ScopedLock lock( m_mutex);
+		count_value = m_count;
+		m_count = 0;
+	}
+	std::string line( string_format( format, count_value));
+	operator << (line);
 }
 

@@ -36,7 +36,7 @@ static void GenGroupProcedure_greedyChaseFreeFeatures( const GenGroupParameter* 
 		{
 			newgroupcnt += genGroupContext->greedyChaseFreeFeatures( groupIdAllocator, si, *simrelreader, *parameter) ? 1:0;
 		}
-		if (newgroupcnt && genGroupContext->logout()) genGroupContext->logout() << string_format( _TXT("free feature chase step triggered creation of %u new groups"), newgroupcnt);
+		genGroupContext->logout().countItems( newgroupcnt);
 	}
 	catch (const std::bad_alloc& err)
 	{
@@ -64,7 +64,7 @@ static void GenGroupProcedure_greedyNeighbourGroupInterchange( const GenGroupPar
 		{
 			genGroupContext->greedyNeighbourGroupInterchange( groupIdAllocator, gi, *parameter, interchangecnt);
 		}
-		if (interchangecnt && genGroupContext->logout()) genGroupContext->logout() << string_format( _TXT("neighbour groups interchanged %u features"), interchangecnt);
+		genGroupContext->logout().countItems( interchangecnt);
 	}
 	catch (const std::bad_alloc& err)
 	{
@@ -92,7 +92,7 @@ static void GenGroupProcedure_improveGroups( const GenGroupParameter* parameter,
 		{
 			mutationcnt += genGroupContext->improveGroup( groupIdAllocator, gi, *parameter) ? 1:0;
 		}
-		if (mutationcnt && genGroupContext->logout()) genGroupContext->logout() << string_format( _TXT("group improve step triggered %u successful mutations"), mutationcnt);
+		genGroupContext->logout().countItems( mutationcnt);
 	}
 	catch (const std::bad_alloc& err)
 	{
@@ -120,7 +120,7 @@ static void GenGroupProcedure_similarNeighbourGroupElimination( const GenGroupPa
 		{
 			eliminationcnt += genGroupContext->similarNeighbourGroupElimination( groupIdAllocator, gi, *parameter) ? 1:0;
 		}
-		if (eliminationcnt && genGroupContext->logout()) genGroupContext->logout() << string_format( _TXT("neighbour elimination step triggered %u successful removals"), eliminationcnt);
+		genGroupContext->logout().countItems( eliminationcnt);
 	}
 	catch (const std::bad_alloc& err)
 	{
@@ -148,7 +148,7 @@ static void GenGroupProcedure_unfittestGroupElimination( const GenGroupParameter
 		{
 			eliminationcnt += genGroupContext->unfittestGroupElimination( groupIdAllocator, gi, *parameter) ? 1:0;
 		}
-		if (eliminationcnt && genGroupContext->logout()) genGroupContext->logout() << string_format( _TXT("unfittest group elimination step triggered %u successful removals"), eliminationcnt);
+		genGroupContext->logout().countItems( eliminationcnt);
 	}
 	catch (const std::bad_alloc& err)
 	{
@@ -197,6 +197,15 @@ std::vector<SimHash> GenModel::run(
 	if (groupContext.logout()) groupContext.logout()
 		<< string_format( _TXT("start learning concepts for class %s"), clname.c_str());
 
+#ifdef STRUS_LOWLEVEL_DEBUG
+#define STRUS_CHECK_CONSISTENCY_IF_LOWLEVEL_DEBUG \
+		if (groupContext.logout()) groupContext.logout() << _TXT("checking consistency of structures"); \
+		groupContext.garbageCollectSimGroupIds(); \
+		groupContext.checkSimGroupStructures();
+#else
+#define STRUS_CHECK_CONSISTENCY_IF_LOWLEVEL_DEBUG
+#endif
+
 	// Do the iterations of creating new individuals
 	unsigned int iteration=0;
 	for (; iteration != m_iterations; ++iteration)
@@ -214,56 +223,45 @@ std::vector<SimHash> GenModel::run(
 
 		if (groupContext.logout()) groupContext.logout() << string_format( _TXT("starting iteration %u"), iteration);
 
-		if (groupContext.logout()) groupContext.logout() << _TXT("chasing free elements");
+		if (groupContext.logout()) groupContext.logout() << _TXT("greedy chase free features");
 		threadContext.run( &GenGroupProcedure_greedyChaseFreeFeatures, 0, samplear.size());
+		if (groupContext.logout()) groupContext.logout().printAccuLine( _TXT("free feature chase triggered creation of %u new groups"));
 
-#ifdef STRUS_LOWLEVEL_DEBUG
-		if (groupContext.logout()) groupContext.logout() << _TXT("checking consistency of structures");
-		groupContext.garbageCollectSimGroupIds();
-		groupContext.checkSimGroupStructures();
-#endif
-		groupContext.logout() << _TXT("run interchange assignments");
+		STRUS_CHECK_CONSISTENCY_IF_LOWLEVEL_DEBUG
+
+		groupContext.logout() << _TXT("run cross group assignments from gready chase feature step");
 		threadContext.runGroupAssignments();
+		if (groupContext.logout()) groupContext.logout().printAccuLine( _TXT("assigned %u features to groups"));
 
-#ifdef STRUS_LOWLEVEL_DEBUG
-		if (groupContext.logout()) groupContext.logout() << _TXT("checking consistency of structures");
-		groupContext.garbageCollectSimGroupIds();
-		groupContext.checkSimGroupStructures();
-#endif
+		STRUS_CHECK_CONSISTENCY_IF_LOWLEVEL_DEBUG
+
 		if (groupContext.logout()) groupContext.logout() << _TXT("improving fitness of individuals");
 		threadContext.run( &GenGroupProcedure_improveGroups, 1, glbcntalloc.nofGroupIdsAllocated()+1);
+		if (groupContext.logout()) groupContext.logout().printAccuLine( _TXT("group improve triggered %u successful mutations"));
 
-#ifdef STRUS_LOWLEVEL_DEBUG
-		if (groupContext.logout()) groupContext.logout() << _TXT("checking consistency of structures");
-		groupContext.garbageCollectSimGroupIds();
-		groupContext.checkSimGroupStructures();
-#endif
+		STRUS_CHECK_CONSISTENCY_IF_LOWLEVEL_DEBUG
+
 		if (groupContext.logout()) groupContext.logout() << string_format( _TXT("interchanging elements of %u individuals"), glbcntalloc.nofGroupIdsAllocated());
 		threadContext.run( &GenGroupProcedure_greedyNeighbourGroupInterchange, 1, glbcntalloc.nofGroupIdsAllocated()+1);
+		if (groupContext.logout()) groupContext.logout().printAccuLine( _TXT("neighbour groups interchanged %u features"));
 
-#ifdef STRUS_LOWLEVEL_DEBUG
-		if (groupContext.logout()) groupContext.logout() << _TXT("checking consistency of structures");
-		groupContext.garbageCollectSimGroupIds();
-		groupContext.checkSimGroupStructures();
-#endif
+		STRUS_CHECK_CONSISTENCY_IF_LOWLEVEL_DEBUG
+
 		if (groupContext.logout()) groupContext.logout() << _TXT("improving fitness of individuals");
 		threadContext.run( &GenGroupProcedure_improveGroups, 1, glbcntalloc.nofGroupIdsAllocated()+1);
+		if (groupContext.logout()) groupContext.logout().printAccuLine( _TXT("group improve triggered %u successful mutations"));
 
-#ifdef STRUS_LOWLEVEL_DEBUG
-		if (groupContext.logout()) groupContext.logout() << _TXT("checking consistency of structures");
-		groupContext.garbageCollectSimGroupIds();
-		groupContext.checkSimGroupStructures();
-#endif
+		STRUS_CHECK_CONSISTENCY_IF_LOWLEVEL_DEBUG
+
 		if (groupContext.logout()) groupContext.logout() << _TXT("solving neighbour clashes");
 		threadContext.run( &GenGroupProcedure_similarNeighbourGroupElimination, 1, glbcntalloc.nofGroupIdsAllocated()+1);
+		if (groupContext.logout()) groupContext.logout().printAccuLine( _TXT("neighbour elimination triggered %u successful removals"));
 
-#ifdef STRUS_LOWLEVEL_DEBUG
-		if (groupContext.logout()) groupContext.logout() << _TXT("checking consistency of structures");
-		groupContext.garbageCollectSimGroupIds();
-		groupContext.checkSimGroupStructures();
-#endif
+		STRUS_CHECK_CONSISTENCY_IF_LOWLEVEL_DEBUG
+
 		if (groupContext.logout()) groupContext.logout() << _TXT("improving capacity");
 		threadContext.run( &GenGroupProcedure_unfittestGroupElimination, 1, glbcntalloc.nofGroupIdsAllocated()+1);
+		if (groupContext.logout()) groupContext.logout().printAccuLine( _TXT("improving capacity triggered %u successful removals"));
 
 		if (groupContext.logout()) groupContext.logout() << _TXT("garbage collection of groupids leaked");
 		groupContext.garbageCollectSimGroupIds();

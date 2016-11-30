@@ -8,6 +8,7 @@
 /// \brief Logger for reporting status of long during processes in the library
 #ifndef _STRUS_VECTOR_SPACE_MODEL_LOGGER_HPP_INCLUDED
 #define _STRUS_VECTOR_SPACE_MODEL_LOGGER_HPP_INCLUDED
+#include "utils.hpp"
 #include <iostream>
 #include <fstream>
 
@@ -25,11 +26,16 @@ public:
 		return m_logout != 0;
 	}
 
+	void countItems( unsigned int addcnt);
+	void printAccuLine( const char* format);
+
 private:
 	Logger( const Logger&){}		//< non copyable
 	void operator=(const Logger&){}		//< non copyable
 
 private:
+	utils::Mutex m_mutex;
+	unsigned int m_count;
 	std::ostream* m_logout;
 	std::ofstream m_logfilestream;
 };
