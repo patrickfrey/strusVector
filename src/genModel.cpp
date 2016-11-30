@@ -266,7 +266,7 @@ std::vector<SimHash> GenModel::run(
 		if (groupContext.logout()) groupContext.logout() << _TXT("garbage collection of free group ids");
 		ConceptIndex nofGroups;
 		groupContext.garbageCollectSimGroupIds( nofGroups);
-		if (groupContext.logout()) groupContext.logout() << _TXT("got %u active groups");
+		if (groupContext.logout()) groupContext.logout() << string_format( _TXT("got %u active groups"), nofGroups);
 
 #ifdef STRUS_LOWLEVEL_DEBUG
 		if (groupContext.logout()) groupContext.logout() << _TXT("checking consistency of structures");
