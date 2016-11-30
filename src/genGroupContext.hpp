@@ -30,7 +30,7 @@ namespace strus {
 class ErrorBufferInterface;
 
 /// \brief Some constants that are not configurable yet
-#define STRUS_VECTOR_BAD_FITNESS_FRACTION     0.1  // factor of fitness considered bad compared with the best fitness of the group, used to decide wheter a 'mature' group can be left when maximum capacity of releations is reached
+#define STRUS_VECTOR_BAD_FITNESS_FRACTION     0.3  // factor of fitness considered bad compared with the best fitness of the group, used to decide wheter a 'mature' group can be left when maximum capacity of releations is reached
 
 struct GenGroupParameter
 {
