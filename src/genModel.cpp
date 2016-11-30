@@ -229,7 +229,7 @@ std::vector<SimHash> GenModel::run(
 
 		STRUS_CHECK_CONSISTENCY_IF_LOWLEVEL_DEBUG
 
-		groupContext.logout() << _TXT("run cross group assignments from gready chase feature step");
+		groupContext.logout() << _TXT("run cross group assignments from greedy chase feature step");
 		threadContext.runGroupAssignments();
 		if (groupContext.logout()) groupContext.logout().printAccuLine( _TXT("assigned %u features to groups"));
 
