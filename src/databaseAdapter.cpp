@@ -817,8 +817,10 @@ void DatabaseAdapter::writeSampleConceptIndexMap( const std::string& clname, con
 
 std::vector<SampleIndex> DatabaseAdapter::readConceptSampleIndices( const std::string& clname, const ConceptIndex& cidx) const
 {
-	if (cidx == 0) throw strus::runtime_error(_TXT("illegal key (null) for concept"));
-
+	if (cidx == 0)
+	{
+		throw strus::runtime_error(_TXT("illegal key (null) for concept"));
+	}
 	DatabaseKeyBuffer key( KeyConceptSampleIndexMap);
 	key(clname)[ cidx];
 

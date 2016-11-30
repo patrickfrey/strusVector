@@ -735,11 +735,11 @@ private:
 
 	void writeDependencyLinks( const std::string& from_clname, const std::string& to_clname)
 	{
-		unsigned int ci = 0, ce = m_database->readNofConcepts( from_clname);
-		for (unsigned int cidx=0; ci != ce; ++ci,++cidx)
+		unsigned int ci = 1, ce = m_database->readNofConcepts( from_clname)+1;
+		for (; ci != ce; ++ci)
 		{
 			m_database->writeConceptDependencies( from_clname, ci, to_clname, translateConcepts( from_clname, ci, to_clname));
-			if (cidx && cidx % m_config.commitsize == 0)
+			if (ci % m_config.commitsize == 0)
 			{
 				m_database->commit();
 			}
