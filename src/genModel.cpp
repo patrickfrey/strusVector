@@ -263,7 +263,7 @@ std::vector<SimHash> GenModel::run(
 		threadContext.run( &GenGroupProcedure_unfittestGroupElimination, 1, glbcntalloc.nofGroupIdsAllocated()+1);
 		if (groupContext.logout()) groupContext.logout().printAccuLine( _TXT("successful withdrawal of %u group elements from their unfittest group"));
 
-		if (groupContext.logout()) groupContext.logout() << _TXT("garbage collection of groupids leaked");
+		if (groupContext.logout()) groupContext.logout() << _TXT("garbage collection of free group ids");
 		ConceptIndex nofGroups;
 		groupContext.garbageCollectSimGroupIds( nofGroups);
 		if (groupContext.logout()) groupContext.logout() << _TXT("got %u active groups");
