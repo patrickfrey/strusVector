@@ -16,11 +16,11 @@
 using namespace strus;
 
 Logger::Logger()
-	:m_logout(&std::cerr)
+	:m_count(0),m_logout(&std::cerr)
 {}
 
 Logger::Logger( const char* logfile)
-	:m_logout(0)
+	:m_count(0),m_logout(0)
 {
 	if (logfile)
 	{
