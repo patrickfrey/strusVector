@@ -9,6 +9,7 @@
 #ifndef _STRUS_VECTOR_SPACE_MODEL_SHARED_ARRAY_HPP_INCLUDED
 #define _STRUS_VECTOR_SPACE_MODEL_SHARED_ARRAY_HPP_INCLUDED
 #include "utils.hpp"
+#include "cacheLineSize.hpp"
 #include <new>
 #include <stdexcept>
 
@@ -27,7 +28,7 @@ public:
 		}
 		m_arsize = (std::size_t)m_mod * MaxNofMutex;
 		m_mutexarsize = (m_arsize) / m_mod;
-		m_mutexarmem = utils::aligned_malloc( m_mutexarsize * sizeof(utils::RecursiveMutex), 128);
+		m_mutexarmem = utils::aligned_malloc( m_mutexarsize * sizeof(utils::RecursiveMutex), CacheLineSize);
 		m_mutexar = new (m_mutexarmem)utils::RecursiveMutex[ m_mutexarsize];
 	}
 	~SharedArrayMutex()
