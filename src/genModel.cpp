@@ -241,7 +241,7 @@ std::vector<SimHash> GenModel::run(
 
 		STRUS_CHECK_CONSISTENCY_IF_LOWLEVEL_DEBUG
 
-		if (groupContext.logout()) groupContext.logout() << string_format( _TXT("interchanging elements of %u individuals"), glbcntalloc.nofGroupIdsAllocated());
+		if (groupContext.logout()) groupContext.logout() << string_format( _TXT("interchanging elements of %u groups"), glbcntalloc.nofGroupIdsAllocated());
 		threadContext.run( &GenGroupProcedure_greedyNeighbourGroupInterchange, 1, glbcntalloc.nofGroupIdsAllocated()+1);
 		if (groupContext.logout()) groupContext.logout().printAccuLine( _TXT("neighbour groups interchanged %u features"));
 
