@@ -52,7 +52,7 @@ private:
 	std::vector<ConceptIndex> m_freeList;
 };
 
-typedef utils::SharedPtr<SimGroup> SimGroupRef;
+typedef boost::shared_ptr<SimGroup> SimGroupRef;
 
 class SimGroupMap
 {
