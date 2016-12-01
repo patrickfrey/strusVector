@@ -461,8 +461,8 @@ std::vector<std::string> DatabaseAdapter::readConceptClassNames() const
 
 void DatabaseAdapter::writeConceptClassNames( const std::vector<std::string>& clnames)
 {
-	DatabaseKeyBuffer key( KeyConceptClassNames);
 	if (!m_transaction.get()) beginTransaction();
+	DatabaseKeyBuffer key( KeyConceptClassNames);
 	std::string buffer = stringListSerialization( clnames);
 	m_transaction->write( key.c_str(), key.size(), buffer.c_str(), buffer.size());
 }
@@ -801,10 +801,10 @@ std::vector<ConceptIndex> DatabaseAdapter::readSampleConceptIndices( const std::
 
 void DatabaseAdapter::writeSampleConceptIndexMap( const std::string& clname, const SampleConceptIndexMap& sfmap)
 {
+	if (!m_transaction.get()) beginTransaction();
 	SampleIndex si = 0, se = sfmap.maxkey()+1;
 	for (; si != se; ++si)
 	{
-		if (!m_transaction.get()) beginTransaction();
 		std::vector<ConceptIndex> concepts = sfmap.getValues( si);
 		if (concepts.empty()) continue;
 		std::string blob = vectorSerialization<ConceptIndex>( concepts);
@@ -846,10 +846,10 @@ SampleConceptIndexMap DatabaseAdapter::readSampleConceptIndexMap( const std::str
 
 void DatabaseAdapter::writeConceptSampleIndexMap( const std::string& clname, const ConceptSampleIndexMap& csmap)
 {
+	if (!m_transaction.get()) beginTransaction();
 	ConceptIndex ci = 1, ce = csmap.maxkey()+1;
 	for (; ci != ce; ++ci)
 	{
-		if (!m_transaction.get()) beginTransaction();
 		std::vector<SampleIndex> members = csmap.getValues( ci);
 		if (members.empty()) continue;
 		std::string blob = vectorSerialization<SampleIndex>( members);
@@ -968,6 +968,7 @@ std::vector<ConceptIndex> DatabaseAdapter::readConceptDependencies( const std::s
 
 void DatabaseAdapter::writeConceptDependencies( const std::string& clname, const ConceptIndex& cidx, const std::string& depclname, const std::vector<ConceptIndex>& deplist)
 {
+	if (!m_transaction.get()) beginTransaction();
 	std::string blob = vectorSerialization<SampleIndex>( deplist);
 	DatabaseKeyBuffer key( KeyConceptDependency);
 	key(clname)(depclname)[ cidx];
