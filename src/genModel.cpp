@@ -268,10 +268,8 @@ std::vector<SimHash> GenModel::run(
 		groupContext.garbageCollectSimGroupIds( nofGroups);
 		if (groupContext.logout()) groupContext.logout() << string_format( _TXT("got %u active groups"), nofGroups);
 
-#ifdef STRUS_LOWLEVEL_DEBUG
 		if (groupContext.logout()) groupContext.logout() << _TXT("checking consistency of structures");
 		groupContext.checkSimGroupStructures();
-#endif
 	}/*for (; iteration...*/
 
 	if (groupContext.logout()) groupContext.logout() << _TXT("eliminating redundant (dependent) groups");
