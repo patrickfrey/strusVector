@@ -477,10 +477,10 @@ void GenGroupContext::greedyNeighbourGroupInterchange(
 					if (tryAddGroupMember( group_id, *mi, parameter.descendants, parameter.mutations, parameter.votes, parameter.maxage))
 					{
 						++interchangecnt;
+						group = m_groupMap.get( group_id);
+						if (!group.get()) break;
 					}
 				}
-				group = m_groupMap.get( group_id);
-				if (!group.get()) break;
 			}
 		}
 	}
