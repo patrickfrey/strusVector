@@ -22,7 +22,7 @@ GenModelConfig::GenModelConfig( const GenModelConfig& o)
 	,mutations(o.mutations),votes(o.votes)
 	,descendants(o.descendants),maxage(o.maxage),iterations(o.iterations)
 	,assignments(o.assignments),greediness(o.greediness)
-	,isaf(o.isaf),eqdiff(o.eqdiff)
+	,isaf(o.isaf),baff(o.baff),eqdiff(o.eqdiff)
 	,with_singletons(o.with_singletons)
 	{}
 
@@ -31,7 +31,9 @@ GenModelConfig::GenModelConfig()
 	,mutations(DefaultMutations),votes(DefaultMutationVotes)
 	,descendants(DefaultDescendants),maxage(DefaultMaxAge),iterations(DefaultIterations)
 	,assignments(DefaultAssignments),greediness(DefaultGreediness)
-	,isaf((float)DefaultIsaf / 100),eqdiff((float)DefaultEqdiff / 100)
+	,isaf((float)DefaultIsaf / 100)
+	,baff((float)DefaultBadFitnessFactor / 100)
+	,eqdiff((float)DefaultEqdiff / 100)
 	,with_singletons((bool)DefaultWithSingletons)
 	{}
 
@@ -40,7 +42,7 @@ GenModelConfig::GenModelConfig( const std::string& config, unsigned int maxdist,
 	,mutations(defaultcfg.mutations),votes(defaultcfg.votes)
 	,descendants(defaultcfg.descendants),maxage(defaultcfg.maxage),iterations(defaultcfg.iterations)
 	,assignments(defaultcfg.assignments),greediness(defaultcfg.greediness)
-	,isaf(defaultcfg.isaf),eqdiff(defaultcfg.eqdiff)
+	,isaf(defaultcfg.isaf),baff(defaultcfg.baff),eqdiff(defaultcfg.eqdiff)
 	,with_singletons(defaultcfg.with_singletons)
 {
 	std::string src = config;
@@ -84,6 +86,7 @@ void GenModelConfig::parse( std::string& src, unsigned int maxdist, ErrorBufferI
 	if (extractUIntFromConfigString( greediness, src, "greediness", errorhnd)){}
 	double val;
 	if (extractFloatFromConfigString( val, src, "isaf", errorhnd)){isaf=(float)val;}
+	if (extractFloatFromConfigString( val, src, "baff", errorhnd)){baff=(float)val;}
 	if (extractFloatFromConfigString( val, src, "eqdiff", errorhnd)){eqdiff=(float)val;}
 	if (extractBooleanFromConfigString( with_singletons, src, "singletons", errorhnd)){}
 
@@ -127,6 +130,7 @@ std::string GenModelConfig::tostring( bool eolnsep) const
 	printConfigItem( buf, "iterations", iterations, eolnsep);
 	printConfigItem( buf, "assignments", assignments, eolnsep);
 	printConfigItem( buf, "isaf", isaf, eolnsep);
+	printConfigItem( buf, "baff", baff, eolnsep);
 	printConfigItem( buf, "eqdiff", eqdiff, eolnsep);
 	printConfigItem( buf, "singletons", with_singletons, eolnsep);
 	return buf.str();

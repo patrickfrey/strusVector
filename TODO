@@ -1,1 +1,2 @@
 + use more bits in genetic algorithm, use less in final groups for classification, make the number of final result bits and the related similarity bits configurable
+

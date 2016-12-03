@@ -191,6 +191,7 @@ std::vector<SimHash> GenModel::run(
 	genParameter.maxage = m_maxage;
 	genParameter.greediness = m_greediness;
 	genParameter.isaf = m_isaf;
+	genParameter.baff = m_baff;
 	genParameter.eqdiff = m_eqdiff;
 	genParameter.with_singletons = m_with_singletons;
 
@@ -302,6 +303,7 @@ std::string GenModel::tostring() const
 		<< ", iterations=" << m_iterations << std::endl
 		<< ", assignments=" << m_assignments << std::endl
 		<< ", isaf=" << m_isaf << std::endl
+		<< ", baff=" << m_baff << std::endl
 		<< ", eqdiff=" << m_eqdiff << std::endl
 		<< ", singletons=" << (m_with_singletons?"yes":"no") << std::endl;
 	return rt.str();

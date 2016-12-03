@@ -32,6 +32,7 @@ struct GenModelConfig
 		DefaultAssignments = 7,
 		DefaultGreediness = 3,
 		DefaultIsaf = 60,
+		DefaultBadFitnessFactor = 10,
 		DefaultEqdiff = 25,
 		DefaultWithSingletons = 0
 	};
@@ -54,6 +55,7 @@ struct GenModelConfig
 	unsigned int assignments;	///< maximum number of assignments on a sample to a group
 	unsigned int greediness;	///< non-negative integer specifying the greediness of collecting near elements into a newly created group (ascending)
 	float isaf;			///< fraction of samples of a superset that has to be in a subset for declaring the subset as dependent (is a) of the superset
+	float baff;			///< factor of fitness considered bad compared with the best fitness of the group, used to decide wheter a group can be left when maximum capacity of releations is reached
 	float eqdiff;			///< fraction of maximum elements that can to differ for sets to considered to be equal (unfittest competitor elimination)
 	bool with_singletons;		///< true, if singletons should also get into the result
 };

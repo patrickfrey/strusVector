@@ -618,7 +618,7 @@ bool GenGroupContext::unfittestGroupElimination(
 	}
 	bool doRemoveMember = false;
 	SampleIndex toRemoveMember = 0;
-	if (unfitestGroup_id == group_id && minFitness < maxFitness * STRUS_VECTOR_BAD_FITNESS_FRACTION)
+	if (unfitestGroup_id == group_id && minFitness < maxFitness * parameter.baff)
 	{
 		std::vector<SampleIndex>::const_iterator di = dropMembers.begin(), de = dropMembers.end();
 		for (; di != de; ++di)

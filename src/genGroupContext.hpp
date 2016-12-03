@@ -29,9 +29,6 @@ namespace strus {
 /// \brief Forward declaration
 class ErrorBufferInterface;
 
-/// \brief Some constants that are not configurable yet
-#define STRUS_VECTOR_BAD_FITNESS_FRACTION     0.1  // factor of fitness considered bad compared with the best fitness of the group, used to decide wheter a 'mature' group can be left when maximum capacity of releations is reached
-
 struct GenGroupParameter
 {
 	unsigned int simdist;
@@ -42,13 +39,14 @@ struct GenGroupParameter
 	unsigned int maxage;
 	unsigned int greediness;
 	float isaf;
+	float baff;
 	float eqdiff;
 	bool with_singletons;
 
 	GenGroupParameter()
 		:simdist(0),eqdist(0)
 		,descendants(0),mutations(0),votes(0),maxage(0),greediness(0)
-		,isaf(0.6),eqdiff(0.15),with_singletons(false){}
+		,isaf(0.6),baff(0.1),eqdiff(0.15),with_singletons(false){}
 };
 
 class GenGroupContext
