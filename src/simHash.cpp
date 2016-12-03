@@ -126,6 +126,36 @@ bool SimHash::operator[]( std::size_t idx) const
 	return (m_ar[ aridx] & mask) != 0;
 }
 
+std::size_t SimHash::next_free( std::size_t idx) const
+{
+	if (idx >= (std::size_t)m_size)
+	{
+		throw strus::runtime_error(_TXT("array bound read in %s"), "SimHash");
+	}
+	std::size_t cnt = 0;
+	for (; cnt < m_size; cnt += NofElementBits)
+	{
+		std::size_t aridx = idx / NofElementBits;
+		std::size_t arofs = idx % NofElementBits;
+		uint64_t mask = 1;
+		mask <<= (NofElementBits-1 - arofs);
+		while (mask != 0 && idx < m_size)
+		{
+			if ((m_ar[ aridx] & mask) == 0)
+			{
+				return idx;
+			}
+			mask >>=  1;
+			++idx;
+		}
+		if (idx == m_size)
+		{
+			idx = 0;
+		}
+	}
+	return m_size;
+}
+
 void SimHash::set( std::size_t idx, bool value)
 {
 	if (idx >= (std::size_t)m_size)

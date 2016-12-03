@@ -33,6 +33,8 @@ public:
 
 	/// \brief Get element value by index
 	bool operator[]( std::size_t idx) const;
+	/// \brief Get next 0 value index after idx
+	std::size_t next_free( std::size_t idx) const;
 	/// \brief Set element with index to value
 	void set( std::size_t idx, bool value);
 	/// \brief Calculate distance (bits with different value)

@@ -176,8 +176,9 @@ SimHash SimGroup::mutationGencode( const std::vector<SimHash>& samplear, unsigne
 	unsigned int ki=0, ke=maxNofMutations;
 	for (; ki != ke; ++ki)
 	{
-		unsigned int mutidx = g_random.get( 0, gencode().size());
-		if (!kn[ mutidx])
+		std::size_t rndidx = g_random.get( 0, gencode().size());
+		std::size_t mutidx = kn.next_free( rndidx);
+		if (mutidx < gencode().size())
 		{
 			//.... only mutate non kernel elements
 			// The majority of randomly selected members decide the direction of the mutation:
