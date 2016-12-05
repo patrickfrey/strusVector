@@ -54,7 +54,8 @@ public:
 		m_database.reset( new DatabaseAdapter( database_, m_config.databaseConfig, m_errorhnd));
 		m_database->checkVersion();
 		if (m_database->isempty()) throw strus::runtime_error(_TXT("try to open a vector space model that is empty, need to be built first"));
-		m_config = m_database->readConfig();
+		VectorSpaceModelConfig cfg = m_database->readConfig();
+		m_config = VectorSpaceModelConfig( config_, errorhnd_, cfg);
 
 		std::vector<std::string> clnames = m_database->readConceptClassNames();
 		std::vector<std::string>::const_iterator ci = clnames.begin(), ce = clnames.end();
