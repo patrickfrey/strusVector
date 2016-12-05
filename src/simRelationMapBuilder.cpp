@@ -34,7 +34,10 @@ SimRelationMapBuilder::SimRelationMapBuilder( const std::vector<SimHash>& sample
 		ofs += m_benchar.back().init( ofs);
 		++oi;
 	}
-	if (logout) logout << strus::string_format( _TXT("got %u samples in %u benches with maxdiff %u/64"), (unsigned int)ofs, oi, m_benchar.back().maxDiff());
+	if (!m_benchar.empty())
+	{
+		if (logout) logout << strus::string_format( _TXT("got %u samples in %u benches with maxdiff %u/64"), (unsigned int)ofs, oi, m_benchar.back().maxDiff());
+	}
 }
 
 SimRelationMap SimRelationMapBuilder::getSimRelationMap( strus::Index idx) const
