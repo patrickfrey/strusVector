@@ -131,6 +131,10 @@ public:
 	{
 		try
 		{
+			if (!m_lshmodel.get())
+			{
+				m_lshmodel.reset( new LshModel( m_database->readLshModel()));
+			}
 			const SimHashMapReference& ivec = loadSimHashVectorRef( conceptClass);
 			const GenModelConfig& gencfg = m_config.genModelConfig( conceptClass);
 			std::vector<Index> rt;
@@ -152,6 +156,10 @@ public:
 	{
 		try
 		{
+			if (!m_lshmodel.get())
+			{
+				m_lshmodel.reset( new LshModel( m_database->readLshModel()));
+			}
 			if (!m_samplear.get())
 			{
 				m_samplear.reset( new SimHashMap( m_database->readSampleSimhashVector(), 1/*prob select random seed*/));
