@@ -47,6 +47,7 @@ struct GenModelConfig
 	unsigned int simdist;		///< maximum distance to be considered similar
 	unsigned int raddist;		///< maximum radius distance of group elements to centroid
 	unsigned int eqdist;		///< maximum distance to be considered equal
+	unsigned int probdist;		///< similarity distance to use as base for probabilistic search for vectors (speedup vs. accuracy), default is (simdist * 3/2), 0 for no probabilistic search (slow)
 	unsigned int mutations;		///< maximum number of random selected mutation candidates of the non kernel elements of a group
 	unsigned int votes;		///< maximum number of votes to use to determine a mutation direction
 	unsigned int descendants;	///< number of descendants of which the fittest is selected

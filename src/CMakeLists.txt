@@ -10,6 +10,7 @@ set(
 	internationalization.cpp
 	random.cpp
 	simHash.cpp
+	simHashMap.cpp
 	simGroup.cpp
 	simGroupMap.cpp
 	dependencyGraph.cpp

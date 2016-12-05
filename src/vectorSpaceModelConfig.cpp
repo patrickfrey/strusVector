@@ -18,7 +18,7 @@
 using namespace strus;
 
 GenModelConfig::GenModelConfig( const GenModelConfig& o)
-	:simdist(o.simdist),raddist(o.raddist),eqdist(o.eqdist)
+	:simdist(o.simdist),raddist(o.raddist),eqdist(o.eqdist),probdist(o.probdist)
 	,mutations(o.mutations),votes(o.votes)
 	,descendants(o.descendants),maxage(o.maxage),iterations(o.iterations)
 	,assignments(o.assignments),greediness(o.greediness)
@@ -27,7 +27,7 @@ GenModelConfig::GenModelConfig( const GenModelConfig& o)
 	{}
 
 GenModelConfig::GenModelConfig()
-	:simdist(DefaultSimDist),raddist(DefaultRadDist),eqdist(DefaultEqDist)
+	:simdist(DefaultSimDist),raddist(DefaultRadDist),eqdist(DefaultEqDist),probdist(0)
 	,mutations(DefaultMutations),votes(DefaultMutationVotes)
 	,descendants(DefaultDescendants),maxage(DefaultMaxAge),iterations(DefaultIterations)
 	,assignments(DefaultAssignments),greediness(DefaultGreediness)
@@ -38,7 +38,7 @@ GenModelConfig::GenModelConfig()
 	{}
 
 GenModelConfig::GenModelConfig( const std::string& config, unsigned int maxdist, ErrorBufferInterface* errorhnd, const GenModelConfig& defaultcfg)
-	:simdist(defaultcfg.simdist),raddist(defaultcfg.raddist),eqdist(defaultcfg.eqdist)
+	:simdist(defaultcfg.simdist),raddist(defaultcfg.raddist),eqdist(defaultcfg.eqdist),probdist(defaultcfg.probdist)
 	,mutations(defaultcfg.mutations),votes(defaultcfg.votes)
 	,descendants(defaultcfg.descendants),maxage(defaultcfg.maxage),iterations(defaultcfg.iterations)
 	,assignments(defaultcfg.assignments),greediness(defaultcfg.greediness)
@@ -59,36 +59,39 @@ void GenModelConfig::parse( std::string& src, unsigned int maxdist, ErrorBufferI
 	{
 		raddist = simdist;
 		eqdist = simdist / 6;
+		probdist = simdist + simdist / 2;
 	}
 	if (simdist > maxdist)
 	{
 		throw strus::runtime_error(_TXT("the 'simdist' configuration parameter must not be bigger than 'maxdist'"));
 	}
-	if (extractUIntFromConfigString( raddist, src, "raddist", errorhnd)){}
+	(void)extractUIntFromConfigString( raddist, src, "raddist", errorhnd);
 	if (raddist > simdist)
 	{
 		throw strus::runtime_error(_TXT("the 'raddist' configuration parameter must not be bigger than 'simdist'"));
 	}
-	if (extractUIntFromConfigString( eqdist, src, "eqdist", errorhnd)){}
+	(void)extractUIntFromConfigString( eqdist, src, "eqdist", errorhnd);
 	if (eqdist > simdist)
 	{
 		throw strus::runtime_error(_TXT("the 'eqdist' configuration parameter must not be bigger than 'simdist'"));
 	}
-	if (extractUIntFromConfigString( mutations, src, "mutations", errorhnd)){}
-	if (extractUIntFromConfigString( votes, src, "votes", errorhnd)){}
-	if (extractUIntFromConfigString( descendants, src, "descendants", errorhnd)){}
+	(void)extractUIntFromConfigString( probdist, src, "probdist", errorhnd);
+	(void)extractUIntFromConfigString( mutations, src, "mutations", errorhnd);
+	(void)extractUIntFromConfigString( votes, src, "votes", errorhnd);
+	(void)extractUIntFromConfigString( descendants, src, "descendants", errorhnd);
 	if (extractUIntFromConfigString( iterations, src, "iterations", errorhnd))
 	{
 		maxage = iterations;
 	}
-	if (extractUIntFromConfigString( maxage, src, "maxage", errorhnd)){}
-	if (extractUIntFromConfigString( assignments, src, "assignments", errorhnd)){}
-	if (extractUIntFromConfigString( greediness, src, "greediness", errorhnd)){}
+	(void)extractUIntFromConfigString( maxage, src, "maxage", errorhnd);
+	(void)extractUIntFromConfigString( assignments, src, "assignments", errorhnd);
+	(void)extractUIntFromConfigString( greediness, src, "greediness", errorhnd);
 	double val;
 	if (extractFloatFromConfigString( val, src, "isaf", errorhnd)){isaf=(float)val;}
 	if (extractFloatFromConfigString( val, src, "baff", errorhnd)){baff=(float)val;}
 	if (extractFloatFromConfigString( val, src, "eqdiff", errorhnd)){eqdiff=(float)val;}
-	if (extractBooleanFromConfigString( with_singletons, src, "singletons", errorhnd)){}
+
+	(void)extractBooleanFromConfigString( with_singletons, src, "singletons", errorhnd);
 
 	if (mutations == 0 || descendants == 0 || maxage == 0 || iterations == 0)
 	{
@@ -122,6 +125,7 @@ std::string GenModelConfig::tostring( bool eolnsep) const
 	printConfigItem( buf, "simdist", simdist, eolnsep);
 	printConfigItem( buf, "raddist", raddist, eolnsep);
 	printConfigItem( buf, "eqdist", eqdist, eolnsep);
+	printConfigItem( buf, "probdist", probdist, eolnsep);
 	printConfigItem( buf, "mutations", mutations, eolnsep);
 	printConfigItem( buf, "votes", votes, eolnsep);
 	printConfigItem( buf, "descendants", descendants, eolnsep);

@@ -21,6 +21,7 @@
 #include "utils.hpp"
 #include "logger.hpp"
 #include "simHash.hpp"
+#include "simHashMap.hpp"
 #include "simRelationMap.hpp"
 #include "simRelationReader.hpp"
 #include "simRelationMapBuilder.hpp"
@@ -38,17 +39,18 @@ using namespace strus;
 
 #define MAIN_CONCEPT_CLASSNAME ""
 
+typedef Reference<SimHashMap> SimHashMapReference;
+
+
 class VectorSpaceModelInstance
 	:public VectorSpaceModelInstanceInterface
 {
 public:
-	typedef Reference<std::vector<SimHash> > SimHashVectorReference;
-
 	VectorSpaceModelInstance( const std::string& config_, const DatabaseInterface* database_, ErrorBufferInterface* errorhnd_)
 		:m_errorhnd(errorhnd_),m_database(),m_config(config_,errorhnd_),m_lshmodel(),m_individuals()
 	{
 		m_conceptClassMap[ MAIN_CONCEPT_CLASSNAME] = m_individuals.size();
-		m_individuals.push_back( SimHashVectorReference());
+		m_individuals.push_back( SimHashMapReference());
 		m_database.reset( new DatabaseAdapter( database_, m_config.databaseConfig, m_errorhnd));
 		m_database->checkVersion();
 		if (m_database->isempty()) throw strus::runtime_error(_TXT("try to open a vector space model that is empty, need to be built first"));
@@ -59,7 +61,7 @@ public:
 		for (; ci != ce; ++ci)
 		{
 			m_conceptClassMap[ *ci] = m_individuals.size();
-			m_individuals.push_back( SimHashVectorReference());
+			m_individuals.push_back( SimHashMapReference());
 		}
 	}
 
@@ -72,29 +74,33 @@ public:
 		{
 			m_lshmodel.reset( new LshModel( m_database->readLshModel()));
 		}
-		conceptClassMap::const_iterator ci = m_conceptClassMap.begin(), ce = m_conceptClassMap.end();
+		ConceptClassMap::const_iterator ci = m_conceptClassMap.begin(), ce = m_conceptClassMap.end();
 		for (; ci != ce; ++ci)
 		{
-			SimHashVectorReference& ivec = m_individuals[ci->second];
+			SimHashMapReference& ivec = m_individuals[ci->second];
 			if (!ivec.get())
 			{
-				ivec.reset( new std::vector<SimHash>( m_database->readConceptSimhashVector( ci->first)));
+				ivec.reset( new SimHashMap( m_database->readConceptSimhashVector( ci->first), 1/*prob select random seed*/));
 			}
+		}
+		if (!m_samplear.get())
+		{
+			m_samplear.reset( new SimHashMap( m_database->readSampleSimhashVector(), 1/*prob select random seed*/));
 		}
 	}
 
-	const SimHashVectorReference& loadSimHashVectorRef( const std::string& conceptClass) const
+	const SimHashMapReference& loadSimHashVectorRef( const std::string& conceptClass) const
 	{
 		if (!m_lshmodel.get())
 		{
 			m_lshmodel.reset( new LshModel( m_database->readLshModel()));
 		}
-		conceptClassMap::const_iterator ci = m_conceptClassMap.find( conceptClass);
+		ConceptClassMap::const_iterator ci = m_conceptClassMap.find( conceptClass);
 		if (ci == m_conceptClassMap.end()) throw strus::runtime_error(_TXT("concept class identifier '%s' unknown"), conceptClass.c_str());
-		SimHashVectorReference& ivec = m_individuals[ ci->second];
+		SimHashMapReference& ivec = m_individuals[ ci->second];
 		if (!ivec.get())
 		{
-			ivec.reset( new std::vector<SimHash>( m_database->readConceptSimhashVector( ci->first)));
+			ivec.reset( new SimHashMap( m_database->readConceptSimhashVector( ci->first), 1/*prob select random seed*/));
 		}
 		return ivec;
 	}
@@ -125,17 +131,40 @@ public:
 	{
 		try
 		{
-			const SimHashVectorReference& ivec = loadSimHashVectorRef( conceptClass);
+			const SimHashMapReference& ivec = loadSimHashVectorRef( conceptClass);
 			const GenModelConfig& gencfg = m_config.genModelConfig( conceptClass);
 			std::vector<Index> rt;
 			SimHash hash( m_lshmodel->simHash( arma::normalise( arma::vec( vec))));
-			std::vector<SimHash>::const_iterator ii = ivec->begin(), ie = ivec->end();
-			for (std::size_t iidx=1; ii != ie; ++ii,++iidx)
+			if (gencfg.probdist)
 			{
-				if (ii->near( hash, gencfg.simdist))
-				{
-					rt.push_back( iidx);
-				}
+				rt = ivec->findSimilar( hash, gencfg.simdist, gencfg.probdist);
+			}
+			else
+			{
+				rt = ivec->findSimilar( hash, gencfg.simdist);
+			}
+			return rt;
+		}
+		CATCH_ERROR_ARG1_MAP_RETURN( _TXT("error in instance of '%s' mapping vector to concepts: %s"), MODULENAME, *m_errorhnd, std::vector<Index>());
+	}
+
+	virtual std::vector<Index> findSimFeatures( const std::vector<double>& vec) const
+	{
+		try
+		{
+			if (!m_samplear.get())
+			{
+				m_samplear.reset( new SimHashMap( m_database->readSampleSimhashVector(), 1/*prob select random seed*/));
+			}
+			std::vector<Index> rt;
+			SimHash hash( m_lshmodel->simHash( arma::normalise( arma::vec( vec))));
+			if (m_config.gencfg.probdist)
+			{
+				rt = m_samplear->findSimilar( hash, m_config.maxdist, m_config.maxdist * m_config.gencfg.probdist / m_config.gencfg.simdist);
+			}
+			else
+			{
+				rt = m_samplear->findSimilar( hash, m_config.maxdist);
 			}
 			return rt;
 		}
@@ -193,12 +222,12 @@ public:
 			else if (utils::caseInsensitiveStartsWith( name, "conlsh_"))
 			{
 				std::string clname( name.c_str() + 7/*strlen("conlsh_")*/);
-				conceptClassMap::const_iterator ci = m_conceptClassMap.find( clname);
+				ConceptClassMap::const_iterator ci = m_conceptClassMap.find( clname);
 				if (ci == m_conceptClassMap.end()) return rt;
-				SimHashVectorReference& ivec = m_individuals[ci->second];
+				SimHashMapReference& ivec = m_individuals[ci->second];
 				if (!ivec.get())
 				{
-					ivec.reset( new std::vector<SimHash>( m_database->readConceptSimhashVector( ci->first)));
+					ivec.reset( new SimHashMap( m_database->readConceptSimhashVector( ci->first), 1/*prob select random seed*/));
 				}
 				if (index <= 0 || (std::size_t)index > ivec->size()) throw strus::runtime_error(_TXT("concept index out of range"));
 				rt.push_back( (*ivec)[ index-1].tostring());
@@ -305,7 +334,7 @@ public:
 		{
 			std::vector<std::string> rt;
 			rt.push_back( "featlsh");
-			conceptClassMap::const_iterator ci = m_conceptClassMap.begin(), ce = m_conceptClassMap.end();
+			ConceptClassMap::const_iterator ci = m_conceptClassMap.begin(), ce = m_conceptClassMap.end();
 			for (; ci != ce; ++ci)
 			{
 				rt.push_back( std::string("conlsh_") + ci->first);
@@ -334,7 +363,7 @@ public:
 	{
 		try
 		{
-			conceptClassMap::const_iterator ci = m_conceptClassMap.find( conceptClass);
+			ConceptClassMap::const_iterator ci = m_conceptClassMap.find( conceptClass);
 			if (ci == m_conceptClassMap.end()) return 0;
 			if (!m_individuals[ ci->second].get())
 			{
@@ -367,9 +396,10 @@ private:
 	Reference<DatabaseAdapter> m_database;
 	VectorSpaceModelConfig m_config;
 	mutable Reference<LshModel> m_lshmodel;				//< cached model
-	mutable std::vector<SimHashVectorReference> m_individuals;	//< cached concept vectors
-	typedef std::map<std::string,std::size_t> conceptClassMap;
-	conceptClassMap m_conceptClassMap;				//< maps names of concept classes to the associated individuals
+	mutable std::vector<SimHashMapReference> m_individuals;		//< cached concept vectors
+	mutable SimHashMapReference m_samplear;				//< cached samples
+	typedef std::map<std::string,std::size_t> ConceptClassMap;
+	ConceptClassMap m_conceptClassMap;				//< maps names of concept classes to the associated individuals
 };
 
 class SimRelationMapReader
