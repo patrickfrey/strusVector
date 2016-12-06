@@ -19,7 +19,7 @@
 
 using namespace strus;
 
-#define WEIGHTFACTOR(dd) (dd + dd / 2)
+#define WEIGHTFACTOR(dd) (dd + dd / 3)
 
 
 SimRelationMapBuilder::SimRelationMapBuilder( const std::vector<SimHash>& samplear, SampleIndex startsampleidx, unsigned int maxdist_, unsigned int maxsimsam_, unsigned int rndsimsam_, unsigned int threads_, bool probabilistic_, Logger& logout, const SimRelationReader* simmapreader_)

@@ -543,16 +543,6 @@ std::vector<SimHash> DatabaseAdapter::readSampleSimhashVector() const
 	return readSimhashVector( KeySampleSimHash, std::string());
 }
 
-std::vector<SimHash> DatabaseAdapter::readConceptSimhashVector( const std::string& clname) const
-{
-	return readSimhashVector( KeyConceptSimhash, clname);
-}
-
-void DatabaseAdapter::writeConceptSimhashVector( const std::string& clname, const std::vector<SimHash>& ar)
-{
-	return writeSimhashVector( KeyConceptSimhash, clname, ar);
-}
-
 
 VectorSpaceModelConfig DatabaseAdapter::readConfig() const
 {
@@ -989,7 +979,6 @@ void DatabaseAdapter::clear()
 	deleteConceptClassNames();
 	deleteSamples();
 	deleteSampleSimhashVectors();
-	deleteConceptSimhashVectors();
 	deleteLshModel();
 	deleteSimRelationMap();
 	deleteSampleConceptIndexMaps();
@@ -1023,11 +1012,6 @@ void DatabaseAdapter::deleteSamples()
 void DatabaseAdapter::deleteSampleSimhashVectors()
 {
 	deleteSubTree( KeySampleSimHash);
-}
-
-void DatabaseAdapter::deleteConceptSimhashVectors()
-{
-	deleteSubTree( KeyConceptSimhash);
 }
 
 void DatabaseAdapter::deleteSimRelationMap()
@@ -1069,7 +1053,6 @@ struct DatabaseKeyNameTab
 
 		ar[ DatabaseAdapter::KeySampleNameInv - 32] = "featidx";
 		ar[ DatabaseAdapter::KeySampleSimHash - 32] = "featlsh";
-		ar[ DatabaseAdapter::KeyConceptSimhash - 32] = "conlsh";
 		ar[ DatabaseAdapter::KeyConfig - 32] = "config";
 		ar[ DatabaseAdapter::KeyLshModel - 32] = "lshmodel";
 
@@ -1158,17 +1141,6 @@ void DatabaseAdapter::dumpKeyValue( std::ostream& out, const strus::DatabaseCurs
 			scanner(cl,clsize)[ sidx];
 			SimHash sh = SimHash::fromSerialization( value.ptr(), value.size());
 			out << std::string(cl,clsize) << " " << (sidx-1) << " " << sh.tostring() << std::endl;
-			break;
-		}
-		case DatabaseAdapter::KeyConceptSimhash:
-		{
-			char const* cl;
-			std::size_t clsize;
-			SampleIndex sidx;
-			DatabaseKeyScanner scanner( key.ptr()+1, key.size()-1);
-			scanner(cl,clsize)[ sidx];
-			SimHash sh = SimHash::fromSerialization( value.ptr(), value.size());
-			out << std::string(cl,clsize) << " " << sidx << " " << sh.tostring() << std::endl;
 			break;
 		}
 		case DatabaseAdapter::KeyConfig:

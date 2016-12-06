@@ -131,7 +131,6 @@ int main( int argc, const char** argv)
 		unsigned int nofFeatures = 1000;
 		unsigned int dim = 0;
 		bool use_model_built = false;
-		bool use_group_assign = false;
 		bool printUsageAndExit = false;
 
 		// Parse parameters:
@@ -139,11 +138,7 @@ int main( int argc, const char** argv)
 		bool finished_options = false;
 		while (!finished_options && argc > argidx && argv[argidx][0] == '-')
 		{
-			if (0==std::strcmp( argv[argidx], "-g"))
-			{
-				use_group_assign = true;
-			}
-			else if (0==std::strcmp( argv[argidx], "-b"))
+			if (0==std::strcmp( argv[argidx], "-b"))
 			{
 				use_model_built = true;
 			}
@@ -168,7 +163,6 @@ int main( int argc, const char** argv)
 			std::cerr << "Usage: " << argv[0] << " [<config>] [<number of concepts added>]" << std::endl;
 			std::cerr << "options:" << std::endl;
 			std::cerr << "-h     : print this usage" << std::endl;
-			std::cerr << "-g     : use concept assignment instead of similarity to verify results" << std::endl;
 			std::cerr << "-b     : do not recreate model, use the one built" << std::endl;
 			return rt;
 		}
@@ -311,128 +305,45 @@ int main( int argc, const char** argv)
 		ConceptMatrix conceptMatrix;
 		ConceptMatrix conceptInvMatrix;
 		ClassesMap classesmap;
-		unsigned int groupAssozMisses = 0;
-		unsigned int groupAssozFalses = 0;
 
 		std::vector<std::vector<double> >::const_iterator si = samplear.begin(), se = samplear.end();
 		for (std::size_t sidx=0; si != se; ++si,++sidx)
 		{
-			std::vector<strus::Index> ctgar( categorizer->mapVectorToConcepts( MAIN_CONCEPTNAME, *si));
-			std::vector<strus::Index> ctgar2( categorizer->featureConcepts( MAIN_CONCEPTNAME, sidx));
-			std::vector<strus::Index>::const_iterator ci,ce,ca,zi,ze,za;
-			if (use_group_assign)
-			{
-				za = zi = ctgar.begin(), ze = ctgar.end();
-				ca = ci = ctgar2.begin(), ce = ctgar2.end();
-			}
-			else
-			{
-				ca = ci = ctgar.begin(), ce = ctgar.end();
-				za = zi = ctgar2.begin(), ze = ctgar2.end();
-			}
+			std::vector<strus::Index> ctgar( categorizer->featureConcepts( MAIN_CONCEPTNAME, sidx));
+			std::vector<strus::Index>::const_iterator ci,ce,ca;
+			ca = ci = ctgar.begin(), ce = ctgar.end();
+
 			std::cout << "[" << sidx << "] => ";
 			for (std::size_t cidx=0; ci != ce; ++ci,++cidx)
 			{
-				while (zi != ze && *zi < *ci)
-				{
-					++groupAssozFalses;
-					++zi;
-				}
-				if (zi != ze && *zi == *ci)
-				{
-					++zi;
-				}
-				else if (zi == ze || *zi > *ci)
-				{
-					++groupAssozMisses;
-				}
 				conceptMatrix( sidx, *ci-1) = 1;
 				conceptInvMatrix( *ci-1, sidx) = 1;
 				if (cidx) std::cout << ", ";
 				std::cout << *ci;
 				classesmap.insert( ClassesElem( *ci, sidx));
 			}
-			while (zi < ze)
-			{
-				++groupAssozFalses;
-				++zi;
-			}
 			std::cout << std::endl;
+		}
 
-			if (!use_group_assign)
-			{
-				std::cout << " " << sidx << "  => ";
-				std::size_t zidx = 0;
-				for (zi = za; zi != ze; ++zi,++zidx)
-				{
-					if (zidx) std::cout << ", ";
-					std::cout << *zi;
-				}
-				std::cout << std::endl;
-			}
-		}
-		// Output classes:
-		unsigned int memberAssozMisses = 0;
-		unsigned int memberAssozFalses = 0;
-		ClassesMap::const_iterator ci = classesmap.begin(), ce = classesmap.end();
-		while (ci != ce)
-		{
-			strus::Index key = ci->first;
-			std::vector<strus::Index> members( categorizer->conceptFeatures( MAIN_CONCEPTNAME, ci->first));
-			std::vector<strus::Index>::const_iterator mi = members.begin(), me = members.end();
-			std::cout << "(" << key << ") <= ";
-			for (; ci != ce && ci->first == key; ++ci)
-			{
-				while (mi != me && *mi < ci->second)
-				{
-					++memberAssozFalses;
-					++mi;
-				}
-				if (mi != me && *mi == ci->second)
-				{
-					++mi;
-				}
-				else if (mi == me || *mi > ci->second)
-				{
-					++memberAssozMisses;
-				}
-				std::cout << ' ' << ci->second;
-			}
-			while (mi < me)
-			{
-				++memberAssozFalses;
-				++mi;
-			}
-			std::cout << std::endl;
-			std::cout << " " << key << "  <= ";
-			for (mi = members.begin(); mi != me; ++mi)
-			{
-				std::cout << ' ' << *mi;
-			}
-			std::cout << std::endl;
-		}
 		// Build a similarity matrix defined by concepts shared between input vectors:
 		std::cerr << "build sample to sample concept relation matrix:" << std::endl;
 		strus::SparseDim2Field<unsigned char> outSimMatrix;
-		unsigned int fi=0, fe=categorizer->nofConcepts( MAIN_CONCEPTNAME);
-		for (; fi != fe; ++fi)
+		ClassesMap::const_iterator li = classesmap.begin(), le = classesmap.end();
+		while (li != le)
 		{
-			std::vector<unsigned int> conceptMembers;
-			ConceptMatrix::const_row_iterator
-				ri = conceptInvMatrix.begin_row( fi),
-				re = conceptInvMatrix.end_row( fi);
-			for (; ri != re; ++ri)
+			strus::Index conidx = li->first;
+			ClassesMap::const_iterator la = li;
+			for (; li != le && li->first == conidx; ++li)
 			{
-				std::vector<unsigned int>::const_iterator
-					mi = conceptMembers.begin(), me = conceptMembers.end();
-				for (; mi != me; ++mi)
+				ClassesMap::const_iterator oi = la, oe = li;
+				for (; oi != oe; ++oi)
 				{
-					outSimMatrix( *mi, ri.col()) = 1;
-					outSimMatrix( ri.col(), *mi) = 1;
+					outSimMatrix( li->second, oi->second) = 1;
+					outSimMatrix( oi->second, li->second) = 1;
 				}
-				conceptMembers.push_back( ri.col());
 			}
 		}
+
 		// Compare the similarity matrix defined by concept assignments and the one defined by the cosine measure of the sample vectors and accumulate the results:
 		std::cerr << "test calculated concept assignments:" << std::endl;
 		unsigned int nofMisses = 0;
@@ -442,10 +353,10 @@ int main( int argc, const char** argv)
 		{
 			for (std::size_t oidx=0; oidx != nofFeatures; ++oidx)
 			{
-				double sim = simMatrix.get( sidx, oidx);
-				unsigned char val = outSimMatrix.get( sidx, oidx);
 				if (sidx != oidx)
 				{
+					double sim = simMatrix.get( sidx, oidx);
+					unsigned char val = outSimMatrix.get( sidx, oidx);
 					if (sim >= 0.9)
 					{
 						if (val == 0)
@@ -478,10 +389,6 @@ int main( int argc, const char** argv)
 		std::cerr << "output:" << std::endl << outSimMatrix.tostring() << std::endl;
 		std::cerr << "expected:" << std::endl << expSimMatrix.tostring() << std::endl;
 #endif
-		std::cerr << "group assoz miss = " << groupAssozMisses << std::endl;
-		std::cerr << "group assoz false = " << groupAssozFalses << std::endl;
-		std::cerr << "member assoz miss = " << memberAssozMisses << std::endl;
-		std::cerr << "member assoz false = " << memberAssozFalses << std::endl;
 		std::cerr << "number of similarities = " << nofSimilarities << " reflexive = " << (nofSimilarities*2) << std::endl;
 		std::cerr << "number of misses = " << nofMisses << std::endl;
 		std::cerr << "false positives = " << nofFalsePositives << std::endl;

@@ -51,7 +51,6 @@ public:
 
 	SimHash readSampleSimhash( const SampleIndex& sidx) const;
 	std::vector<SimHash> readSampleSimhashVector() const;
-	std::vector<SimHash> readConceptSimhashVector( const std::string& clname) const;
 
 	SampleIndex readLastSimRelationIndex() const;
 	std::vector<SimRelationMap::Element> readSimRelations( const SampleIndex& sidx) const;
@@ -74,7 +73,6 @@ public:
 	void writeConceptClassNames( const std::vector<std::string>& clnames);
 	void writeState( unsigned int state);
 	void writeSample( const SampleIndex& sidx, const std::string& name, const Vector& vec, const SimHash& simHash);
-	void writeConceptSimhashVector( const std::string& clname, const std::vector<SimHash>& ar);
 	void writeSimRelationMap( const SimRelationMap& simrelmap);
 	void writeSimRelationRow( const SampleIndex& sidx, const SimRelationMap::Row& row);
 	void writeSampleConceptIndexMap( const std::string& clname, const SampleConceptIndexMap& sfmap);
@@ -91,7 +89,6 @@ public:
 	void deleteConceptClassNames();
 	void deleteSamples();
 	void deleteSampleSimhashVectors();
-	void deleteConceptSimhashVectors();
 	void deleteSimRelationMap();
 	void deleteSampleConceptIndexMaps();
 	void deleteConceptSampleIndexMaps();
@@ -114,7 +111,6 @@ public:
 		KeySampleName = '@',
 		KeySampleNameInv = '#',
 		KeySampleSimHash = 'S',
-		KeyConceptSimhash = 'R',
 		KeyConfig = 'C',
 		KeyLshModel = 'L',
 		KeySimRelationMap = 'M',
