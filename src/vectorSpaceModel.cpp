@@ -720,7 +720,7 @@ private:
 
 		if (logout) logout << string_format( _TXT("calculate similarity relation matrix for %u features (selection %s)"), m_samplear.size(), m_config.with_probsim?_TXT("probabilistic selection"):_TXT("try all"));
 		uint64_t total_nof_similarities = 0;
-		SampleIndex startsampleidx = m_haveFeaturesAdded?0:m_database->readLastSimRelationIndex();
+		SampleIndex startsampleidx = m_haveFeaturesAdded?0:(m_database->readLastSimRelationIndex()+1);
 		SimRelationMapBuilder simrelbuilder( m_samplear, startsampleidx, m_config.maxdist, m_config.maxsimsam, m_config.rndsimsam, m_config.threads, m_config.with_probsim, logout, simmapreader);
 		SimRelationMap simrelmap_part;
 		while (simrelbuilder.getNextSimRelationMap( simrelmap_part))
