@@ -109,7 +109,7 @@ public:
 			SimHash hash( m_lshmodel->simHash( arma::normalise( arma::vec( vec))));
 			if (m_config.gencfg.probdist)
 			{
-				rt = m_samplear->findSimilar2( hash, m_config.maxdist, m_config.maxdist * m_config.gencfg.probdist / m_config.gencfg.simdist, maxNofElements);
+				rt = m_samplear->findSimilar( hash, m_config.maxdist, m_config.maxdist * m_config.gencfg.probdist / m_config.gencfg.simdist, maxNofElements);
 			}
 			else
 			{
