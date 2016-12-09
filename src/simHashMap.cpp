@@ -149,7 +149,7 @@ std::vector<Index> SimHashMap::findSimilar2( const SimHash& sh, unsigned short s
 	unsigned int shdiff = ((unsigned int)prob_simdist * 64U) / m_vecsize;
 	uint64_t needle = sh.ar()[ m_select];
 	std::size_t si = 0, se = m_ar.size();
-	/*[-]*/std::cout << "SIMDIST " << simdist << " " << shdiff << std::endl;
+	/*[-]*/std::cout << "SIMDIST " << prob_simdist_factor << " " << prob_simdist << " " << simdist << " " << shdiff << std::endl;
 	for (; si != se; ++si)
 	{
 		if (strus::BitOperations::bitCount( m_selar[si] ^ needle) <= shdiff)
@@ -165,7 +165,7 @@ std::vector<Index> SimHashMap::findSimilar2( const SimHash& sh, unsigned short s
 					if (lastdist < dist)
 					{
 						simdist = lastdist;
-						shdiff = (unsigned int)(prob_simdist_factor * simdist);
+						shdiff = (unsigned int)(prob_simdist_factor * simdist * 64U) / m_vecsize;
 						/*[-]*/std::cout << "SIMDIST " << simdist << " " << shdiff << std::endl;
 					}
 				}
