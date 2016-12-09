@@ -78,12 +78,12 @@ struct RankList
 	
 			while (last - first > 2)
 			{
-				if (m_brute_ar[ m_brute_index[ mid]] < elem)
+				if (elem < m_brute_ar[ m_brute_index[ mid]])
 				{
 					last = mid;
 					mid = (first + mid) >> 1;
 				}
-				else if (elem < m_brute_ar[ m_brute_index[ mid]])
+				else if (m_brute_ar[ m_brute_index[ mid]] < elem)
 				{
 					first = mid+1;
 					mid = (last + mid) >> 1;
@@ -97,7 +97,7 @@ struct RankList
 			}
 			for (; first < last; ++first)
 			{
-				if (m_brute_ar[ m_brute_index[ first]] < elem)
+				if (elem < m_brute_ar[ m_brute_index[ first]])
 				{
 					bruteInsert_at( first, elem);
 					break;
