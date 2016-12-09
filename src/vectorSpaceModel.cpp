@@ -93,7 +93,7 @@ public:
 		CATCH_ERROR_ARG1_MAP_RETURN( _TXT("error in instance of '%s' getting the list of implemented concept class names: %s"), MODULENAME, *m_errorhnd, std::vector<std::string>());
 	}
 
-	virtual std::vector<Index> findSimilarFeatures( const std::vector<double>& vec) const
+	virtual std::vector<Index> findSimilarFeatures( const std::vector<double>& vec, unsigned int maxNofElements) const
 	{
 		try
 		{
@@ -109,11 +109,11 @@ public:
 			SimHash hash( m_lshmodel->simHash( arma::normalise( arma::vec( vec))));
 			if (m_config.gencfg.probdist)
 			{
-				rt = m_samplear->findSimilar( hash, m_config.maxdist, m_config.maxdist * m_config.gencfg.probdist / m_config.gencfg.simdist);
+				rt = m_samplear->findSimilar( hash, m_config.maxdist, m_config.maxdist * m_config.gencfg.probdist / m_config.gencfg.simdist, maxNofElements);
 			}
 			else
 			{
-				rt = m_samplear->findSimilar( hash, m_config.maxdist);
+				rt = m_samplear->findSimilar( hash, m_config.maxdist, maxNofElements);
 			}
 			return rt;
 		}

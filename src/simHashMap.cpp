@@ -7,6 +7,7 @@
  */
 /// \brief Map for fast scan for similar SimHashes 
 #include "simHashMap.hpp"
+#include "simRelationMap.hpp"
 #include "internationalization.hpp"
 #include "cacheLineSize.hpp"
 #include "utils.hpp"
@@ -39,9 +40,12 @@ void SimHashMap::initBench()
 	}
 }
 
-std::vector<Index> SimHashMap::findSimilar( const SimHash& sh, unsigned short simdist, unsigned short prob_simdist) const
+
+std::vector<Index> SimHashMap::findSimilar( const SimHash& sh, unsigned short simdist, unsigned short prob_simdist, unsigned int maxNofElements) const
 {
-	std::vector<Index> rt;
+	std::set<SimRelationMap::Element> ranklist;
+	unsigned int ranklistSize = 0;
+	double prob_simdist_factor = (double)prob_simdist / (double)simdist;
 	unsigned int shdiff = ((unsigned int)prob_simdist * 64U) / m_vecsize;
 	uint64_t needle = sh.ar()[ m_select];
 	std::size_t si = 0, se = m_ar.size();
@@ -51,23 +55,63 @@ std::vector<Index> SimHashMap::findSimilar( const SimHash& sh, unsigned short si
 		{
 			if (m_ar[ si].near( sh, simdist))
 			{
-				rt.push_back( si);
+				unsigned short dist = m_ar[ si].dist( sh);
+				if (ranklistSize < maxNofElements)
+				{
+					ranklist.insert( SimRelationMap::Element( si, dist));
+					++ranklistSize;
+				}
+				else
+				{
+					std::set<SimRelationMap::Element>::iterator it = ranklist.end();
+					--it;
+					ranklist.erase(it);
+					ranklist.insert( SimRelationMap::Element( si, dist));
+					simdist = ranklist.rbegin()->simdist;
+					shdiff = (unsigned int)(prob_simdist_factor * simdist);
+				}
 			}
 		}
+	}
+	std::vector<Index> rt;
+	std::set<SimRelationMap::Element>::const_iterator ri = ranklist.begin(), re = ranklist.end();
+	for (; ri != re; ++ri)
+	{
+		rt.push_back( ri->index);
 	}
 	return rt;
 }
 
-std::vector<Index> SimHashMap::findSimilar( const SimHash& sh, unsigned short simdist) const
+std::vector<Index> SimHashMap::findSimilar( const SimHash& sh, unsigned short simdist, unsigned int maxNofElements) const
 {
-	std::vector<Index> rt;
+	std::set<SimRelationMap::Element> ranklist;
+	unsigned int ranklistSize = 0;
 	std::size_t si = 0, se = m_ar.size();
 	for (; si != se; ++si)
 	{
 		if (m_ar[ si].near( sh, simdist))
 		{
-			rt.push_back( si);
+			unsigned short dist = m_ar[ si].dist( sh);
+			if (ranklistSize < maxNofElements)
+			{
+				ranklist.insert( SimRelationMap::Element( si, dist));
+				++ranklistSize;
+			}
+			else
+			{
+				std::set<SimRelationMap::Element>::iterator it = ranklist.end();
+				--it;
+				ranklist.erase(it);
+				ranklist.insert( SimRelationMap::Element( si, dist));
+				simdist = ranklist.rbegin()->simdist;
+			}
 		}
+	}
+	std::vector<Index> rt;
+	std::set<SimRelationMap::Element>::const_iterator ri = ranklist.begin(), re = ranklist.end();
+	for (; ri != re; ++ri)
+	{
+		rt.push_back( ri->index);
 	}
 	return rt;
 }
