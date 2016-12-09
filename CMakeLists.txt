@@ -23,10 +23,7 @@ configure_file( "${PROJECT_SOURCE_DIR}/include/strus/versionVector.hpp.in"  "${P
 configure_file( "${PROJECT_SOURCE_DIR}/dist/obs/deploy_to_obs.sh.in"  "${PROJECT_SOURCE_DIR}/dist/obs/deploy_to_obs.sh"  @ONLY )
 configure_file( "${PROJECT_SOURCE_DIR}/dist/archlinux/PKGBUILD.in"  "${PROJECT_SOURCE_DIR}/dist/archlinux/PKGBUILD"  @ONLY )
 configure_file( "${PROJECT_SOURCE_DIR}/dist/obs/strusvector.dsc.in"  "${PROJECT_SOURCE_DIR}/dist/obs/strusvector.dsc"  @ONLY )
-configure_file( "${PROJECT_SOURCE_DIR}/dist/obs/strusvector-Debian_7.0.dsc.in"  "${PROJECT_SOURCE_DIR}/dist/obs/strusvector-Debian_7.0.dsc"  @ONLY )
-configure_file( "${PROJECT_SOURCE_DIR}/dist/obs/strusvector-xUbuntu_12.04.dsc.in"  "${PROJECT_SOURCE_DIR}/dist/obs/strusvector-xUbuntu_12.04.dsc"  @ONLY )
 configure_file( "${PROJECT_SOURCE_DIR}/dist/obs/strusvector-xUbuntu_14.04.dsc.in"  "${PROJECT_SOURCE_DIR}/dist/obs/strusvector-xUbuntu_14.04.dsc"  @ONLY )
-configure_file( "${PROJECT_SOURCE_DIR}/dist/obs/strusvector-xUbuntu_15.10.dsc.in" "${PROJECT_SOURCE_DIR}/dist/obs/strusvector-xUbuntu_15.10.dsc"  @ONLY )
 configure_file( "${PROJECT_SOURCE_DIR}/dist/obs/strusvector-xUbuntu_16.04.dsc.in" "${PROJECT_SOURCE_DIR}/dist/obs/strusvector-xUbuntu_16.04.dsc"  @ONLY )
 configure_file( "${PROJECT_SOURCE_DIR}/dist/redhat/strusvector.spec.in"  "${PROJECT_SOURCE_DIR}/dist/redhat/strusvector.spec"  @ONLY )
 
