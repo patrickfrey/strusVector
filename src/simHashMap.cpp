@@ -121,7 +121,18 @@ struct RankList
 		}
 		return rt;
 	}
-	
+
+	std::string tostring() const
+	{
+		std::ostringstream buf;
+		std::size_t limit = m_nofRanks > m_maxNofRanks ? m_maxNofRanks:m_nofRanks;
+		for (std::size_t ridx=0; ridx<limit; ++ridx)
+		{
+			buf << "(" << m_brute_ar[ m_brute_index[ ridx]].simdist << "," << m_brute_ar[ m_brute_index[ ridx]].index << ") ";
+		}
+		return buf.str();
+	}
+
 private:
 	enum {MaxIndexSize=256};
 	unsigned int m_nofRanks;
@@ -138,6 +149,7 @@ std::vector<Index> SimHashMap::findSimilar2( const SimHash& sh, unsigned short s
 	unsigned int shdiff = ((unsigned int)prob_simdist * 64U) / m_vecsize;
 	uint64_t needle = sh.ar()[ m_select];
 	std::size_t si = 0, se = m_ar.size();
+	/*[-]*/std::cout << "SIMDIST " << simdist << " " << shdiff << std::endl;
 	for (; si != se; ++si)
 	{
 		if (strus::BitOperations::bitCount( m_selar[si] ^ needle) <= shdiff)
@@ -154,8 +166,10 @@ std::vector<Index> SimHashMap::findSimilar2( const SimHash& sh, unsigned short s
 					{
 						simdist = lastdist;
 						shdiff = (unsigned int)(prob_simdist_factor * simdist);
+						/*[-]*/std::cout << "SIMDIST " << simdist << " " << shdiff << std::endl;
 					}
 				}
+				/*[-]*/std::cout << "RANKS " << ranklist.tostring() << std::endl;
 			}
 		}
 	}
