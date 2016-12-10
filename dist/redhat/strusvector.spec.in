@@ -185,11 +185,6 @@ BuildRequires: boost-devel
 %endif
 
 %if %{rhel} || %{centos} || %{scilin} || %{fedora} || %{suse} || %{sles}
-BuildRequires: leveldb-devel
-Requires: leveldb
-%endif
-
-%if %{rhel} || %{centos} || %{scilin} || %{fedora} || %{suse} || %{sles}
 BuildRequires: blas-devel
 BuildRequires: lapack-devel
 Requires: blas
