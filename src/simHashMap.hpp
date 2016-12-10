@@ -25,8 +25,8 @@ public:
 		:m_ar(ar_),m_selar(0),m_select(0),m_vecsize(0),m_seed(seed_){initBench();}
 	~SimHashMap();
 
-	std::vector<Index> findSimilar( const SimHash& sh, unsigned short simdist, unsigned short prob_simdist) const;
-	std::vector<Index> findSimilar( const SimHash& sh, unsigned short simdist) const;
+	std::vector<Index> findSimilar( const SimHash& sh, unsigned short simdist, unsigned short prob_simdist, unsigned int maxNofElements) const;
+	std::vector<Index> findSimilar( const SimHash& sh, unsigned short simdist, unsigned int maxNofElements) const;
 
 	const SimHash& operator[]( std::size_t idx) const	{return m_ar[idx];}
 

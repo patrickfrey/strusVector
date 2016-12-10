@@ -1099,6 +1099,7 @@ void DatabaseAdapter::dumpKeyValue( std::ostream& out, const strus::DatabaseCurs
 			{
 				out << " " << *ci;
 			}
+			out << std::endl;
 			break;
 		}
 		case DatabaseAdapter::KeySampleVector:
@@ -1145,7 +1146,7 @@ void DatabaseAdapter::dumpKeyValue( std::ostream& out, const strus::DatabaseCurs
 		}
 		case DatabaseAdapter::KeyConfig:
 		{
-			out << std::string(value);
+			out << std::string(value) << std::endl;
 			break;
 		}
 		case DatabaseAdapter::KeyLshModel:
