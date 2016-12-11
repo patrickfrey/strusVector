@@ -10,7 +10,7 @@ pkgdesc='Library implementing the storage of a text search engine.'
 license=('MPL2')
 arch=('i686' 'x86_64')
 url="http://project-strus.net"
-depends=('boost>=1.53' 'boost-libs>=1.53' 'leveldb' "strusbase>=${_deppkgver}" "strus>=${_deppkgver}" "strusanalyzer>=${_deppkgver}" "strustrace>=${_deppkgver}" "strusmodule>=${_deppkgver}" "blas" "lapack")
+depends=('boost>=1.53' 'boost-libs>=1.53' "strusbase>=${_deppkgver}" "strus>=${_deppkgver}" "strusanalyzer>=${_deppkgver}" "strustrace>=${_deppkgver}" "strusmodule>=${_deppkgver}" "blas" "lapack")
 makedepends=('cmake')
 source=("${pkgname}-${_mainpkgver}.tar.gz")
 
@@ -30,10 +30,6 @@ package() {
   msg "Installing.."
   cd build
   make DESTDIR=${pkgdir} install
-  
-  msg "Adding strusvector to ld.so.conf..."
-  install -d ${pkgdir}/etc/ld.so.conf.d
-  echo "/usr/lib/${pkgname}" > ${pkgdir}/etc/ld.so.conf.d/${pkgname}.conf  
 }
 
 check() {
