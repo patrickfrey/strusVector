@@ -98,7 +98,7 @@ double SimGroup::fitness( const std::vector<SimHash>& samplear, const SimHash& g
 	for (; mi != me; ++mi)
 	{
 		double dist = genom.dist( samplear[ *mi]);
-		sqrsum += dist * dist;
+		sqrsum += dist * std::sqrt( dist);
 	}
 	return pow_uint( 1.0 + 1.0 / std::sqrt( sqrsum / m_nofmembers), m_nofmembers) - 1.0;
 }
