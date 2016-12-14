@@ -351,11 +351,11 @@ public:
 		{
 			m_database->writeConfig( m_config);
 			m_lshmodel = LshModel( m_config.dim, m_config.bits, m_config.variations);
-			m_genmodelmain = GenModel( m_config.threads, m_config.maxdist, m_config.gencfg.simdist, m_config.gencfg.raddist, m_config.gencfg.eqdist, m_config.gencfg.mutations, m_config.gencfg.votes, m_config.gencfg.descendants, m_config.gencfg.maxage, m_config.gencfg.iterations, m_config.gencfg.assignments, m_config.gencfg.greediness, m_config.gencfg.isaf, m_config.gencfg.baff, m_config.gencfg.eqdiff, m_config.gencfg.with_singletons, m_errorhnd);
+			m_genmodelmain = GenModel( m_config.threads, m_config.maxdist, m_config.gencfg.simdist, m_config.gencfg.raddist, m_config.gencfg.eqdist, m_config.gencfg.mutations, m_config.gencfg.votes, m_config.gencfg.descendants, m_config.gencfg.maxage, m_config.gencfg.iterations, m_config.gencfg.assignments, m_config.gencfg.greediness, m_config.gencfg.isaf, m_config.gencfg.baff, m_config.gencfg.fdf, m_config.gencfg.eqdiff, m_config.gencfg.with_singletons, m_errorhnd);
 			GenModelConfigMap::const_iterator mi = m_config.altgenmap.begin(), me = m_config.altgenmap.end();
 			for (; mi != me; ++mi)
 			{
-				m_genmodelmap[ mi->first] = GenModel( m_config.threads, m_config.maxdist, mi->second.simdist, mi->second.raddist, mi->second.eqdist, mi->second.mutations, mi->second.votes, mi->second.descendants, mi->second.maxage, mi->second.iterations, mi->second.assignments, mi->second.greediness, mi->second.isaf, mi->second.baff, mi->second.eqdiff, mi->second.with_singletons, m_errorhnd);
+				m_genmodelmap[ mi->first] = GenModel( m_config.threads, m_config.maxdist, mi->second.simdist, mi->second.raddist, mi->second.eqdist, mi->second.mutations, mi->second.votes, mi->second.descendants, mi->second.maxage, mi->second.iterations, mi->second.assignments, mi->second.greediness, mi->second.isaf, mi->second.baff, mi->second.fdf, mi->second.eqdiff, mi->second.with_singletons, m_errorhnd);
 			}
 			m_database->writeLshModel( m_lshmodel);
 			m_database->writeState( m_state = 1);
@@ -374,11 +374,11 @@ public:
 				m_needToCalculateSimRelationMap = true;
 			}
 			m_lshmodel = m_database->readLshModel();
-			m_genmodelmain = GenModel( m_config.threads, m_config.maxdist, m_config.gencfg.simdist, m_config.gencfg.raddist, m_config.gencfg.eqdist, m_config.gencfg.mutations, m_config.gencfg.votes, m_config.gencfg.descendants, m_config.gencfg.maxage, m_config.gencfg.iterations, m_config.gencfg.assignments, m_config.gencfg.greediness, m_config.gencfg.isaf, m_config.gencfg.baff, m_config.gencfg.eqdiff, m_config.gencfg.with_singletons, m_errorhnd);
+			m_genmodelmain = GenModel( m_config.threads, m_config.maxdist, m_config.gencfg.simdist, m_config.gencfg.raddist, m_config.gencfg.eqdist, m_config.gencfg.mutations, m_config.gencfg.votes, m_config.gencfg.descendants, m_config.gencfg.maxage, m_config.gencfg.iterations, m_config.gencfg.assignments, m_config.gencfg.greediness, m_config.gencfg.isaf, m_config.gencfg.baff, m_config.gencfg.fdf, m_config.gencfg.eqdiff, m_config.gencfg.with_singletons, m_errorhnd);
 			GenModelConfigMap::const_iterator mi = m_config.altgenmap.begin(), me = m_config.altgenmap.end();
 			for (; mi != me; ++mi)
 			{
-				m_genmodelmap[ mi->first] = GenModel( m_config.threads, m_config.maxdist, mi->second.simdist, mi->second.raddist, mi->second.eqdist, mi->second.mutations, mi->second.votes, mi->second.descendants, mi->second.maxage, mi->second.iterations, mi->second.assignments, mi->second.greediness, mi->second.isaf, mi->second.baff, mi->second.eqdiff, mi->second.with_singletons, m_errorhnd);
+				m_genmodelmap[ mi->first] = GenModel( m_config.threads, m_config.maxdist, mi->second.simdist, mi->second.raddist, mi->second.eqdist, mi->second.mutations, mi->second.votes, mi->second.descendants, mi->second.maxage, mi->second.iterations, mi->second.assignments, mi->second.greediness, mi->second.isaf, mi->second.baff, mi->second.fdf, mi->second.eqdiff, mi->second.with_singletons, m_errorhnd);
 			}
 			m_samplear = m_database->readSampleSimhashVector();
 		}

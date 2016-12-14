@@ -71,11 +71,11 @@ bool SimGroup::isMember( const SampleIndex& idx) const
 	return m_members.find( idx) != m_members.end();
 }
 
-double SimGroup::fitness( const std::vector<SimHash>& samplear) const
+double SimGroup::fitness( const std::vector<SimHash>& samplear, double fdf) const
 {
 	if (!m_fitness_valid)
 	{
-		m_fitness = fitness( samplear, gencode());
+		m_fitness = fitness( samplear, gencode(), fdf);
 		m_fitness_valid = true;
 	}
 	return m_fitness;
@@ -91,14 +91,14 @@ double pow_uint( double value, unsigned int exp)
 	return rt;
 }
 
-double SimGroup::fitness( const std::vector<SimHash>& samplear, const SimHash& genom) const
+double SimGroup::fitness( const std::vector<SimHash>& samplear, const SimHash& genom, double fdf) const
 {
 	double sqrsum = 0.0;
 	const_iterator mi = m_members.begin(), me = m_members.end();
 	for (; mi != me; ++mi)
 	{
-		double dist = genom.dist( samplear[ *mi]);
-		sqrsum += dist * std::sqrt( dist);
+		double dist = genom.dist( samplear[ *mi]) * fdf;
+		sqrsum += dist * dist;
 	}
 	return pow_uint( 1.0 + 1.0 / std::sqrt( sqrsum / m_nofmembers), m_nofmembers) - 1.0;
 }
@@ -205,18 +205,19 @@ SimGroup* SimGroup::createMutation(
 		const std::vector<SimHash>& samplear,
 		unsigned int descendants,
 		unsigned int maxNofMutations,
-		unsigned int maxNofVotes) const
+		unsigned int maxNofVotes,
+		double fdf) const
 {
 	std::vector<SimHash> descendantlist;
 	descendantlist.reserve( descendants);
 
-	double max_fitness = fitness( samplear);
+	double max_fitness = fitness( samplear, fdf);
 	int selected = -1;
 	std::size_t di=0, de=descendants;
 	for (; di != de; ++di)
 	{
 		descendantlist.push_back( mutationGencode( samplear, maxNofMutations, maxNofVotes));
-		double desc_fitness = fitness( samplear, descendantlist.back());
+		double desc_fitness = fitness( samplear, descendantlist.back(), fdf);
 		if (desc_fitness > max_fitness)
 		{
 			selected = (int)di;
@@ -234,18 +235,19 @@ bool SimGroup::doMutation(
 		const std::vector<SimHash>& samplear,
 		unsigned int descendants,
 		unsigned int maxNofMutations,
-		unsigned int maxNofVotes)
+		unsigned int maxNofVotes,
+		double fdf)
 {
 	std::vector<SimHash> descendantlist;
 	descendantlist.reserve( descendants);
 
-	double max_fitness = fitness( samplear);
+	double max_fitness = fitness( samplear, fdf);
 	int selected = -1;
 	std::size_t di=0, de=descendants;
 	for (; di != de; ++di)
 	{
 		descendantlist.push_back( mutationGencode( samplear, maxNofMutations, maxNofVotes));
-		double desc_fitness = fitness( samplear, descendantlist.back());
+		double desc_fitness = fitness( samplear, descendantlist.back(), fdf);
 		if (desc_fitness > max_fitness)
 		{
 			selected = (int)di;

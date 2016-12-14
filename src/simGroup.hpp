@@ -63,19 +63,22 @@ public:
 
 	/// \brief Calculate the fitness of this individual
 	/// \param[in] samplear global array of samples the reference system of this individual is based on
-	double fitness( const std::vector<SimHash>& samplear) const;
+	/// \param[in] fdf factor multiplying dist in fitness formula
+	double fitness( const std::vector<SimHash>& samplear, double fdf) const;
 
 	/// \brief Try to create a mutation with better fitness than this SimGroup
 	/// \param[in] samplear global array of samples the reference system of this individual is based on
 	/// \param[in] descendants number of descendants to try
 	/// \param[in] maxNofMutations maximum number of mutations
 	/// \param[in] maxNofVotes maximum number of votes when polling for a mutation decision
+	/// \param[in] fdf factor multiplying dist in fitness formula
 	/// \return the mutated group (with ownership) or 0 if not succeeded
 	SimGroup* createMutation(
 			const std::vector<SimHash>& samplear,
 			unsigned int descendants,
 			unsigned int maxNofMutations,
-			unsigned int maxNofVotes) const;
+			unsigned int maxNofVotes,
+			double fdf) const;
 
 	
 	/// \brief Try to do a mutation step with better fitness on this SimGroup
@@ -83,15 +86,18 @@ public:
 	/// \param[in] descendants number of descendants to try
 	/// \param[in] maxNofMutations maximum number of mutations
 	/// \param[in] maxNofVotes maximum number of votes when polling for a mutation decision
+	/// \param[in] fdf factor multiplying dist in fitness formula
 	/// \return true if succeeded
 	bool doMutation(
 			const std::vector<SimHash>& samplear,
 			unsigned int descendants,
 			unsigned int maxNofMutations,
-			unsigned int maxNofVotes);
+			unsigned int maxNofVotes,
+			double fdf);
 
 	/// \brief Evaluate the kernel = the set of elements that are the same for all samples
 	/// \param[in] samplear global array of samples the reference system of this individual is based on
+	/// \return the similarity hash value
 	SimHash kernel( const std::vector<SimHash>& samplear) const;
 
 	/// \brief Check status of this group
@@ -106,18 +112,23 @@ public:
 private:
 	/// \brief Evaluate the fitness of a proposed genom change
 	/// \param[in] samplear global array of samples the reference system of this individual is based on
-	double fitness( const std::vector<SimHash>& samplear, const SimHash& candidate) const;
+	/// \param[in] fdf factor multiplying dist in fitness formula
+	/// \return the fitness value
+	double fitness( const std::vector<SimHash>& samplear, const SimHash& candidate, double fdf) const;
 	/// \brief Calculate a mutation
 	/// \param[in] samplear global array of samples the reference system of this individual is based on
 	/// \param[in] maxNofMutations maximum number of bit mutations to do
 	/// \param[in] maxNofVotes number of elements used for a vote for a mutation direction
+	/// \return the gen code
 	SimHash mutationGencode( const std::vector<SimHash>& samplear, unsigned int maxNofMutations, unsigned int maxNofVotes) const;
 	/// \brief Calculate an initial individual (kernel + some random values)
 	/// \param[in] samplear global array of samples the reference system of this individual is based on
+	/// \return the initial gen code
 	SimHash inithash( const std::vector<SimHash>& samplear) const;
 	/// \brief Vote for a mutation
 	/// \param[in] mutidx index of gencode element to set
 	/// \param[in] nofqueries number of elements to query for the vote
+	/// \return the vote
 	bool mutation_vote( const std::vector<SimHash>& samplear, unsigned int mutidx, unsigned int nofqueries) const;
 
 private:

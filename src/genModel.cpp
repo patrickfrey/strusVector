@@ -192,6 +192,7 @@ std::vector<SimHash> GenModel::run(
 	genParameter.greediness = m_greediness;
 	genParameter.isaf = m_isaf;
 	genParameter.baff = m_baff;
+	genParameter.fdf = m_fdf;
 	genParameter.eqdiff = m_eqdiff;
 	genParameter.with_singletons = m_with_singletons;
 

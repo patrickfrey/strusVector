@@ -205,7 +205,7 @@ void GenGroupContext::removeGroup( SimGroupIdAllocator& localAllocator, const Co
 bool GenGroupContext::tryAddGroupMember(
 		const ConceptIndex& group_id, const SampleIndex& newmember,
 		unsigned int descendants, unsigned int mutations, unsigned int votes,
-		unsigned int maxage)
+		unsigned int maxage, double fdf)
 {
 	SimGroupRef group = m_groupMap.get( group_id);
 	if (!group.get())
@@ -224,8 +224,8 @@ bool GenGroupContext::tryAddGroupMember(
 	{
 		throw strus::runtime_error(_TXT("internal: inconsistency in group (try add group member)"));
 	}
-	newgroup->doMutation( *m_samplear, descendants, age_mutations( *newgroup, maxage, mutations), age_mutation_votes( *newgroup, maxage, votes));
-	if (newgroup->fitness( *m_samplear) > group->fitness( *m_samplear))
+	newgroup->doMutation( *m_samplear, descendants, age_mutations( *newgroup, maxage, mutations), age_mutation_votes( *newgroup, maxage, votes), fdf);
+	if (newgroup->fitness( *m_samplear, fdf) > group->fitness( *m_samplear, fdf))
 	{
 		m_groupMap.setGroup( group_id, newgroup);
 		return true;
@@ -313,7 +313,7 @@ void GenGroupContext::tryGroupAssignments(
 			{
 				throw strus::runtime_error(_TXT("internal: inconsistency in group (add member failed)"));
 			}
-			newgroup->doMutation( *m_samplear, parameter.descendants, age_mutations( *newgroup, parameter.maxage, parameter.mutations), age_mutation_votes( *newgroup, parameter.maxage, parameter.votes));
+			newgroup->doMutation( *m_samplear, parameter.descendants, age_mutations( *newgroup, parameter.maxage, parameter.mutations), age_mutation_votes( *newgroup, parameter.maxage, parameter.votes), parameter.fdf);
 			m_groupMap.setGroup( ai->conceptIndex, newgroup);
 			++aidx;
 		}
@@ -355,8 +355,8 @@ bool GenGroupContext::greedyChaseFreeFeatures(
 			{
 				SimGroupRef testgroup = boost::make_shared<SimGroup>( *group);
 				testgroup->addMember( neighbour.index);
-				testgroup->doMutation( *m_samplear, parameter.descendants, age_mutations( *testgroup, parameter.maxage, parameter.mutations), age_mutation_votes( *testgroup, parameter.maxage, parameter.votes));
-				if (testgroup->fitness( *m_samplear) > group->fitness( *m_samplear))
+				testgroup->doMutation( *m_samplear, parameter.descendants, age_mutations( *testgroup, parameter.maxage, parameter.mutations), age_mutation_votes( *testgroup, parameter.maxage, parameter.votes), parameter.fdf);
+				if (testgroup->fitness( *m_samplear, parameter.fdf) > group->fitness( *m_samplear, parameter.fdf))
 				{
 					// ... we have to go over a queue to avoid inconsistencies
 					m_groupAssignQueue.push( neighbour.index, bestmatch_simgroup);
@@ -367,7 +367,7 @@ bool GenGroupContext::greedyChaseFreeFeatures(
 		// ...if we did not find a close group, then we found a new one with the two elements as members:
 		ConceptIndex newgroupidx = groupIdAllocator.alloc();
 		SimGroupRef newgroup = boost::make_shared<SimGroup>( *m_samplear, sidx, neighbour.index, newgroupidx);
-		(void)newgroup->doMutation( *m_samplear, parameter.descendants, age_mutations( *newgroup, parameter.maxage, parameter.mutations), age_mutation_votes( *newgroup, parameter.maxage, parameter.votes));
+		(void)newgroup->doMutation( *m_samplear, parameter.descendants, age_mutations( *newgroup, parameter.maxage, parameter.mutations), age_mutation_votes( *newgroup, parameter.maxage, parameter.votes), parameter.fdf);
 		bool success_nb = false;
 		{
 			SharedSampleSimGroupMap::Lock SLOCK( &m_sampleSimGroupMap, neighbour.index);
@@ -389,7 +389,7 @@ bool GenGroupContext::greedyChaseFreeFeatures(
 			{
 				if (!tryAddGroupMember( newgroupidx, neighbour.index, parameter.descendants,
 							parameter.mutations, parameter.votes,
-							parameter.maxage)) break;
+							parameter.maxage, parameter.fdf)) break;
 			}
 			return true;
 		}
@@ -455,7 +455,7 @@ void GenGroupContext::greedyNeighbourGroupInterchange(
 					{
 						throw strus::runtime_error(_TXT("internal: inconsistency in group reference not in sim group map, but element part of group"));
 					}
-					(void)newgroup->doMutation( *m_samplear, parameter.descendants, age_mutations( *newgroup, parameter.maxage, parameter.mutations), age_mutation_votes( *newgroup, parameter.maxage, parameter.votes));
+					(void)newgroup->doMutation( *m_samplear, parameter.descendants, age_mutations( *newgroup, parameter.maxage, parameter.mutations), age_mutation_votes( *newgroup, parameter.maxage, parameter.votes), parameter.fdf);
 					m_groupMap.setGroup( group_id, newgroup);
 					group = m_groupMap.get( group_id);
 					++interchangecnt;
@@ -474,7 +474,7 @@ void GenGroupContext::greedyNeighbourGroupInterchange(
 			{
 				if (group->gencode().near( (*m_samplear)[*mi], parameter.simdist) && !group->isMember( *mi))
 				{
-					if (tryAddGroupMember( group_id, *mi, parameter.descendants, parameter.mutations, parameter.votes, parameter.maxage))
+					if (tryAddGroupMember( group_id, *mi, parameter.descendants, parameter.mutations, parameter.votes, parameter.maxage, parameter.fdf))
 					{
 						++interchangecnt;
 						group = m_groupMap.get( group_id);
@@ -493,7 +493,7 @@ bool GenGroupContext::improveGroup(
 {
 	SimGroupRef group = m_groupMap.get( group_id);
 	if (!group.get()) return false;
-	SimGroupRef newgroup( group->createMutation( *m_samplear, parameter.descendants, age_mutations( *group, parameter.maxage, parameter.mutations), age_mutation_votes( *group, parameter.maxage, parameter.votes)));
+	SimGroupRef newgroup( group->createMutation( *m_samplear, parameter.descendants, age_mutations( *group, parameter.maxage, parameter.mutations), age_mutation_votes( *group, parameter.maxage, parameter.votes), parameter.fdf));
 	if (!newgroup.get()) return false;
 
 	SimGroup::const_iterator mi = newgroup->begin(), me = newgroup->end();
@@ -513,7 +513,7 @@ bool GenGroupContext::improveGroup(
 				}
 			}
 			if (newgroup->size() < 2) break;
-			newgroup->doMutation( *m_samplear, parameter.descendants, age_mutations( *group, parameter.maxage, parameter.mutations), age_mutation_votes( *group, parameter.maxage, parameter.votes));
+			newgroup->doMutation( *m_samplear, parameter.descendants, age_mutations( *group, parameter.maxage, parameter.mutations), age_mutation_votes( *group, parameter.maxage, parameter.votes), parameter.fdf);
 		}
 	}
 	m_groupMap.setGroup( group_id, newgroup);
@@ -551,7 +551,7 @@ bool GenGroupContext::similarNeighbourGroupElimination(
 			// Eliminate group that is completely contained in another group with a higher fitness:
 			if (sim_group->contains( *group))
 			{
-				if (sim_group->fitness( *m_samplear) > group->fitness( *m_samplear))
+				if (sim_group->fitness( *m_samplear, parameter.fdf) > group->fitness( *m_samplear, parameter.fdf))
 				{
 					removeGroup( groupIdAllocator, group_id);
 					return true;
@@ -561,7 +561,7 @@ bool GenGroupContext::similarNeighbourGroupElimination(
 			float maxeditdist = (unsigned int)((float)std::min( group->size(), sim_group->size()) * parameter.eqdiff);
 			if (group->diffMembers( *sim_group, maxeditdist) < maxeditdist)
 			{
-				if (sim_group->fitness( *m_samplear) > group->fitness( *m_samplear))
+				if (sim_group->fitness( *m_samplear, parameter.fdf) > group->fitness( *m_samplear, parameter.fdf))
 				{
 					removeGroup( groupIdAllocator, group_id);
 					return true;
@@ -605,7 +605,7 @@ bool GenGroupContext::unfittestGroupElimination(
 		SimGroupRef member_group = m_groupMap.get( *ni);
 		if (!member_group.get()) continue;
 
-		double fitness = member_group->fitness( *m_samplear);
+		double fitness = member_group->fitness( *m_samplear, parameter.fdf);
 		if (fitness > maxFitness)
 		{
 			maxFitness = fitness;

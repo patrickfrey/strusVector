@@ -40,13 +40,14 @@ struct GenGroupParameter
 	unsigned int greediness;
 	float isaf;
 	float baff;
+	float fdf;
 	float eqdiff;
 	bool with_singletons;
 
 	GenGroupParameter()
 		:simdist(0),eqdist(0)
 		,descendants(0),mutations(0),votes(0),maxage(0),greediness(0)
-		,isaf(0.6),baff(0.1),eqdiff(0.15),with_singletons(false){}
+		,isaf(0.6),baff(0.1),fdf(0.1),eqdiff(0.15),with_singletons(false){}
 };
 
 class GenGroupContext
@@ -69,7 +70,7 @@ public:
 	bool tryAddGroupMember(
 			const ConceptIndex& group_id, const SampleIndex& newmember,
 			unsigned int descendants, unsigned int mutations, unsigned int votes,
-			unsigned int maxage);
+			unsigned int maxage, double fdf);
 
 	std::string groupMembersString( const ConceptIndex& group_id) const;
 	void checkSimGroupStructures();
