@@ -9,8 +9,9 @@
 #include "vectorSpaceModel.hpp"
 #include "vectorSpaceModelDump.hpp"
 #include "strus/errorBufferInterface.hpp"
-#include "strus/vectorSpaceModelInstanceInterface.hpp"
+#include "strus/vectorSpaceModelClientInterface.hpp"
 #include "strus/vectorSpaceModelBuilderInterface.hpp"
+#include "strus/vectorSpaceModelSearchInterface.hpp"
 #include "strus/databaseInterface.hpp"
 #include "strus/base/fileio.hpp"
 #include "strus/base/string_format.hpp"
@@ -31,6 +32,7 @@
 #include "stringList.hpp"
 #include "armadillo"
 #include <memory>
+#include <limits>
 
 using namespace strus;
 #define MODULENAME   "standard vector space model"
@@ -39,45 +41,72 @@ using namespace strus;
 
 #define MAIN_CONCEPT_CLASSNAME ""
 
-typedef Reference<SimHashMap> SimHashMapReference;
 
-
-class VectorSpaceModelInstance
-	:public VectorSpaceModelInstanceInterface
+class VectorSpaceModelSearch
+	:public VectorSpaceModelSearchInterface
 {
 public:
-	VectorSpaceModelInstance( const std::string& config_, const DatabaseInterface* database_, ErrorBufferInterface* errorhnd_)
-		:m_errorhnd(errorhnd_),m_database(),m_config(config_,errorhnd_),m_lshmodel()
-	{
-		m_database.reset( new DatabaseAdapter( database_, m_config.databaseConfig, m_errorhnd));
-		m_database->checkVersion();
-		if (m_database->isempty()) throw strus::runtime_error(_TXT("try to open a vector space model that is empty, need to be built first"));
-		VectorSpaceModelConfig cfg = m_database->readConfig();
-		m_config = VectorSpaceModelConfig( config_, errorhnd_, cfg);
-	}
-
-	virtual ~VectorSpaceModelInstance()
+	VectorSpaceModelSearch( const DatabaseAdapter& database, const VectorSpaceModelConfig& config_, const Index& range_from_, const Index& range_to_, ErrorBufferInterface* errorhnd_)
+		:m_errorhnd(errorhnd_)
+		,m_config(config_)
+		,m_lshmodel(database.readLshModel())
+		,m_samplear(database.readSampleSimhashVector(range_from_,range_to_),1/*prob select random seed*/)
+		,m_range_from(range_from_)
+		,m_range_to(range_to_)
 	{}
 
-	void loaddata()
-	{
-		if (!m_lshmodel.get())
-		{
-			m_lshmodel.reset( new LshModel( m_database->readLshModel()));
-		}
-		if (!m_samplear.get())
-		{
-			m_samplear.reset( new SimHashMap( m_database->readSampleSimhashVector(), 1/*prob select random seed*/));
-		}
-	}
+	virtual ~VectorSpaceModelSearch(){}
 
-	virtual void preload()
+	virtual std::vector<Result> findSimilar( const std::vector<double>& vec, unsigned int maxNofResults) const
 	{
 		try
 		{
-			loaddata();
+			SimHash hash( m_lshmodel.simHash( arma::normalise( arma::vec( vec))));
+			if (m_config.gencfg.probdist)
+			{
+				return m_samplear.findSimilar( hash, m_config.maxdist, m_config.maxdist * m_config.gencfg.probdist / m_config.gencfg.simdist, maxNofResults, m_range_from);
+			}
+			else
+			{
+				return m_samplear.findSimilar( hash, m_config.maxdist, maxNofResults, m_range_from);
+			}
 		}
-		CATCH_ERROR_ARG1_MAP( _TXT("error in instance of '%s' when pre-loading data: %s"), MODULENAME, *m_errorhnd);
+		CATCH_ERROR_ARG1_MAP_RETURN( _TXT("error in similar vector search of '%s': %s"), MODULENAME, *m_errorhnd, std::vector<Result>());
+	}
+
+private:
+	ErrorBufferInterface* m_errorhnd;
+	VectorSpaceModelConfig m_config;
+	LshModel m_lshmodel;
+	SimHashMap m_samplear;
+	Index m_range_from;
+	Index m_range_to;
+};
+
+
+class VectorSpaceModelClient
+	:public VectorSpaceModelClientInterface
+{
+public:
+	VectorSpaceModelClient( const VectorSpaceModelConfig& config_, const std::string& configstr_, const DatabaseInterface* database_, ErrorBufferInterface* errorhnd_)
+		:m_errorhnd(errorhnd_),m_database(database_,config_.databaseConfig,errorhnd_),m_config(config_)
+	{
+		m_database.checkVersion();
+		if (m_database.isempty()) throw strus::runtime_error(_TXT("try to open a vector space model that is empty, need to be built first"));
+		VectorSpaceModelConfig cfg = m_database.readConfig();
+		m_config = VectorSpaceModelConfig( configstr_, errorhnd_, cfg);
+	}
+
+	virtual ~VectorSpaceModelClient()
+	{}
+
+	virtual VectorSpaceModelSearchInterface* createSearcher( const Index& range_from, const Index& range_to) const
+	{
+		try
+		{
+			return new VectorSpaceModelSearch( m_database, m_config, range_from, range_to, m_errorhnd);
+		}
+		CATCH_ERROR_ARG1_MAP_RETURN( _TXT("error in client interface of '%s' creating searcher: %s"), MODULENAME, *m_errorhnd, 0);
 	}
 
 	virtual std::vector<std::string> conceptClassNames() const
@@ -86,74 +115,48 @@ public:
 		{
 			std::vector<std::string> rt;
 			rt.push_back( MAIN_CONCEPT_CLASSNAME);
-			std::vector<std::string> dbclnames = m_database->readConceptClassNames();
+			std::vector<std::string> dbclnames = m_database.readConceptClassNames();
 			rt.insert( rt.end(), dbclnames.begin(), dbclnames.end());
 			return rt;
 		}
-		CATCH_ERROR_ARG1_MAP_RETURN( _TXT("error in instance of '%s' getting the list of implemented concept class names: %s"), MODULENAME, *m_errorhnd, std::vector<std::string>());
+		CATCH_ERROR_ARG1_MAP_RETURN( _TXT("error in client interface of '%s' getting the list of implemented concept class names: %s"), MODULENAME, *m_errorhnd, std::vector<std::string>());
 	}
 
-	virtual std::vector<Index> findSimilarFeatures( const std::vector<double>& vec, unsigned int maxNofElements) const
-	{
-		try
-		{
-			if (!m_lshmodel.get())
-			{
-				m_lshmodel.reset( new LshModel( m_database->readLshModel()));
-			}
-			if (!m_samplear.get())
-			{
-				m_samplear.reset( new SimHashMap( m_database->readSampleSimhashVector(), 1/*prob select random seed*/));
-			}
-			std::vector<Index> rt;
-			SimHash hash( m_lshmodel->simHash( arma::normalise( arma::vec( vec))));
-			if (m_config.gencfg.probdist)
-			{
-				rt = m_samplear->findSimilar( hash, m_config.maxdist, m_config.maxdist * m_config.gencfg.probdist / m_config.gencfg.simdist, maxNofElements);
-			}
-			else
-			{
-				rt = m_samplear->findSimilar( hash, m_config.maxdist, maxNofElements);
-			}
-			return rt;
-		}
-		CATCH_ERROR_ARG1_MAP_RETURN( _TXT("error in instance of '%s' mapping vector to concepts: %s"), MODULENAME, *m_errorhnd, std::vector<Index>());
-	}
 
 	virtual std::vector<Index> featureConcepts( const std::string& conceptClass, const Index& index) const
 	{
 		try
 		{
-			return m_database->readSampleConceptIndices( conceptClass, index);
+			return m_database.readSampleConceptIndices( conceptClass, index);
 		}
-		CATCH_ERROR_ARG1_MAP_RETURN( _TXT("error in instance of '%s' retrieving associated concepts by sample index: %s"), MODULENAME, *m_errorhnd, std::vector<Index>());
+		CATCH_ERROR_ARG1_MAP_RETURN( _TXT("error in client interface of '%s' retrieving associated concepts by sample index: %s"), MODULENAME, *m_errorhnd, std::vector<Index>());
 	}
 
 	virtual std::vector<double> featureVector( const Index& index) const
 	{
 		try
 		{
-			return m_database->readSampleVector( index);
+			return m_database.readSampleVector( index);
 		}
-		CATCH_ERROR_ARG1_MAP_RETURN( _TXT("error in instance of '%s' getting sample vector by index: %s"), MODULENAME, *m_errorhnd, std::vector<double>());
+		CATCH_ERROR_ARG1_MAP_RETURN( _TXT("error in client interface of '%s' getting sample vector by index: %s"), MODULENAME, *m_errorhnd, std::vector<double>());
 	}
 
 	virtual std::string featureName( const Index& index) const
 	{
 		try
 		{
-			return m_database->readSampleName( index);
+			return m_database.readSampleName( index);
 		}
-		CATCH_ERROR_ARG1_MAP_RETURN( _TXT("error in instance of '%s' getting name of sample: %s"), MODULENAME, *m_errorhnd, std::string());
+		CATCH_ERROR_ARG1_MAP_RETURN( _TXT("error in client interface of '%s' getting name of sample: %s"), MODULENAME, *m_errorhnd, std::string());
 	}
 
 	virtual Index featureIndex( const std::string& name) const
 	{
 		try
 		{
-			return m_database->readSampleIndex( name);
+			return m_database.readSampleIndex( name);
 		}
-		CATCH_ERROR_ARG1_MAP_RETURN( _TXT("error in instance of '%s' getting index of feature by its name: %s"), MODULENAME, *m_errorhnd, -1);
+		CATCH_ERROR_ARG1_MAP_RETURN( _TXT("error in client interface of '%s' getting index of feature by its name: %s"), MODULENAME, *m_errorhnd, -1);
 	}
 
 	virtual std::vector<std::string> featureAttributes( const std::string& name, const Index& index) const
@@ -165,14 +168,14 @@ public:
 			{
 				if (index < 0) throw strus::runtime_error(_TXT("feature index out of range"));
 
-				SimHash simhash = m_database->readSampleSimhash( index);
+				SimHash simhash = m_database.readSampleSimhash( index);
 				rt.push_back( simhash.tostring());
 			}
 			else if (utils::caseInsensitiveEquals( name, "simrel"))
 			{
 				if (index >= 0)
 				{
-					std::vector<SimRelationMap::Element> elems = m_database->readSimRelations( index);
+					std::vector<SimRelationMap::Element> elems = m_database.readSimRelations( index);
 					std::vector<SimRelationMap::Element>::const_iterator ei = elems.begin(), ee = elems.end();
 					for (; ei != ee; ++ei)
 					{
@@ -183,10 +186,10 @@ public:
 				}
 				else
 				{
-					SampleIndex si = 0, se = m_database->readNofSamples();
+					SampleIndex si = 0, se = m_database.readNofSamples();
 					for (; si != se; ++si)
 					{
-						std::vector<SimRelationMap::Element> elems = m_database->readSimRelations( si);
+						std::vector<SimRelationMap::Element> elems = m_database.readSimRelations( si);
 						std::vector<SimRelationMap::Element>::const_iterator ei = elems.begin(), ee = elems.end();
 						for (; ei != ee; ++ei)
 						{
@@ -199,20 +202,20 @@ public:
 			}
 			else if (utils::caseInsensitiveEquals( name, "simsingletons"))
 			{
-				std::vector<SampleIndex> res = m_database->readSimSingletons();
+				std::vector<SampleIndex> res = m_database.readSimSingletons();
 				std::vector<SampleIndex>::const_iterator si = res.begin(), se = res.end();
 				for (; si != se; ++si)
 				{
 					std::ostringstream elemstr;
-					elemstr << *si << " " << m_database->readSampleName( *si);
+					elemstr << *si << " " << m_database.readSampleName( *si);
 					rt.push_back( elemstr.str());
 				}
 			}
 			else if (utils::caseInsensitiveEquals( name, "nofsimrel"))
 			{
 				std::ostringstream elemstr;
-				SampleIndex sidx = m_database->readLastSimRelationIndex();
-				SampleIndex nofSamples = m_database->readNofSimRelations();
+				SampleIndex sidx = m_database.readLastSimRelationIndex();
+				SampleIndex nofSamples = m_database.readNofSimRelations();
 				elemstr << sidx << " " << nofSamples;
 				rt.push_back( elemstr.str());
 			}
@@ -222,7 +225,7 @@ public:
 			}
 			return rt;
 		}
-		CATCH_ERROR_ARG1_MAP_RETURN( _TXT("error in instance of '%s' getting feature attribute: %s"), MODULENAME, *m_errorhnd, std::vector<std::string>());
+		CATCH_ERROR_ARG1_MAP_RETURN( _TXT("error in client interface of '%s' getting feature attribute: %s"), MODULENAME, *m_errorhnd, std::vector<std::string>());
 	}
 
 	virtual std::vector<std::string> featureAttributeNames() const
@@ -236,30 +239,30 @@ public:
 			rt.push_back( "nofsimrel");
 			return rt;
 		}
-		CATCH_ERROR_ARG1_MAP_RETURN( _TXT("error in instance of '%s' getting feature attribute names: %s"), MODULENAME, *m_errorhnd, std::vector<std::string>());
+		CATCH_ERROR_ARG1_MAP_RETURN( _TXT("error in client interface of '%s' getting feature attribute names: %s"), MODULENAME, *m_errorhnd, std::vector<std::string>());
 	}
 
 	virtual std::vector<Index> conceptFeatures( const std::string& conceptClass, const Index& conceptid) const
 	{
 		try
 		{
-			return m_database->readConceptSampleIndices( conceptClass, conceptid);
+			return m_database.readConceptSampleIndices( conceptClass, conceptid);
 		}
-		CATCH_ERROR_ARG1_MAP_RETURN( _TXT("error in instance of '%s' getting associated feature indices by learnt concept: %s"), MODULENAME, *m_errorhnd, std::vector<Index>());
+		CATCH_ERROR_ARG1_MAP_RETURN( _TXT("error in client interface of '%s' getting associated feature indices by learnt concept: %s"), MODULENAME, *m_errorhnd, std::vector<Index>());
 	}
 
 	virtual unsigned int nofConcepts( const std::string& conceptClass) const
 	{
 		try
 		{
-			return m_database->readNofConcepts( conceptClass);
+			return m_database.readNofConcepts( conceptClass);
 		}
-		CATCH_ERROR_ARG1_MAP_RETURN( _TXT("error in instance of '%s' getting number of concepts learnt: %s"), MODULENAME, *m_errorhnd, 0);
+		CATCH_ERROR_ARG1_MAP_RETURN( _TXT("error in client interface of '%s' getting number of concepts learnt: %s"), MODULENAME, *m_errorhnd, 0);
 	}
 
 	virtual unsigned int nofFeatures() const
 	{
-		return m_database->readNofSamples();
+		return m_database.readNofSamples();
 	}
 
 	virtual std::string config() const
@@ -268,15 +271,13 @@ public:
 		{
 			return m_config.tostring();
 		}
-		CATCH_ERROR_ARG1_MAP_RETURN( _TXT("error in instance of '%s' mapping configuration to string: %s"), MODULENAME, *m_errorhnd, std::string());
+		CATCH_ERROR_ARG1_MAP_RETURN( _TXT("error in client interface of '%s' mapping configuration to string: %s"), MODULENAME, *m_errorhnd, std::string());
 	}
 
 private:
 	ErrorBufferInterface* m_errorhnd;
-	Reference<DatabaseAdapter> m_database;
+	DatabaseAdapter m_database;
 	VectorSpaceModelConfig m_config;
-	mutable Reference<LshModel> m_lshmodel;				//< cached model
-	mutable Reference<SimHashMap> m_samplear;			//< cached samples
 };
 
 
@@ -339,17 +340,19 @@ class VectorSpaceModelBuilder
 	:public VectorSpaceModelBuilderInterface
 {
 public:
-	VectorSpaceModelBuilder( const std::string& config_, const DatabaseInterface* database_, ErrorBufferInterface* errorhnd_)
-		:m_errorhnd(errorhnd_),m_dbi(database_),m_config(config_,errorhnd_)
+	VectorSpaceModelBuilder( const VectorSpaceModelConfig& config_, const std::string& configstr_, const DatabaseInterface* database_, ErrorBufferInterface* errorhnd_)
+		:m_errorhnd(errorhnd_)
+		,m_dbi(database_)
+		,m_database(database_,config_.databaseConfig,errorhnd_)
+		,m_config(config_)
 		,m_state(0),m_needToCalculateSimRelationMap(false),m_haveFeaturesAdded(false)
 		,m_lshmodel(),m_genmodelmain(),m_genmodelmap(),m_samplear()
 	{
-		m_database.reset( new DatabaseAdapter( database_, m_config.databaseConfig, m_errorhnd));
-		m_database->checkVersion();
-		m_state = m_database->readState();
-		if (m_database->isempty() || m_state < 1)
+		m_database.checkVersion();
+		m_state = m_database.readState();
+		if (m_database.isempty() || m_state < 1)
 		{
-			m_database->writeConfig( m_config);
+			m_database.writeConfig( m_config);
 			m_lshmodel = LshModel( m_config.dim, m_config.bits, m_config.variations);
 			m_genmodelmain = GenModel( m_config.threads, m_config.maxdist, m_config.gencfg.simdist, m_config.gencfg.raddist, m_config.gencfg.eqdist, m_config.gencfg.mutations, m_config.gencfg.votes, m_config.gencfg.descendants, m_config.gencfg.maxage, m_config.gencfg.iterations, m_config.gencfg.assignments, m_config.gencfg.greediness, m_config.gencfg.isaf, m_config.gencfg.baff, m_config.gencfg.fdf, m_config.gencfg.eqdiff, m_config.gencfg.with_singletons, m_errorhnd);
 			GenModelConfigMap::const_iterator mi = m_config.altgenmap.begin(), me = m_config.altgenmap.end();
@@ -357,14 +360,14 @@ public:
 			{
 				m_genmodelmap[ mi->first] = GenModel( m_config.threads, m_config.maxdist, mi->second.simdist, mi->second.raddist, mi->second.eqdist, mi->second.mutations, mi->second.votes, mi->second.descendants, mi->second.maxage, mi->second.iterations, mi->second.assignments, mi->second.greediness, mi->second.isaf, mi->second.baff, mi->second.fdf, mi->second.eqdiff, mi->second.with_singletons, m_errorhnd);
 			}
-			m_database->writeLshModel( m_lshmodel);
-			m_database->writeState( m_state = 1);
-			m_database->commit();
+			m_database.writeLshModel( m_lshmodel);
+			m_database.writeState( m_state = 1);
+			m_database.commit();
 		}
 		else
 		{
-			VectorSpaceModelConfig cfg = m_database->readConfig();
-			m_config = VectorSpaceModelConfig( config_, errorhnd_, cfg);
+			VectorSpaceModelConfig cfg = m_database.readConfig();
+			m_config = VectorSpaceModelConfig( configstr_, errorhnd_, cfg);
 			if (!m_config.isBuildCompatible( cfg))
 			{
 				throw strus::runtime_error(_TXT("loading vector space model with incompatible configuration"));
@@ -373,14 +376,14 @@ public:
 			{
 				m_needToCalculateSimRelationMap = true;
 			}
-			m_lshmodel = m_database->readLshModel();
+			m_lshmodel = m_database.readLshModel();
 			m_genmodelmain = GenModel( m_config.threads, m_config.maxdist, m_config.gencfg.simdist, m_config.gencfg.raddist, m_config.gencfg.eqdist, m_config.gencfg.mutations, m_config.gencfg.votes, m_config.gencfg.descendants, m_config.gencfg.maxage, m_config.gencfg.iterations, m_config.gencfg.assignments, m_config.gencfg.greediness, m_config.gencfg.isaf, m_config.gencfg.baff, m_config.gencfg.fdf, m_config.gencfg.eqdiff, m_config.gencfg.with_singletons, m_errorhnd);
 			GenModelConfigMap::const_iterator mi = m_config.altgenmap.begin(), me = m_config.altgenmap.end();
 			for (; mi != me; ++mi)
 			{
 				m_genmodelmap[ mi->first] = GenModel( m_config.threads, m_config.maxdist, mi->second.simdist, mi->second.raddist, mi->second.eqdist, mi->second.mutations, mi->second.votes, mi->second.descendants, mi->second.maxage, mi->second.iterations, mi->second.assignments, mi->second.greediness, mi->second.isaf, mi->second.baff, mi->second.fdf, mi->second.eqdiff, mi->second.with_singletons, m_errorhnd);
 			}
-			m_samplear = m_database->readSampleSimhashVector();
+			m_samplear = m_database.readSampleSimhashVector( 0, std::numeric_limits<Index>::max());
 		}
 	}
 
@@ -425,11 +428,11 @@ public:
 			std::size_t si = 0, se = m_vecar.size();
 			for (; si != se; ++si)
 			{
-				m_database->writeSample( m_samplear.size() + si, m_namear[si], m_vecar[si], shar[si]);
+				m_database.writeSample( m_samplear.size() + si, m_namear[si], m_vecar[si], shar[si]);
 			}
 			m_samplear.insert( m_samplear.end(), shar.begin(), shar.end());
-			m_database->writeNofSamples( m_samplear.size());
-			m_database->commit();
+			m_database.writeNofSamples( m_samplear.size());
+			m_database.commit();
 
 			m_haveFeaturesAdded |= (m_vecar.size() != 0);
 			m_vecar.clear();
@@ -475,8 +478,8 @@ public:
 			}
 			else if (utils::caseInsensitiveEquals( command, "clear"))
 			{
-				m_database->clear();
-				m_database->commit();
+				m_database.clear();
+				m_database.commit();
 				return true;
 			}
 			else
@@ -491,28 +494,28 @@ private:
 	void rebase()
 	{
 		utils::ScopedLock lock( m_mutex);
-		m_database->commit();
-		SimRelationNeighbourReader nbreader( m_database.get(), &m_samplear, m_config.maxdist);
+		m_database.commit();
+		SimRelationNeighbourReader nbreader( &m_database, &m_samplear, m_config.maxdist);
 		buildSimRelationMap( &nbreader);
 	}
 
 	void buildSimilarityRelationMap()
 	{
 		utils::ScopedLock lock( m_mutex);
-		m_database->commit();
+		m_database.commit();
 		buildSimRelationMap( 0/*without SimRelationNeighbourReader*/);
 	}
 
 	void learnConcepts()
 	{
 		utils::ScopedLock lock( m_mutex);
-		m_database->commit();
+		m_database.commit();
 
-		m_database->deleteSampleConceptIndexMaps();
-		m_database->deleteConceptSampleIndexMaps();
-		m_database->deleteConceptDependencies();
-		m_database->deleteConceptClassNames();
-		m_database->commit();
+		m_database.deleteSampleConceptIndexMaps();
+		m_database.deleteConceptSampleIndexMaps();
+		m_database.deleteConceptDependencies();
+		m_database.deleteConceptClassNames();
+		m_database.commit();
 
 		std::vector<std::string> clnames;
 		run_genmodel( MAIN_CONCEPT_CLASSNAME, m_genmodelmain);
@@ -522,20 +525,20 @@ private:
 			run_genmodel( mi->first, mi->second);
 			clnames.push_back( mi->first);
 		}
-		m_database->writeNofSamples( m_samplear.size());
-		m_database->writeConceptClassNames( clnames);
-		m_database->writeState( 3);
-		m_database->commit();
+		m_database.writeNofSamples( m_samplear.size());
+		m_database.writeConceptClassNames( clnames);
+		m_database.writeState( 3);
+		m_database.commit();
 		buildConceptDependencies();
-		m_database->writeState( 4);
-		m_database->commit();
+		m_database.writeState( 4);
+		m_database.commit();
 	}
 
 	void finalize()
 	{
 		{
 			utils::ScopedLock lock( m_mutex);
-			m_database->commit();
+			m_database.commit();
 			if (needToCalculateSimRelationMap())
 			{
 				buildSimRelationMap( 0/*without SimRelationNeighbourReader*/);
@@ -554,14 +557,14 @@ private:
 		for (; ci != ce; ++ci)
 		{
 			writeDependencyLinks( ci->first, ci->second);
-			m_database->commit();
+			m_database.commit();
 		}
 	}
 
 	bool needToCalculateSimRelationMap()
 	{
-		unsigned int nofSamples = m_database->readNofSamples();
-		unsigned int simNofSamples = m_database->readNofSimRelations();
+		unsigned int nofSamples = m_database.readNofSamples();
+		unsigned int simNofSamples = m_database.readNofSimRelations();
 		if (m_needToCalculateSimRelationMap || m_config.with_forcesim || nofSamples > simNofSamples)
 		{
 			const char* logfile = m_config.logfile.empty()?0:m_config.logfile.c_str();
@@ -583,31 +586,31 @@ private:
 		const char* logfile = m_config.logfile.empty()?0:m_config.logfile.c_str();
 		Logger logout( logfile);
 
-		m_database->writeState( 1);
-		m_database->commit();
+		m_database.writeState( 1);
+		m_database.commit();
 
 		if (logout) logout << string_format( _TXT("calculate similarity relation matrix for %u features (selection %s)"), m_samplear.size(), m_config.with_probsim?_TXT("probabilistic selection"):_TXT("try all"));
 		uint64_t total_nof_similarities = 0;
-		SampleIndex startsampleidx = m_haveFeaturesAdded?0:(m_database->readLastSimRelationIndex()+1);
+		SampleIndex startsampleidx = m_haveFeaturesAdded?0:(m_database.readLastSimRelationIndex()+1);
 		SimRelationMapBuilder simrelbuilder( m_samplear, startsampleidx, m_config.maxdist, m_config.maxsimsam, m_config.rndsimsam, m_config.threads, m_config.with_probsim, logout, simmapreader);
 		SimRelationMap simrelmap_part;
 		while (simrelbuilder.getNextSimRelationMap( simrelmap_part))
 		{
-			m_database->writeSimRelationMap( simrelmap_part);
-			m_database->commit();
+			m_database.writeSimRelationMap( simrelmap_part);
+			m_database.commit();
 			total_nof_similarities += simrelmap_part.nofRelationsDetected();
 			if (logout) logout << string_format( _TXT("got total %u features with %uK similarities"), simrelmap_part.endIndex(), (unsigned int)(total_nof_similarities/1024));
 		}
-		m_database->writeNofSimRelations( m_samplear.size());
-		m_database->writeState( 2);
-		m_database->commit();
+		m_database.writeNofSimRelations( m_samplear.size());
+		m_database.writeState( 2);
+		m_database.commit();
 		if (logout) logout << string_format( _TXT("calculated similarity relation matrix stored to database"));
 	}
 
 	void run_genmodel( const std::string& clname, const GenModel& genmodel)
 	{
 		const char* logfile = m_config.logfile.empty()?0:m_config.logfile.c_str();
-		SimRelationMapReader simrelmap( m_database.get());
+		SimRelationMapReader simrelmap( &m_database);
 		std::vector<SampleIndex> singletons;
 		SampleConceptIndexMap sampleConceptIndexMap;
 		ConceptSampleIndexMap conceptSampleIndexMap;
@@ -616,19 +619,19 @@ private:
 				singletons, sampleConceptIndexMap, conceptSampleIndexMap,
 				clname, m_samplear, m_config.maxconcepts, simrelmap, m_config.threads, logfile);
 
-		m_database->writeSampleConceptIndexMap( clname, sampleConceptIndexMap);
-		m_database->writeConceptSampleIndexMap( clname, conceptSampleIndexMap);
-		m_database->writeNofConcepts( clname, resultar.size());
+		m_database.writeSampleConceptIndexMap( clname, sampleConceptIndexMap);
+		m_database.writeConceptSampleIndexMap( clname, conceptSampleIndexMap);
+		m_database.writeNofConcepts( clname, resultar.size());
 	}
 
 	std::vector<ConceptIndex> translateConcepts( const std::string& from_clname, ConceptIndex from_index, const std::string& to_clname)
 	{
 		std::set<ConceptIndex> to_conceptset;
-		std::vector<SampleIndex> from_members = m_database->readConceptSampleIndices( from_clname, from_index);
+		std::vector<SampleIndex> from_members = m_database.readConceptSampleIndices( from_clname, from_index);
 		std::vector<SampleIndex>::const_iterator mi = from_members.begin(), me = from_members.end();
 		for (; mi != me; ++mi)
 		{
-			std::vector<ConceptIndex> to_concepts = m_database->readSampleConceptIndices( to_clname, *mi);
+			std::vector<ConceptIndex> to_concepts = m_database.readSampleConceptIndices( to_clname, *mi);
 			std::vector<ConceptIndex>::const_iterator
 				vi = to_concepts.begin(), ve = to_concepts.end();
 			for (; vi != ve; ++vi)
@@ -641,16 +644,16 @@ private:
 
 	void writeDependencyLinks( const std::string& from_clname, const std::string& to_clname)
 	{
-		unsigned int ci = 1, ce = m_database->readNofConcepts( from_clname)+1;
+		unsigned int ci = 1, ce = m_database.readNofConcepts( from_clname)+1;
 		for (; ci != ce; ++ci)
 		{
-			m_database->writeConceptDependencies( from_clname, ci, to_clname, translateConcepts( from_clname, ci, to_clname));
+			m_database.writeConceptDependencies( from_clname, ci, to_clname, translateConcepts( from_clname, ci, to_clname));
 			if (ci % m_config.commitsize == 0)
 			{
-				m_database->commit();
+				m_database.commit();
 			}
 		}
-		m_database->commit();
+		m_database.commit();
 	}
 
 private:
@@ -659,7 +662,7 @@ private:
 private:
 	ErrorBufferInterface* m_errorhnd;
 	const DatabaseInterface* m_dbi;
-	Reference<DatabaseAdapter> m_database;
+	DatabaseAdapter m_database;
 	VectorSpaceModelConfig m_config;
 	unsigned int m_state;
 	bool m_needToCalculateSimRelationMap;
@@ -712,20 +715,20 @@ bool VectorSpaceModel::resetRepository( const std::string& configsrc, const Data
 }
 
 
-VectorSpaceModelInstanceInterface* VectorSpaceModel::createInstance( const std::string& configsrc, const DatabaseInterface* database) const
+VectorSpaceModelClientInterface* VectorSpaceModel::createClient( const std::string& configsrc, const DatabaseInterface* database) const
 {
 	try
 	{
-		return new VectorSpaceModelInstance( configsrc, database, m_errorhnd);
+		return new VectorSpaceModelClient( VectorSpaceModelConfig(configsrc,m_errorhnd), configsrc, database, m_errorhnd);
 	}
-	CATCH_ERROR_ARG1_MAP_RETURN( _TXT("error creating '%s' instance: %s"), MODULENAME, *m_errorhnd, 0);
+	CATCH_ERROR_ARG1_MAP_RETURN( _TXT("error creating '%s' client interface: %s"), MODULENAME, *m_errorhnd, 0);
 }
 
 VectorSpaceModelBuilderInterface* VectorSpaceModel::createBuilder( const std::string& configsrc, const DatabaseInterface* database) const
 {
 	try
 	{
-		return new VectorSpaceModelBuilder( configsrc, database, m_errorhnd);
+		return new VectorSpaceModelBuilder( VectorSpaceModelConfig(configsrc,m_errorhnd), configsrc, database, m_errorhnd);
 	}
 	CATCH_ERROR_ARG1_MAP_RETURN( _TXT("error creating '%s' builder: %s"), MODULENAME, *m_errorhnd, 0);
 }

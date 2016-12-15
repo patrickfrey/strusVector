@@ -224,7 +224,7 @@ void DatabaseAdapter::writeSample( const SampleIndex& sidx, const std::string& n
 	writeSampleIndex( sidx, name);
 	writeSampleName( sidx, name);
 	writeSampleVector( sidx, vec);
-	writeSimhash( KeySampleSimHash, std::string(), sidx, simHash);
+	writeSimhash( KeySampleSimHash, sidx, simHash);
 }
 
 #ifdef STRUS_LOWLEVEL_DEBUG
@@ -467,10 +467,10 @@ void DatabaseAdapter::writeConceptClassNames( const std::vector<std::string>& cl
 	m_transaction->write( key.c_str(), key.size(), buffer.c_str(), buffer.size());
 }
 
-SimHash DatabaseAdapter::readSimhash( const KeyPrefix& prefix, const std::string& clname, const SampleIndex& sidx) const
+SimHash DatabaseAdapter::readSimhash( const KeyPrefix& prefix, const SampleIndex& sidx) const
 {
 	DatabaseKeyBuffer key( prefix);
-	key( clname)[ sidx+1];
+	key[ sidx+1];
 
 	std::string content;
 	if (!m_database->readValue( key.c_str(), key.size(), content, DatabaseOptions()))
@@ -487,15 +487,16 @@ SimHash DatabaseAdapter::readSimhash( const KeyPrefix& prefix, const std::string
 	return SimHash::fromSerialization( content);
 }
 
-std::vector<SimHash> DatabaseAdapter::readSimhashVector( const KeyPrefix& prefix, const std::string& clname) const
+std::vector<SimHash> DatabaseAdapter::readSimhashVector( const KeyPrefix& prefix, const SampleIndex& range_from, const SampleIndex& range_to) const
 {
 	std::vector<SimHash> rt;
 	std::auto_ptr<DatabaseCursorInterface> cursor( m_database->createCursor( DatabaseOptions()));
 	if (!cursor.get()) throw strus::runtime_error(_TXT("failed to create cursor to read sim hash vector: %s"), m_errorhnd->fetchError());
 
 	DatabaseKeyBuffer key( prefix);
-	key( clname);
-	DatabaseCursorInterface::Slice slice = cursor->seekFirst( key.c_str(), key.size());
+	key[ range_from+1];
+
+	DatabaseCursorInterface::Slice slice = cursor->seekUpperBound( key.c_str(), key.size(), 1);
 	while (slice.defined())
 	{
 		char const* cl;
@@ -503,7 +504,8 @@ std::vector<SimHash> DatabaseAdapter::readSimhashVector( const KeyPrefix& prefix
 		SampleIndex sidx;
 		DatabaseKeyScanner key_scanner( slice.ptr()+1, slice.size()-1);
 		key_scanner(cl,clsize)[ sidx];
-		if (sidx != (SampleIndex)rt.size()+1) throw strus::runtime_error( _TXT("keys not ascending in '%s' structure"), "simhash");
+		if (sidx >= range_to) break;
+		if (sidx != (SampleIndex)rt.size()+range_from+1) throw strus::runtime_error( _TXT("keys not ascending in '%s' structure"), "simhash");
 
 		SimHash vec = SimHash::fromSerialization( cursor->value());
 		rt.push_back( vec);
@@ -512,22 +514,22 @@ std::vector<SimHash> DatabaseAdapter::readSimhashVector( const KeyPrefix& prefix
 	return rt;
 }
 
-void DatabaseAdapter::writeSimhashVector( const KeyPrefix& prefix, const std::string& clname, const std::vector<SimHash>& ar)
+void DatabaseAdapter::writeSimhashVector( const KeyPrefix& prefix, const std::vector<SimHash>& ar)
 {
 	if (!m_transaction.get()) beginTransaction();
 
 	std::vector<SimHash>::const_iterator si = ar.begin(), se = ar.end();
 	for (std::size_t sidx=0; si < se; ++si,++sidx)
 	{
-		writeSimhash( prefix, clname, sidx, *si);
+		writeSimhash( prefix, sidx, *si);
 	}
 }
 
-void DatabaseAdapter::writeSimhash( const KeyPrefix& prefix, const std::string& clname, const SampleIndex& sidx, const SimHash& simHash)
+void DatabaseAdapter::writeSimhash( const KeyPrefix& prefix, const SampleIndex& sidx, const SimHash& simHash)
 {
 	if (!m_transaction.get()) beginTransaction();
 	DatabaseKeyBuffer key( prefix);
-	key(clname)[ sidx+1];
+	key[ sidx+1];
 
 	std::string blob( simHash.serialization());
 	m_transaction->write( key.c_str(), key.size(), blob.c_str(), blob.size());
@@ -535,12 +537,12 @@ void DatabaseAdapter::writeSimhash( const KeyPrefix& prefix, const std::string& 
 
 SimHash DatabaseAdapter::readSampleSimhash( const SampleIndex& sidx) const
 {
-	return readSimhash( KeySampleSimHash, std::string(), sidx);
+	return readSimhash( KeySampleSimHash, sidx);
 }
 
-std::vector<SimHash> DatabaseAdapter::readSampleSimhashVector() const
+std::vector<SimHash> DatabaseAdapter::readSampleSimhashVector( const SampleIndex& range_from, const SampleIndex& range_to) const
 {
-	return readSimhashVector( KeySampleSimHash, std::string());
+	return readSimhashVector( KeySampleSimHash, range_from, range_to);
 }
 
 

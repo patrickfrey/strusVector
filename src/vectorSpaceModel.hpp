@@ -13,7 +13,7 @@
 namespace strus {
 
 /// \brief Forward declaration
-class VectorSpaceModelInstanceInterface;
+class VectorSpaceModelClientInterface;
 /// \brief Forward declaration
 class VectorSpaceModelBuilderInterface;
 /// \brief Forward declaration
@@ -36,7 +36,7 @@ public:
 	virtual bool createRepository( const std::string& configsource, const DatabaseInterface* database) const;
 	virtual bool resetRepository( const std::string& configsource, const DatabaseInterface* database) const;
 
-	virtual VectorSpaceModelInstanceInterface* createInstance( const std::string& configsrc, const DatabaseInterface* database) const;
+	virtual VectorSpaceModelClientInterface* createClient( const std::string& configsrc, const DatabaseInterface* database) const;
 	virtual VectorSpaceModelBuilderInterface* createBuilder( const std::string& configsrc, const DatabaseInterface* database) const;
 	virtual VectorSpaceModelDumpInterface* createDump( const std::string& configsource, const DatabaseInterface* database, const std::string& keyprefix) const;
 

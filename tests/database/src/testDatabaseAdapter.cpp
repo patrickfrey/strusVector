@@ -326,7 +326,7 @@ static void readAndCheckDatabase( const strus::VectorSpaceModelConfig& config, c
 		if (database.readSampleName( si) != dataset.sampleNames[si]) throw std::runtime_error("sample names do not match");
 		if (database.readSampleIndex( dataset.sampleNames[si]) != si) throw std::runtime_error("sample indices got by name do not match");
 	}
-	if (!compare( dataset.sampleSimHashs, database.readSampleSimhashVector())) throw std::runtime_error("sample sim hash values do not match");
+	if (!compare( dataset.sampleSimHashs, database.readSampleSimhashVector(0,std::numeric_limits<strus::Index>::max()))) throw std::runtime_error("sample sim hash values do not match");
 
 	if (!compare( dataset.simrelmap, database.readSimRelationMap())) throw std::runtime_error("concept sim relation map does not match");
 	if (!compare( dataset.sfmap, database.readSampleConceptIndexMap( MAIN_CONCEPTNAME))) throw std::runtime_error("sample concept index map does not match");

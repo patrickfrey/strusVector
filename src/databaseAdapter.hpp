@@ -50,7 +50,7 @@ public:
 	std::vector<std::string> readConceptClassNames() const;
 
 	SimHash readSampleSimhash( const SampleIndex& sidx) const;
-	std::vector<SimHash> readSampleSimhashVector() const;
+	std::vector<SimHash> readSampleSimhashVector( const SampleIndex& range_from, const SampleIndex& range_to) const;
 
 	SampleIndex readLastSimRelationIndex() const;
 	std::vector<SimRelationMap::Element> readSimRelations( const SampleIndex& sidx) const;
@@ -121,13 +121,13 @@ public:
 
 private:
 	void beginTransaction();
-	SimHash readSimhash( const KeyPrefix& prefix, const std::string& clname, const SampleIndex& sidx) const;
-	std::vector<SimHash> readSimhashVector( const KeyPrefix& prefix, const std::string& clname) const;
+	SimHash readSimhash( const KeyPrefix& prefix, const SampleIndex& sidx) const;
+	std::vector<SimHash> readSimhashVector( const KeyPrefix& prefix, const SampleIndex& range_from, const SampleIndex& range_to) const;
 	unsigned int readVariable( const std::string& name) const;
 	IndexListMap<strus::Index,strus::Index> readIndexListMap( const KeyPrefix& prefix, const std::string& clname) const;
 
-	void writeSimhash( const KeyPrefix& prefix, const std::string& clname, const SampleIndex& sidx, const SimHash& simHash);
-	void writeSimhashVector( const KeyPrefix& prefix, const std::string& clname, const std::vector<SimHash>& ar);
+	void writeSimhash( const KeyPrefix& prefix, const SampleIndex& sidx, const SimHash& simHash);
+	void writeSimhashVector( const KeyPrefix& prefix, const std::vector<SimHash>& ar);
 	void writeSampleIndex( const SampleIndex& sidx, const std::string& name);
 	void writeSampleName( const SampleIndex& sidx, const std::string& name);
 	void writeSampleVector( const SampleIndex& sidx, const Vector& vec);

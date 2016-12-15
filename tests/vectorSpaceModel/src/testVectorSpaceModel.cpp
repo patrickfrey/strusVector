@@ -10,7 +10,7 @@
 #include "strus/lib/database_leveldb.hpp"
 #include "strus/lib/error.hpp"
 #include "strus/vectorSpaceModelInterface.hpp"
-#include "strus/vectorSpaceModelInstanceInterface.hpp"
+#include "strus/vectorSpaceModelClientInterface.hpp"
 #include "strus/vectorSpaceModelBuilderInterface.hpp"
 #include "strus/databaseInterface.hpp"
 #include "strus/errorBufferInterface.hpp"
@@ -214,7 +214,7 @@ int main( int argc, const char** argv)
 		std::vector<std::vector<double> > samplear;
 		if (use_model_built)
 		{
-			std::auto_ptr<strus::VectorSpaceModelInstanceInterface> instance( vmodel->createInstance( config, dbi.get()));
+			std::auto_ptr<strus::VectorSpaceModelClientInterface> instance( vmodel->createClient( config, dbi.get()));
 			if (!instance.get()) throw std::runtime_error( g_errorhnd->fetchError());
 			strus::Index si = 0, se = instance->nofFeatures();
 			for (; si != se; ++si)
@@ -293,10 +293,10 @@ int main( int argc, const char** argv)
 
 		// Categorize the input vectors and build some maps out of the assignments of concepts:
 		std::cerr << "load model to categorize vectors" << std::endl;
-		std::auto_ptr<strus::VectorSpaceModelInstanceInterface> categorizer( vmodel->createInstance( config, dbi.get()));
+		std::auto_ptr<strus::VectorSpaceModelClientInterface> categorizer( vmodel->createClient( config, dbi.get()));
 		if (!categorizer.get())
 		{
-			throw std::runtime_error( "failed to create VSM instance from model stored");
+			throw std::runtime_error( "failed to create VSM client interface from model stored");
 		}
 		std::cerr << "loaded trained model with " << categorizer->nofConcepts( MAIN_CONCEPTNAME) << " concepts" << std::endl;
 		typedef strus::SparseDim2Field<unsigned char> ConceptMatrix;

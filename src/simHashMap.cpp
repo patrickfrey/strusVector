@@ -111,13 +111,15 @@ struct RankList
 		++m_nofRanks;
 	}
 
-	std::vector<strus::Index> result() const
+	std::vector<SearchResultElement> result( unsigned int width, Index indexofs) const
 	{
-		std::vector<strus::Index> rt;
+		std::vector<SearchResultElement> rt;
+		double width_f = width;
 		std::size_t limit = m_nofRanks > m_maxNofRanks ? m_maxNofRanks:m_nofRanks;
 		for (std::size_t ridx=0; ridx<limit; ++ridx)
 		{
-			rt.push_back( m_brute_ar[ m_brute_index[ ridx]].index);
+			double weight = 1.0 - (double)m_brute_ar[ m_brute_index[ ridx]].simdist / width_f;
+			rt.push_back( SearchResultElement( m_brute_ar[ m_brute_index[ ridx]].index + indexofs, weight));
 		}
 		return rt;
 	}
@@ -141,7 +143,7 @@ private:
 	SimRelationMap::Element m_brute_ar[ MaxIndexSize];
 };
 
-std::vector<Index> SimHashMap::findSimilar( const SimHash& sh, unsigned short simdist, unsigned short prob_simdist, unsigned int maxNofElements) const
+std::vector<SearchResultElement> SimHashMap::findSimilar( const SimHash& sh, unsigned short simdist, unsigned short prob_simdist, unsigned int maxNofElements, const Index& indexofs) const
 {
 	RankList ranklist( maxNofElements);
 	unsigned int ranklistSize = 0;
@@ -170,10 +172,10 @@ std::vector<Index> SimHashMap::findSimilar( const SimHash& sh, unsigned short si
 			}
 		}
 	}
-	return ranklist.result();
+	return ranklist.result( sh.size(), indexofs);
 }
 
-std::vector<Index> SimHashMap::findSimilar( const SimHash& sh, unsigned short simdist, unsigned int maxNofElements) const
+std::vector<SearchResultElement> SimHashMap::findSimilar( const SimHash& sh, unsigned short simdist, unsigned int maxNofElements, const Index& indexofs) const
 {
 	RankList ranklist( maxNofElements);
 	unsigned int ranklistSize = 0;
@@ -195,7 +197,7 @@ std::vector<Index> SimHashMap::findSimilar( const SimHash& sh, unsigned short si
 			}
 		}
 	}
-	return ranklist.result();
+	return ranklist.result( sh.size(), indexofs);
 }
 
 
