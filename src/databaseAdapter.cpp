@@ -499,11 +499,9 @@ std::vector<SimHash> DatabaseAdapter::readSimhashVector( const KeyPrefix& prefix
 	DatabaseCursorInterface::Slice slice = cursor->seekUpperBound( key.c_str(), key.size(), 1);
 	while (slice.defined())
 	{
-		char const* cl;
-		std::size_t clsize;
 		SampleIndex sidx;
 		DatabaseKeyScanner key_scanner( slice.ptr()+1, slice.size()-1);
-		key_scanner(cl,clsize)[ sidx];
+		key_scanner[ sidx];
 		if (sidx >= range_to) break;
 		if (sidx != (SampleIndex)rt.size()+range_from+1) throw strus::runtime_error( _TXT("keys not ascending in '%s' structure"), "simhash");
 
@@ -1137,13 +1135,11 @@ void DatabaseAdapter::dumpKeyValue( std::ostream& out, const strus::DatabaseCurs
 		}
 		case DatabaseAdapter::KeySampleSimHash:
 		{
-			const char* cl;
-			std::size_t clsize;
 			SampleIndex sidx;
 			DatabaseKeyScanner scanner( key.ptr()+1, key.size()-1);
-			scanner(cl,clsize)[ sidx];
+			scanner[ sidx];
 			SimHash sh = SimHash::fromSerialization( value.ptr(), value.size());
-			out << std::string(cl,clsize) << " " << (sidx-1) << " " << sh.tostring() << std::endl;
+			out << (sidx-1) << " " << sh.tostring() << std::endl;
 			break;
 		}
 		case DatabaseAdapter::KeyConfig:

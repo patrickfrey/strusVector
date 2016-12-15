@@ -73,7 +73,10 @@ public:
 	{
 		str = m_itr;
 		while (m_itr != m_end && *m_itr != '\0') ++m_itr;
-		if (m_itr == m_end) throw strus::runtime_error(_TXT("illegal key in database"));
+		if (m_itr == m_end)
+		{
+			throw strus::runtime_error(_TXT("illegal key in database"));
+		}
 		strsize = m_itr - str;
 		++m_itr;
 		return *this;
