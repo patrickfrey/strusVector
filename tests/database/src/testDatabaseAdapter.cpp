@@ -11,7 +11,7 @@
 #include "strus/lib/error.hpp"
 #include "strus/index.hpp"
 #include "strus/vectorSpaceModelInterface.hpp"
-#include "strus/vectorSpaceModelInstanceInterface.hpp"
+#include "strus/vectorSpaceModelClientInterface.hpp"
 #include "strus/vectorSpaceModelBuilderInterface.hpp"
 #include "strus/databaseInterface.hpp"
 #include "strus/errorBufferInterface.hpp"
