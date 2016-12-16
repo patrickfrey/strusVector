@@ -6,8 +6,8 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 /// \brief Logger for reporting status of long during processes in the library
-#ifndef _STRUS_VECTOR_SPACE_MODEL_LOGGER_HPP_INCLUDED
-#define _STRUS_VECTOR_SPACE_MODEL_LOGGER_HPP_INCLUDED
+#ifndef _STRUS_VECTOR_LOGGER_HPP_INCLUDED
+#define _STRUS_VECTOR_LOGGER_HPP_INCLUDED
 #include "utils.hpp"
 #include <iostream>
 #include <fstream>

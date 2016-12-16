@@ -10,16 +10,16 @@
 #include "strus/lib/database_leveldb.hpp"
 #include "strus/lib/error.hpp"
 #include "strus/index.hpp"
-#include "strus/vectorSpaceModelInterface.hpp"
-#include "strus/vectorSpaceModelClientInterface.hpp"
-#include "strus/vectorSpaceModelBuilderInterface.hpp"
+#include "strus/vectorStorageInterface.hpp"
+#include "strus/vectorStorageClientInterface.hpp"
+#include "strus/vectorStorageBuilderInterface.hpp"
 #include "strus/databaseInterface.hpp"
 #include "strus/errorBufferInterface.hpp"
 #include "strus/base/configParser.hpp"
 #include "strus/base/stdint.h"
 #include "strus/base/fileio.hpp"
 #include "strus/base/string_format.hpp"
-#include "vectorSpaceModelConfig.hpp"
+#include "vectorStorageConfig.hpp"
 #include "indexListMap.hpp"
 #include "lshModel.hpp"
 #include "genModel.hpp"
@@ -158,7 +158,7 @@ strus::ConceptSampleIndexMap getConceptSampleIndexMap( unsigned int nofSamples)
 
 struct TestDataset
 {
-	TestDataset( const strus::VectorSpaceModelConfig& config, unsigned int nofSamples_)
+	TestDataset( const strus::VectorStorageConfig& config, unsigned int nofSamples_)
 		:nofConcepts(getNofConcepts( nofSamples_))
 		,nofSamples(nofSamples_)
 		,state((nofSamples_*17)%3 + 1)
@@ -192,7 +192,7 @@ struct TestDataset
 
 #define MAIN_CONCEPTNAME "x"
 
-static void writeDatabase( const strus::VectorSpaceModelConfig& config, const TestDataset& dataset)
+static void writeDatabase( const strus::VectorStorageConfig& config, const TestDataset& dataset)
 {
 	std::auto_ptr<strus::DatabaseInterface> dbi( strus::createDatabaseType_leveldb( g_errorhnd));
 	if (dbi->exists( config.databaseConfig))
@@ -309,7 +309,7 @@ static bool compare( const strus::LshModel& m1, const strus::LshModel& m2)
 	return m1.isequal( m2);
 }
 
-static void readAndCheckDatabase( const strus::VectorSpaceModelConfig& config, const TestDataset& dataset)
+static void readAndCheckDatabase( const strus::VectorStorageConfig& config, const TestDataset& dataset)
 {
 	std::auto_ptr<strus::DatabaseInterface> dbi( strus::createDatabaseType_leveldb( g_errorhnd));
 	strus::DatabaseAdapter database( dbi.get(), config.databaseConfig, g_errorhnd);
@@ -428,7 +428,7 @@ int main( int argc, const char** argv)
 			std::cerr << "-s <CONFIG>  : specify test configuration string as <CONFIG>" << std::endl;
 			return rt;
 		}
-		strus::VectorSpaceModelConfig config( configstr, g_errorhnd);
+		strus::VectorStorageConfig config( configstr, g_errorhnd);
 		if (g_errorhnd->hasError()) throw std::runtime_error("error in test configuration");
 
 		TestDataset dataset( config, nofSamples);

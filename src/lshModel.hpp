@@ -6,8 +6,8 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 /// \brief LSH Similarity model structure
-#ifndef _STRUS_VECTOR_SPACE_MODEL_LSH_MODEL_HPP_INCLUDED
-#define _STRUS_VECTOR_SPACE_MODEL_LSH_MODEL_HPP_INCLUDED
+#ifndef _STRUS_VECTOR_LSH_MODEL_HPP_INCLUDED
+#define _STRUS_VECTOR_LSH_MODEL_HPP_INCLUDED
 #include "strus/base/stdint.h"
 #include "simHash.hpp"
 #include "armadillo"

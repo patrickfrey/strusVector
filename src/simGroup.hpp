@@ -6,8 +6,8 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 /// \brief Structure for storing similarity group representants (individuals in the genetic algorithm for breeding similarity group representants)
-#ifndef _STRUS_VECTOR_SPACE_MODEL_SIMILAITY_GROUP_HPP_INCLUDED
-#define _STRUS_VECTOR_SPACE_MODEL_SIMILAITY_GROUP_HPP_INCLUDED
+#ifndef _STRUS_VECTOR_SIMILAITY_GROUP_HPP_INCLUDED
+#define _STRUS_VECTOR_SIMILAITY_GROUP_HPP_INCLUDED
 #include "simHash.hpp"
 #include "armadillo"
 #include "strus/index.hpp"

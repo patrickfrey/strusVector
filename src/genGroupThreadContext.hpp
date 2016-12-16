@@ -6,8 +6,8 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 /// \brief Multithreading context for the genetic algorithms
-#ifndef _STRUS_VECTOR_SPACE_MODEL_GEN_GROUP_THREAD_CONTEXT_HPP_INCLUDED
-#define _STRUS_VECTOR_SPACE_MODEL_GEN_GROUP_THREAD_CONTEXT_HPP_INCLUDED
+#ifndef _STRUS_VECTOR_GEN_GROUP_THREAD_CONTEXT_HPP_INCLUDED
+#define _STRUS_VECTOR_GEN_GROUP_THREAD_CONTEXT_HPP_INCLUDED
 #include "simGroupMap.hpp"
 #include "simRelationReader.hpp"
 #include "genGroupContext.hpp"

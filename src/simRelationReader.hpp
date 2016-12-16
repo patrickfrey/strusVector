@@ -6,8 +6,8 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 /// \brief Interface to get the most similar elements of sidx in the ascending order of similarity
-#ifndef _STRUS_VECTOR_SPACE_MODEL_SIMRELATION_READER_HPP_INCLUDED
-#define _STRUS_VECTOR_SPACE_MODEL_SIMRELATION_READER_HPP_INCLUDED
+#ifndef _STRUS_VECTOR_SIMRELATION_READER_HPP_INCLUDED
+#define _STRUS_VECTOR_SIMRELATION_READER_HPP_INCLUDED
 #include "simRelationMap.hpp"
 #include <vector>
 

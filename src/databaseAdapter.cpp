@@ -33,7 +33,7 @@ using namespace strus;
 DatabaseAdapter::DatabaseAdapter( const DatabaseInterface* database_, const std::string& config, ErrorBufferInterface* errorhnd_)
 	:m_database(database_->createClient(config)),m_errorhnd(errorhnd_)
 {
-	if (!m_database.get()) throw strus::runtime_error( _TXT("failed to create database client for standard vector space model: %s"), m_errorhnd->fetchError());
+	if (!m_database.get()) throw strus::runtime_error( _TXT("failed to create database client for standard vector storage: %s"), m_errorhnd->fetchError());
 }
 
 void DatabaseAdapter::commit()
@@ -43,7 +43,7 @@ void DatabaseAdapter::commit()
 		if (!m_transaction->commit())
 		{
 			m_transaction.reset();
-			throw strus::runtime_error( _TXT("standard vector space model transaction commit failed: %s"), m_errorhnd->fetchError());
+			throw strus::runtime_error( _TXT("standard vector storage transaction commit failed: %s"), m_errorhnd->fetchError());
 		}
 		m_transaction.reset();
 	}
@@ -58,12 +58,12 @@ void DatabaseAdapter::beginTransaction()
 	m_transaction.reset( m_database->createTransaction());
 	if (!m_transaction.get())
 	{
-		throw strus::runtime_error( _TXT("standard vector space model create transaction failed: %s"), m_errorhnd->fetchError());
+		throw strus::runtime_error( _TXT("standard vector storage create transaction failed: %s"), m_errorhnd->fetchError());
 	}
 }
 
 
-struct VectorSpaceModelHdr
+struct VectorStorageHdr
 {
 	enum {FILEID=0x3ff3};
 	char name[58];
@@ -71,9 +71,9 @@ struct VectorSpaceModelHdr
 	unsigned short version_major;
 	unsigned short version_minor;
 
-	VectorSpaceModelHdr()
+	VectorStorageHdr()
 	{
-		std::memcpy( name, "strus standard vector space model\n\0", sizeof(name));
+		std::memcpy( name, "strus standard vector storage\n\0", sizeof(name));
 		_id = FILEID;
 		version_major = STRUS_VECTOR_VERSION_MAJOR;
 		version_minor = STRUS_VECTOR_VERSION_MINOR;
@@ -81,9 +81,9 @@ struct VectorSpaceModelHdr
 
 	void check()
 	{
-		if (_id != FILEID) throw strus::runtime_error(_TXT("unknown file type, expected strus standard vector space model binary file"));
-		if (version_major != STRUS_VECTOR_VERSION_MAJOR) throw strus::runtime_error(_TXT("major version (%u) of loaded strus standard vector space model binary file does not match"), version_major);
-		if (version_minor > STRUS_VECTOR_VERSION_MINOR) throw strus::runtime_error(_TXT("minor version (%u) of loaded strus standard vector space model binary file does not match (newer than your version of strus)"), version_minor);
+		if (_id != FILEID) throw strus::runtime_error(_TXT("unknown file type, expected strus standard vector storage binary file"));
+		if (version_major != STRUS_VECTOR_VERSION_MAJOR) throw strus::runtime_error(_TXT("major version (%u) of loaded strus standard vector storage binary file does not match"), version_major);
+		if (version_minor > STRUS_VECTOR_VERSION_MINOR) throw strus::runtime_error(_TXT("minor version (%u) of loaded strus standard vector storage binary file does not match (newer than your version of strus)"), version_minor);
 	}
 
 	void hton()
@@ -117,7 +117,7 @@ void DatabaseAdapter::checkVersion()
 			throw strus::runtime_error( _TXT( "failed to read non exising version from database"));
 		}
 	}
-	VectorSpaceModelHdr hdr;
+	VectorStorageHdr hdr;
 	if (content.size() < sizeof(hdr)) throw strus::runtime_error(_TXT("unknown version format"));
 	std::memcpy( &hdr, content.c_str(), sizeof(hdr));
 	hdr.ntoh();
@@ -128,7 +128,7 @@ void DatabaseAdapter::writeVersion()
 {
 	DatabaseKeyBuffer key( KeyVersion);
 
-	VectorSpaceModelHdr hdr;
+	VectorStorageHdr hdr;
 	hdr.hton();
 	if (!m_transaction.get()) beginTransaction();
 	m_transaction->write( key.c_str(), key.size(), (const char*)&hdr, sizeof(hdr));
@@ -544,7 +544,7 @@ std::vector<SimHash> DatabaseAdapter::readSampleSimhashVector( const SampleIndex
 }
 
 
-VectorSpaceModelConfig DatabaseAdapter::readConfig() const
+VectorStorageConfig DatabaseAdapter::readConfig() const
 {
 	DatabaseKeyBuffer key( KeyConfig);
 
@@ -560,10 +560,10 @@ VectorSpaceModelConfig DatabaseAdapter::readConfig() const
 			throw strus::runtime_error( _TXT( "failed to read non existing configuration from database"));
 		}
 	}
-	return VectorSpaceModelConfig( content, m_errorhnd);
+	return VectorStorageConfig( content, m_errorhnd);
 }
 
-void DatabaseAdapter::writeConfig( const VectorSpaceModelConfig& config)
+void DatabaseAdapter::writeConfig( const VectorStorageConfig& config)
 {
 	DatabaseKeyBuffer key( KeyConfig);
 	std::string content( config.tostring( false));
@@ -1076,7 +1076,7 @@ void DatabaseAdapter::dumpKeyValue( std::ostream& out, const strus::DatabaseCurs
 	{
 		case DatabaseAdapter::KeyVersion:
 		{
-			VectorSpaceModelHdr hdr;
+			VectorStorageHdr hdr;
 			if (value.size() < sizeof(hdr)) throw strus::runtime_error(_TXT("unknown version format"));
 			std::memcpy( &hdr, value.ptr(), sizeof(hdr));
 			hdr.ntoh();
@@ -1232,7 +1232,7 @@ void DatabaseAdapter::dumpKeyValue( std::ostream& out, const strus::DatabaseCurs
 		}
 		default:
 		{
-			throw strus::runtime_error( _TXT( "illegal data base key prefix '%c' for this vector space model storage"), (char)((KeyPrefix)key.ptr()[0]));
+			throw strus::runtime_error( _TXT( "illegal data base key prefix '%c' for this vector storage storage"), (char)((KeyPrefix)key.ptr()[0]));
 		}
 	}
 }

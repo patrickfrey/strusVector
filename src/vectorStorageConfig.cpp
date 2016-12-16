@@ -5,8 +5,8 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
-/// \brief Configuration structure for the strus standard vector space model
-#include "vectorSpaceModelConfig.hpp"
+/// \brief Configuration structure for the strus standard vector storage
+#include "vectorStorageConfig.hpp"
 #include "strus/errorBufferInterface.hpp"
 #include "strus/base/configParser.hpp"
 #include "utils.hpp"
@@ -51,7 +51,7 @@ GenModelConfig::GenModelConfig( const std::string& config, unsigned int maxdist,
 	std::string::const_iterator si = src.begin(), se = src.end();
 	for (; si != se && ((unsigned char)*si <= 32 || *si == ';'); ++si)
 	{}
-	if (si != se) throw strus::runtime_error(_TXT("unknown configuration parameter for gen model (vector space model)"));
+	if (si != se) throw strus::runtime_error(_TXT("unknown configuration parameter for gen model (vector storage)"));
 }
 
 void GenModelConfig::parse( std::string& src, unsigned int maxdist, ErrorBufferInterface* errorhnd)
@@ -97,11 +97,11 @@ void GenModelConfig::parse( std::string& src, unsigned int maxdist, ErrorBufferI
 
 	if (mutations == 0 || descendants == 0 || maxage == 0 || iterations == 0)
 	{
-		throw strus::runtime_error(_TXT("error in vector space model configuration: mutations, descendants, maxage or iterations values must not be zero"));
+		throw strus::runtime_error(_TXT("error in vector storage configuration: mutations, descendants, maxage or iterations values must not be zero"));
 	}
 	if (errorhnd->hasError())
 	{
-		throw strus::runtime_error(_TXT("error loading vector space model configuration: %s"), errorhnd->fetchError());
+		throw strus::runtime_error(_TXT("error loading vector storage configuration: %s"), errorhnd->fetchError());
 	}
 }
 
@@ -144,7 +144,7 @@ std::string GenModelConfig::tostring( bool eolnsep) const
 }
 
 
-VectorSpaceModelConfig::VectorSpaceModelConfig( const VectorSpaceModelConfig& o)
+VectorStorageConfig::VectorStorageConfig( const VectorStorageConfig& o)
 	:databaseConfig(o.databaseConfig),logfile(o.logfile)
 	,threads(o.threads),commitsize(o.commitsize)
 	,dim(o.dim),bits(o.bits),variations(o.variations)
@@ -156,7 +156,7 @@ VectorSpaceModelConfig::VectorSpaceModelConfig( const VectorSpaceModelConfig& o)
 	,altgenmap(o.altgenmap)
 	{}
 
-VectorSpaceModelConfig::VectorSpaceModelConfig()
+VectorStorageConfig::VectorStorageConfig()
 	:databaseConfig(),logfile(),threads(DefaultThreads),commitsize(DefaultCommitSize)
 	,dim(DefaultDim),bits(DefaultBits),variations(DefaultVariations)
 	,maxdist(DefaultMaxDist),gencfg()
@@ -167,7 +167,7 @@ VectorSpaceModelConfig::VectorSpaceModelConfig()
 	,altgenmap()
 	{}
 
-VectorSpaceModelConfig::VectorSpaceModelConfig( const std::string& config, ErrorBufferInterface* errorhnd, const VectorSpaceModelConfig& defaultcfg)
+VectorStorageConfig::VectorStorageConfig( const std::string& config, ErrorBufferInterface* errorhnd, const VectorStorageConfig& defaultcfg)
 	:databaseConfig(defaultcfg.databaseConfig),logfile(defaultcfg.logfile)
 	,threads(defaultcfg.threads),commitsize(defaultcfg.commitsize)
 	,dim(defaultcfg.dim),bits(defaultcfg.bits),variations(defaultcfg.variations)
@@ -213,15 +213,15 @@ VectorSpaceModelConfig::VectorSpaceModelConfig( const std::string& config, Error
 		char const* namestart = ee;
 		while (*ee && (unsigned char)*ee != ':' && (unsigned char)*ee != ' ')
 		{
-			if ((*ee|32) < 'a' || (*ee|32) > 'z') throw strus::runtime_error(_TXT("expected identifier at start of alternative gen configuration in vector space model"));
+			if ((*ee|32) < 'a' || (*ee|32) > 'z') throw strus::runtime_error(_TXT("expected identifier at start of alternative gen configuration in vector storage"));
 			++ee;
 		}
 		std::string name( namestart, ee - namestart);
 		while (*ee && (unsigned char)*ee <= 32) ++ee;
-		if (*ee != ':') throw strus::runtime_error(_TXT("expected colon ':' after identifier at start of alternative gen configuration in vector space model"));
+		if (*ee != ':') throw strus::runtime_error(_TXT("expected colon ':' after identifier at start of alternative gen configuration in vector storage"));
 		++ee;
 		GenModelConfig altgencfg( ee, maxdist, errorhnd, gencfg);
-		if (altgenmap.find( name) != altgenmap.end()) throw strus::runtime_error(_TXT("duplicate definition of alternative gen configuration in vector space model"));
+		if (altgenmap.find( name) != altgenmap.end()) throw strus::runtime_error(_TXT("duplicate definition of alternative gen configuration in vector storage"));
 		altgenmap[ name] = altgencfg;
 	}
 	std::string condepdefstr;
@@ -242,23 +242,23 @@ VectorSpaceModelConfig::VectorSpaceModelConfig( const std::string& config, Error
 	}
 	if (dim == 0 || bits == 0 || variations == 0)
 	{
-		throw strus::runtime_error(_TXT("error in vector space model configuration: dim, bits or var values must not be zero"));
+		throw strus::runtime_error(_TXT("error in vector storage configuration: dim, bits or var values must not be zero"));
 	}
 	databaseConfig = utils::trim(src);	//... rest is database configuration
 	while (databaseConfig.size() && databaseConfig[ databaseConfig.size()-1] == ';') databaseConfig.resize( databaseConfig.size()-1);
 
 	if (errorhnd->hasError())
 	{
-		throw strus::runtime_error(_TXT("error loading vector space model configuration: %s"), errorhnd->fetchError());
+		throw strus::runtime_error(_TXT("error loading vector storage configuration: %s"), errorhnd->fetchError());
 	}
 }
 
-bool VectorSpaceModelConfig::isBuildCompatible( const VectorSpaceModelConfig& o) const
+bool VectorStorageConfig::isBuildCompatible( const VectorStorageConfig& o) const
 {
 	return (dim == o.dim && bits == o.bits && variations == o.variations);
 }
 
-std::string VectorSpaceModelConfig::tostring( bool eolnsep) const
+std::string VectorStorageConfig::tostring( bool eolnsep) const
 {
 	std::ostringstream buf;
 	buf << std::fixed << std::setprecision(5);

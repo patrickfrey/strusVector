@@ -6,8 +6,8 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 /// \brief Pseudo random number generator for mutations
-#ifndef _STRUS_VECTOR_SPACE_MODEL_RANDOM_HPP_INCLUDED
-#define _STRUS_VECTOR_SPACE_MODEL_RANDOM_HPP_INCLUDED
+#ifndef _STRUS_VECTOR_RANDOM_HPP_INCLUDED
+#define _STRUS_VECTOR_RANDOM_HPP_INCLUDED
 #include <vector>
 
 namespace strus {

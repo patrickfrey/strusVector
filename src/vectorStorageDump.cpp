@@ -5,9 +5,9 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
-/// \brief Implementation of the contents dump of a standard vector space model storage
-/// \file vectorSpaceModelDump.cpp
-#include "vectorSpaceModelDump.hpp"
+/// \brief Implementation of the contents dump of a standard vector storage storage
+/// \file vectorStorageDump.cpp
+#include "vectorStorageDump.hpp"
 #include "databaseAdapter.hpp"
 #include "databaseHelpers.hpp"
 #include "strus/databaseOptions.hpp"
@@ -21,9 +21,9 @@
 
 using namespace strus;
 
-#define MODULENAME   "standard vector space model"
+#define MODULENAME   "standard vector storage"
 
-VectorSpaceModelDump::VectorSpaceModelDump( const DatabaseInterface* database_, const std::string& configsrc, const std::string& keyprefix_, ErrorBufferInterface* errorhnd_)
+VectorStorageDump::VectorStorageDump( const DatabaseInterface* database_, const std::string& configsrc, const std::string& keyprefix_, ErrorBufferInterface* errorhnd_)
 	:m_database(database_,configsrc,errorhnd_)
 	,m_chunk()
 	,m_keyprefix(keyprefix_)
@@ -31,7 +31,7 @@ VectorSpaceModelDump::VectorSpaceModelDump( const DatabaseInterface* database_, 
 {
 }
 
-bool VectorSpaceModelDump::nextChunk( const char*& chunk, std::size_t& chunksize)
+bool VectorStorageDump::nextChunk( const char*& chunk, std::size_t& chunksize)
 {
 	try
 	{

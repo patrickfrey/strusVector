@@ -6,17 +6,17 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 /// \brief Map for fast scan for similar SimHashes 
-#ifndef _STRUS_VECTOR_SPACE_MODEL_SIMHASH_MAP_HPP_INCLUDED
-#define _STRUS_VECTOR_SPACE_MODEL_SIMHASH_MAP_HPP_INCLUDED
+#ifndef _STRUS_VECTOR_SIMHASH_MAP_HPP_INCLUDED
+#define _STRUS_VECTOR_SIMHASH_MAP_HPP_INCLUDED
 #include "strus/base/stdint.h"
 #include "strus/index.hpp"
-#include "strus/vectorSpaceModelSearchInterface.hpp"
+#include "strus/vectorStorageSearchInterface.hpp"
 #include "simHash.hpp"
 #include <vector>
 
 namespace strus {
 
-typedef VectorSpaceModelSearchInterface::Result SearchResultElement;
+typedef VectorStorageSearchInterface::Result SearchResultElement;
 
 /// \brief Map for fast scan for similar SimHashes 
 class SimHashMap

@@ -5,17 +5,17 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
-/// \brief Implementation of the vector space model interface
-#include "vectorSpaceModel.hpp"
-#include "vectorSpaceModelDump.hpp"
+/// \brief Implementation of the vector storage interface
+#include "vectorStorage.hpp"
+#include "vectorStorageDump.hpp"
 #include "strus/errorBufferInterface.hpp"
-#include "strus/vectorSpaceModelClientInterface.hpp"
-#include "strus/vectorSpaceModelBuilderInterface.hpp"
-#include "strus/vectorSpaceModelSearchInterface.hpp"
+#include "strus/vectorStorageClientInterface.hpp"
+#include "strus/vectorStorageBuilderInterface.hpp"
+#include "strus/vectorStorageSearchInterface.hpp"
 #include "strus/databaseInterface.hpp"
 #include "strus/base/fileio.hpp"
 #include "strus/base/string_format.hpp"
-#include "vectorSpaceModelConfig.hpp"
+#include "vectorStorageConfig.hpp"
 #include "databaseAdapter.hpp"
 #include "internationalization.hpp"
 #include "errorUtils.hpp"
@@ -35,18 +35,18 @@
 #include <limits>
 
 using namespace strus;
-#define MODULENAME   "standard vector space model"
+#define MODULENAME   "standard vector storage"
 
 #undef STRUS_LOWLEVEL_DEBUG
 
 #define MAIN_CONCEPT_CLASSNAME ""
 
 
-class VectorSpaceModelSearch
-	:public VectorSpaceModelSearchInterface
+class VectorStorageSearch
+	:public VectorStorageSearchInterface
 {
 public:
-	VectorSpaceModelSearch( const DatabaseAdapter& database, const VectorSpaceModelConfig& config_, const Index& range_from_, const Index& range_to_, ErrorBufferInterface* errorhnd_)
+	VectorStorageSearch( const DatabaseAdapter& database, const VectorStorageConfig& config_, const Index& range_from_, const Index& range_to_, ErrorBufferInterface* errorhnd_)
 		:m_errorhnd(errorhnd_)
 		,m_config(config_)
 		,m_lshmodel(database.readLshModel())
@@ -55,7 +55,7 @@ public:
 		,m_range_to(range_to_)
 	{}
 
-	virtual ~VectorSpaceModelSearch(){}
+	virtual ~VectorStorageSearch(){}
 
 	virtual std::vector<Result> findSimilar( const std::vector<double>& vec, unsigned int maxNofResults) const
 	{
@@ -76,7 +76,7 @@ public:
 
 private:
 	ErrorBufferInterface* m_errorhnd;
-	VectorSpaceModelConfig m_config;
+	VectorStorageConfig m_config;
 	LshModel m_lshmodel;
 	SimHashMap m_samplear;
 	Index m_range_from;
@@ -84,27 +84,27 @@ private:
 };
 
 
-class VectorSpaceModelClient
-	:public VectorSpaceModelClientInterface
+class VectorStorageClient
+	:public VectorStorageClientInterface
 {
 public:
-	VectorSpaceModelClient( const VectorSpaceModelConfig& config_, const std::string& configstr_, const DatabaseInterface* database_, ErrorBufferInterface* errorhnd_)
+	VectorStorageClient( const VectorStorageConfig& config_, const std::string& configstr_, const DatabaseInterface* database_, ErrorBufferInterface* errorhnd_)
 		:m_errorhnd(errorhnd_),m_database(database_,config_.databaseConfig,errorhnd_),m_config(config_)
 	{
 		m_database.checkVersion();
-		if (m_database.isempty()) throw strus::runtime_error(_TXT("try to open a vector space model that is empty, need to be built first"));
-		VectorSpaceModelConfig cfg = m_database.readConfig();
-		m_config = VectorSpaceModelConfig( configstr_, errorhnd_, cfg);
+		if (m_database.isempty()) throw strus::runtime_error(_TXT("try to open a vector storage that is empty, need to be built first"));
+		VectorStorageConfig cfg = m_database.readConfig();
+		m_config = VectorStorageConfig( configstr_, errorhnd_, cfg);
 	}
 
-	virtual ~VectorSpaceModelClient()
+	virtual ~VectorStorageClient()
 	{}
 
-	virtual VectorSpaceModelSearchInterface* createSearcher( const Index& range_from, const Index& range_to) const
+	virtual VectorStorageSearchInterface* createSearcher( const Index& range_from, const Index& range_to) const
 	{
 		try
 		{
-			return new VectorSpaceModelSearch( m_database, m_config, range_from, range_to, m_errorhnd);
+			return new VectorStorageSearch( m_database, m_config, range_from, range_to, m_errorhnd);
 		}
 		CATCH_ERROR_ARG1_MAP_RETURN( _TXT("error in client interface of '%s' creating searcher: %s"), MODULENAME, *m_errorhnd, 0);
 	}
@@ -277,7 +277,7 @@ public:
 private:
 	ErrorBufferInterface* m_errorhnd;
 	DatabaseAdapter m_database;
-	VectorSpaceModelConfig m_config;
+	VectorStorageConfig m_config;
 };
 
 
@@ -336,11 +336,11 @@ private:
 };
 
 
-class VectorSpaceModelBuilder
-	:public VectorSpaceModelBuilderInterface
+class VectorStorageBuilder
+	:public VectorStorageBuilderInterface
 {
 public:
-	VectorSpaceModelBuilder( const VectorSpaceModelConfig& config_, const std::string& configstr_, const DatabaseInterface* database_, ErrorBufferInterface* errorhnd_)
+	VectorStorageBuilder( const VectorStorageConfig& config_, const std::string& configstr_, const DatabaseInterface* database_, ErrorBufferInterface* errorhnd_)
 		:m_errorhnd(errorhnd_)
 		,m_dbi(database_)
 		,m_database(database_,config_.databaseConfig,errorhnd_)
@@ -366,11 +366,11 @@ public:
 		}
 		else
 		{
-			VectorSpaceModelConfig cfg = m_database.readConfig();
-			m_config = VectorSpaceModelConfig( configstr_, errorhnd_, cfg);
+			VectorStorageConfig cfg = m_database.readConfig();
+			m_config = VectorStorageConfig( configstr_, errorhnd_, cfg);
 			if (!m_config.isBuildCompatible( cfg))
 			{
-				throw strus::runtime_error(_TXT("loading vector space model with incompatible configuration"));
+				throw strus::runtime_error(_TXT("loading vector storage with incompatible configuration"));
 			}
 			if (m_config.maxdist > cfg.maxdist)
 			{
@@ -387,7 +387,7 @@ public:
 		}
 	}
 
-	virtual ~VectorSpaceModelBuilder()
+	virtual ~VectorStorageBuilder()
 	{}
 
 	virtual void addFeature( const std::string& name, const std::vector<double>& vec)
@@ -444,7 +444,7 @@ public:
 			}
 			return true;
 		}
-		CATCH_ERROR_ARG1_MAP_RETURN( _TXT("error in vector space model database commit of '%s' builder: %s"), MODULENAME, *m_errorhnd, false);
+		CATCH_ERROR_ARG1_MAP_RETURN( _TXT("error in vector storage database commit of '%s' builder: %s"), MODULENAME, *m_errorhnd, false);
 	}
 
 	virtual bool run( const std::string& command)
@@ -552,7 +552,7 @@ private:
 		const char* logfile = m_config.logfile.empty()?0:m_config.logfile.c_str();
 		Logger logout( logfile);
 		if (logout) logout << _TXT("writing concept class dependencies");
-		std::vector<VectorSpaceModelConfig::ConceptClassDependency>::const_iterator
+		std::vector<VectorStorageConfig::ConceptClassDependency>::const_iterator
 			ci = m_config.conceptClassDependecies.begin(), ce = m_config.conceptClassDependecies.end();
 		for (; ci != ce; ++ci)
 		{
@@ -663,7 +663,7 @@ private:
 	ErrorBufferInterface* m_errorhnd;
 	const DatabaseInterface* m_dbi;
 	DatabaseAdapter m_database;
-	VectorSpaceModelConfig m_config;
+	VectorStorageConfig m_config;
 	unsigned int m_state;
 	bool m_needToCalculateSimRelationMap;
 	bool m_haveFeaturesAdded;
@@ -677,15 +677,15 @@ private:
 };
 
 
-VectorSpaceModel::VectorSpaceModel( ErrorBufferInterface* errorhnd_)
+VectorStorage::VectorStorage( ErrorBufferInterface* errorhnd_)
 	:m_errorhnd(errorhnd_){}
 
 
-bool VectorSpaceModel::createRepository( const std::string& configsource, const DatabaseInterface* dbi) const
+bool VectorStorage::createStorage( const std::string& configsource, const DatabaseInterface* dbi) const
 {
 	try
 	{
-		VectorSpaceModelConfig config( configsource, m_errorhnd);
+		VectorStorageConfig config( configsource, m_errorhnd);
 		if (dbi->createDatabase( config.databaseConfig))
 		{
 			DatabaseAdapter database( dbi, config.databaseConfig, m_errorhnd);
@@ -694,18 +694,18 @@ bool VectorSpaceModel::createRepository( const std::string& configsource, const 
 		}
 		else
 		{
-			throw strus::runtime_error(_TXT("failed to create repository for vector space model: %s"), m_errorhnd->fetchError());
+			throw strus::runtime_error(_TXT("failed to create repository for vector storage: %s"), m_errorhnd->fetchError());
 		}
 		return true;
 	}
 	CATCH_ERROR_ARG1_MAP_RETURN( _TXT("error creating '%s' repository: %s"), MODULENAME, *m_errorhnd, false);
 }
 
-bool VectorSpaceModel::resetRepository( const std::string& configsrc, const DatabaseInterface* dbi) const
+bool VectorStorage::resetStorage( const std::string& configsrc, const DatabaseInterface* dbi) const
 {
 	try
 	{
-		VectorSpaceModelConfig config( configsrc, m_errorhnd);
+		VectorStorageConfig config( configsrc, m_errorhnd);
 		DatabaseAdapter database( dbi, config.databaseConfig, m_errorhnd);
 		database.clear();
 		database.commit();
@@ -715,34 +715,34 @@ bool VectorSpaceModel::resetRepository( const std::string& configsrc, const Data
 }
 
 
-VectorSpaceModelClientInterface* VectorSpaceModel::createClient( const std::string& configsrc, const DatabaseInterface* database) const
+VectorStorageClientInterface* VectorStorage::createClient( const std::string& configsrc, const DatabaseInterface* database) const
 {
 	try
 	{
-		return new VectorSpaceModelClient( VectorSpaceModelConfig(configsrc,m_errorhnd), configsrc, database, m_errorhnd);
+		return new VectorStorageClient( VectorStorageConfig(configsrc,m_errorhnd), configsrc, database, m_errorhnd);
 	}
 	CATCH_ERROR_ARG1_MAP_RETURN( _TXT("error creating '%s' client interface: %s"), MODULENAME, *m_errorhnd, 0);
 }
 
-VectorSpaceModelBuilderInterface* VectorSpaceModel::createBuilder( const std::string& configsrc, const DatabaseInterface* database) const
+VectorStorageBuilderInterface* VectorStorage::createBuilder( const std::string& configsrc, const DatabaseInterface* database) const
 {
 	try
 	{
-		return new VectorSpaceModelBuilder( VectorSpaceModelConfig(configsrc,m_errorhnd), configsrc, database, m_errorhnd);
+		return new VectorStorageBuilder( VectorStorageConfig(configsrc,m_errorhnd), configsrc, database, m_errorhnd);
 	}
 	CATCH_ERROR_ARG1_MAP_RETURN( _TXT("error creating '%s' builder: %s"), MODULENAME, *m_errorhnd, 0);
 }
 
-VectorSpaceModelDumpInterface* VectorSpaceModel::createDump( const std::string& configsource, const DatabaseInterface* database, const std::string& keyprefix) const
+VectorStorageDumpInterface* VectorStorage::createDump( const std::string& configsource, const DatabaseInterface* database, const std::string& keyprefix) const
 {
 	try
 	{
-		return new VectorSpaceModelDump( database, configsource, keyprefix, m_errorhnd);
+		return new VectorStorageDump( database, configsource, keyprefix, m_errorhnd);
 	}
 	CATCH_ERROR_ARG1_MAP_RETURN( _TXT("error creating '%s' builder: %s"), MODULENAME, *m_errorhnd, 0);
 }
 
-std::vector<std::string> VectorSpaceModel::builderCommands() const
+std::vector<std::string> VectorStorage::builderCommands() const
 {
 	try
 	{
@@ -757,7 +757,7 @@ std::vector<std::string> VectorSpaceModel::builderCommands() const
 	CATCH_ERROR_ARG1_MAP_RETURN( _TXT("error getting list of commands of '%s' builder: %s"), MODULENAME, *m_errorhnd, std::vector<std::string>());
 }
 
-std::string VectorSpaceModel::builderCommandDescription( const std::string& command) const
+std::string VectorStorage::builderCommandDescription( const std::string& command) const
 {
 	try
 	{

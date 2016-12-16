@@ -5,9 +5,9 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
-/// \brief Configuration structure for the strus standard vector space model
-#ifndef _STRUS_VECTOR_SPACE_MODEL_CONFIG_HPP_INCLUDED
-#define _STRUS_VECTOR_SPACE_MODEL_CONFIG_HPP_INCLUDED
+/// \brief Configuration structure for the strus standard vector storage
+#ifndef _STRUS_VECTOR_STORAGE_CONFIG_HPP_INCLUDED
+#define _STRUS_VECTOR_STORAGE_CONFIG_HPP_INCLUDED
 #include "simGroup.hpp"
 #include <string>
 #include <map>
@@ -66,7 +66,7 @@ struct GenModelConfig
 typedef std::map<std::string,GenModelConfig> GenModelConfigMap;
 
 
-struct VectorSpaceModelConfig
+struct VectorStorageConfig
 {
 	enum Defaults {
 		DefaultThreads = 0,
@@ -82,11 +82,11 @@ struct VectorSpaceModelConfig
 		DefaultWithProbSim = 1,
 		DefaultWithForceSim = 0
 	};
-	VectorSpaceModelConfig( const VectorSpaceModelConfig& o);
-	VectorSpaceModelConfig();
-	VectorSpaceModelConfig( const std::string& config, ErrorBufferInterface* errorhnd, const VectorSpaceModelConfig& defaultcfg=VectorSpaceModelConfig());
+	VectorStorageConfig( const VectorStorageConfig& o);
+	VectorStorageConfig();
+	VectorStorageConfig( const std::string& config, ErrorBufferInterface* errorhnd, const VectorStorageConfig& defaultcfg=VectorStorageConfig());
 
-	bool isBuildCompatible( const VectorSpaceModelConfig& o) const;
+	bool isBuildCompatible( const VectorStorageConfig& o) const;
 	std::string tostring( bool eolnsep=true) const;
 
 	const GenModelConfig& genModelConfig( const std::string& name) const
