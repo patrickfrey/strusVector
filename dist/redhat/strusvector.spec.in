@@ -184,11 +184,19 @@ BuildRequires: boost-devel
 %endif
 %endif
 
-%if %{rhel} || %{centos} || %{scilin} || %{fedora} || %{suse} || %{sles}
+%if %{rhel} || %{centos} || %{scilin} || %{fedora}
 BuildRequires: blas-devel
 BuildRequires: lapack-devel
 Requires: blas
 Requires: lapack
+%endif
+%if %{suse} || %{sles}
+%if %{sles12} || %{osufactory}
+BuildRequires: blas-devel
+BuildRequires: lapack-devel
+Requires: blas
+Requires: lapack
+%endif
 %endif
 
 %if %{rhel} || %{centos} || %{scilin} || %{fedora}
