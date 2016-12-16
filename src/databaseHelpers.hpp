@@ -5,9 +5,9 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
-/// \brief Database abstraction (wrapper) for the standard strus vector space model
-#ifndef _STRUS_VECTOR_SPACE_MODEL_DATABASE_HELPERS_HPP_INCLUDED
-#define _STRUS_VECTOR_SPACE_MODEL_DATABASE_HELPERS_HPP_INCLUDED
+/// \brief Database abstraction (wrapper) for the standard strus vector storage
+#ifndef _STRUS_VECTOR_DATABASE_HELPERS_HPP_INCLUDED
+#define _STRUS_VECTOR_DATABASE_HELPERS_HPP_INCLUDED
 #include "strus/base/hton.hpp"
 #include "strus/base/utf8.hpp"
 #include "strus/base/stdint.h"

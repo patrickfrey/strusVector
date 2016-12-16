@@ -6,8 +6,8 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 /// \brief Function for evaluating similarity relations (incl. multithreaded)
-#ifndef _STRUS_VECTOR_SPACE_MODEL_GET_SIMHASH_VALUES_HPP_INCLUDED
-#define _STRUS_VECTOR_SPACE_MODEL_GET_SIMHASH_VALUES_HPP_INCLUDED
+#ifndef _STRUS_VECTOR_GET_SIMHASH_VALUES_HPP_INCLUDED
+#define _STRUS_VECTOR_GET_SIMHASH_VALUES_HPP_INCLUDED
 #include "simHash.hpp"
 #include <vector>
 

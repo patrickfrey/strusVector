@@ -25,9 +25,9 @@ set(
 	genGroupThreadContext.cpp
 	genModel.cpp
 	databaseAdapter.cpp
-	vectorSpaceModelConfig.cpp
-	vectorSpaceModelDump.cpp
-	vectorSpaceModel.cpp
+	vectorStorageConfig.cpp
+	vectorStorageDump.cpp
+	vectorStorage.cpp
 )
 
 include_directories(

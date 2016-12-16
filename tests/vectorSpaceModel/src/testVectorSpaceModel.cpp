@@ -9,9 +9,9 @@
 #include "strus/lib/vectorspace_std.hpp"
 #include "strus/lib/database_leveldb.hpp"
 #include "strus/lib/error.hpp"
-#include "strus/vectorSpaceModelInterface.hpp"
-#include "strus/vectorSpaceModelClientInterface.hpp"
-#include "strus/vectorSpaceModelBuilderInterface.hpp"
+#include "strus/vectorStorageInterface.hpp"
+#include "strus/vectorStorageClientInterface.hpp"
+#include "strus/vectorStorageBuilderInterface.hpp"
 #include "strus/databaseInterface.hpp"
 #include "strus/errorBufferInterface.hpp"
 #include "strus/base/configParser.hpp"
@@ -197,7 +197,7 @@ int main( int argc, const char** argv)
 		}
 		// Build all objects:
 		std::auto_ptr<strus::DatabaseInterface> dbi( strus::createDatabaseType_leveldb( g_errorhnd));
-		std::auto_ptr<strus::VectorSpaceModelInterface> vmodel( createVectorSpaceModel_std( g_errorhnd));
+		std::auto_ptr<strus::VectorStorageInterface> vmodel( createVectorStorage_std( g_errorhnd));
 		if (!dbi.get() || !vmodel.get() || g_errorhnd->hasError()) throw std::runtime_error( g_errorhnd->fetchError());
 
 		// Remove traces of old test model before creating a new one:
@@ -206,7 +206,7 @@ int main( int argc, const char** argv)
 			(void)g_errorhnd->fetchError();
 		}
 		// Creating repository for vector space model:
-		if (!vmodel->createRepository( config, dbi.get()))
+		if (!vmodel->createStorage( config, dbi.get()))
 		{
 			throw std::runtime_error( g_errorhnd->fetchError());
 		}
@@ -214,7 +214,7 @@ int main( int argc, const char** argv)
 		std::vector<std::vector<double> > samplear;
 		if (use_model_built)
 		{
-			std::auto_ptr<strus::VectorSpaceModelClientInterface> instance( vmodel->createClient( config, dbi.get()));
+			std::auto_ptr<strus::VectorStorageClientInterface> instance( vmodel->createClient( config, dbi.get()));
 			if (!instance.get()) throw std::runtime_error( g_errorhnd->fetchError());
 			strus::Index si = 0, se = instance->nofFeatures();
 			for (; si != se; ++si)
@@ -222,7 +222,7 @@ int main( int argc, const char** argv)
 				samplear.push_back( instance->featureVector( si));
 			}
 		}
-		std::auto_ptr<strus::VectorSpaceModelBuilderInterface> builder( vmodel->createBuilder( config, dbi.get()));
+		std::auto_ptr<strus::VectorStorageBuilderInterface> builder( vmodel->createBuilder( config, dbi.get()));
 		if (!builder.get()) throw std::runtime_error( g_errorhnd->fetchError());
 
 		if (!use_model_built)
@@ -293,7 +293,7 @@ int main( int argc, const char** argv)
 
 		// Categorize the input vectors and build some maps out of the assignments of concepts:
 		std::cerr << "load model to categorize vectors" << std::endl;
-		std::auto_ptr<strus::VectorSpaceModelClientInterface> categorizer( vmodel->createClient( config, dbi.get()));
+		std::auto_ptr<strus::VectorStorageClientInterface> categorizer( vmodel->createClient( config, dbi.get()));
 		if (!categorizer.get())
 		{
 			throw std::runtime_error( "failed to create VSM client interface from model stored");

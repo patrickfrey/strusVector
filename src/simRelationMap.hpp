@@ -6,8 +6,8 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 /// \brief Structure for storing similarity relations
-#ifndef _STRUS_VECTOR_SPACE_MODEL_SIMILARITY_RELATION_MAP_HPP_INCLUDED
-#define _STRUS_VECTOR_SPACE_MODEL_SIMILARITY_RELATION_MAP_HPP_INCLUDED
+#ifndef _STRUS_VECTOR_SIMILARITY_RELATION_MAP_HPP_INCLUDED
+#define _STRUS_VECTOR_SIMILARITY_RELATION_MAP_HPP_INCLUDED
 #include "simHash.hpp"
 #include "simGroup.hpp"
 #include "strus/base/stdint.h"

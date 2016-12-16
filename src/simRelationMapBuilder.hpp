@@ -6,8 +6,8 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 /// \brief Class for probabilistic evaluating similarity relations (incl. multithreaded)
-#ifndef _STRUS_VECTOR_SPACE_MODEL_GET_SIMILARITY_RELATION_MAP_BUILDER_HPP_INCLUDED
-#define _STRUS_VECTOR_SPACE_MODEL_GET_SIMILARITY_RELATION_MAP_BUILDER_HPP_INCLUDED
+#ifndef _STRUS_VECTOR_GET_SIMILARITY_RELATION_MAP_BUILDER_HPP_INCLUDED
+#define _STRUS_VECTOR_GET_SIMILARITY_RELATION_MAP_BUILDER_HPP_INCLUDED
 #include "simRelationMap.hpp"
 #include "simRelationReader.hpp"
 #include "simHash.hpp"

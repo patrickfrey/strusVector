@@ -6,8 +6,8 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 /// \brief Structure for breeding good representants of similarity classes with help of genetic algorithms
-#ifndef _STRUS_VECTOR_SPACE_MODEL_GENMODEL_HPP_INCLUDED
-#define _STRUS_VECTOR_SPACE_MODEL_GENMODEL_HPP_INCLUDED
+#ifndef _STRUS_VECTOR_GENMODEL_HPP_INCLUDED
+#define _STRUS_VECTOR_GENMODEL_HPP_INCLUDED
 #include "simHash.hpp"
 #include "simGroup.hpp"
 #include "simRelationMap.hpp"

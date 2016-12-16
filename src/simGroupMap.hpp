@@ -6,8 +6,8 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 /// \brief Collection of similarity groups for thread safe access
-#ifndef _STRUS_VECTOR_SPACE_MODEL_SIM_GROUP_MAP_HPP_INCLUDED
-#define _STRUS_VECTOR_SPACE_MODEL_SIM_GROUP_MAP_HPP_INCLUDED
+#ifndef _STRUS_VECTOR_SIM_GROUP_MAP_HPP_INCLUDED
+#define _STRUS_VECTOR_SIM_GROUP_MAP_HPP_INCLUDED
 #include "simGroup.hpp"
 #include "utils.hpp"
 #include "internationalization.hpp"

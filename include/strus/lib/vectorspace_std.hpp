@@ -7,8 +7,8 @@
  */
 /// \brief Exported functions of the strus standard vector space model library
 /// \file vectorspace_std.hpp
-#ifndef _STRUS_VECTOR_SPACE_MODEL_STD_LIB_HPP_INCLUDED
-#define _STRUS_VECTOR_SPACE_MODEL_STD_LIB_HPP_INCLUDED
+#ifndef _STRUS_VECTOR_STORAGE_STD_LIB_HPP_INCLUDED
+#define _STRUS_VECTOR_STORAGE_STD_LIB_HPP_INCLUDED
 
 /// \brief strus toplevel namespace
 namespace strus {
@@ -16,14 +16,14 @@ namespace strus {
 /// \brief Forward declaration
 class ErrorBufferInterface;
 /// \brief Forward declaration
-class VectorSpaceModelInterface;
+class VectorStorageInterface;
 /// \brief Forward declaration
 class DatabaseInterface;
 
 /// \brief Create standard vector space model
 /// \param[in] database database to us for the data repository of the model
 /// \param[in] errorhnd error handler to use
-VectorSpaceModelInterface* createVectorSpaceModel_std( ErrorBufferInterface* errorhnd);
+VectorStorageInterface* createVectorStorage_std( ErrorBufferInterface* errorhnd);
 
 }//namespace
 #endif

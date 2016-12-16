@@ -7,14 +7,14 @@
  */
 #include "strus/lib/vectorspace_std.hpp"
 #include "strus/errorBufferInterface.hpp"
-#include "vectorSpaceModel.hpp"
+#include "vectorStorage.hpp"
 #include "strus/base/dll_tags.hpp"
 #include "internationalization.hpp"
 #include "errorUtils.hpp"
 
 using namespace strus;
 
-DLL_PUBLIC VectorSpaceModelInterface* strus::createVectorSpaceModel_std( ErrorBufferInterface* errorhnd)
+DLL_PUBLIC VectorStorageInterface* strus::createVectorStorage_std( ErrorBufferInterface* errorhnd)
 {
 	try
 	{
@@ -24,8 +24,8 @@ DLL_PUBLIC VectorSpaceModelInterface* strus::createVectorSpaceModel_std( ErrorBu
 			strus::initMessageTextDomain();
 			intl_initialized = true;
 		}
-		return new VectorSpaceModel( errorhnd);
+		return new VectorStorage( errorhnd);
 	}
-	CATCH_ERROR_MAP_RETURN( _TXT("error creating standard vector space model: %s"), *errorhnd, 0);
+	CATCH_ERROR_MAP_RETURN( _TXT("error creating standard vector storage: %s"), *errorhnd, 0);
 }
 

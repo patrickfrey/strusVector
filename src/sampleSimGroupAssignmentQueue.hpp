@@ -6,8 +6,8 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 /// \brief Queue for sample to group assignments
-#ifndef _STRUS_VECTOR_SPACE_MODEL_SAMPLE_CONCEPT_ASSIGNMENT_QUEUE_HPP_INCLUDED
-#define _STRUS_VECTOR_SPACE_MODEL_SAMPLE_CONCEPT_ASSIGNMENT_QUEUE_HPP_INCLUDED
+#ifndef _STRUS_VECTOR_SAMPLE_CONCEPT_ASSIGNMENT_QUEUE_HPP_INCLUDED
+#define _STRUS_VECTOR_SAMPLE_CONCEPT_ASSIGNMENT_QUEUE_HPP_INCLUDED
 #include "simGroup.hpp"
 #include "utils.hpp"
 #include <vector>

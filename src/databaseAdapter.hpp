@@ -5,16 +5,16 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
-/// \brief Database abstraction (wrapper) for the standard strus vector space model
-#ifndef _STRUS_VECTOR_SPACE_MODEL_DATABASE_ADAPTER_HPP_INCLUDED
-#define _STRUS_VECTOR_SPACE_MODEL_DATABASE_ADAPTER_HPP_INCLUDED
+/// \brief Database abstraction (wrapper) for the standard strus vector storage
+#ifndef _STRUS_VECTOR_STORAGE_DATABASE_ADAPTER_HPP_INCLUDED
+#define _STRUS_VECTOR_STORAGE_DATABASE_ADAPTER_HPP_INCLUDED
 #include "strus/databaseInterface.hpp"
 #include "strus/databaseClientInterface.hpp"
 #include "strus/databaseTransactionInterface.hpp"
 #include "strus/databaseCursorInterface.hpp"
 #include "strus/reference.hpp"
 #include "strus/base/stdint.h"
-#include "vectorSpaceModelConfig.hpp"
+#include "vectorStorageConfig.hpp"
 #include "simHash.hpp"
 #include "simRelationMap.hpp"
 #include "genModel.hpp"
@@ -63,7 +63,7 @@ public:
 	std::vector<SampleIndex> readConceptSingletons( const std::string& clname) const;
 	std::vector<ConceptIndex> readConceptDependencies( const std::string& clname, const ConceptIndex& cidx, const std::string& depclname) const;
 
-	VectorSpaceModelConfig readConfig() const;
+	VectorStorageConfig readConfig() const;
 	LshModel readLshModel() const;
 
 	void writeVersion();
@@ -78,7 +78,7 @@ public:
 	void writeSampleConceptIndexMap( const std::string& clname, const SampleConceptIndexMap& sfmap);
 	void writeConceptSampleIndexMap( const std::string& clname, const ConceptSampleIndexMap& fsmap);
 	void writeConceptDependencies( const std::string& clname, const ConceptIndex& cidx, const std::string& depclname, const std::vector<ConceptIndex>& deplist);
-	void writeConfig( const VectorSpaceModelConfig& config);
+	void writeConfig( const VectorStorageConfig& config);
 	void writeLshModel( const LshModel& model);
 
 	bool isempty();

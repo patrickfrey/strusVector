@@ -12,9 +12,9 @@
 #include "internationalization.hpp"
 #include "errorUtils.hpp"
 
-static const strus::VectorSpaceModelConstructor standard_vsmodel =
+static const strus::VectorStorageConstructor standard_vsmodel =
 {
-	"vector_std", strus::createVectorSpaceModel_std
+	"vector_std", strus::createVectorStorage_std
 };
 
 static const char* lapack_license =

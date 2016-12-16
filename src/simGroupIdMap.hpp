@@ -6,8 +6,8 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 /// \brief Map of similarity group identifiers for remapping them when cleaning up maps (eliminating leaks)
-#ifndef _STRUS_VECTOR_SPACE_MODEL_SIM_GROUP_ID_MAP_HPP_INCLUDED
-#define _STRUS_VECTOR_SPACE_MODEL_SIM_GROUP_ID_MAP_HPP_INCLUDED
+#ifndef _STRUS_VECTOR_SIM_GROUP_ID_MAP_HPP_INCLUDED
+#define _STRUS_VECTOR_SIM_GROUP_ID_MAP_HPP_INCLUDED
 #include "simGroup.hpp"
 #include "internationalization.hpp"
 #include <vector>

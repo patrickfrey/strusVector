@@ -6,8 +6,8 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 /// \brief Structure for thread safe operations on representants of similarity classes with help of genetic algorithms
-#ifndef _STRUS_VECTOR_SPACE_MODEL_DEPENDENCY_GRAPH_HPP_INCLUDED
-#define _STRUS_VECTOR_SPACE_MODEL_DEPENDENCY_GRAPH_HPP_INCLUDED
+#ifndef _STRUS_VECTOR_DEPENDENCY_GRAPH_HPP_INCLUDED
+#define _STRUS_VECTOR_DEPENDENCY_GRAPH_HPP_INCLUDED
 #include <utility>
 #include <set>
 #include "simGroup.hpp"

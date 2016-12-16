@@ -6,8 +6,8 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 /// \brief Structure for a sparse field of dimension 2 (it's a sparse matrix, but we do not provide any operations, just access)
-#ifndef _STRUS_VECTOR_SPACE_MODEL_SPARSE_DIM2_FIELD_HPP_INCLUDED
-#define _STRUS_VECTOR_SPACE_MODEL_SPARSE_DIM2_FIELD_HPP_INCLUDED
+#ifndef _STRUS_VECTOR_SPARSE_DIM2_FIELD_HPP_INCLUDED
+#define _STRUS_VECTOR_SPARSE_DIM2_FIELD_HPP_INCLUDED
 #include "strus/base/stdint.h"
 #include <string>
 #include <sstream>

@@ -91,10 +91,10 @@ static arma::vec createSimilarVector( const arma::vec& vec, double maxCosSim)
 	}
 }
 
-class VectorSpaceModel
+class VectorStorage
 {
 public:
-	VectorSpaceModel( std::size_t dim_, std::size_t variations_, std::size_t width_)
+	VectorStorage( std::size_t dim_, std::size_t variations_, std::size_t width_)
 		:m_dim(dim_),m_variations(variations_),m_width(width_)
 		,m_modelMatrix( createModelMatrix( dim_, variations_))
 	{
@@ -241,10 +241,10 @@ private:
 
 
 #ifdef STRUS_LOWLEVEL_DEBUG
-static VectorSpaceModel::SimHash diffSimHash( const VectorSpaceModel::SimHash& aa, const VectorSpaceModel::SimHash& bb)
+static VectorStorage::SimHash diffSimHash( const VectorStorage::SimHash& aa, const VectorStorage::SimHash& bb)
 {
-	VectorSpaceModel::SimHash rt;
-	VectorSpaceModel::SimHash::const_iterator ai = aa.begin(), ae = aa.end(), bi = bb.begin(), be = bb.end();
+	VectorStorage::SimHash rt;
+	VectorStorage::SimHash::const_iterator ai = aa.begin(), ae = aa.end(), bi = bb.begin(), be = bb.end();
 	for (; ai != ae && bi != be; ++ai,++bi)
 	{
 		rt.push_back( *ai ^ *bi);
@@ -353,13 +353,13 @@ int main( int argc, const char** argv)
 			  << ", variations " << (unsigned int)Variations << ", rotations " << (unsigned int)Width << ":"
 			  << std::endl;
 
-		VectorSpaceModel model( Dim, Variations, Width);
+		VectorStorage model( Dim, Variations, Width);
 #ifdef STRUS_LOWLEVEL_DEBUG
 		std::cout << "Model Matrix:" << std::endl << model.tostring() << std::endl;
 #endif
 		std::vector<arma::vec> testvectorar;
-		std::vector<VectorSpaceModel::SimHash> testshar;
-		std::vector<VectorSpaceModel::SimHashStruct> testsimhashar;
+		std::vector<VectorStorage::SimHash> testshar;
+		std::vector<VectorStorage::SimHashStruct> testsimhashar;
 
 		std::cout << "Build " << (unsigned int)nof_sample_vectors << " samples:" << std::endl;
 		unsigned int vi=0,ve=nof_sample_vectors;

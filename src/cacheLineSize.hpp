@@ -6,8 +6,8 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 /// \brief Cache line size
-#ifndef _STRUS_VECTOR_SPACE_MODEL_CACHELINE_SIZE_HPP_INCLUDED
-#define _STRUS_VECTOR_SPACE_MODEL_CACHELINE_SIZE_HPP_INCLUDED
+#ifndef _STRUS_VECTOR_CACHELINE_SIZE_HPP_INCLUDED
+#define _STRUS_VECTOR_CACHELINE_SIZE_HPP_INCLUDED
 
 namespace strus {
 	enum {CacheLineSize=128};
