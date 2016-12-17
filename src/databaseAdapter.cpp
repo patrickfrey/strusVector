@@ -245,17 +245,19 @@ static void print_value_seq( const void* sq, unsigned int sqlen)
 template <typename ScalarType>
 static std::vector<ScalarType> vectorFromSerialization( const char* blob, std::size_t blobsize)
 {
+	typedef typename ByteOrder<ScalarType>::net_value_type NetScalarType;
+
 #ifdef STRUS_LOWLEVEL_DEBUG
 	printf("read vector");
 #endif
 	std::vector<ScalarType> rt;
-	rt.reserve( blobsize / sizeof(ScalarType));
-	if (blobsize % sizeof(ScalarType) != 0)
+	rt.reserve( blobsize / sizeof(NetScalarType));
+	if (blobsize % sizeof(NetScalarType) != 0)
 	{
 		throw strus::runtime_error(_TXT("corrupt data in vector serialization"));
 	}
-	ScalarType const* ri = (const ScalarType*)blob;
-	const ScalarType* re = ri + blobsize / sizeof(ScalarType);
+	NetScalarType const* ri = (const NetScalarType*)blob;
+	const NetScalarType* re = ri + blobsize / sizeof(NetScalarType);
 	for (; ri != re; ++ri)
 	{
 		rt.push_back( ByteOrder<ScalarType>::ntoh( *ri));
@@ -278,18 +280,20 @@ static std::vector<ScalarType> vectorFromSerialization( const std::string& blob)
 template <typename ScalarType>
 static std::string vectorSerialization( const std::vector<ScalarType>& vec)
 {
+	typedef typename ByteOrder<ScalarType>::net_value_type NetScalarType;
+
 #ifdef STRUS_LOWLEVEL_DEBUG
 	printf("write vector");
 #endif
 	std::string rt;
-	rt.reserve( vec.size() * sizeof(ScalarType));
+	rt.reserve( vec.size() * sizeof(NetScalarType));
 	typename std::vector<ScalarType>::const_iterator vi = vec.begin(), ve = vec.end();
 	for (; vi != ve; ++vi)
 	{
 #ifdef STRUS_LOWLEVEL_DEBUG
 		print_value_seq( &*vi, sizeof(ScalarType));
 #endif
-		ScalarType buf = ByteOrder<ScalarType>::hton( *vi);
+		NetScalarType buf = ByteOrder<ScalarType>::hton( *vi);
 		rt.append( (const char*)&buf, sizeof(buf));
 	}
 #ifdef STRUS_LOWLEVEL_DEBUG
