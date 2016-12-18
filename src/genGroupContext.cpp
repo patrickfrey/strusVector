@@ -72,7 +72,8 @@ std::vector<ConceptIndex> GenGroupContext::getNeighbourGroups( const SimGroup& g
 		SimGroupRef nbgroup = m_groupMap.get( *si);
 		if (nbgroup.get() && nbgroup->gencode().near( group.gencode(), nbdist))
 		{
-			if (neighbour_groups.insert( NBGroupStruct( nbdist, *si)).second)
+			unsigned short dist = nbgroup->gencode().dist( group.gencode());
+			if (neighbour_groups.insert( NBGroupStruct( dist, *si)).second)
 			{
 				++nof_neighbour_groups;
 			}
@@ -81,7 +82,8 @@ std::vector<ConceptIndex> GenGroupContext::getNeighbourGroups( const SimGroup& g
 				if (nof_neighbour_groups > maxnofresults)
 				{
 					std::set<NBGroupStruct>::iterator last = neighbour_groups.end();
-					neighbour_groups.erase( --last);
+					--last;
+					neighbour_groups.erase( last);
 					--nof_neighbour_groups;
 				}
 				nbdist = neighbour_groups.rbegin()->dist;
