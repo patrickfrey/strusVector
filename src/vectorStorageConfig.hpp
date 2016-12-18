@@ -33,7 +33,7 @@ struct GenModelConfig
 		DefaultGreediness = 3,
 		DefaultIsaf = 60,
 		DefaultBadFitnessFactor = 10,
-		DefaultFitnessDistFactor = 10,
+		DefaultFitnessDistFactor = 25,
 		DefaultEqdiff = 25,
 		DefaultWithSingletons = 0
 	};

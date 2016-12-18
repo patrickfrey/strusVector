@@ -13,6 +13,8 @@
 #include "strus/base/string_format.hpp"
 #include "strus/errorBufferInterface.hpp"
 #include <boost/make_shared.hpp>
+#include <iostream>
+#include <sstream>
 
 using namespace strus;
 using namespace strus::utils;
@@ -117,6 +119,9 @@ void GenGroupContext::checkSimGroupStructures()
 	std::ostringstream errbuf;
 	enum {MaxNofErrors = 30};
 	unsigned int nofErrors = 0;
+	unsigned int groupMemberDistribution[32];
+	unsigned int groupMemberDistributionMaxIdx = 0;
+	std::memset( &groupMemberDistribution, 0, sizeof(groupMemberDistribution));
 
 	ConceptIndex gi = 1, ge = m_cntalloc->nofGroupIdsAllocated()+1;
 	for (; gi != ge; ++gi)
@@ -127,6 +132,15 @@ void GenGroupContext::checkSimGroupStructures()
 		{
 			throw strus::runtime_error( _TXT("group has id %u that is not matching to index %u"), group->id(), gi);
 		}
+		unsigned int nn = group->size();
+		unsigned int nidx = 0;
+		for (; nn > 2; nn /= 2,++nidx){}
+		groupMemberDistribution[ nidx] += 1;
+		if (nidx > groupMemberDistributionMaxIdx)
+		{
+			groupMemberDistributionMaxIdx = nidx;
+		}
+
 		SimGroup::const_iterator mi = group->begin(), me = group->end();
 		for (unsigned int midx=0; mi != me; ++mi,++midx)
 		{
@@ -177,6 +191,16 @@ void GenGroupContext::checkSimGroupStructures()
 	if (nofErrors)
 	{
 		throw strus::runtime_error(_TXT("internal: %u errors in sim group structures"), nofErrors);
+	}
+	if (m_logout)
+	{
+		std::ostringstream buf;
+		for (unsigned int nidx=0; nidx<=groupMemberDistributionMaxIdx; ++nidx)
+		{
+			buf << " " << groupMemberDistribution[ nidx];
+		}
+		std::string msg( buf.str());
+		m_logout << string_format( _TXT("group member distribution is: %s"), msg.c_str());
 	}
 }
 
