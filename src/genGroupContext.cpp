@@ -200,7 +200,7 @@ void GenGroupContext::checkSimGroupStructures()
 			buf << " " << groupMemberDistribution[ nidx];
 		}
 		std::string msg( buf.str());
-		m_logout << string_format( _TXT("group member distribution is: %s"), msg.c_str());
+		m_logout << string_format( _TXT("group member distribution: %s"), msg.c_str());
 	}
 }
 
