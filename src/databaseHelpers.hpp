@@ -112,10 +112,12 @@ public:
 	template <typename ScalarType>
 	DatabaseValueBuffer& operator[]( const ScalarType& val)
 	{
-		if (sizeof(ScalarType) + m_itr > MaxValueSize) throw strus::runtime_error(_TXT("array bound write in database value buffer"));
-		ScalarType hostval = ByteOrder<ScalarType>::hton( val);
-		std::memcpy( m_buf + m_itr, &hostval, sizeof(hostval));
-		m_itr += sizeof(hostval);
+		typedef typename ByteOrder<ScalarType>::net_value_type NetScalarType;
+
+		if (sizeof(NetScalarType) + m_itr > MaxValueSize) throw strus::runtime_error(_TXT("array bound write in database value buffer"));
+		NetScalarType val_n = ByteOrder<ScalarType>::hton( val);
+		std::memcpy( m_buf + m_itr, &val_n, sizeof(val_n));
+		m_itr += sizeof(val_n);
 		return *this;
 	}
 
@@ -140,10 +142,12 @@ public:
 	template <typename ScalarType>
 	DatabaseValueScanner& operator[]( ScalarType& val)
 	{
-		if (sizeof(ScalarType) > (unsigned int)(m_end - m_itr)) throw strus::runtime_error(_TXT("array bound read in database value scanner"));
-		ScalarType val_n;
-		std::memcpy( &val_n, m_itr, sizeof(ScalarType));
-		m_itr += sizeof(ScalarType);
+		typedef typename ByteOrder<ScalarType>::net_value_type NetScalarType;
+
+		if (sizeof(NetScalarType) > (unsigned int)(m_end - m_itr)) throw strus::runtime_error(_TXT("array bound read in database value scanner"));
+		NetScalarType val_n;
+		std::memcpy( &val_n, m_itr, sizeof(val_n));
+		m_itr += sizeof(val_n);
 		val = ByteOrder<ScalarType>::ntoh( val_n);
 		return *this;
 	}
