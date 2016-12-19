@@ -13,6 +13,8 @@
 #include "strus/base/string_format.hpp"
 #include "strus/errorBufferInterface.hpp"
 #include <boost/make_shared.hpp>
+#include <iostream>
+#include <sstream>
 
 using namespace strus;
 using namespace strus::utils;
@@ -70,7 +72,8 @@ std::vector<ConceptIndex> GenGroupContext::getNeighbourGroups( const SimGroup& g
 		SimGroupRef nbgroup = m_groupMap.get( *si);
 		if (nbgroup.get() && nbgroup->gencode().near( group.gencode(), nbdist))
 		{
-			if (neighbour_groups.insert( NBGroupStruct( nbdist, *si)).second)
+			unsigned short dist = nbgroup->gencode().dist( group.gencode());
+			if (neighbour_groups.insert( NBGroupStruct( dist, *si)).second)
 			{
 				++nof_neighbour_groups;
 			}
@@ -79,7 +82,8 @@ std::vector<ConceptIndex> GenGroupContext::getNeighbourGroups( const SimGroup& g
 				if (nof_neighbour_groups > maxnofresults)
 				{
 					std::set<NBGroupStruct>::iterator last = neighbour_groups.end();
-					neighbour_groups.erase( --last);
+					--last;
+					neighbour_groups.erase( last);
 					--nof_neighbour_groups;
 				}
 				nbdist = neighbour_groups.rbegin()->dist;
@@ -117,6 +121,9 @@ void GenGroupContext::checkSimGroupStructures()
 	std::ostringstream errbuf;
 	enum {MaxNofErrors = 30};
 	unsigned int nofErrors = 0;
+	unsigned int groupMemberDistribution[32];
+	unsigned int groupMemberDistributionMaxIdx = 0;
+	std::memset( &groupMemberDistribution, 0, sizeof(groupMemberDistribution));
 
 	ConceptIndex gi = 1, ge = m_cntalloc->nofGroupIdsAllocated()+1;
 	for (; gi != ge; ++gi)
@@ -127,6 +134,15 @@ void GenGroupContext::checkSimGroupStructures()
 		{
 			throw strus::runtime_error( _TXT("group has id %u that is not matching to index %u"), group->id(), gi);
 		}
+		unsigned int nn = group->size();
+		unsigned int nidx = 0;
+		for (; nn > 2; nn /= 2,++nidx){}
+		groupMemberDistribution[ nidx] += 1;
+		if (nidx > groupMemberDistributionMaxIdx)
+		{
+			groupMemberDistributionMaxIdx = nidx;
+		}
+
 		SimGroup::const_iterator mi = group->begin(), me = group->end();
 		for (unsigned int midx=0; mi != me; ++mi,++midx)
 		{
@@ -177,6 +193,16 @@ void GenGroupContext::checkSimGroupStructures()
 	if (nofErrors)
 	{
 		throw strus::runtime_error(_TXT("internal: %u errors in sim group structures"), nofErrors);
+	}
+	if (m_logout)
+	{
+		std::ostringstream buf;
+		for (unsigned int nidx=0; nidx<=groupMemberDistributionMaxIdx; ++nidx)
+		{
+			buf << " " << groupMemberDistribution[ nidx];
+		}
+		std::string msg( buf.str());
+		m_logout << string_format( _TXT("group member distribution: %s"), msg.c_str());
 	}
 }
 
@@ -466,7 +492,7 @@ void GenGroupContext::greedyNeighbourGroupInterchange(
 				}
 			}
 		}
-		if (group.get() && group->gencode().near( sim_group->gencode(), parameter.simdist))
+		if (sim_group->gencode().near( group->gencode(), parameter.simdist))
 		{
 			// Try add one member of sim_gi to gi that is similar to gi:
 			SimGroup::const_iterator mi = sim_group->begin(), me = sim_group->end();

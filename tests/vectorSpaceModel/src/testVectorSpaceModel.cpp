@@ -114,7 +114,7 @@ static strus::ErrorBufferInterface* g_errorhnd = 0;
 	"maxfeatures=1000000;"\
 	"maxconcepts=4000000;"\
 	"singletons=no;"\
-	"probsim=yes;"\
+	"probsim=no;"\
 	"forcesim=no"
 
 
