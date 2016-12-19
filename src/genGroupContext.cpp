@@ -492,7 +492,7 @@ void GenGroupContext::greedyNeighbourGroupInterchange(
 				}
 			}
 		}
-		if (group.get() && group->gencode().near( sim_group->gencode(), parameter.simdist))
+		if (sim_group->gencode().near( group->gencode(), parameter.simdist))
 		{
 			// Try add one member of sim_gi to gi that is similar to gi:
 			SimGroup::const_iterator mi = sim_group->begin(), me = sim_group->end();
