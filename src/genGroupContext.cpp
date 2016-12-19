@@ -50,7 +50,7 @@ struct NBGroupStruct
 	}
 };
 
-std::vector<ConceptIndex> GenGroupContext::getNeighbourGroups( const SimGroup& group, unsigned short nbdist, unsigned int maxnofresults) const
+std::vector<ConceptIndex> GenGroupContext::getNeighbourGroups( const SimGroup& group, unsigned short nbdist, unsigned int maxnofresults)
 {
 	std::set<NBGroupStruct> neighbour_groups;
 	unsigned int nof_neighbour_groups = 0;
@@ -89,6 +89,7 @@ std::vector<ConceptIndex> GenGroupContext::getNeighbourGroups( const SimGroup& g
 				nbdist = neighbour_groups.rbegin()->dist;
 			}
 		}
+		nbgroup.reset( (SimGroup*)0);	//... ensure nbgroup is alive till here
 	}
 	std::vector<ConceptIndex> rt;
 	std::set<NBGroupStruct>::const_iterator ni = neighbour_groups.begin(), ne = neighbour_groups.end();
@@ -99,7 +100,7 @@ std::vector<ConceptIndex> GenGroupContext::getNeighbourGroups( const SimGroup& g
 	return rt;
 }
 
-std::string GenGroupContext::groupMembersString( const ConceptIndex& group_id) const
+std::string GenGroupContext::groupMembersString( const ConceptIndex& group_id)
 {
 	std::ostringstream rt;
 	SimGroupRef group = m_groupMap.get( group_id);
@@ -112,6 +113,7 @@ std::string GenGroupContext::groupMembersString( const ConceptIndex& group_id) c
 			rt << *mi;
 		}
 	}
+	group.reset( (SimGroup*)0);		//... ensure group is alive till here
 	return rt.str();
 }
 
@@ -226,6 +228,7 @@ void GenGroupContext::removeGroup( SimGroupIdAllocator& localAllocator, const Co
 	}
 	m_groupMap.resetGroup( group_id);
 	localAllocator.free( group_id);
+	group.reset( (SimGroup*)0);		//... ensure group is alive till here
 }
 
 bool GenGroupContext::tryAddGroupMember(
@@ -269,7 +272,7 @@ bool GenGroupContext::tryAddGroupMember(
 
 ConceptIndex GenGroupContext::getSampleClosestSimGroup(
 		const SampleIndex& main_sampleidx, const SampleIndex& search_sampleidx, 
-		unsigned short min_dist) const
+		unsigned short min_dist)
 {
 	ConceptIndex rt = 0;
 	std::vector<ConceptIndex> gar;
@@ -288,6 +291,7 @@ ConceptIndex GenGroupContext::getSampleClosestSimGroup(
 			rt = group->id();
 			min_dist = (*m_samplear)[ search_sampleidx].dist( group->gencode());
 		}
+		group.reset( (SimGroup*)0);		//... ensure group is alive till here
 	}
 	return rt;
 }
@@ -509,7 +513,9 @@ void GenGroupContext::greedyNeighbourGroupInterchange(
 				}
 			}
 		}
+		if (!sim_group.get()) break;	//... ensure group is alive till here
 	}
+	group.reset( (SimGroup*)0);				//... ensure group is alive till here
 }
 
 bool GenGroupContext::improveGroup(
@@ -543,6 +549,7 @@ bool GenGroupContext::improveGroup(
 		}
 	}
 	m_groupMap.setGroup( group_id, newgroup);
+	group.reset( (SimGroup*)0);				//... ensure group is alive till here
 	if (newgroup->size() < 2)
 	{
 		// Delete group that lost too many members:
@@ -594,7 +601,9 @@ bool GenGroupContext::similarNeighbourGroupElimination(
 				}
 			}
 		}
+		if (!sim_group.get()) break;	//... ensure group is alive till here
 	}
+	group.reset( (SimGroup*)0);				//... ensure group is alive till here
 	return false;
 }
 
@@ -641,6 +650,7 @@ bool GenGroupContext::unfittestGroupElimination(
 			minFitness = fitness;
 			unfitestGroup_id = *ni;
 		}
+		if (!member_group.get()) continue;	//... ensure group is alive till here
 	}
 	bool doRemoveMember = false;
 	SampleIndex toRemoveMember = 0;
@@ -681,6 +691,7 @@ bool GenGroupContext::unfittestGroupElimination(
 	{
 		removeGroup( groupIdAllocator, group_id);
 	}
+	group.reset( (SimGroup*)0);		//... ensure group is alive till here
 	return rt;
 }
 
@@ -701,6 +712,7 @@ void GenGroupContext::garbageCollectSimGroupIds( ConceptIndex& nofGroups)
 				m_groupMap.resetGroup( gi);
 			}
 			nofGroups = new_gi;
+			group.reset( (SimGroup*)0);		//... ensure group is alive till here
 		}
 	}
 	m_sampleSimGroupMap.base().rewrite( groupIdMap);
@@ -780,7 +792,7 @@ void GenGroupContext::collectResults(
 	ConceptIndex gi = 1, ge = m_cntalloc->nofGroupIdsAllocated()+1;
 	for (; gi != ge; ++gi)
 	{
-		const SimGroupRef& group = m_groupMap.get( gi);
+		SimGroupRef group = m_groupMap.get( gi);
 		if (!group.get()) continue;
 
 		results.push_back( group->gencode());
@@ -792,6 +804,7 @@ void GenGroupContext::collectResults(
 			members.push_back( *mi);
 		}
 		conceptSampleIndexMap.add( results.size(), members);
+		group.reset( (SimGroup*)0);		//... ensure group is alive till here
 	}
 	// Collect the group membership for every sample into sampleConceptIndexMap:
 	sampleConceptIndexMap.clear();

@@ -63,7 +63,7 @@ public:
 		,m_groupAssignQueue()
 		,m_error(){}
 
-	std::vector<ConceptIndex> getNeighbourGroups( const SimGroup& group, unsigned short nbdist, unsigned int maxnofresults) const;
+	std::vector<ConceptIndex> getNeighbourGroups( const SimGroup& group, unsigned short nbdist, unsigned int maxnofresults);
 
 	void removeGroup(
 			SimGroupIdAllocator& localAllocator, const ConceptIndex& group_id);
@@ -72,13 +72,13 @@ public:
 			unsigned int descendants, unsigned int mutations, unsigned int votes,
 			unsigned int maxage, double fdf);
 
-	std::string groupMembersString( const ConceptIndex& group_id) const;
+	std::string groupMembersString( const ConceptIndex& group_id);
 	void checkSimGroupStructures();
 
 	///\brief Eval the group closest to a sample that is closer than a min dist
 	ConceptIndex getSampleClosestSimGroup(
 			const SampleIndex& main_sampleidx, const SampleIndex& search_sampleidx, 
-			unsigned short min_dist) const;
+			unsigned short min_dist);
 
 	/// \brief Find the closest sample to a given sample that is not yet in a group with this sample and can still be assigned to a new group
 	bool findClosestFreeSample(
