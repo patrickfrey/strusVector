@@ -13,6 +13,7 @@
 #include "strus/vectorStorageBuilderInterface.hpp"
 #include "strus/vectorStorageSearchInterface.hpp"
 #include "strus/databaseInterface.hpp"
+#include "strus/base/utf8.hpp"
 #include "strus/base/fileio.hpp"
 #include "strus/base/string_format.hpp"
 #include "vectorStorageConfig.hpp"
@@ -390,6 +391,34 @@ public:
 	virtual ~VectorStorageBuilder()
 	{}
 
+	static std::string utf8clean( const std::string& name)
+	{
+		std::string rt;
+		std::size_t si = 0, se = name.size();
+		while (si < se)
+		{
+			unsigned char asciichr = name[si];
+			if (asciichr && asciichr < 128)
+			{
+				rt.push_back( asciichr);
+				++si;
+			}
+			else
+			{
+				std::size_t chrlen = strus::utf8charlen( asciichr);
+				uint32_t chr = strus::utf8decode( name.c_str() + si, chrlen);
+				if (chr)
+				{
+					char buf[ 16];
+					chrlen = strus::utf8encode( buf, chr);
+					rt.append( buf, chrlen);
+				}
+				si += chrlen;
+			}
+		}
+		return rt;
+	}
+
 	virtual void addFeature( const std::string& name, const std::vector<double>& vec)
 	{
 		try
@@ -400,7 +429,7 @@ public:
 				if (m_vecar.size() < m_config.maxfeatures)
 				{
 					m_vecar.push_back( vec);
-					m_namear.push_back( name);
+					m_namear.push_back( utf8clean( name));
 					nofFeaturesAdded = m_vecar.size();
 				}
 				else
