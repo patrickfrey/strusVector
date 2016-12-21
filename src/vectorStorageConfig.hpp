@@ -80,7 +80,8 @@ struct VectorStorageConfig
 		DefaultMaxFeatures = (1<<31),
 		DefaultWithSingletons = 0,
 		DefaultWithProbSim = 1,
-		DefaultWithForceSim = 0
+		DefaultWithForceSim = 0,
+		DefaultWithRealVectorWeights = 0
 	};
 	VectorStorageConfig( const VectorStorageConfig& o);
 	VectorStorageConfig();
@@ -118,6 +119,7 @@ struct VectorStorageConfig
 	unsigned int maxconcepts;	///< restrict the number of concepts created (also temporarily)
 	bool with_probsim;		///< true, if probabilistic function is used as prefilter for the candidates of the similarity matrix (faster)
 	bool with_forcesim;		///< true, if the similarity relation matrix calculation should be forced
+	bool with_realvecweights;	///< true, if find similar should calculate the real weights in find similar at least for the results
 	GenModelConfigMap altgenmap;	///< alternative runs of categorization
 	typedef std::pair<std::string,std::string> ConceptClassDependency;
 	std::vector<ConceptClassDependency> conceptClassDependecies; ///< Dependencies to calculate between concept classes

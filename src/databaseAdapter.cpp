@@ -36,6 +36,11 @@ DatabaseAdapter::DatabaseAdapter( const DatabaseInterface* database_, const std:
 	if (!m_database.get()) throw strus::runtime_error( _TXT("failed to create database client for standard vector storage: %s"), m_errorhnd->fetchError());
 }
 
+DatabaseAdapter::DatabaseAdapter( const DatabaseAdapter& o)
+	:m_database(o.m_database),m_transaction(),m_cursor(),m_cursorkey(),m_errorhnd(o.m_errorhnd)
+{}
+
+
 void DatabaseAdapter::commit()
 {
 	if (m_transaction.get())

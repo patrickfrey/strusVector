@@ -33,6 +33,7 @@ class DatabaseAdapter
 {
 public:
 	DatabaseAdapter( const DatabaseInterface* database_, const std::string& config, ErrorBufferInterface* errorhnd_);
+	DatabaseAdapter( const DatabaseAdapter& o);
 	~DatabaseAdapter(){}
 
 	void checkVersion();
