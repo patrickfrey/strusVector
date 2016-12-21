@@ -88,7 +88,7 @@ public:
 					arma::vec resvv( m_database->readSampleVector( ri->featidx()));
 					ri->setWeight( arma::norm_dot( vv, resvv));
 				}
-				std::sort( rt.begin(), rt.end());
+				std::sort( rt.begin(), rt.end(), std::greater<int>());
 				rt.resize( maxNofResults);
 				return rt;
 			}
