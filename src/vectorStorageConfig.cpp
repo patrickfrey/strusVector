@@ -153,6 +153,7 @@ VectorStorageConfig::VectorStorageConfig( const VectorStorageConfig& o)
 	,maxfeatures(o.maxfeatures),maxconcepts(o.maxconcepts)
 	,with_probsim(o.with_probsim)
 	,with_forcesim(o.with_forcesim)
+	,with_realvecweights(o.with_realvecweights)
 	,altgenmap(o.altgenmap)
 	{}
 
@@ -164,6 +165,7 @@ VectorStorageConfig::VectorStorageConfig()
 	,maxfeatures(DefaultMaxFeatures),maxconcepts(0)
 	,with_probsim((bool)DefaultWithProbSim)
 	,with_forcesim((bool)DefaultWithForceSim)
+	,with_realvecweights((bool)DefaultWithRealVectorWeights)
 	,altgenmap()
 	{}
 
@@ -176,6 +178,7 @@ VectorStorageConfig::VectorStorageConfig( const std::string& config, ErrorBuffer
 	,maxfeatures(defaultcfg.maxfeatures),maxconcepts(defaultcfg.maxconcepts)
 	,with_probsim(defaultcfg.with_probsim)
 	,with_forcesim(defaultcfg.with_forcesim)
+	,with_realvecweights(defaultcfg.with_realvecweights)
 	,altgenmap(defaultcfg.altgenmap)
 {
 	bool altgenmap_set = false;
@@ -200,6 +203,7 @@ VectorStorageConfig::VectorStorageConfig( const std::string& config, ErrorBuffer
 	}
 	if (extractBooleanFromConfigString( with_probsim, src, "probsim", errorhnd)){}
 	if (extractBooleanFromConfigString( with_forcesim, src, "forcesim", errorhnd)){}
+	if (extractBooleanFromConfigString( with_realvecweights, src, "realvecweights", errorhnd)){}
 	std::string altgencfgstr;
 	while (extractStringFromConfigString( altgencfgstr, src, "altgen", errorhnd))
 	{
@@ -284,6 +288,7 @@ std::string VectorStorageConfig::tostring( bool eolnsep) const
 	printConfigItem( buf, "maxconcepts", maxconcepts, eolnsep);
 	printConfigItem( buf, "probsim", (with_probsim?"yes":"no"), eolnsep);
 	printConfigItem( buf, "forcesim", (with_forcesim?"yes":"no"), eolnsep);
+	printConfigItem( buf, "realvecweights", (with_realvecweights?"yes":"no"), eolnsep);
 	return buf.str();
 }
 

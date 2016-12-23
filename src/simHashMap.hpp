@@ -23,9 +23,9 @@ class SimHashMap
 {
 public:
 	SimHashMap( const SimHashMap& o)
-		:m_ar(o.m_ar),m_selar(0),m_select(0),m_vecsize(0),m_seed(o.m_seed){initBench();}
+		:m_ar(o.m_ar),m_selar1(0),m_selar2(0),m_select1(0),m_select2(0),m_vecsize(0),m_seed(o.m_seed){initBench();}
 	SimHashMap( const std::vector<SimHash>& ar_, unsigned int seed_)
-		:m_ar(ar_),m_selar(0),m_select(0),m_vecsize(0),m_seed(seed_){initBench();}
+		:m_ar(ar_),m_selar1(0),m_selar2(0),m_select1(0),m_select2(0),m_vecsize(0),m_seed(seed_){initBench();}
 	~SimHashMap();
 
 	std::vector<SearchResultElement> findSimilar( const SimHash& sh, unsigned short simdist, unsigned short prob_simdist, unsigned int maxNofElements, const Index& indexofs) const;
@@ -44,8 +44,10 @@ private:
 
 private:
 	std::vector<SimHash> m_ar;
-	uint64_t* m_selar;
-	unsigned int m_select;
+	uint64_t* m_selar1;
+	uint64_t* m_selar2;
+	unsigned int m_select1;
+	unsigned int m_select2;
 	unsigned int m_vecsize;
 	unsigned int m_seed;
 };

@@ -13,6 +13,7 @@
 #include "strus/vectorStorageBuilderInterface.hpp"
 #include "strus/vectorStorageSearchInterface.hpp"
 #include "strus/databaseInterface.hpp"
+#include "strus/base/utf8.hpp"
 #include "strus/base/fileio.hpp"
 #include "strus/base/string_format.hpp"
 #include "vectorStorageConfig.hpp"
@@ -33,6 +34,8 @@
 #include "armadillo"
 #include <memory>
 #include <limits>
+#include <boost/shared_ptr.hpp>
+#include <boost/make_shared.hpp>
 
 using namespace strus;
 #define MODULENAME   "standard vector storage"
@@ -53,7 +56,12 @@ public:
 		,m_samplear(database.readSampleSimhashVector(range_from_,range_to_),1/*prob select random seed*/)
 		,m_range_from(range_from_)
 		,m_range_to(range_to_)
-	{}
+	{
+		if (m_config.with_realvecweights)
+		{
+			m_database = boost::make_shared<DatabaseAdapter>( database);
+		}
+	}
 
 	virtual ~VectorStorageSearch(){}
 
@@ -61,14 +69,40 @@ public:
 	{
 		try
 		{
-			SimHash hash( m_lshmodel.simHash( arma::normalise( arma::vec( vec))));
-			if (m_config.gencfg.probdist)
+			if (m_config.with_realvecweights && m_database.get())
 			{
-				return m_samplear.findSimilar( hash, m_config.maxdist, m_config.maxdist * m_config.gencfg.probdist / m_config.gencfg.simdist, maxNofResults, m_range_from);
+				std::vector<Result> rt;
+				arma::vec vv = arma::vec( vec);
+				SimHash hash( m_lshmodel.simHash( arma::normalise( vv)));
+				if (m_config.gencfg.probdist)
+				{
+					rt = m_samplear.findSimilar( hash, m_config.maxdist, m_config.maxdist * m_config.gencfg.probdist / m_config.gencfg.simdist, maxNofResults * 2 + 10, m_range_from);
+				}
+				else
+				{
+					rt = m_samplear.findSimilar( hash, m_config.maxdist, maxNofResults * 2 + 10, m_range_from);
+				}
+				std::vector<Result>::iterator ri = rt.begin(), re = rt.end();
+				for (; ri != re; ++ri)
+				{
+					arma::vec resvv( m_database->readSampleVector( ri->featidx()));
+					ri->setWeight( arma::norm_dot( vv, resvv));
+				}
+				std::sort( rt.begin(), rt.end(), std::greater<strus::VectorStorageSearchInterface::Result>());
+				rt.resize( maxNofResults);
+				return rt;
 			}
 			else
 			{
-				return m_samplear.findSimilar( hash, m_config.maxdist, maxNofResults, m_range_from);
+				SimHash hash( m_lshmodel.simHash( arma::normalise( arma::vec( vec))));
+				if (m_config.gencfg.probdist)
+				{
+					return m_samplear.findSimilar( hash, m_config.maxdist, m_config.maxdist * m_config.gencfg.probdist / m_config.gencfg.simdist, maxNofResults, m_range_from);
+				}
+				else
+				{
+					return m_samplear.findSimilar( hash, m_config.maxdist, maxNofResults, m_range_from);
+				}
 			}
 		}
 		CATCH_ERROR_ARG1_MAP_RETURN( _TXT("error in similar vector search of '%s': %s"), MODULENAME, *m_errorhnd, std::vector<Result>());
@@ -79,6 +113,7 @@ private:
 	VectorStorageConfig m_config;
 	LshModel m_lshmodel;
 	SimHashMap m_samplear;
+	boost::shared_ptr<DatabaseAdapter> m_database;
 	Index m_range_from;
 	Index m_range_to;
 };
@@ -390,6 +425,34 @@ public:
 	virtual ~VectorStorageBuilder()
 	{}
 
+	static std::string utf8clean( const std::string& name)
+	{
+		std::string rt;
+		std::size_t si = 0, se = name.size();
+		while (si < se)
+		{
+			unsigned char asciichr = name[si];
+			if (asciichr && asciichr < 128)
+			{
+				rt.push_back( asciichr);
+				++si;
+			}
+			else
+			{
+				std::size_t chrlen = strus::utf8charlen( asciichr);
+				uint32_t chr = strus::utf8decode( name.c_str() + si, chrlen);
+				if (chr)
+				{
+					char buf[ 16];
+					chrlen = strus::utf8encode( buf, chr);
+					rt.append( buf, chrlen);
+				}
+				si += chrlen;
+			}
+		}
+		return rt;
+	}
+
 	virtual void addFeature( const std::string& name, const std::vector<double>& vec)
 	{
 		try
@@ -400,7 +463,7 @@ public:
 				if (m_vecar.size() < m_config.maxfeatures)
 				{
 					m_vecar.push_back( vec);
-					m_namear.push_back( name);
+					m_namear.push_back( utf8clean( name));
 					nofFeaturesAdded = m_vecar.size();
 				}
 				else

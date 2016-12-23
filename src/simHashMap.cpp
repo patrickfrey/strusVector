@@ -20,7 +20,8 @@ using namespace strus;
 
 SimHashMap::~SimHashMap()
 {
-	if (m_selar) utils::aligned_free( m_selar);
+	if (m_selar1) utils::aligned_free( m_selar1);
+	if (m_selar2) utils::aligned_free( m_selar2);
 }
 
 void SimHashMap::initBench()
@@ -29,14 +30,22 @@ void SimHashMap::initBench()
 	m_vecsize = m_ar[0].size();
 	unsigned int mod = m_ar[0].arsize();
 	if (mod > 1) mod -= 1;
-	m_select = m_seed % mod;
-	m_selar = (uint64_t*)utils::aligned_malloc( m_ar.size() * sizeof(uint64_t), CacheLineSize);
-	if (!m_selar) throw std::bad_alloc();
+	m_select1 = (m_seed+0) % mod;
+	m_select2 = (m_seed+1) % mod;
+	m_selar1 = (uint64_t*)utils::aligned_malloc( m_ar.size() * sizeof(uint64_t), CacheLineSize);
+	m_selar2 = (uint64_t*)utils::aligned_malloc( m_ar.size() * sizeof(uint64_t), CacheLineSize);
+	if (!m_selar1 || !m_selar2)
+	{
+		if (m_selar1) utils::aligned_free( m_selar1);
+		if (m_selar2) utils::aligned_free( m_selar2);
+		throw std::bad_alloc();
+	}
 	std::size_t si = 0, se = m_ar.size();
 	for (; si != se; ++si)
 	{
 		if (m_ar[si].size() != m_vecsize) throw strus::runtime_error(_TXT("inconsistent dataset passed to sim hash map (sim hash element sizes differ)"));
-		m_selar[ si] = m_ar[ si].ar()[ m_select];
+		m_selar1[ si] = m_ar[ si].ar()[ m_select1];
+		m_selar2[ si] = m_ar[ si].ar()[ m_select2];
 	}
 }
 
@@ -149,24 +158,28 @@ std::vector<SearchResultElement> SimHashMap::findSimilar( const SimHash& sh, uns
 	unsigned int ranklistSize = 0;
 	double prob_simdist_factor = (double)prob_simdist / (double)simdist;
 	unsigned int shdiff = ((unsigned int)prob_simdist * 64U) / m_vecsize;
-	uint64_t needle = sh.ar()[ m_select];
+	uint64_t needle1 = sh.ar()[ m_select1];
+	uint64_t needle2 = sh.ar()[ m_select2];
 	std::size_t si = 0, se = m_ar.size();
 	for (; si != se; ++si)
 	{
-		if (strus::BitOperations::bitCount( m_selar[si] ^ needle) <= shdiff)
+		if (strus::BitOperations::bitCount( m_selar1[si] ^ needle1) <= shdiff)
 		{
-			if (m_ar[ si].near( sh, simdist))
+			if (strus::BitOperations::bitCount( m_selar2[si] ^ needle2) <= shdiff)
 			{
-				unsigned short dist = m_ar[ si].dist( sh);
-				ranklist.insert( SimRelationMap::Element( si, dist));
-				ranklistSize++;
-				if (ranklistSize > maxNofElements)
+				if (m_ar[ si].near( sh, simdist))
 				{
-					unsigned short lastdist = ranklist.lastdist();
-					if (lastdist < dist)
+					unsigned short dist = m_ar[ si].dist( sh);
+					ranklist.insert( SimRelationMap::Element( si, dist));
+					ranklistSize++;
+					if (ranklistSize > maxNofElements)
 					{
-						simdist = lastdist;
-						shdiff = (unsigned int)(prob_simdist_factor * simdist * 64U) / m_vecsize;
+						unsigned short lastdist = ranklist.lastdist();
+						if (lastdist < dist)
+						{
+							simdist = lastdist;
+							shdiff = (unsigned int)(prob_simdist_factor * simdist * 64U) / m_vecsize;
+						}
 					}
 				}
 			}
