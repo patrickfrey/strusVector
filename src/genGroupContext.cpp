@@ -19,6 +19,9 @@
 using namespace strus;
 using namespace strus::utils;
 
+#ifdef __GNUC__
+#pragma GCC optimize "2"
+#endif
 #undef STRUS_LOWLEVEL_DEBUG
 
 static Random g_random;
@@ -237,10 +240,7 @@ bool GenGroupContext::tryAddGroupMember(
 		unsigned int maxage, double fdf)
 {
 	SimGroupRef group = m_groupMap.get( group_id);
-	if (!group.get())
-	{
-		return false;
-	}
+	if (!group.get()) return false;
 	{
 		SharedSampleSimGroupMap::Lock LOCK( &m_sampleSimGroupMap, newmember);
 		if (!m_sampleSimGroupMap.insert( LOCK, group_id))
@@ -515,7 +515,7 @@ void GenGroupContext::greedyNeighbourGroupInterchange(
 		}
 		if (!sim_group.get()) break;	//... ensure group is alive till here
 	}
-	group.reset( (SimGroup*)0);				//... ensure group is alive till here
+	group.reset( (SimGroup*)0);		//... ensure group is alive till here
 }
 
 bool GenGroupContext::improveGroup(
