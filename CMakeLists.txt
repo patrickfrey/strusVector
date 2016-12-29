@@ -37,7 +37,10 @@ enable_testing()
 add_subdirectory( 3rdParty )
 add_subdirectory( src )
 add_subdirectory( tests )
-  
+IF (WITH_PAGERANK STREQUAL "YES")
+add_subdirectory( src_pagerank )
+ENDIF (WITH_PAGERANK STREQUAL "YES")
+ 
 include( cmake/report_build_settings.cmake )
 
 # Install header files:
