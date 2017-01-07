@@ -199,7 +199,7 @@ public:
 		try
 		{
 			std::vector<std::string> rt;
-			if (utils::caseInsensitiveEquals( name, "featlsh"))
+			if (utils::caseInsensitiveEquals( name, "lsh"))
 			{
 				if (index < 0) throw strus::runtime_error(_TXT("feature index out of range"));
 
