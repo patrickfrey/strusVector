@@ -9,6 +9,7 @@
 #ifndef _STRUS_VECTOR_PAGERANK_IMPLEMENTATION_HPP_INCLUDED
 #define _STRUS_VECTOR_PAGERANK_IMPLEMENTATION_HPP_INCLUDED
 #include <string>
+#include <vector>
 #include <map>
 
 namespace strus {
@@ -21,6 +22,8 @@ class ErrorBufferInterface;
 class PageRank
 {
 public:
+	enum {NofIterations = 32};
+
 	PageRank()
 		:m_idcnt(0){}
 	~PageRank(){}
@@ -30,11 +33,20 @@ public:
 	class PageWeight
 	{
 	public:
+		PageWeight( const std::string& id_, double weight_)
+			:m_id(id_),m_weight(weight_){}
+		PageWeight( const PageWeight& o)
+			:m_id(o.m_id),m_weight(o.m_weight){}
+
+		const std::string& id() const		{return m_id;}
+		double weight() const			{return m_weight;}
 
 	private:
-		std::string id;
-		double weight;
+		std::string m_id;
+		double m_weight;
 	};
+
+	std::vector<PageWeight> calculate() const;
 
 private:
 	typedef unsigned int PageId;
@@ -45,7 +57,7 @@ private:
 	typedef std::set<Link> LinkMatrix;
 	typedef std::map<std::string,PageId> IdMap;
 
-	LinkMatrix m_connectionMatrix;
+	LinkMatrix m_linkMatrix;
 	IdMap m_idmap;
 	PageId m_idcnt;
 };

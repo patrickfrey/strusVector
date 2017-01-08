@@ -80,7 +80,7 @@ int main()
 			values << 1.1 << 1.2 << 1.3 << arma::endr;
 
 			arma::sp_mat X( locations1, values);
-			arma::sp_mat Y( locations1, values);
+			arma::sp_mat Y( locations2, values);
 			std::cout << X << std::endl;
 			std::cout << Y << std::endl;
 		}
