@@ -95,7 +95,7 @@ arma::mat LshModel::createModelMatrix( std::size_t dim_, std::size_t nofbits_)
 	}
 	if (dim_ < nofbits_)
 	{
-		throw std::runtime_error( "dimension must me two times bigger than nofbits");
+		throw std::runtime_error( "dimension must be at least two times bigger than nofbits");
 	}
 	double step = (float) dim_ / (float) nofbits_;
 	arma::mat rt = arma::mat( nofbits_, dim_);
