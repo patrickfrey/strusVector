@@ -162,7 +162,7 @@ VectorStorageConfig::VectorStorageConfig()
 	,dim(DefaultDim),bits(DefaultBits),variations(DefaultVariations)
 	,maxdist(DefaultMaxDist),gencfg()
 	,maxsimsam(DefaultMaxSimSam),rndsimsam(DefaultRndSimSam)
-	,maxfeatures(DefaultMaxFeatures),maxconcepts(0)
+	,maxfeatures(DefaultMaxFeatures),maxconcepts(DefaultMaxConcepts)
 	,with_probsim((bool)DefaultWithProbSim)
 	,with_forcesim((bool)DefaultWithForceSim)
 	,with_realvecweights((bool)DefaultWithRealVectorWeights)
@@ -196,10 +196,10 @@ VectorStorageConfig::VectorStorageConfig( const std::string& config, ErrorBuffer
 	if (extractUIntFromConfigString( rndsimsam, src, "rndsimsam", errorhnd)){}
 	if (extractUIntFromConfigString( maxfeatures, src, "maxfeatures", errorhnd)){}
 	if (extractUIntFromConfigString( maxconcepts, src, "maxconcepts", errorhnd)){}
-	if (!maxconcepts)
+	if (!maxconcepts && maxfeatures)
 	{
 		maxconcepts = (maxfeatures / 2) * gencfg.assignments + 2;
-		if (maxfeatures > maxconcepts) throw strus::runtime_error(_TXT("maxconcepts has to be specified, because default maxconcepts = (maxfeatures * assignments / 2) exceeds domain"));
+		if (maxfeatures > maxconcepts) throw strus::runtime_error(_TXT("'maxconcepts' has to be specified, because default maxconcepts = (maxfeatures * assignments / 2) exceeds domain"));
 	}
 	if (extractBooleanFromConfigString( with_probsim, src, "probsim", errorhnd)){}
 	if (extractBooleanFromConfigString( with_forcesim, src, "forcesim", errorhnd)){}
