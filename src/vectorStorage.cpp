@@ -514,6 +514,7 @@ public:
 	{
 		try
 		{
+			done();
 			if (command.empty())
 			{
 				finalize();
@@ -543,6 +544,8 @@ public:
 			{
 				m_database.clear();
 				m_database.commit();
+				m_vecar.clear();
+				m_namear.clear();
 				return true;
 			}
 			else
