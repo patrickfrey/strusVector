@@ -514,29 +514,33 @@ public:
 	{
 		try
 		{
-			done();
 			if (command.empty())
 			{
+				done();
 				finalize();
 				return true;
 			}
 			else if (utils::caseInsensitiveEquals( command, "rebase"))
 			{
+				done();
 				rebase();
 				return true;
 			}
 			else if (utils::caseInsensitiveEquals( command, "base"))
 			{
+				done();
 				buildSimilarityRelationMap();
 				return true;
 			}
 			else if (utils::caseInsensitiveEquals( command, "learn"))
 			{
+				done();
 				learnConcepts();
 				return true;
 			}
 			else if (utils::caseInsensitiveEquals( command, "condep"))
 			{
+				done();
 				buildConceptDependencies();
 				return true;
 			}
