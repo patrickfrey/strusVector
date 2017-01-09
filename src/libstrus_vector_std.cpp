@@ -5,7 +5,7 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
-#include "strus/lib/vectorspace_std.hpp"
+#include "strus/lib/vector_std.hpp"
 #include "strus/errorBufferInterface.hpp"
 #include "vectorStorage.hpp"
 #include "strus/base/dll_tags.hpp"
