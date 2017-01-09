@@ -6,7 +6,7 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 /// \brief Test program
-#include "strus/lib/vectorspace_std.hpp"
+#include "strus/lib/vector_std.hpp"
 #include "strus/lib/database_leveldb.hpp"
 #include "strus/lib/error.hpp"
 #include "strus/vectorStorageInterface.hpp"

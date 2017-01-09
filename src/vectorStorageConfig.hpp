@@ -77,7 +77,8 @@ struct VectorStorageConfig
 		DefaultMaxDist = 640,	//< 640 out of 2K (32*64)
 		DefaultMaxSimSam = 0,
 		DefaultRndSimSam = 0,
-		DefaultMaxFeatures = (1<<31),
+		DefaultMaxFeatures = 0,
+		DefaultMaxConcepts = 0,
 		DefaultWithSingletons = 0,
 		DefaultWithProbSim = 1,
 		DefaultWithForceSim = 0,

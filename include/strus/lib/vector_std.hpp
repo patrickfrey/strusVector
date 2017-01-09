@@ -6,7 +6,7 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 /// \brief Exported functions of the strus standard vector space model library
-/// \file vectorspace_std.hpp
+/// \file vector_std.hpp
 #ifndef _STRUS_VECTOR_STORAGE_STD_LIB_HPP_INCLUDED
 #define _STRUS_VECTOR_STORAGE_STD_LIB_HPP_INCLUDED
 

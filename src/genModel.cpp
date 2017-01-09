@@ -178,6 +178,10 @@ std::vector<SimHash> GenModel::run(
 		const char* logfile) const
 {
 	unsigned int maxconcepts = maxconcepts_ ? maxconcepts_ : samplear.size() * FEATURE_MAXNOFCONCEPT_RELATION;
+	if (maxconcepts < (1<<16))
+	{
+		maxconcepts += nofThreads * CacheLineSize + CacheLineSize;
+	}
 	GlobalCountAllocator glbcntalloc( maxconcepts);
 	GenGroupParameter genParameter;
 	GenGroupContext groupContext( &glbcntalloc, samplear, maxconcepts, m_assignments, nofThreads, logfile, m_errorhnd);

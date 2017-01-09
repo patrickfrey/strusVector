@@ -774,15 +774,6 @@ void GenGroupContext::collectResults(
 		if (sampleSimGroupMap_base.nofElements( si) == 0)
 		{
 			singletons.push_back( si);
-			if (parameter.with_singletons)
-			{
-				// Add singleton to result:
-				results.push_back( (*m_samplear)[ si]);
-				// Collect si as group member into conceptSampleIndexMap:
-				std::vector<SampleIndex> members;
-				members.push_back( si);
-				conceptSampleIndexMap.add( results.size(), members);
-			}
 		}
 	}
 	if (m_logout) m_logout << string_format( _TXT("found %u singletons"), singletons.size());
@@ -824,15 +815,22 @@ void GenGroupContext::collectResults(
 			sampleConceptIndexMap.add( si, groups);
 		}
 	}
-	// Collect the group membership for singletons into sampleConceptIndexMap if wished:
+	// Add singletons as groups with one element if wished:
 	if (parameter.with_singletons)
 	{
-		std::vector<SampleIndex>::const_iterator xi = singletons.begin(), xe = singletons.end();
-		for (ConceptIndex xidx=1; xi != xe; ++xi,++xidx)
+		std::vector<SampleIndex>::const_iterator li = singletons.begin(), le = singletons.end();
+		for (; li != le; ++li)
 		{
+			// Add singleton to result:
+			results.push_back( (*m_samplear)[ *li]);
+			// Collect si as group member into conceptSampleIndexMap:
+			std::vector<SampleIndex> members;
+			members.push_back( *li);
+			conceptSampleIndexMap.add( results.size(), members);
+
 			std::vector<ConceptIndex> groups;
-			groups.push_back( xidx);
-			sampleConceptIndexMap.add( xidx-1, groups);
+			groups.push_back( results.size());
+			sampleConceptIndexMap.add( *li, groups);
 			// ... singleton groups are numbered one to one to the sigleton features, because added first
 		}
 	}

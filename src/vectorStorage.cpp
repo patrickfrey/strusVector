@@ -460,7 +460,7 @@ public:
 			unsigned int nofFeaturesAdded = 0;
 			{
 				utils::ScopedLock lock( m_mutex);
-				if (m_vecar.size() < m_config.maxfeatures)
+				if (m_config.maxfeatures == 0 || m_vecar.size() < m_config.maxfeatures)
 				{
 					m_vecar.push_back( vec);
 					m_namear.push_back( utf8clean( name));
@@ -516,26 +516,35 @@ public:
 		{
 			if (command.empty())
 			{
+				done();
 				finalize();
 				return true;
 			}
 			else if (utils::caseInsensitiveEquals( command, "rebase"))
 			{
+				done();
 				rebase();
 				return true;
 			}
 			else if (utils::caseInsensitiveEquals( command, "base"))
 			{
+				done();
 				buildSimilarityRelationMap();
 				return true;
 			}
 			else if (utils::caseInsensitiveEquals( command, "learn"))
 			{
+				done();
+				if (m_samplear.empty())
+				{
+					throw strus::runtime_error(_TXT("no features defined to learn concepts"));
+				}
 				learnConcepts();
 				return true;
 			}
 			else if (utils::caseInsensitiveEquals( command, "condep"))
 			{
+				done();
 				buildConceptDependencies();
 				return true;
 			}
@@ -543,6 +552,8 @@ public:
 			{
 				m_database.clear();
 				m_database.commit();
+				m_vecar.clear();
+				m_namear.clear();
 				return true;
 			}
 			else
@@ -607,7 +618,10 @@ private:
 				buildSimRelationMap( 0/*without SimRelationNeighbourReader*/);
 			}
 		}
-		learnConcepts();
+		if (!m_samplear.empty())
+		{
+			learnConcepts();
+		}
 	}
 
 	void buildConceptDependencies()

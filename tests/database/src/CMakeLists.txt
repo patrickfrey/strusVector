@@ -17,7 +17,7 @@ link_directories(
 )
 
 add_executable( testDatabaseAdapter testDatabaseAdapter.cpp)
-target_link_libraries( testDatabaseAdapter strus_vectorspace_static  strus_database_leveldb strus_error strus_armadillo ${Boost_LIBRARIES} ${Intl_LIBRARIES} )
+target_link_libraries( testDatabaseAdapter strus_vector_static  strus_database_leveldb strus_error strus_armadillo ${Boost_LIBRARIES} ${Intl_LIBRARIES} )
 
 
 

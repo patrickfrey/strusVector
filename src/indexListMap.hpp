@@ -49,7 +49,10 @@ public:
 	{
 		if (key > m_maxkey) m_maxkey = key;
 		typename ListMap::const_iterator li = m_listmap.find( key);
-		if (li != m_listmap.end()) throw strus::runtime_error(_TXT("index list map key added twice"));
+		if (li != m_listmap.end())
+		{
+			throw strus::runtime_error(_TXT("index list map key added twice"));
+		}
 		IndexListRef ref( m_list.size(), values.size());
 		m_list.insert( m_list.end(), values.begin(), values.end());
 		m_listmap[ key] = ref;
