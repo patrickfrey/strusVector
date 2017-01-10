@@ -316,7 +316,6 @@ static std::vector<std::string> stringListFromSerialization( const std::string& 
 	{
 		rt.push_back( std::string( ci, ce-ci));
 	}
-	rt.push_back( ci);
 	return rt;
 }
 
@@ -326,8 +325,8 @@ static std::string stringListSerialization( const std::vector<std::string>& list
 	std::vector<std::string>::const_iterator ci = list.begin(), ce = list.end();
 	for (; ci != ce; ++ci)
 	{
-		if (!rt.empty()) rt.push_back('\n');
 		rt.append(*ci);
+		rt.push_back('\n');
 	}
 	return rt;
 }
