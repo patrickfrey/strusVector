@@ -14,19 +14,24 @@
 #include <stdexcept>
 #include <cstring>
 
+#undef STRUS_LOWLEVEL_DEBUG
+
 enum LexemId
 {
 	LEXEM_STARTRULE,
 	LEXEM_NAME,
+	LEXEM_EQUAL,
 	LEXEM_REDIRECT,
 	LEXEM_ENDRULE
 };
 
+#ifdef STRUS_LOWLEVEL_DEBUG
 static const char* lexemIdName( LexemId lid)
 {
-	const char* ar[] = {"STARTRULE","NAME","REDIRECT","ENDRULE"};
+	const char* ar[] = {"STARTRULE","NAME","EQUAL","REDIRECT","ENDRULE"};
 	return ar[ lid];
 }
+#endif
 
 class InputParser
 	:public strus::InputStream
@@ -51,12 +56,17 @@ public:
 			lexemId = LEXEM_STARTRULE;
 			++m_itr;
 		}
+		else if (*tk == '=')
+		{
+			lexemId = LEXEM_EQUAL;
+			++m_itr;
+		}
 		else if (*tk == ';')
 		{
 			lexemId = LEXEM_ENDRULE;
 			++m_itr;
 		}
-		else if (tk[0] == '-' && tk[0] == '>')
+		else if (tk[0] == '-' && tk[1] == '>')
 		{
 			lexemId = LEXEM_REDIRECT;
 			m_itr += 2;
@@ -80,9 +90,8 @@ private:
 	static bool isAlphaNum( char ch)
 	{
 		if (ch >= '0' && ch <= '9') return true;
-		ch |= 32;
 		if (ch == '_') return true;
-		return (ch >= 'a' && ch <= 'z');
+		return ((ch|32) >= 'a' && (ch|32) <= 'z');
 	}
 	static bool isSpace( char ch)
 	{
@@ -110,6 +119,7 @@ private:
 	{
 		enum {BufSize=2048};
 		char buf[ BufSize];
+		m_buf.clear();
 
 		for (;;)
 		{
@@ -139,25 +149,162 @@ private:
 	std::string m_buf;
 };
 
-
+static void printUsage()
+{
+	std::cerr << "usage: strusPageRank [options] <inputfile>" << std::endl;
+	std::cerr << "    options     :" << std::endl;
+	std::cerr << "    -h          : print this usage" << std::endl;
+	std::cerr << "    -v          : verbose output, print all declarations to stdout" << std::endl;
+	std::cerr << "    <inputfile> = input file path or '-' for stdin" << std::endl;
+	std::cerr << "                  file with lines of the for \"*\" SOURCEID = [->] {<TARGETID>} \";\"" << std::endl;
+}
 
 int main( int argc, const char** argv)
 {
 	try
 	{
-		if (argc <= 1 || std::strcmp( argv[0], "-h") == 0 || std::strcmp( argv[0], "--help") == 0)
+		if (argc <= 1)
 		{
-			std::cerr << "usage: strusPageRank <inputfile>" << std::endl;
-			std::cerr << "    <inputfile> = input file path or '-' for stdin" << std::endl;
-			std::cerr << "                  file with lines of the for \"*\" SOURCEID = [->] {<TARGETID>} \";\"" << std::endl;
+			std::cerr << "too few arguments" << std::endl;
+			printUsage();
 			return 0;
 		}
-		InputParser input( argv[1]);
+		int argi = 1;
+		bool verbose = false;
+
+		for (; argi < argc; ++argi)
+		{
+			if (std::strcmp( argv[ argi], "-h") == 0 || std::strcmp( argv[ argi], "--help") == 0)
+			{
+				printUsage();
+				return 0;
+			}
+			else if (std::strcmp( argv[ argi], "-v") == 0 || std::strcmp( argv[ argi], "--verbose") == 0)
+			{
+				verbose = true;
+			}
+			else if (std::strcmp( argv[ argi], "-") == 0)
+			{
+				break;
+			}
+			else if (std::strcmp( argv[ argi], "--") == 0)
+			{
+				++argi;
+				break;
+			}
+			else if (argv[ argi][0] == '-')
+			{
+				std::cerr << "unknown option: " << argv[argi] << std::endl;
+				printUsage();
+				return -1;
+			}
+			else
+			{
+				break;
+			}
+		}
+		if (argi == argc)
+		{
+			std::cerr << "too few arguments" << std::endl;
+			printUsage();
+			return -1;
+		}
+		else if (argi+1 > argc)
+		{
+			std::cerr << "too many arguments" << std::endl;
+			printUsage();
+			return -1;
+		}
+		strus::PageRank pagerank;
+		InputParser input( argv[ argi]);
 		LexemId lid;
+		std::set<strus::PageRank::PageId> declaredset;
+		std::map<strus::PageRank::PageId,strus::PageRank::PageId> redirectmap;
 		std::string lname;
+		std::string declname;
+		std::vector<std::string> linknames;
+		std::string redirectname;
+
 		while (input.parseLexem( lid, lname))
 		{
-			std::cout << lexemIdName( lid) << " " << lname << std::endl;
+#ifdef STRUS_LOWLEVEL_DEBUG
+			std::cerr << lexemIdName( lid) << " " << lname << std::endl;
+#endif
+			switch (lid)
+			{
+				case LEXEM_STARTRULE:
+					if (!declname.empty() || !linknames.empty() || !redirectname.empty())
+					{
+						std::cerr << "rule definition not terminated before definition of '" << lname << "'" << std::endl;
+					}
+					declname.clear();
+					linknames.clear();
+					redirectname.clear();
+					if (!input.parseLexem( lid, declname) || lid != LEXEM_NAME)
+					{
+						throw std::runtime_error( "id of link source expected after '*' (start of rule declaration)");
+					}
+					break;
+				case LEXEM_NAME:
+					linknames.push_back( lname);
+					break;
+				case LEXEM_EQUAL:
+					break;
+				case LEXEM_REDIRECT:
+					if (!input.parseLexem( lid, redirectname) || lid != LEXEM_NAME)
+					{
+						std::cerr << "name of redirect target expected after '->'" << std::endl;
+					}
+					break;
+				case LEXEM_ENDRULE:
+				{
+					strus::PageRank::PageId dpg = pagerank.getOrCreatePageId( declname);
+					if (declname.empty())
+					{
+						std::cerr << "empty declaration found" << std::endl;
+					}
+					else if (linknames.empty())
+					{
+						if (!redirectname.empty())
+						{
+							// declare redirect
+							strus::PageRank::PageId rpg = pagerank.getOrCreatePageId( redirectname);
+							redirectmap[ dpg] = rpg;
+							if (verbose)
+							{
+								std::cerr << "redirect " << declname << " -> " << redirectname << std::endl;
+							}
+						}
+					}
+					else
+					{
+						if (redirectname.empty())
+						{
+							// add declared links:
+							std::vector<std::string>::const_iterator
+								li = linknames.begin(), le = linknames.end();
+							for (; li != le; ++li)
+							{
+								strus::PageRank::PageId lpg = pagerank.getOrCreatePageId( *li);
+								pagerank.addLink( dpg, lpg);
+								if (verbose)
+								{
+									std::cerr << "link " << declname << " = " << *li << std::endl;
+								}
+							}
+							declaredset.insert( dpg);
+						}
+						else
+						{
+							std::cerr << "mixing real links with redirect in definition of '" << declname << "'" << std::endl;
+						}
+					}
+					declname.clear();
+					linknames.clear();
+					redirectname.clear();
+					break;
+				}
+			}
 		}
 		return 0;
 	}
