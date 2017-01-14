@@ -90,6 +90,7 @@ public:
 private:
 	static bool isAlphaNum( char ch)
 	{
+		if ((unsigned char)ch >= 128) return true;
 		if (ch >= '0' && ch <= '9') return true;
 		if (ch == '_') return true;
 		return ((ch|32) >= 'a' && (ch|32) <= 'z');
