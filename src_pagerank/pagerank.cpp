@@ -48,7 +48,16 @@ void PageRank::addLink( const PageId& from, const PageId& to)
 {
 	if (from == 0 || from > m_idcnt) throw std::runtime_error("illegal page id value (addLink)");
 	if (to == 0 || to > m_idcnt) throw std::runtime_error("illegal page id value (addLink)");
-	m_linkMatrix.insert( Link( from-1, to-1));
+	Link lnk( from-1, to-1);
+	LinkMatrix::iterator li = m_linkMatrix.find( lnk);
+	if (li == m_linkMatrix.end())
+	{
+		m_linkMatrix[ lnk] = 1;
+	}
+	else
+	{
+		li->second += 1;
+	}
 	if (from > m_maxrow) m_maxrow = from;
 }
 
@@ -60,8 +69,8 @@ std::vector<double> PageRank::calculate() const
 	arma::umat locations = arma::zeros<arma::umat>( 2, m_linkMatrix.size() + ((m_maxrow < m_idcnt) ? 1:0));
 	for (unsigned int lidx=0; li != le; ++li,++lidx)
 	{
-		locations( 1, lidx) = li->first;
-		locations( 0, lidx) = li->second;
+		locations( 1, lidx) = li->first.first;
+		locations( 0, lidx) = li->first.second;
 	}
 	arma::vec values( m_linkMatrix.size()  + ((m_maxrow < m_idcnt) ? 1:0));
 	li = m_linkMatrix.begin();
@@ -70,11 +79,11 @@ std::vector<double> PageRank::calculate() const
 	{
 		LinkMatrix::const_iterator ln = li;
 		unsigned int linkcnt = 0;
-		for (; ln != le && ln->first == li->first; ++ln,++linkcnt){}
+		for (; ln != le && ln->first.first == li->first.first; ++ln, linkcnt += li->second){}
 		double weight = 1.0 / (double)linkcnt;
 		for (; li != ln; ++li,++lidx)
 		{
-			values( lidx) = weight;
+			values( lidx) = li->second * weight;
 		}
 	}
 	if (m_maxrow < m_idcnt)

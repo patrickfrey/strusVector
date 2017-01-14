@@ -45,7 +45,7 @@ public:
 
 private:
 	typedef std::pair<PageId,PageId> Link;
-	typedef std::set<Link> LinkMatrix;
+	typedef std::map<Link,unsigned int> LinkMatrix;
 	typedef std::map<std::string,PageId> IdMap;
 
 	LinkMatrix m_linkMatrix;
