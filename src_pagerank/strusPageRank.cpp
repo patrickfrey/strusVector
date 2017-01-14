@@ -150,8 +150,9 @@ int main( int argc, const char** argv)
 			std::cerr << "usage: strusPageRank <inputfile>" << std::endl;
 			std::cerr << "    <inputfile> = input file path or '-' for stdin" << std::endl;
 			std::cerr << "                  file with lines of the for \"*\" SOURCEID = [->] {<TARGETID>} \";\"" << std::endl;
+			return 0;
 		}
-		InputParser input( argv[0]);
+		InputParser input( argv[1]);
 		LexemId lid;
 		std::string lname;
 		while (input.parseLexem( lid, lname))
