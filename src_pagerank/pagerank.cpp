@@ -70,10 +70,6 @@ std::vector<double> PageRank::calculate() const
 	LinkMatrix::const_iterator li = m_linkMatrix.begin(), le = m_linkMatrix.end();
 
 	unsigned int nofDummyElements = ((m_maxrow < m_idcnt) ? 1:0) + ((m_maxcol < m_idcnt) ? 1:0);
-	/*[-]*/std::cout << "++++ nofDummyElements " << nofDummyElements << std::endl;
-	/*[-]*/std::cout << "++++ m_maxrow " << m_maxrow << std::endl;
-	/*[-]*/std::cout << "++++ m_maxcol " << m_maxcol << std::endl;
-	/*[-]*/std::cout << "++++ m_idcnt " << m_idcnt << std::endl;
 
 	arma::umat locations = arma::zeros<arma::umat>( 2, m_linkMatrix.size() + nofDummyElements);
 	for (unsigned int lidx=0; li != le; ++li,++lidx)
