@@ -236,7 +236,6 @@ int main( int argc, const char** argv)
 		strus::PageRank pagerank;
 		InputParser input( argv[ argi]);
 		LexemId lid;
-		std::set<strus::PageRank::PageId> declaredset;
 		std::string lname;
 		std::string declname;
 		std::vector<std::string> linknames;
@@ -299,7 +298,7 @@ int main( int argc, const char** argv)
 					{
 						std::cerr << "empty declaration found" << std::endl;
 					}
-					else if (linknames.empty())
+					else
 					{
 						if (!redirectname.empty())
 						{
@@ -311,28 +310,17 @@ int main( int argc, const char** argv)
 								std::cerr << "redirect " << declname << " -> " << redirectname << std::endl;
 							}
 						}
-					}
-					else
-					{
-						if (redirectname.empty())
+						// add declared links:
+						std::vector<std::string>::const_iterator
+							li = linknames.begin(), le = linknames.end();
+						for (; li != le; ++li)
 						{
-							// add declared links:
-							std::vector<std::string>::const_iterator
-								li = linknames.begin(), le = linknames.end();
-							for (; li != le; ++li)
+							strus::PageRank::PageId lpg = pagerank.getOrCreatePageId( *li);
+							pagerank.addLink( dpg, lpg);
+							if (verbose)
 							{
-								strus::PageRank::PageId lpg = pagerank.getOrCreatePageId( *li);
-								pagerank.addLink( dpg, lpg);
-								if (verbose)
-								{
-									std::cerr << "link " << declname << " = " << *li << std::endl;
-								}
+								std::cerr << "link " << declname << " = " << *li << std::endl;
 							}
-							declaredset.insert( dpg);
-						}
-						else
-						{
-							std::cerr << "mixing real links with redirect in definition of '" << declname << "'" << std::endl;
 						}
 					}
 					declname.clear();

@@ -61,6 +61,7 @@ void PageRank::addLink( const PageId& from, const PageId& to, unsigned int cnt)
 		li->second += cnt;
 	}
 	if (from > m_maxrow) m_maxrow = from;
+	if (to > m_maxcol) m_maxcol = to;
 }
 
 std::vector<double> PageRank::calculate() const
@@ -68,13 +69,19 @@ std::vector<double> PageRank::calculate() const
 	if (m_idcnt == 0) return std::vector<double>();
 	LinkMatrix::const_iterator li = m_linkMatrix.begin(), le = m_linkMatrix.end();
 
-	arma::umat locations = arma::zeros<arma::umat>( 2, m_linkMatrix.size() + ((m_maxrow < m_idcnt) ? 1:0));
+	unsigned int nofDummyElements = ((m_maxrow < m_idcnt) ? 1:0) + ((m_maxcol < m_idcnt) ? 1:0);
+	/*[-]*/std::cout << "++++ nofDummyElements " << nofDummyElements << std::endl;
+	/*[-]*/std::cout << "++++ m_maxrow " << m_maxrow << std::endl;
+	/*[-]*/std::cout << "++++ m_maxcol " << m_maxcol << std::endl;
+	/*[-]*/std::cout << "++++ m_idcnt " << m_idcnt << std::endl;
+
+	arma::umat locations = arma::zeros<arma::umat>( 2, m_linkMatrix.size() + nofDummyElements);
 	for (unsigned int lidx=0; li != le; ++li,++lidx)
 	{
 		locations( 1, lidx) = li->first.first;
 		locations( 0, lidx) = li->first.second;
 	}
-	arma::vec values( m_linkMatrix.size()  + ((m_maxrow < m_idcnt) ? 1:0));
+	arma::vec values( m_linkMatrix.size() + nofDummyElements);
 	li = m_linkMatrix.begin();
 	unsigned int lidx=0;
 	while (li != le)
@@ -93,6 +100,12 @@ std::vector<double> PageRank::calculate() const
 		locations( 1, m_linkMatrix.size()) = m_idcnt-1;
 		locations( 0, m_linkMatrix.size()) = 0;
 		values( m_linkMatrix.size()) = 0.0;
+	}
+	if (m_maxcol < m_idcnt)
+	{
+		locations( 1, m_linkMatrix.size() +nofDummyElements -1) = 0;
+		locations( 0, m_linkMatrix.size() +nofDummyElements -1) = m_idcnt-1;
+		values( m_linkMatrix.size() +nofDummyElements -1) = 0.0;
 	}
 	std::vector<double> vv_;
 	std::vector<double> ee_;
@@ -148,11 +161,18 @@ void PageRank::printRedirectsToFile( const std::string& filename) const
 PageRank::PageId PageRank::resolveRedirect( const PageId& pid) const
 {
 	PageId rt = pid;
+	PageId minimum = pid;
 	RedirectMap::const_iterator ri = m_redirectMap.find( rt);
-	while (ri != m_redirectMap.end())
+	while (ri != m_redirectMap.end() && ri->second != pid)
 	{
 		rt = ri->second;
+		if (rt < minimum) minimum = rt;
 		ri = m_redirectMap.find( rt);
+	}
+	if (ri->second == pid)
+	{
+		//... circular reference, take the smallest of all entries found in the circle
+		return minimum;
 	}
 	return rt;
 }
