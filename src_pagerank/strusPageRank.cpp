@@ -15,7 +15,7 @@
 #include <cstring>
 #include <cstdio>
 
-#undef STRUS_LOWLEVEL_DEBUG
+#define STRUS_LOWLEVEL_DEBUG
 
 enum LexemId
 {
@@ -148,6 +148,7 @@ private:
 			else
 			{
 				m_buf.append( buf, nn);
+				read( buf, nn);
 			}
 		}
 	}
@@ -259,7 +260,15 @@ int main( int argc, const char** argv)
 					redirectname.clear();
 					if (!input.parseLexem( lid, declname) || lid != LEXEM_NAME)
 					{
-						throw std::runtime_error( "id of link source expected after '*' (start of rule declaration)");
+						if (lid == LEXEM_EQUAL)
+						{
+							// ... skip rule with empty name
+							while (input.parseLexem( lid, lname) && lid != LEXEM_ENDRULE){}
+						}
+						else
+						{
+							throw std::runtime_error( "id of link source expected after '*' (start of rule declaration)");
+						}
 					}
 					break;
 				case LEXEM_NAME:
@@ -270,7 +279,17 @@ int main( int argc, const char** argv)
 				case LEXEM_REDIRECT:
 					if (!input.parseLexem( lid, redirectname) || lid != LEXEM_NAME)
 					{
-						std::cerr << "name of redirect target expected after '->'" << std::endl;
+						if (lid == LEXEM_ENDRULE)
+						{
+							declname.clear();
+							linknames.clear();
+							redirectname.clear();
+							continue;
+						}
+						else
+						{
+							std::cerr << "name of redirect target expected after '->'" << std::endl;
+						}
 					}
 					break;
 				case LEXEM_ENDRULE:
