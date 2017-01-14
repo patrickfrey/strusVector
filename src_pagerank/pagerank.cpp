@@ -13,12 +13,12 @@
 
 using namespace strus;
 
-PageRank::PageId PageRank::getPageId( const std::string& id)
+PageRank::PageId PageRank::getPageId( const std::string& name) const
 {
-	IdMap::const_iterator fi = m_idmap.find( id);
-	if (fi == m_midmap.end())
+	IdMap::const_iterator fi = m_idmap.find( name);
+	if (fi == m_idmap.end())
 	{
-		return m_idmap[ id] = m_idcnt++;
+		return 0;
 	}
 	else
 	{
@@ -26,61 +26,94 @@ PageRank::PageId PageRank::getPageId( const std::string& id)
 	}
 }
 
-void PageRank::addLink( const std::string& from, const std::string& to)
+std::string PageRank::getPageName( const PageId& id) const
 {
-	PageId from_idx = getPageId( from);
-	PageId to_idx = getPageId( to);
-	m_linkMatrix.insert( Link( from_idx, to_idx));
+	if (id == 0 || id > m_idcnt) throw std::runtime_error("illegal page id value (addLink)");
+	return m_idinv[ id-1];
 }
 
-std::vector<PageWeight> PageRank::calculate() const
+PageRank::PageId PageRank::getOrCreatePageId( const std::string& name)
 {
-	LinkMatrix::const_iterator li = m_linkMatrix.begin(), le = m_linkMatrix.end();
-	arma::umat locations;
-	arma::vec values;
-	arma::vec vv;
+	IdMap::const_iterator fi = m_idmap.find( name);
+	if (fi == m_idmap.end())
+	{
+		m_idinv.push_back( name);
+		return m_idmap[ name] = ++m_idcnt;
+	}
+	else
+	{
+		return fi->second;
+	}
+}
 
-	for (; li != le; ++li)
+void PageRank::addLink( const PageId& from, const PageId& to)
+{
+	if (from == 0 || from > m_idcnt) throw std::runtime_error("illegal page id value (addLink)");
+	if (to == 0 || to > m_idcnt) throw std::runtime_error("illegal page id value (addLink)");
+	m_linkMatrix.insert( Link( from-1, to-1));
+	if (from > m_maxrow) m_maxrow = from;
+}
+
+std::vector<double> PageRank::calculate() const
+{
+	if (m_idcnt == 0) return std::vector<double>();
+	LinkMatrix::const_iterator li = m_linkMatrix.begin(), le = m_linkMatrix.end();
+
+	std::cout << "LINE " << (int)__LINE__ << std::endl;
+	arma::umat locations = arma::zeros<arma::umat>( 2, m_linkMatrix.size() + ((m_maxrow < m_idcnt) ? 1:0));
+	for (unsigned int lidx=0; li != le; ++li,++lidx)
 	{
-		locations << li->first;
+		std::cout << "LIDX " << (int)lidx << std::endl;
+		locations( 0, lidx) = li->first;
+		locations( 1, lidx) = li->second;
 	}
-	locations << arma::endr;
+	std::cout << "LINE " << (int)__LINE__ << std::endl;
+	arma::vec values( m_linkMatrix.size()  + ((m_maxrow < m_idcnt) ? 1:0));
 	li = m_linkMatrix.begin();
-	for (; li != le; ++li)
-	{
-		locations << li->second;
-	}
-	locations << arma::endr;
-	li = m_linkMatrix.begin();
+	unsigned int lidx=0;
 	while (li != le)
 	{
 		LinkMatrix::const_iterator ln = li;
 		unsigned int linkcnt = 0;
 		for (; ln != le && ln->first == li->first; ++ln,++linkcnt){}
 		double weight = 1.0 / (double)linkcnt;
-		for (; li != le && li->first == li->first; ++li)
+		std::cout << "LINKCNT " << ln->first << "=" << linkcnt << std::endl;
+		for (; li != ln; ++li,++lidx)
 		{
-			values << weight;
+			values( lidx) = weight;
 		}
 	}
-	values << arma::endr;
-
-	arma::vec ee;
+	if (m_maxrow < m_idcnt)
+	{
+		locations( 0, m_linkMatrix.size()) = m_idcnt-1;
+		locations( 1, m_linkMatrix.size()) = 0;
+		values( m_linkMatrix.size()) = 0.0;
+	}
+	std::cout << "LINE " << (int)__LINE__ << std::endl;
+	std::vector<double> vv_;
+	std::vector<double> ee_;
 	PageId vi = 0;
 	for (; vi < m_idcnt; ++vi)
 	{
-		vv << (1.0 / (double)m_idcnt);
-		ee << (1.0 / (double)m_idcnt);
+		vv_.push_back( (1.0 / (double)m_idcnt));
+		ee_.push_back( (1.0 / (double)m_idcnt));
 	}
+	std::cout << "DIM " << (int)vv_.size() << " " << (int)ee_.size() << std::endl;
+	arma::vec ee( ee_);
+	arma::vec vv( vv_);
 
 	arma::sp_mat M( locations, values);
-	double dumpingFactor = 0.85;
+	std::cout << "MATRIX: " << M << std::endl;
 
-	unsigned int ii=0, ie=NofIterations;
-	for (; ii < ie; ++ie)
+	unsigned int ii=0, ie=m_nofIterations;
+	for (; ii < ie; ++ii)
 	{
-		vv = M * vv * dumpingFactor + (1.0 - dumpingFactor) * ee;
+		vv = M * vv * m_dampeningFactor + (1.0 - m_dampeningFactor) * ee;
 	}
+	std::vector<double> rt;
+	rt.reserve( vv.size());
+	rt.insert( rt.end(), vv.begin(), vv.end());
+	return rt;
 }
 
 

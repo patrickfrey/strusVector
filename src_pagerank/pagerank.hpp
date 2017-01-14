@@ -11,6 +11,7 @@
 #include <string>
 #include <vector>
 #include <map>
+#include <set>
 
 namespace strus {
 
@@ -24,33 +25,23 @@ class PageRank
 public:
 	enum {NofIterations = 32};
 
-	PageRank()
-		:m_idcnt(0){}
+	explicit PageRank( unsigned int nofIterations_=NofIterations, double dampeningFactor_ = 0.85)
+		:m_idcnt(0),m_maxrow(0),m_nofIterations(nofIterations_),m_dampeningFactor(dampeningFactor_){}
 	~PageRank(){}
 
-	void addLink( const std::string& from, const std::string& to);
-
-	class PageWeight
-	{
-	public:
-		PageWeight( const std::string& id_, double weight_)
-			:m_id(id_),m_weight(weight_){}
-		PageWeight( const PageWeight& o)
-			:m_id(o.m_id),m_weight(o.m_weight){}
-
-		const std::string& id() const		{return m_id;}
-		double weight() const			{return m_weight;}
-
-	private:
-		std::string m_id;
-		double m_weight;
-	};
-
-	std::vector<PageWeight> calculate() const;
-
-private:
 	typedef unsigned int PageId;
-	PageId getPageId( const std::string& rid);
+	PageId getPageId( const std::string& name) const;
+	PageId getOrCreatePageId( const std::string& name);
+	std::string getPageName( const PageId& id) const;
+
+	void addLink( const PageId& from, const PageId& to);
+
+	unsigned int nofPages() const
+	{
+		return m_idcnt;
+	}
+
+	std::vector<double> calculate() const;
 
 private:
 	typedef std::pair<PageId,PageId> Link;
@@ -59,7 +50,11 @@ private:
 
 	LinkMatrix m_linkMatrix;
 	IdMap m_idmap;
+	std::vector<std::string> m_idinv;
 	PageId m_idcnt;
+	PageId m_maxrow;
+	unsigned int m_nofIterations;
+	double m_dampeningFactor;
 };
 
 } //namespace

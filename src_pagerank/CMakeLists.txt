@@ -14,6 +14,7 @@ include_directories(
 link_directories(
 	"${Boost_LIBRARY_DIRS}"
 	"${PROJECT_SOURCE_DIR}/src"
+	"${PROJECT_SOURCE_DIR}/src_pagerank"
 	"${PROJECT_BINARY_DIR}/3rdParty/armadillo"
 	"${strusbase_LIBRARY_DIRS}"
 )
@@ -21,8 +22,11 @@ link_directories(
 # ------------------------------
 # PROGRAM
 # ------------------------------
-add_executable( strusPageRank  strusPageRank.cpp pagerank.cpp )
-target_link_libraries( strusPageRank strus_base strus_error ${Boost_LIBRARIES} ${Intl_LIBRARIES} )
+add_library( strus_pagerank_static STATIC pagerank.cpp )
+target_link_libraries( strus_pagerank_static strus_base "${Boost_LIBRARIES}" "${Intl_LIBRARIES}" )
+
+add_executable( strusPageRank  strusPageRank.cpp )
+target_link_libraries( strusPageRank strus_base strus_error strus_pagerank_static ${Boost_LIBRARIES} ${Intl_LIBRARIES} )
 
 
 # ------------------------------
