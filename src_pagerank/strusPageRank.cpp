@@ -15,7 +15,7 @@
 #include <cstring>
 #include <cstdio>
 
-#define STRUS_LOWLEVEL_DEBUG
+#undef STRUS_LOWLEVEL_DEBUG
 
 enum LexemId
 {
