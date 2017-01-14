@@ -8,8 +8,6 @@
 /// \brief Implementation of a page rank calculation 
 #include "pagerank.hpp"
 #include "armadillo"
-#include <iostream>
-#include <sstream>
 
 using namespace strus;
 
@@ -59,15 +57,12 @@ std::vector<double> PageRank::calculate() const
 	if (m_idcnt == 0) return std::vector<double>();
 	LinkMatrix::const_iterator li = m_linkMatrix.begin(), le = m_linkMatrix.end();
 
-	std::cout << "LINE " << (int)__LINE__ << std::endl;
 	arma::umat locations = arma::zeros<arma::umat>( 2, m_linkMatrix.size() + ((m_maxrow < m_idcnt) ? 1:0));
 	for (unsigned int lidx=0; li != le; ++li,++lidx)
 	{
-		std::cout << "LIDX " << (int)lidx << std::endl;
 		locations( 1, lidx) = li->first;
 		locations( 0, lidx) = li->second;
 	}
-	std::cout << "LINE " << (int)__LINE__ << std::endl;
 	arma::vec values( m_linkMatrix.size()  + ((m_maxrow < m_idcnt) ? 1:0));
 	li = m_linkMatrix.begin();
 	unsigned int lidx=0;
@@ -77,7 +72,6 @@ std::vector<double> PageRank::calculate() const
 		unsigned int linkcnt = 0;
 		for (; ln != le && ln->first == li->first; ++ln,++linkcnt){}
 		double weight = 1.0 / (double)linkcnt;
-		std::cout << "LINKCNT " << ln->first << "=" << linkcnt << std::endl;
 		for (; li != ln; ++li,++lidx)
 		{
 			values( lidx) = weight;
@@ -89,7 +83,6 @@ std::vector<double> PageRank::calculate() const
 		locations( 0, m_linkMatrix.size()) = 0;
 		values( m_linkMatrix.size()) = 0.0;
 	}
-	std::cout << "LINE " << (int)__LINE__ << std::endl;
 	std::vector<double> vv_;
 	std::vector<double> ee_;
 	PageId vi = 0;
@@ -98,12 +91,10 @@ std::vector<double> PageRank::calculate() const
 		vv_.push_back( (1.0 / (double)m_idcnt));
 		ee_.push_back( (1.0 / (double)m_idcnt));
 	}
-	std::cout << "DIM " << (int)vv_.size() << " " << (int)ee_.size() << std::endl;
 	arma::vec ee( ee_);
 	arma::vec vv( vv_);
 
 	arma::sp_mat M( locations, values);
-	std::cout << "MATRIX: " << M << std::endl;
 
 	unsigned int ii=0, ie=m_nofIterations;
 	for (; ii < ie; ++ii)
