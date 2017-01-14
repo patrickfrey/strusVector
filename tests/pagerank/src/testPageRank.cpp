@@ -10,6 +10,7 @@
 #include <vector>
 #include <iostream>
 #include <stdexcept>
+#include <cmath>
 
 int main( int argc, const char** argv)
 {
@@ -43,9 +44,15 @@ int main( int argc, const char** argv)
 
 		std::vector<double> res = pg.calculate();
 		std::vector<double>::const_iterator ri = res.begin(), re = res.end();
-		for (; ri != re; ++ri)
+		double exp[] = { 0.143994, 0.143994, 0.144, 0.152406, 0.0623895 };
+		for (unsigned int ridx=0; ri != re; ++ri,++ridx)
 		{
-			std::cout << *ri << std::endl;
+			double err = std::fabs(*ri - exp[ridx]);
+			if (err > 1E-4)
+			{
+				throw std::runtime_error("output not as expected");
+			}
+			std::cout << *ri << " (" << err << ")" << std::endl;
 		}
 		return 0;
 	}
