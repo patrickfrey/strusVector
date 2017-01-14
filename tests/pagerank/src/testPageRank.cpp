@@ -16,7 +16,7 @@ int main( int argc, const char** argv)
 	try
 	{
 		typedef strus::PageRank::PageId PageId;
-		strus::PageRank pg( 100, 0.7);
+		strus::PageRank pg( 30, 0.85);
 		// Example taken from http://mathscinotes.com/2012/01/worked-pagerank-example/
 		PageId i1 = pg.getOrCreatePageId( "A");
 		PageId i2 = pg.getOrCreatePageId( "B");

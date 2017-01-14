@@ -64,8 +64,8 @@ std::vector<double> PageRank::calculate() const
 	for (unsigned int lidx=0; li != le; ++li,++lidx)
 	{
 		std::cout << "LIDX " << (int)lidx << std::endl;
-		locations( 0, lidx) = li->first;
-		locations( 1, lidx) = li->second;
+		locations( 1, lidx) = li->first;
+		locations( 0, lidx) = li->second;
 	}
 	std::cout << "LINE " << (int)__LINE__ << std::endl;
 	arma::vec values( m_linkMatrix.size()  + ((m_maxrow < m_idcnt) ? 1:0));
@@ -85,8 +85,8 @@ std::vector<double> PageRank::calculate() const
 	}
 	if (m_maxrow < m_idcnt)
 	{
-		locations( 0, m_linkMatrix.size()) = m_idcnt-1;
-		locations( 1, m_linkMatrix.size()) = 0;
+		locations( 1, m_linkMatrix.size()) = m_idcnt-1;
+		locations( 0, m_linkMatrix.size()) = 0;
 		values( m_linkMatrix.size()) = 0.0;
 	}
 	std::cout << "LINE " << (int)__LINE__ << std::endl;
