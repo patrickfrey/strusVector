@@ -164,8 +164,9 @@ static void printUsage()
 	std::cerr << "usage: strusPageRank [options] <inputfile>" << std::endl;
 	std::cerr << "    options     :" << std::endl;
 	std::cerr << "    -h          : print this usage" << std::endl;
-	std::cerr << "    -v          : verbose output, print all declarations to stdout" << std::endl;
-	std::cerr << "    -r <PATH>   : specify file <PATH> to write redirect definitions to" << std::endl;
+	std::cerr << "    -v          : verbose output, print all declarations to stdout." << std::endl;
+	std::cerr << "    -r <PATH>   : specify file <PATH> to write redirect definitions to." << std::endl;
+	std::cerr << "    -i <ITER>   : specify number of iterations to run as <ITER>." << std::endl;
 	std::cerr << "    <inputfile> = input file path or '-' for stdin" << std::endl;
 	std::cerr << "                  file with lines of the for \"*\" SOURCEID = [->] {<TARGETID>} \";\"" << std::endl;
 }
@@ -183,6 +184,7 @@ int main( int argc, const char** argv)
 		int argi = 1;
 		bool verbose = false;
 		std::string redirectFilename;
+		int iterations = strus::PageRank::NofIterations;
 
 		for (; argi < argc; ++argi)
 		{
@@ -200,6 +202,13 @@ int main( int argc, const char** argv)
 				++argi;
 				if (argi == argc) throw std::runtime_error("option -r (redirect file) expects argument");
 				redirectFilename = argv[argi];
+			}
+			else if (std::strcmp( argv[ argi], "-i") == 0 || std::strcmp( argv[ argi], "--iterations") == 0)
+			{
+				++argi;
+				if (argi == argc) throw std::runtime_error("option -i (iterations) expects argument");
+				iterations = atoi( argv[argi]);
+				if (iterations <= 0) throw std::runtime_error("option -i (iterations) needs positive integer number as argument");
 			}
 			else if (std::strcmp( argv[ argi], "-") == 0)
 			{
@@ -233,7 +242,7 @@ int main( int argc, const char** argv)
 			printUsage();
 			return -1;
 		}
-		strus::PageRank pagerank;
+		strus::PageRank pagerank( iterations);
 		InputParser input( argv[ argi]);
 		LexemId lid;
 		std::string lname;
