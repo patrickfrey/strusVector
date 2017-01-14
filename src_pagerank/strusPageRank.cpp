@@ -13,6 +13,7 @@
 #include <iostream>
 #include <stdexcept>
 #include <cstring>
+#include <cstdio>
 
 #undef STRUS_LOWLEVEL_DEBUG
 
@@ -38,7 +39,7 @@ class InputParser
 {
 public:
 	explicit InputParser( const char* path)
-		:strus::InputStream(path?path:"-")
+		:strus::InputStream(path?path:"-"),m_nofLines(0)
 	{
 		m_itr = m_buf.c_str();
 	}
@@ -110,6 +111,11 @@ private:
 			{
 				return 0;
 			}
+			++m_nofLines;
+			if (m_nofLines % 100000 == 0)
+			{
+				fprintf( stderr, "\rprocessed %u lines              ", (unsigned int)m_nofLines);
+			}
 			m_itr = m_buf.c_str();
 		}
 		return m_itr;
@@ -128,6 +134,7 @@ private:
 			{
 				int ec = error();
 				if (ec) throw std::runtime_error( strus::string_format( "error reading input file: %s", ::strerror(ec)));
+				fprintf( stderr, "\rprocessed %u lines              \n", (unsigned int)m_nofLines);
 				return !m_buf.empty();
 			}
 			char const* eoln = (const char*)std::memchr( buf, '\n', nn);
@@ -147,6 +154,7 @@ private:
 private:
 	char const* m_itr;
 	std::string m_buf;
+	std::size_t m_nofLines;
 };
 
 static void printUsage()
@@ -155,6 +163,7 @@ static void printUsage()
 	std::cerr << "    options     :" << std::endl;
 	std::cerr << "    -h          : print this usage" << std::endl;
 	std::cerr << "    -v          : verbose output, print all declarations to stdout" << std::endl;
+	std::cerr << "    -r <PATH>   : specify file <PATH> to write redirect definitions to" << std::endl;
 	std::cerr << "    <inputfile> = input file path or '-' for stdin" << std::endl;
 	std::cerr << "                  file with lines of the for \"*\" SOURCEID = [->] {<TARGETID>} \";\"" << std::endl;
 }
@@ -171,6 +180,7 @@ int main( int argc, const char** argv)
 		}
 		int argi = 1;
 		bool verbose = false;
+		std::string redirectFilename;
 
 		for (; argi < argc; ++argi)
 		{
@@ -182,6 +192,12 @@ int main( int argc, const char** argv)
 			else if (std::strcmp( argv[ argi], "-v") == 0 || std::strcmp( argv[ argi], "--verbose") == 0)
 			{
 				verbose = true;
+			}
+			else if (std::strcmp( argv[ argi], "-r") == 0 || std::strcmp( argv[ argi], "--redirect") == 0)
+			{
+				++argi;
+				if (argi == argc) throw std::runtime_error("option -r (redirect file) expects argument");
+				redirectFilename = argv[argi];
 			}
 			else if (std::strcmp( argv[ argi], "-") == 0)
 			{
@@ -219,12 +235,12 @@ int main( int argc, const char** argv)
 		InputParser input( argv[ argi]);
 		LexemId lid;
 		std::set<strus::PageRank::PageId> declaredset;
-		std::map<strus::PageRank::PageId,strus::PageRank::PageId> redirectmap;
 		std::string lname;
 		std::string declname;
 		std::vector<std::string> linknames;
 		std::string redirectname;
 
+		// Parse input:
 		while (input.parseLexem( lid, lname))
 		{
 #ifdef STRUS_LOWLEVEL_DEBUG
@@ -269,7 +285,7 @@ int main( int argc, const char** argv)
 						{
 							// declare redirect
 							strus::PageRank::PageId rpg = pagerank.getOrCreatePageId( redirectname);
-							redirectmap[ dpg] = rpg;
+							pagerank.defineRedirect( dpg, rpg);
 							if (verbose)
 							{
 								std::cerr << "redirect " << declname << " -> " << redirectname << std::endl;
@@ -305,6 +321,22 @@ int main( int argc, const char** argv)
 					break;
 				}
 			}
+		}
+		if (!redirectFilename.empty())
+		{
+			std::cerr << "write redirects to file " << redirectFilename << std::endl;
+			pagerank.printRedirectsToFile( redirectFilename);
+		}
+		std::cerr << "remove garbagge (eliminate links to nowhere and resolve redirects)" << std::endl;
+		pagerank = pagerank.reduce();
+		std::cerr << "calculate ..." << std::endl;
+		std::vector<double> pagerankResults = pagerank.calculate();
+
+		std::cerr << "output results ..." << std::endl;
+		std::vector<double>::const_iterator ri = pagerankResults.begin(), re = pagerankResults.end();
+		for (strus::PageRank::PageId rid=1; ri != re; ++ri,++rid)
+		{
+			std::cout << pagerank.getPageName( rid) << "\t" << *ri << std::endl;
 		}
 		return 0;
 	}

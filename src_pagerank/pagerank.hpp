@@ -27,6 +27,16 @@ public:
 
 	explicit PageRank( unsigned int nofIterations_=NofIterations, double dampeningFactor_ = 0.85)
 		:m_idcnt(0),m_maxrow(0),m_nofIterations(nofIterations_),m_dampeningFactor(dampeningFactor_){}
+	PageRank( const PageRank& o)
+		:m_redirectMap(o.m_redirectMap)
+		,m_linkMatrix(o.m_linkMatrix)
+		,m_idmap(o.m_idmap)
+		,m_idinv(o.m_idinv)
+		,m_idcnt(o.m_idcnt)
+		,m_maxrow(o.m_maxrow)
+		,m_nofIterations(o.m_nofIterations)
+		,m_dampeningFactor(o.m_dampeningFactor){}
+
 	~PageRank(){}
 
 	typedef unsigned int PageId;
@@ -34,7 +44,11 @@ public:
 	PageId getOrCreatePageId( const std::string& name);
 	std::string getPageName( const PageId& id) const;
 
-	void addLink( const PageId& from, const PageId& to);
+	void addLink( const PageId& from, const PageId& to, unsigned int cnt=1);
+	void defineRedirect( const PageId& from, const PageId& to)
+	{
+		m_redirectMap[ from] = to;
+	}
 
 	unsigned int nofPages() const
 	{
@@ -43,11 +57,20 @@ public:
 
 	std::vector<double> calculate() const;
 
+	void printRedirectsToFile( const std::string& filename) const;
+
+	PageRank reduce() const;
+
+private:
+	PageId resolveRedirect( const PageId& pid) const;
+
 private:
 	typedef std::pair<PageId,PageId> Link;
 	typedef std::map<Link,unsigned int> LinkMatrix;
 	typedef std::map<std::string,PageId> IdMap;
+	typedef std::map<PageId,PageId> RedirectMap;
 
+	RedirectMap m_redirectMap;
 	LinkMatrix m_linkMatrix;
 	IdMap m_idmap;
 	std::vector<std::string> m_idinv;

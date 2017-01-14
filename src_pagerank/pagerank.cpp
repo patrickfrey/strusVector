@@ -7,6 +7,8 @@
  */
 /// \brief Implementation of a page rank calculation 
 #include "pagerank.hpp"
+#include "strus/base/string_format.hpp"
+#include "strus/base/fileio.hpp"
 #include "armadillo"
 
 using namespace strus;
@@ -44,7 +46,7 @@ PageRank::PageId PageRank::getOrCreatePageId( const std::string& name)
 	}
 }
 
-void PageRank::addLink( const PageId& from, const PageId& to)
+void PageRank::addLink( const PageId& from, const PageId& to, unsigned int cnt)
 {
 	if (from == 0 || from > m_idcnt) throw std::runtime_error("illegal page id value (addLink)");
 	if (to == 0 || to > m_idcnt) throw std::runtime_error("illegal page id value (addLink)");
@@ -52,11 +54,11 @@ void PageRank::addLink( const PageId& from, const PageId& to)
 	LinkMatrix::iterator li = m_linkMatrix.find( lnk);
 	if (li == m_linkMatrix.end())
 	{
-		m_linkMatrix[ lnk] = 1;
+		m_linkMatrix[ lnk] = cnt;
 	}
 	else
 	{
-		li->second += 1;
+		li->second += cnt;
 	}
 	if (from > m_maxrow) m_maxrow = from;
 }
@@ -116,4 +118,79 @@ std::vector<double> PageRank::calculate() const
 	return rt;
 }
 
+void PageRank::printRedirectsToFile( const std::string& filename) const
+{
+	enum {NofLinesPerChunk=100000};
+	std::string outbuf;
+	RedirectMap::const_iterator ri = m_redirectMap.begin(), re = m_redirectMap.end();
+	for (unsigned int ridx=0; ri != re; ++ri,++ridx)
+	{
+		if (ridx >= NofLinesPerChunk)
+		{
+			unsigned int ec = appendFile( filename, outbuf);
+			if (ec) throw std::runtime_error( string_format( "failed to print redirects to file: %s", ::strerror(ec)));
+			ridx = 0;
+			outbuf.clear();
+		}
+		outbuf.append( getPageName( ri->first));
+		outbuf.push_back( '\t');
+		outbuf.append( getPageName( ri->second));
+		outbuf.push_back( '\n');
+	}
+	if (!outbuf.empty())
+	{
+		unsigned int ec = appendFile( filename, outbuf);
+		if (ec) throw std::runtime_error( string_format( "failed to print redirects to file: %s", ::strerror(ec)));
+	}
+}
+
+
+PageRank::PageId PageRank::resolveRedirect( const PageId& pid) const
+{
+	PageId rt = pid;
+	RedirectMap::const_iterator ri = m_redirectMap.find( rt);
+	while (ri != m_redirectMap.end())
+	{
+		rt = ri->second;
+		ri = m_redirectMap.find( rt);
+	}
+	return rt;
+}
+
+PageRank PageRank::reduce() const
+{
+	PageRank rt;
+	LinkMatrix newLinkMatrix;
+	std::set<PageId> definedset;
+	LinkMatrix::const_iterator li = m_linkMatrix.begin(), le = m_linkMatrix.end();
+	for (; li != le; ++li)
+	{
+		Link newlink = Link( 
+				resolveRedirect( li->first.first), 
+				resolveRedirect( li->first.second));
+
+		LinkMatrix::iterator ni = newLinkMatrix.find( newlink);
+		if (ni == newLinkMatrix.end())
+		{
+			newLinkMatrix[ newlink] = li->second;
+			definedset.insert( newlink.first);
+		}
+		else
+		{
+			ni->second += li->second;
+		}
+	}
+	LinkMatrix::const_iterator ni = newLinkMatrix.begin(), ne = newLinkMatrix.end();
+	for (; ni != ne; ++ni)
+	{
+		if (definedset.find(ni->first.second) != definedset.end())
+		{
+			PageId fromid = rt.getOrCreatePageId( m_idinv[ ni->first.first]);
+			PageId toid = rt.getOrCreatePageId( m_idinv[ ni->first.second]);
+			unsigned int cnt = ni->second;
+			rt.addLink( fromid, toid, cnt);
+		}
+	}
+	return rt;
+}
 
