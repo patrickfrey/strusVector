@@ -385,6 +385,7 @@ int main( int argc, const char** argv)
 					maxresval = resval;
 				}
 			}
+			ri = pagerankResults.begin();
 		}
 		for (strus::PageRank::PageId rid=1; ri != re; ++ri,++rid)
 		{
