@@ -257,6 +257,7 @@ int main( int argc, const char** argv)
 #ifdef STRUS_LOWLEVEL_DEBUG
 			std::cerr << lexemIdName( lid) << " " << lname << std::endl;
 #endif
+		AGAIN:
 			switch (lid)
 			{
 				case LEXEM_STARTRULE:
@@ -288,6 +289,7 @@ int main( int argc, const char** argv)
 				case LEXEM_REDIRECT:
 					if (!input.parseLexem( lid, redirectname) || lid != LEXEM_NAME)
 					{
+						if (lid == LEXEM_REDIRECT) goto AGAIN;
 						if (lid == LEXEM_ENDRULE)
 						{
 							declname.clear();
