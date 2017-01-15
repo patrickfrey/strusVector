@@ -257,11 +257,6 @@ PageRank PageRank::reduce() const
 			unsigned int cnt = ni->second;
 			rt.addLink( fromid, toid, cnt);
 		}
-		else
-		{
-			/*[-]*/if (fromid == 0) std::cerr << "NOT FOUND FROM " << m_idinv[ ni->first.first] << std::endl;
-			/*[-]*/if (toid == 0) std::cerr << "NOT FOUND TO " << m_idinv[ ni->first.second] << std::endl;
-		}
 	}
 	return rt;
 }
