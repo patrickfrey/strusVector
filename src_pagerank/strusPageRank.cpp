@@ -26,13 +26,11 @@ enum LexemId
 	LEXEM_ENDRULE
 };
 
-#ifdef STRUS_LOWLEVEL_DEBUG
 static const char* lexemIdName( LexemId lid)
 {
 	const char* ar[] = {"STARTRULE","NAME","EQUAL","REDIRECT","ENDRULE"};
 	return ar[ lid];
 }
-#endif
 
 class InputParser
 	:public strus::InputStream
@@ -299,7 +297,7 @@ int main( int argc, const char** argv)
 						}
 						else
 						{
-							std::cerr << "name of redirect target expected after '->'" << std::endl;
+							std::cerr << "name of redirect target expected after '->' instead of " << lexemIdName(lid) << std::endl;
 						}
 					}
 					break;
