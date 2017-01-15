@@ -351,11 +351,6 @@ int main( int argc, const char** argv)
 							{
 								std::cerr << "link " << declname << " = " << *li << std::endl;
 							}
-							if (*li == "david_bowie")
-							{
-								std::cerr << "link " << declname << "[" << dpg << "]" << " = " << *li << "[" << lpg << "]" << std::endl;
-								pagerank.declare_observed_item( lpg);
-							}
 						}
 					}
 					declname.clear();
