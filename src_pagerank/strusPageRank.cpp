@@ -400,7 +400,7 @@ int main( int argc, const char** argv)
 				{
 					resval = 0.0;
 				}
-				resval = (resval / maxresval + 0.5) * normval;
+				resval = (resval / maxresval) * normval;
 				std::cout << pagerank.getPageName( rid) << "\t" << (unsigned int)resval << std::endl;
 			}
 			else

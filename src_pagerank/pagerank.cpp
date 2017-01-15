@@ -203,7 +203,13 @@ PageRank::PageId PageRank::resolveRedirect( const PageId& pid) const
 	{
 		++cnt;
 		rt = ri->second;
-		if (rt < minimum) minimum = rt;
+		if (rt < minimum)
+		{
+			if (m_defset.find( rt) != m_defset.end())
+			{
+				minimum = rt;
+			}
+		}
 		ri = m_redirectMap.find( rt);
 	}
 	if (ri != m_redirectMap.end())
@@ -236,15 +242,25 @@ PageRank PageRank::reduce() const
 			ni->second += li->second;
 		}
 	}
+	std::set<PageId>::const_iterator di = m_defset.begin(), de = m_defset.end();
+	for (; di != de; ++di)
+	{
+		rt.getOrCreatePageId( m_idinv[ *di -1], true);
+	}
 	LinkMatrix::const_iterator ni = newLinkMatrix.begin(), ne = newLinkMatrix.end();
 	for (; ni != ne; ++ni)
 	{
-		if (m_defset.find( ni->first.second+1) != m_defset.end())
+		PageId fromid = rt.getPageId( m_idinv[ ni->first.first]);
+		PageId toid = rt.getPageId( m_idinv[ ni->first.second]);
+		if (fromid && toid)
 		{
-			PageId fromid = rt.getOrCreatePageId( m_idinv[ ni->first.first], true);
-			PageId toid = rt.getOrCreatePageId( m_idinv[ ni->first.second], false);
 			unsigned int cnt = ni->second;
 			rt.addLink( fromid, toid, cnt);
+		}
+		else
+		{
+			/*[-]*/if (fromid == 0) std::cerr << "NOT FOUND FROM " << m_idinv[ ni->first.first] << std::endl;
+			/*[-]*/if (toid == 0) std::cerr << "NOT FOUND TO " << m_idinv[ ni->first.second] << std::endl;
 		}
 	}
 	return rt;
