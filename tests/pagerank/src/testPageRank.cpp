@@ -19,11 +19,11 @@ int main( int argc, const char** argv)
 		typedef strus::PageRank::PageId PageId;
 		strus::PageRank pg( 30, 0.85);
 		// Example taken from http://mathscinotes.com/2012/01/worked-pagerank-example/
-		PageId i1 = pg.getOrCreatePageId( "A");
-		PageId i2 = pg.getOrCreatePageId( "B");
-		PageId i3 = pg.getOrCreatePageId( "C");
-		PageId i4 = pg.getOrCreatePageId( "D");
-		PageId i5 = pg.getOrCreatePageId( "E");
+		PageId i1 = pg.getOrCreatePageId( "A", true);
+		PageId i2 = pg.getOrCreatePageId( "B", true);
+		PageId i3 = pg.getOrCreatePageId( "C", true);
+		PageId i4 = pg.getOrCreatePageId( "D", true);
+		PageId i5 = pg.getOrCreatePageId( "E", true);
 
 		pg.addLink( i1, i2);
 		pg.addLink( i1, i3);

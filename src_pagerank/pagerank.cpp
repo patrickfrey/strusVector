@@ -32,16 +32,26 @@ std::string PageRank::getPageName( const PageId& id) const
 	return m_idinv[ id-1];
 }
 
-PageRank::PageId PageRank::getOrCreatePageId( const std::string& name)
+PageRank::PageId PageRank::getOrCreatePageId( const std::string& name, bool isdef)
 {
 	IdMap::const_iterator fi = m_idmap.find( name);
 	if (fi == m_idmap.end())
 	{
 		m_idinv.push_back( name);
-		return m_idmap[ name] = ++m_idcnt;
+		PageRank::PageId newpgid = ++m_idcnt;
+		if (isdef)
+		{
+			m_defset.insert( newpgid);
+		}
+		m_idmap[ name] = newpgid;
+		return newpgid;
 	}
 	else
 	{
+		if (isdef)
+		{
+			m_defset.insert( fi->second);
+		}
 		return fi->second;
 	}
 }
@@ -66,6 +76,7 @@ void PageRank::addLink( const PageId& from, const PageId& to, unsigned int cnt)
 
 std::vector<double> PageRank::calculate() const
 {
+	// Fill the data structures for initialization of the link matrix:
 	if (m_idcnt == 0) return std::vector<double>();
 	LinkMatrix::const_iterator li = m_linkMatrix.begin(), le = m_linkMatrix.end();
 
@@ -84,13 +95,19 @@ std::vector<double> PageRank::calculate() const
 	{
 		LinkMatrix::const_iterator ln = li;
 		unsigned int linkcnt = 0;
-		for (; ln != le && ln->first.first == li->first.first; ++ln, linkcnt += li->second){}
+		for (; ln != le && ln->first.first == li->first.first; ++ln)
+		{
+			linkcnt += ln->second;
+		}
 		double weight = 1.0 / (double)linkcnt;
+		double weightsum = 0.0;
 		for (; li != ln; ++li,++lidx)
 		{
+			weightsum += li->second * weight;
 			values( lidx) = li->second * weight;
 		}
 	}
+	// Add dummy elements if needed, so that the sparse matrix get the correct dimension:
 	if (m_maxrow < m_idcnt)
 	{
 		locations( 1, m_linkMatrix.size()) = m_idcnt-1;
@@ -103,6 +120,8 @@ std::vector<double> PageRank::calculate() const
 		locations( 0, m_linkMatrix.size() +nofDummyElements -1) = m_idcnt-1;
 		values( m_linkMatrix.size() +nofDummyElements -1) = 0.0;
 	}
+
+	// Build the armadillo data structures for the calculation (matrix and vectors needed):
 	std::vector<double> vv_;
 	std::vector<double> ee_;
 	PageId vi = 0;
@@ -116,11 +135,30 @@ std::vector<double> PageRank::calculate() const
 
 	arma::sp_mat M( locations, values);
 
+	// Check if created matrix is normalized:
+	std::map<unsigned int,double> colsummap;
+	arma::sp_mat::const_iterator mi = M.begin(), me = M.end();
+	for (; mi != me; ++mi)
+	{
+		colsummap[ mi.col()] += *mi;
+	}
+	std::map<unsigned int,double>::const_iterator ci = colsummap.begin(), ce = colsummap.end();
+	for (; ci != ce; ++ci)
+	{
+		if (ci->second > 1.1)
+		{
+			throw std::runtime_error( "internal: link matrix built not normalized");
+		}
+	}
+
+	// Run the iterations:
 	unsigned int ii=0, ie=m_nofIterations;
 	for (; ii < ie; ++ii)
 	{
 		vv = M * vv * m_dampeningFactor + (1.0 - m_dampeningFactor) * ee;
 	}
+
+	// Build the result:
 	std::vector<double> rt;
 	rt.reserve( vv.size());
 	rt.insert( rt.end(), vv.begin(), vv.end());
@@ -177,7 +215,7 @@ PageRank PageRank::reduce() const
 {
 	PageRank rt;
 	LinkMatrix newLinkMatrix;
-	std::set<PageId> definedset;
+
 	LinkMatrix::const_iterator li = m_linkMatrix.begin(), le = m_linkMatrix.end();
 	for (; li != le; ++li)
 	{
@@ -189,7 +227,6 @@ PageRank PageRank::reduce() const
 		if (ni == newLinkMatrix.end())
 		{
 			newLinkMatrix[ newlink] = li->second;
-			definedset.insert( newlink.first);
 		}
 		else
 		{
@@ -199,10 +236,10 @@ PageRank PageRank::reduce() const
 	LinkMatrix::const_iterator ni = newLinkMatrix.begin(), ne = newLinkMatrix.end();
 	for (; ni != ne; ++ni)
 	{
-		if (definedset.find(ni->first.second) != definedset.end())
+		if (m_defset.find( ni->first.second+1) != m_defset.end())
 		{
-			PageId fromid = rt.getOrCreatePageId( m_idinv[ ni->first.first]);
-			PageId toid = rt.getOrCreatePageId( m_idinv[ ni->first.second]);
+			PageId fromid = rt.getOrCreatePageId( m_idinv[ ni->first.first], true);
+			PageId toid = rt.getOrCreatePageId( m_idinv[ ni->first.second], false);
 			unsigned int cnt = ni->second;
 			rt.addLink( fromid, toid, cnt);
 		}

@@ -32,8 +32,10 @@ public:
 		,m_linkMatrix(o.m_linkMatrix)
 		,m_idmap(o.m_idmap)
 		,m_idinv(o.m_idinv)
+		,m_defset(o.m_defset)
 		,m_idcnt(o.m_idcnt)
 		,m_maxrow(o.m_maxrow)
+		,m_maxcol(o.m_maxcol)
 		,m_nofIterations(o.m_nofIterations)
 		,m_dampeningFactor(o.m_dampeningFactor){}
 
@@ -41,7 +43,7 @@ public:
 
 	typedef unsigned int PageId;
 	PageId getPageId( const std::string& name) const;
-	PageId getOrCreatePageId( const std::string& name);
+	PageId getOrCreatePageId( const std::string& name, bool isdef);
 	std::string getPageName( const PageId& id) const;
 
 	void addLink( const PageId& from, const PageId& to, unsigned int cnt=1);
@@ -74,6 +76,7 @@ private:
 	LinkMatrix m_linkMatrix;
 	IdMap m_idmap;
 	std::vector<std::string> m_idinv;
+	std::set<PageId> m_defset;
 	PageId m_idcnt;
 	PageId m_maxrow;
 	PageId m_maxcol;

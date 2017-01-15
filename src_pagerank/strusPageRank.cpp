@@ -39,7 +39,7 @@ class InputParser
 {
 public:
 	explicit InputParser( const char* path)
-		:strus::InputStream(path?path:"-"),m_nofLines(0)
+		:strus::InputStream(path?path:"-"),m_nofLines(0),m_eof(false)
 	{
 		m_itr = m_buf.c_str();
 	}
@@ -133,10 +133,12 @@ private:
 			std::size_t nn = readAhead( buf, sizeof(buf));
 			if (!nn)
 			{
+				if (m_eof) return false;
 				int ec = error();
 				if (ec) throw std::runtime_error( strus::string_format( "error reading input file: %s", ::strerror(ec)));
 				fprintf( stderr, "\rprocessed %u lines              \n", (unsigned int)m_nofLines);
-				return !m_buf.empty();
+				m_eof = m_buf.empty();
+				return !m_eof;
 			}
 			char const* eoln = (const char*)std::memchr( buf, '\n', nn);
 			if (eoln)
@@ -157,6 +159,7 @@ private:
 	char const* m_itr;
 	std::string m_buf;
 	std::size_t m_nofLines;
+	bool m_eof;
 };
 
 static void printUsage()
@@ -302,7 +305,7 @@ int main( int argc, const char** argv)
 					break;
 				case LEXEM_ENDRULE:
 				{
-					strus::PageRank::PageId dpg = pagerank.getOrCreatePageId( declname);
+					strus::PageRank::PageId dpg = pagerank.getOrCreatePageId( declname, true);
 					if (declname.empty())
 					{
 						std::cerr << "empty declaration found" << std::endl;
@@ -312,7 +315,7 @@ int main( int argc, const char** argv)
 						if (!redirectname.empty())
 						{
 							// declare redirect
-							strus::PageRank::PageId rpg = pagerank.getOrCreatePageId( redirectname);
+							strus::PageRank::PageId rpg = pagerank.getOrCreatePageId( redirectname, false);
 							pagerank.defineRedirect( dpg, rpg);
 							if (verbose)
 							{
@@ -324,7 +327,7 @@ int main( int argc, const char** argv)
 							li = linknames.begin(), le = linknames.end();
 						for (; li != le; ++li)
 						{
-							strus::PageRank::PageId lpg = pagerank.getOrCreatePageId( *li);
+							strus::PageRank::PageId lpg = pagerank.getOrCreatePageId( *li, false);
 							pagerank.addLink( dpg, lpg);
 							if (verbose)
 							{
