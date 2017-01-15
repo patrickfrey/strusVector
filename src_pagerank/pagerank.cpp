@@ -196,9 +196,12 @@ PageRank::PageId PageRank::resolveRedirect( const PageId& pid) const
 {
 	PageId rt = pid;
 	PageId minimum = pid;
+	enum {MaxCnt=20};
+	unsigned int cnt = 0;
 	RedirectMap::const_iterator ri = m_redirectMap.find( rt);
-	while (ri != m_redirectMap.end() && ri->second != minimum)
+	while (ri != m_redirectMap.end() && ri->second != minimum && cnt < MaxCnt)
 	{
+		++cnt;
 		rt = ri->second;
 		if (rt < minimum) minimum = rt;
 		ri = m_redirectMap.find( rt);
