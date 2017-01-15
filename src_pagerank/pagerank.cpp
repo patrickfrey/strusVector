@@ -254,8 +254,10 @@ PageRank PageRank::reduce() const
 		/*[-]*/if (m_observed_item && m_observed_item == *di)
 		/*[-]*/{
 		/*[-]*/	std::cerr << "mapping observed item " << m_idinv[ *di -1] << " (" << *di << ") " << " to " << newid << std::endl; 
+		/*[-]*/	rt.declare_observed_item( newid);
 		/*[-]*/}
 	}
+
 	LinkMatrix::const_iterator ni = newLinkMatrix.begin(), ne = newLinkMatrix.end();
 	for (; ni != ne; ++ni)
 	{
