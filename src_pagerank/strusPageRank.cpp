@@ -168,6 +168,7 @@ static void printUsage()
 	std::cerr << "    -h          : print this usage" << std::endl;
 	std::cerr << "    -v          : verbose output, print all declarations to stdout." << std::endl;
 	std::cerr << "    -g          : logarithmic scale page rank calculation." << std::endl;
+	std::cerr << "    -n <NORM>   : normalize result to an integer between 0 and <NORM>." << std::endl;
 	std::cerr << "    -r <PATH>   : specify file <PATH> to write redirect definitions to." << std::endl;
 	std::cerr << "    -i <ITER>   : specify number of iterations to run as <ITER>." << std::endl;
 	std::cerr << "    <inputfile> = input file path or '-' for stdin" << std::endl;
@@ -189,6 +190,7 @@ int main( int argc, const char** argv)
 		bool logscale = false;
 		std::string redirectFilename;
 		int iterations = strus::PageRank::NofIterations;
+		int normval = 0;
 
 		for (; argi < argc; ++argi)
 		{
@@ -217,6 +219,13 @@ int main( int argc, const char** argv)
 				if (argi == argc) throw std::runtime_error("option -i (iterations) expects argument");
 				iterations = atoi( argv[argi]);
 				if (iterations <= 0) throw std::runtime_error("option -i (iterations) needs positive integer number as argument");
+			}
+			else if (std::strcmp( argv[ argi], "-n") == 0 || std::strcmp( argv[ argi], "--norm") == 0)
+			{
+				++argi;
+				if (argi == argc) throw std::runtime_error("option -n (norm) expects argument");
+				normval = atoi( argv[argi]);
+				if (normval <= 0) throw std::runtime_error("option -n (norm) needs positive integer number as argument");
 			}
 			else if (std::strcmp( argv[ argi], "-") == 0)
 			{
@@ -361,6 +370,22 @@ int main( int argc, const char** argv)
 
 		std::cerr << "output results ..." << std::endl;
 		std::vector<double>::const_iterator ri = pagerankResults.begin(), re = pagerankResults.end();
+		double maxresval = 0.0;
+		if (normval > 0)
+		{
+			for (strus::PageRank::PageId rid=1; ri != re; ++ri,++rid)
+			{
+				double resval = *ri;
+				if (logscale)
+				{
+					resval = std::log10( resval * pagerank.nofPages() + 1);
+				}
+				if (resval > maxresval)
+				{
+					maxresval = resval;
+				}
+			}
+		}
 		for (strus::PageRank::PageId rid=1; ri != re; ++ri,++rid)
 		{
 			double resval = *ri;
@@ -368,7 +393,19 @@ int main( int argc, const char** argv)
 			{
 				resval = std::log10( resval * pagerank.nofPages() + 1);
 			}
-			std::cout << pagerank.getPageName( rid) << "\t" << resval << std::endl;
+			if (normval > 0)
+			{
+				if (resval < 0.0)
+				{
+					resval = 0.0;
+				}
+				resval = (resval / maxresval + 0.5) * normval;
+				std::cout << pagerank.getPageName( rid) << "\t" << (unsigned int)resval << std::endl;
+			}
+			else
+			{
+				std::cout << pagerank.getPageName( rid) << "\t" << resval << std::endl;
+			}
 		}
 		return 0;
 	}
