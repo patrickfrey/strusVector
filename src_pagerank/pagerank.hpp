@@ -27,7 +27,10 @@ public:
 	enum {NofIterations = 32};
 
 	explicit PageRank( unsigned int nofIterations_=NofIterations, double dampeningFactor_ = 0.85)
-		:m_idcnt(0),m_maxrow(0),m_maxcol(0),m_observed_item(0),m_nofIterations(nofIterations_),m_dampeningFactor(dampeningFactor_){}
+		:m_idcnt(0)
+		,m_maxrow(0),m_maxcol(0)
+		,m_observed_item(0)
+		,m_nofIterations(nofIterations_),m_dampeningFactor(dampeningFactor_){}
 	PageRank( const PageRank& o)
 		:m_redirectMap(o.m_redirectMap)
 		,m_linkMatrix(o.m_linkMatrix)
@@ -37,6 +40,7 @@ public:
 		,m_idcnt(o.m_idcnt)
 		,m_maxrow(o.m_maxrow)
 		,m_maxcol(o.m_maxcol)
+		,m_observed_item(0)
 		,m_nofIterations(o.m_nofIterations)
 		,m_dampeningFactor(o.m_dampeningFactor){}
 
@@ -48,10 +52,7 @@ public:
 	std::string getPageName( const PageId& id) const;
 
 	void addLink( const PageId& from, const PageId& to, unsigned int cnt=1);
-	void defineRedirect( const PageId& from, const PageId& to)
-	{
-		if (from != to) m_redirectMap[ from] = to;
-	}
+	void defineRedirect( const PageId& from, const PageId& to);
 
 	unsigned int nofPages() const
 	{

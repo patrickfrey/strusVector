@@ -28,7 +28,7 @@ PageRank::PageId PageRank::getPageId( const std::string& name) const
 
 std::string PageRank::getPageName( const PageId& id) const
 {
-	if (id == 0 || id > m_idcnt) throw std::runtime_error("illegal page id value (addLink)");
+	if (id == 0 || id > m_idcnt) throw std::runtime_error("illegal page id value (getPageName)");
 	return m_idinv[ id-1];
 }
 
@@ -60,7 +60,7 @@ void PageRank::addLink( const PageId& from, const PageId& to, unsigned int cnt)
 {
 	if (from == 0 || from > m_idcnt) throw std::runtime_error("illegal page id value (addLink)");
 	if (to == 0 || to > m_idcnt) throw std::runtime_error("illegal page id value (addLink)");
-	Link lnk( from-1, to-1);
+	Link lnk( from, to);
 	LinkMatrix::iterator li = m_linkMatrix.find( lnk);
 	/*[-]*/if (m_observed_item && m_observed_item == to)
 	/*[-]*/{
@@ -78,6 +78,13 @@ void PageRank::addLink( const PageId& from, const PageId& to, unsigned int cnt)
 	if (to > m_maxcol) m_maxcol = to;
 }
 
+void PageRank::defineRedirect( const PageId& from, const PageId& to)
+{
+	if (from == 0 || from > m_idcnt) throw std::runtime_error("illegal page id value (defineRedirect)");
+	if (to == 0 || to > m_idcnt) throw std::runtime_error("illegal page id value (defineRedirect)");
+	if (from != to) m_redirectMap[ from] = to;
+}
+
 std::vector<double> PageRank::calculate() const
 {
 	// Fill the data structures for initialization of the link matrix:
@@ -89,8 +96,8 @@ std::vector<double> PageRank::calculate() const
 	arma::umat locations = arma::zeros<arma::umat>( 2, m_linkMatrix.size() + nofDummyElements);
 	for (unsigned int lidx=0; li != le; ++li,++lidx)
 	{
-		locations( 1, lidx) = li->first.first;
-		locations( 0, lidx) = li->first.second;
+		locations( 1, lidx) = li->first.first-1;
+		locations( 0, lidx) = li->first.second-1;
 	}
 	arma::vec values( m_linkMatrix.size() + nofDummyElements);
 	li = m_linkMatrix.begin();
@@ -250,10 +257,10 @@ PageRank PageRank::reduce() const
 	std::set<PageId>::const_iterator di = m_defset.begin(), de = m_defset.end();
 	for (; di != de; ++di)
 	{
-		PageId newid = rt.getOrCreatePageId( m_idinv[ *di -1], true);
+		PageId newid = rt.getOrCreatePageId( getPageName( *di), true);
 		/*[-]*/if (m_observed_item && m_observed_item == *di)
 		/*[-]*/{
-		/*[-]*/	std::cerr << "mapping observed item " << m_idinv[ *di -1] << " (" << *di << ") " << " to " << newid << std::endl; 
+		/*[-]*/	std::cerr << "mapping observed item " << getPageName( *di) << " (" << *di << ") " << " to " << newid << std::endl; 
 		/*[-]*/	rt.declare_observed_item( newid);
 		/*[-]*/}
 	}
@@ -261,8 +268,8 @@ PageRank PageRank::reduce() const
 	LinkMatrix::const_iterator ni = newLinkMatrix.begin(), ne = newLinkMatrix.end();
 	for (; ni != ne; ++ni)
 	{
-		PageId fromid = rt.getPageId( m_idinv[ ni->first.first]);
-		PageId toid = rt.getPageId( m_idinv[ ni->first.second]);
+		PageId fromid = rt.getPageId( getPageName( ni->first.first));
+		PageId toid = rt.getPageId( getPageName( ni->first.second));
 		if (fromid && toid)
 		{
 			unsigned int cnt = ni->second;
