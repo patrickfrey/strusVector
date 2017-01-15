@@ -203,7 +203,7 @@ PageRank::PageId PageRank::resolveRedirect( const PageId& pid) const
 		if (rt < minimum) minimum = rt;
 		ri = m_redirectMap.find( rt);
 	}
-	if (ri->second == minimum)
+	if (ri != m_redirectMap.end())
 	{
 		//... circular reference, take the smallest of all entries found in the circle
 		return minimum;
