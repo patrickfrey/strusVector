@@ -14,6 +14,7 @@
 #include <stdexcept>
 #include <cstring>
 #include <cstdio>
+#include <cmath>
 
 #undef STRUS_LOWLEVEL_DEBUG
 
@@ -166,6 +167,7 @@ static void printUsage()
 	std::cerr << "    options     :" << std::endl;
 	std::cerr << "    -h          : print this usage" << std::endl;
 	std::cerr << "    -v          : verbose output, print all declarations to stdout." << std::endl;
+	std::cerr << "    -g          : logarithmic scale page rank calculation." << std::endl;
 	std::cerr << "    -r <PATH>   : specify file <PATH> to write redirect definitions to." << std::endl;
 	std::cerr << "    -i <ITER>   : specify number of iterations to run as <ITER>." << std::endl;
 	std::cerr << "    <inputfile> = input file path or '-' for stdin" << std::endl;
@@ -184,6 +186,7 @@ int main( int argc, const char** argv)
 		}
 		int argi = 1;
 		bool verbose = false;
+		bool logscale = false;
 		std::string redirectFilename;
 		int iterations = strus::PageRank::NofIterations;
 
@@ -197,6 +200,10 @@ int main( int argc, const char** argv)
 			else if (std::strcmp( argv[ argi], "-v") == 0 || std::strcmp( argv[ argi], "--verbose") == 0)
 			{
 				verbose = true;
+			}
+			else if (std::strcmp( argv[ argi], "-g") == 0 || std::strcmp( argv[ argi], "--logscale") == 0)
+			{
+				logscale = true;
 			}
 			else if (std::strcmp( argv[ argi], "-r") == 0 || std::strcmp( argv[ argi], "--redirect") == 0)
 			{
@@ -356,7 +363,12 @@ int main( int argc, const char** argv)
 		std::vector<double>::const_iterator ri = pagerankResults.begin(), re = pagerankResults.end();
 		for (strus::PageRank::PageId rid=1; ri != re; ++ri,++rid)
 		{
-			std::cout << pagerank.getPageName( rid) << "\t" << *ri << std::endl;
+			double resval = *ri;
+			if (logscale)
+			{
+				resval = std::log10( resval * pagerank.nofPages() + 1);
+			}
+			std::cout << pagerank.getPageName( rid) << "\t" << resval << std::endl;
 		}
 		return 0;
 	}
