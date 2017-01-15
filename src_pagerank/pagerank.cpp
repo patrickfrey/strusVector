@@ -197,13 +197,13 @@ PageRank::PageId PageRank::resolveRedirect( const PageId& pid) const
 	PageId rt = pid;
 	PageId minimum = pid;
 	RedirectMap::const_iterator ri = m_redirectMap.find( rt);
-	while (ri != m_redirectMap.end() && ri->second != pid)
+	while (ri != m_redirectMap.end() && ri->second != minimum)
 	{
 		rt = ri->second;
 		if (rt < minimum) minimum = rt;
 		ri = m_redirectMap.find( rt);
 	}
-	if (ri->second == pid)
+	if (ri->second == minimum)
 	{
 		//... circular reference, take the smallest of all entries found in the circle
 		return minimum;
