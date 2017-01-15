@@ -136,8 +136,8 @@ private:
 				int ec = error();
 				if (ec) throw std::runtime_error( strus::string_format( "error reading input file: %s", ::strerror(ec)));
 				fprintf( stderr, "\rprocessed %u lines              \n", (unsigned int)m_nofLines);
-				m_eof = m_buf.empty();
-				return !m_eof;
+				m_eof = true;
+				return !m_buf.empty();
 			}
 			char const* eoln = (const char*)std::memchr( buf, '\n', nn);
 			if (eoln)
