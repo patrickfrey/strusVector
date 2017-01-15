@@ -26,7 +26,7 @@ public:
 	enum {NofIterations = 32};
 
 	explicit PageRank( unsigned int nofIterations_=NofIterations, double dampeningFactor_ = 0.85)
-		:m_idcnt(0),m_maxrow(0),m_maxcol(0),m_nofIterations(nofIterations_),m_dampeningFactor(dampeningFactor_){}
+		:m_idcnt(0),m_maxrow(0),m_maxcol(0),m_observed_item(0),m_nofIterations(nofIterations_),m_dampeningFactor(dampeningFactor_){}
 	PageRank( const PageRank& o)
 		:m_redirectMap(o.m_redirectMap)
 		,m_linkMatrix(o.m_linkMatrix)
@@ -63,6 +63,18 @@ public:
 
 	PageRank reduce() const;
 
+	/*[-]*/void declare_observed_item( const PageId& pid)
+	{
+		if (m_observed_item != 0 && m_observed_item != pid)
+		{
+			std::cerr << "+++ observed item does not match: " << m_observed_item << " != " << pid << std::endl;
+		}
+		else
+		{
+			m_observed_item = pid;
+		}
+	}
+
 private:
 	PageId resolveRedirect( const PageId& pid) const;
 
@@ -80,6 +92,7 @@ private:
 	PageId m_idcnt;
 	PageId m_maxrow;
 	PageId m_maxcol;
+	PageId m_observed_item;
 	unsigned int m_nofIterations;
 	double m_dampeningFactor;
 };

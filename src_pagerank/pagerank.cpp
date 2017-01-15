@@ -62,6 +62,10 @@ void PageRank::addLink( const PageId& from, const PageId& to, unsigned int cnt)
 	if (to == 0 || to > m_idcnt) throw std::runtime_error("illegal page id value (addLink)");
 	Link lnk( from-1, to-1);
 	LinkMatrix::iterator li = m_linkMatrix.find( lnk);
+	/*[-]*/if (m_observed_item && m_observed_item == to)
+	/*[-]*/{
+	/*[-]*/	std::cerr << "adding observed item rule " << from << " -> " << to << " #" << cnt << std::endl; 
+	/*[-]*/}
 	if (li == m_linkMatrix.end())
 	{
 		m_linkMatrix[ lnk] = cnt;
@@ -156,6 +160,7 @@ std::vector<double> PageRank::calculate() const
 	for (; ii < ie; ++ii)
 	{
 		vv = M * vv * m_dampeningFactor + (1.0 - m_dampeningFactor) * ee;
+		/*[-]*/if (m_observed_item) std::cout << "page rank value observed item " << vv[m_observed_item-1] << std::endl;
 	}
 
 	// Build the result:
@@ -245,7 +250,11 @@ PageRank PageRank::reduce() const
 	std::set<PageId>::const_iterator di = m_defset.begin(), de = m_defset.end();
 	for (; di != de; ++di)
 	{
-		rt.getOrCreatePageId( m_idinv[ *di -1], true);
+		PageId newid = rt.getOrCreatePageId( m_idinv[ *di -1], true);
+		/*[-]*/if (m_observed_item && m_observed_item == *di)
+		/*[-]*/{
+		/*[-]*/	std::cerr << "mapping observed item " << m_idinv[ *di -1] << " (" << *di << ") " << " to " << newid << std::endl; 
+		/*[-]*/}
 	}
 	LinkMatrix::const_iterator ni = newLinkMatrix.begin(), ne = newLinkMatrix.end();
 	for (; ni != ne; ++ni)

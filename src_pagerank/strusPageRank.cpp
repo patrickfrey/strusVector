@@ -170,6 +170,7 @@ static void printUsage()
 	std::cerr << "    -g          : logarithmic scale page rank calculation." << std::endl;
 	std::cerr << "    -n <NORM>   : normalize result to an integer between 0 and <NORM>." << std::endl;
 	std::cerr << "    -r <PATH>   : specify file <PATH> to write redirect definitions to." << std::endl;
+	std::cerr << "    -t <PATH>   : specify file <PATH> to write the tokens to." << std::endl;
 	std::cerr << "    -i <ITER>   : specify number of iterations to run as <ITER>." << std::endl;
 	std::cerr << "    <inputfile> = input file path or '-' for stdin" << std::endl;
 	std::cerr << "                  file with lines of the for \"*\" SOURCEID = [->] {<TARGETID>} \";\"" << std::endl;
@@ -189,6 +190,7 @@ int main( int argc, const char** argv)
 		bool verbose = false;
 		bool logscale = false;
 		std::string redirectFilename;
+		std::string tokensFilename;
 		int iterations = strus::PageRank::NofIterations;
 		int normval = 0;
 
@@ -348,6 +350,11 @@ int main( int argc, const char** argv)
 							if (verbose)
 							{
 								std::cerr << "link " << declname << " = " << *li << std::endl;
+							}
+							if (*li == "david_bowie")
+							{
+								std::cerr << "link " << declname << "[" << dpg << "]" << " = " << *li << "[" << lpg << "]" << std::endl;
+								pagerank.declare_observed_item( lpg);
 							}
 						}
 					}
