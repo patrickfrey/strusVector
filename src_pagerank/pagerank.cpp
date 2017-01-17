@@ -201,6 +201,10 @@ void PageRank::printRedirectsToFile( const std::string& filename) const
 
 PageRank::PageId PageRank::resolveRedirect( const PageId& pid) const
 {
+	if (m_defset.find( pid) != m_defset.end())
+	{
+		return pid;
+	}
 	PageId rt = pid;
 	PageId minimum = pid;
 	enum {MaxCnt=20};
