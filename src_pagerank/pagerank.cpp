@@ -174,6 +174,9 @@ std::vector<double> PageRank::calculate() const
 
 void PageRank::printRedirectsToFile( const std::string& filename) const
 {
+	unsigned int ec = writeFile( filename, std::string());
+	if (ec) throw std::runtime_error( string_format( "failed to write redirects to file: %s", ::strerror(ec)));
+
 	enum {NofLinesPerChunk=100000};
 	std::string outbuf;
 	RedirectMap::const_iterator ri = m_redirectMap.begin(), re = m_redirectMap.end();
@@ -182,11 +185,11 @@ void PageRank::printRedirectsToFile( const std::string& filename) const
 		if (ridx >= NofLinesPerChunk)
 		{
 			unsigned int ec = appendFile( filename, outbuf);
-			if (ec) throw std::runtime_error( string_format( "failed to print redirects to file: %s", ::strerror(ec)));
+			if (ec) throw std::runtime_error( string_format( "failed to write redirects to file: %s", ::strerror(ec)));
 			ridx = 0;
 			outbuf.clear();
 		}
-		if (!pageDefined( ri->first))
+		if (!pageDefined( ri->first) && pageDefined( ri->second))
 		{
 			outbuf.append( getPageName( ri->first));
 			outbuf.push_back( '\t');
@@ -197,7 +200,7 @@ void PageRank::printRedirectsToFile( const std::string& filename) const
 	if (!outbuf.empty())
 	{
 		unsigned int ec = appendFile( filename, outbuf);
-		if (ec) throw std::runtime_error( string_format( "failed to print redirects to file: %s", ::strerror(ec)));
+		if (ec) throw std::runtime_error( string_format( "failed to write redirects to file: %s", ::strerror(ec)));
 	}
 }
 
