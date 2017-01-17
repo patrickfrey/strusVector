@@ -62,6 +62,10 @@ public:
 	void printRedirectsToFile( const std::string& filename) const;
 
 	PageRank reduce() const;
+	bool pageDefined( const PageId& pid) const
+	{
+		return m_defset.find(pid) != m_defset.end();
+	}
 
 private:
 	PageId resolveRedirect( const PageId& pid) const;

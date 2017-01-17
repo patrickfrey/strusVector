@@ -186,7 +186,7 @@ void PageRank::printRedirectsToFile( const std::string& filename) const
 			ridx = 0;
 			outbuf.clear();
 		}
-		if (m_defset.find( ri->first) != m_defset.end())
+		if (!pageDefined( ri->first))
 		{
 			outbuf.append( getPageName( ri->first));
 			outbuf.push_back( '\t');
@@ -204,12 +204,12 @@ void PageRank::printRedirectsToFile( const std::string& filename) const
 
 PageRank::PageId PageRank::resolveRedirect( const PageId& pid) const
 {
-	if (m_defset.find( pid) != m_defset.end())
+	if (pageDefined( pid))
 	{
 		return pid;
 	}
 	RedirectMap::const_iterator ri = m_redirectMap.find( pid);
-	if (ri != m_redirectMap.end() && m_defset.find( ri->second) != m_defset.end())
+	if (ri != m_redirectMap.end() && pageDefined( ri->second))
 	{
 		return ri->second;
 	}
