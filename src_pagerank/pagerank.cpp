@@ -236,7 +236,7 @@ PageRank PageRank::reduce() const
 	for (; li != le; ++li)
 	{
 		Link newlink = Link( 
-				resolveRedirect( li->first.first), 
+				li->first.first,
 				resolveRedirect( li->first.second));
 
 		LinkMatrix::iterator ni = newLinkMatrix.find( newlink);
