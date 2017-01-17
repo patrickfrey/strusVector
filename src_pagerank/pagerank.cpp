@@ -186,10 +186,13 @@ void PageRank::printRedirectsToFile( const std::string& filename) const
 			ridx = 0;
 			outbuf.clear();
 		}
-		outbuf.append( getPageName( ri->first));
-		outbuf.push_back( '\t');
-		outbuf.append( getPageName( ri->second));
-		outbuf.push_back( '\n');
+		if (m_defset.find( ri->first) != m_defset.end())
+		{
+			outbuf.append( getPageName( ri->first));
+			outbuf.push_back( '\t');
+			outbuf.append( getPageName( ri->second));
+			outbuf.push_back( '\n');
+		}
 	}
 	if (!outbuf.empty())
 	{
@@ -205,30 +208,12 @@ PageRank::PageId PageRank::resolveRedirect( const PageId& pid) const
 	{
 		return pid;
 	}
-	PageId rt = pid;
-	PageId minimum = pid;
-	enum {MaxCnt=20};
-	unsigned int cnt = 0;
-	RedirectMap::const_iterator ri = m_redirectMap.find( rt);
-	while (ri != m_redirectMap.end() && ri->second != minimum && cnt < MaxCnt)
+	RedirectMap::const_iterator ri = m_redirectMap.find( pid);
+	if (ri != m_redirectMap.end() && m_defset.find( ri->second) != m_defset.end())
 	{
-		++cnt;
-		rt = ri->second;
-		if (rt < minimum)
-		{
-			if (m_defset.find( rt) != m_defset.end())
-			{
-				minimum = rt;
-			}
-		}
-		ri = m_redirectMap.find( rt);
+		return ri->second;
 	}
-	if (ri != m_redirectMap.end())
-	{
-		//... circular reference, take the smallest of all entries found in the circle
-		return minimum;
-	}
-	return rt;
+	return pid;
 }
 
 PageRank PageRank::reduce() const
