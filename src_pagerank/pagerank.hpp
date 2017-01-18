@@ -12,7 +12,6 @@
 #include <vector>
 #include <map>
 #include <set>
-/*[-]*/#include <iostream>
 
 namespace strus {
 

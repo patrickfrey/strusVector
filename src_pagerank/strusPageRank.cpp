@@ -323,7 +323,8 @@ int main( int argc, const char** argv)
 					break;
 				case LEXEM_ENDRULE:
 				{
-					strus::PageRank::PageId dpg = pagerank.getOrCreatePageId( declname, true);
+					bool isdecl = !linknames.empty();
+					strus::PageRank::PageId dpg = pagerank.getOrCreatePageId( declname, isdecl);
 					if (declname.empty())
 					{
 						std::cerr << "empty declaration found" << std::endl;
