@@ -27,6 +27,7 @@ set(
 	databaseAdapter.cpp
 	vectorStorageConfig.cpp
 	vectorStorageDump.cpp
+	vectorStorageSearch.cpp
 	vectorStorage.cpp
 )
 
