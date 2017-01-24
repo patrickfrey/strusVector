@@ -116,6 +116,7 @@ static strus::ErrorBufferInterface* g_errorhnd = 0;
 	"singletons=no;"\
 	"probsim=no;"\
 	"forcesim=no"
+//"path=vsmodel;threads=0;logfile=-;dim=300;bit=64;var=32;maxdist=400;simdist=340;raddist=250;eqdist=80;mutations=20;votes=5;descendants=5;maxage=30;iterations=40;assignments=7;isaf=0.6;eqdiff=0.15;maxfeatures=1000000;maxconcepts=4000000;singletons=no;probsim=no;forcesim=no"
 
 
 int main( int argc, const char** argv)
@@ -160,7 +161,7 @@ int main( int argc, const char** argv)
 		}
 		if (printUsageAndExit)
 		{
-			std::cerr << "Usage: " << argv[0] << " [<config>] [<number of concepts added>]" << std::endl;
+			std::cerr << "Usage: " << argv[0] << " [<config>] [<number of features added>]" << std::endl;
 			std::cerr << "options:" << std::endl;
 			std::cerr << "-h     : print this usage" << std::endl;
 			std::cerr << "-b     : do not recreate model, use the one built" << std::endl;
