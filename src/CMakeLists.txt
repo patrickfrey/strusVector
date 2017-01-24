@@ -28,6 +28,9 @@ set(
 	vectorStorageConfig.cpp
 	vectorStorageDump.cpp
 	vectorStorageSearch.cpp
+	vectorStorageClient.cpp
+	vectorStorageTransaction.cpp
+	vectorStorageBuilder.cpp
 	vectorStorage.cpp
 )
 

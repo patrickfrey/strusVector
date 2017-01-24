@@ -25,7 +25,6 @@ using namespace strus;
 
 #define VARIABLE_NOF_SAMPLES  "samples"
 #define VARIABLE_NOF_CONCEPTS "concepts"
-#define VARIABLE_STATE "state"
 #define VARIABLE_NOF_SIMRELATIONS "simrelations"
 
 #undef STRUS_LOWLEVEL_DEBUG
@@ -37,34 +36,28 @@ DatabaseAdapter::DatabaseAdapter( const DatabaseInterface* database_, const std:
 }
 
 DatabaseAdapter::DatabaseAdapter( const DatabaseAdapter& o)
-	:m_database(o.m_database),m_transaction(),m_cursor(),m_cursorkey(),m_errorhnd(o.m_errorhnd)
+	:m_database(o.m_database),m_errorhnd(o.m_errorhnd)
 {}
 
 
-void DatabaseAdapter::commit()
+DatabaseAdapter::Transaction::Transaction( DatabaseClientInterface* database, ErrorBufferInterface* errorhnd_)
+	:m_errorhnd(errorhnd_),m_transaction( database->createTransaction())
 {
-	if (m_transaction.get())
-	{
-		if (!m_transaction->commit())
-		{
-			m_transaction.reset();
-			throw strus::runtime_error( _TXT("standard vector storage transaction commit failed: %s"), m_errorhnd->fetchError());
-		}
-		m_transaction.reset();
-	}
-}
-
-void DatabaseAdapter::beginTransaction()
-{
-	if (m_transaction.get())
-	{
-		m_transaction->rollback();
-	}
-	m_transaction.reset( m_database->createTransaction());
 	if (!m_transaction.get())
 	{
-		throw strus::runtime_error( _TXT("standard vector storage create transaction failed: %s"), m_errorhnd->fetchError());
+		throw strus::runtime_error( _TXT("vector storage create transaction failed: %s"), m_errorhnd->fetchError());
 	}
+	
+}
+
+bool DatabaseAdapter::Transaction::commit()
+{
+	return m_transaction->commit();
+}
+
+void DatabaseAdapter::Transaction::rollback()
+{
+	m_transaction->rollback();
 }
 
 
@@ -129,17 +122,16 @@ void DatabaseAdapter::checkVersion()
 	hdr.check();
 }
 
-void DatabaseAdapter::writeVersion()
+void DatabaseAdapter::Transaction::writeVersion()
 {
 	DatabaseKeyBuffer key( KeyVersion);
 
 	VectorStorageHdr hdr;
 	hdr.hton();
-	if (!m_transaction.get()) beginTransaction();
 	m_transaction->write( key.c_str(), key.size(), (const char*)&hdr, sizeof(hdr));
 }
 
-void DatabaseAdapter::writeVariable( const std::string& name, unsigned int value)
+void DatabaseAdapter::Transaction::writeVariable( const std::string& name, unsigned int value)
 {
 	std::string key;
 	key.push_back( (char)KeyVariable);
@@ -147,7 +139,6 @@ void DatabaseAdapter::writeVariable( const std::string& name, unsigned int value
 	DatabaseValueBuffer valuebuf;
 	valuebuf[ (uint64_t)value];
 
-	if (!m_transaction.get()) beginTransaction();
 	m_transaction->write( key.c_str(), key.size(), valuebuf.c_str(), valuebuf.size());
 }
 
@@ -198,34 +189,23 @@ std::vector<std::pair<std::string,uint64_t> > DatabaseAdapter::readVariables() c
 	return rt;
 }
 
-void DatabaseAdapter::writeNofSamples( const SampleIndex& nofSamples)
+void DatabaseAdapter::Transaction::writeNofSamples( const SampleIndex& nofSamples)
 {
-	if (!m_transaction.get()) beginTransaction();
 	writeVariable( VARIABLE_NOF_SAMPLES, nofSamples);
 }
 
-void DatabaseAdapter::writeNofSimRelations( const SampleIndex& nofSamples)
+void DatabaseAdapter::Transaction::writeNofSimRelations( const SampleIndex& nofSamples)
 {
-	if (!m_transaction.get()) beginTransaction();
 	return writeVariable( VARIABLE_NOF_SIMRELATIONS, nofSamples);
 }
 
-void DatabaseAdapter::writeNofConcepts( const std::string& clname, const ConceptIndex& nofConcepts)
+void DatabaseAdapter::Transaction::writeNofConcepts( const std::string& clname, const ConceptIndex& nofConcepts)
 {
-	if (!m_transaction.get()) beginTransaction();
 	writeVariable( std::string(VARIABLE_NOF_CONCEPTS) + "_" + clname, nofConcepts);
 }
 
-void DatabaseAdapter::writeState( unsigned int state)
+void DatabaseAdapter::Transaction::writeSample( const SampleIndex& sidx, const std::string& name, const Vector& vec, const SimHash& simHash)
 {
-	if (!m_transaction.get()) beginTransaction();
-	writeVariable( VARIABLE_STATE, state);
-}
-
-
-void DatabaseAdapter::writeSample( const SampleIndex& sidx, const std::string& name, const Vector& vec, const SimHash& simHash)
-{
-	if (!m_transaction.get()) beginTransaction();
 	writeSampleIndex( sidx, name);
 	writeSampleName( sidx, name);
 	writeSampleVector( sidx, vec);
@@ -352,13 +332,12 @@ DatabaseAdapter::Vector DatabaseAdapter::readSampleVector( const SampleIndex& si
 	return vectorFromSerialization<double>( blob);
 }
 
-void DatabaseAdapter::writeSampleVector( const SampleIndex& sidx, const Vector& vec)
+void DatabaseAdapter::Transaction::writeSampleVector( const SampleIndex& sidx, const Vector& vec)
 {
 	DatabaseKeyBuffer key( KeySampleVector);
 	key[ sidx+1];
 
 	std::string blob( vectorSerialization<double>( vec));
-	if (!m_transaction.get()) beginTransaction();
 	m_transaction->write( key.c_str(), key.size(), blob.c_str(), blob.size());
 }
 
@@ -382,12 +361,10 @@ std::string DatabaseAdapter::readSampleName( const SampleIndex& sidx) const
 	return name;
 }
 
-void DatabaseAdapter::writeSampleName( const SampleIndex& sidx, const std::string& name)
+void DatabaseAdapter::Transaction::writeSampleName( const SampleIndex& sidx, const std::string& name)
 {
 	DatabaseKeyBuffer key( KeySampleName);
 	key[ sidx+1];
-
-	if (!m_transaction.get()) beginTransaction();
 	m_transaction->write( key.c_str(), key.size(), name.c_str(), name.size());
 }
 
@@ -416,13 +393,12 @@ SampleIndex DatabaseAdapter::readSampleIndex( const std::string& name) const
 	return value;
 }
 
-void DatabaseAdapter::writeSampleIndex( const SampleIndex& sidx, const std::string& name)
+void DatabaseAdapter::Transaction::writeSampleIndex( const SampleIndex& sidx, const std::string& name)
 {
 	std::string key;
 	key.push_back( (char)KeySampleNameInv);
 	key.append( name);
 
-	if (!m_transaction.get()) beginTransaction();
 	DatabaseValueBuffer buffer;
 	buffer[ sidx];
 	m_transaction->write( key.c_str(), key.size(), buffer.c_str(), buffer.size());
@@ -441,11 +417,6 @@ SampleIndex DatabaseAdapter::readNofSimRelations() const
 ConceptIndex DatabaseAdapter::readNofConcepts( const std::string& clname) const
 {
 	return readVariable( std::string(VARIABLE_NOF_CONCEPTS) + "_" + clname);
-}
-
-unsigned int DatabaseAdapter::readState() const
-{
-	return readVariable( VARIABLE_STATE);
 }
 
 std::vector<std::string> DatabaseAdapter::readConceptClassNames() const
@@ -467,9 +438,8 @@ std::vector<std::string> DatabaseAdapter::readConceptClassNames() const
 	return stringListFromSerialization( blob);
 }
 
-void DatabaseAdapter::writeConceptClassNames( const std::vector<std::string>& clnames)
+void DatabaseAdapter::Transaction::writeConceptClassNames( const std::vector<std::string>& clnames)
 {
-	if (!m_transaction.get()) beginTransaction();
 	DatabaseKeyBuffer key( KeyConceptClassNames);
 	std::string buffer = stringListSerialization( clnames);
 	m_transaction->write( key.c_str(), key.size(), buffer.c_str(), buffer.size());
@@ -520,10 +490,8 @@ std::vector<SimHash> DatabaseAdapter::readSimhashVector( const KeyPrefix& prefix
 	return rt;
 }
 
-void DatabaseAdapter::writeSimhashVector( const KeyPrefix& prefix, const std::vector<SimHash>& ar)
+void DatabaseAdapter::Transaction::writeSimhashVector( const KeyPrefix& prefix, const std::vector<SimHash>& ar)
 {
-	if (!m_transaction.get()) beginTransaction();
-
 	std::vector<SimHash>::const_iterator si = ar.begin(), se = ar.end();
 	for (std::size_t sidx=0; si < se; ++si,++sidx)
 	{
@@ -531,9 +499,8 @@ void DatabaseAdapter::writeSimhashVector( const KeyPrefix& prefix, const std::ve
 	}
 }
 
-void DatabaseAdapter::writeSimhash( const KeyPrefix& prefix, const SampleIndex& sidx, const SimHash& simHash)
+void DatabaseAdapter::Transaction::writeSimhash( const KeyPrefix& prefix, const SampleIndex& sidx, const SimHash& simHash)
 {
-	if (!m_transaction.get()) beginTransaction();
 	DatabaseKeyBuffer key( prefix);
 	key[ sidx+1];
 
@@ -571,12 +538,11 @@ VectorStorageConfig DatabaseAdapter::readConfig() const
 	return VectorStorageConfig( content, m_errorhnd);
 }
 
-void DatabaseAdapter::writeConfig( const VectorStorageConfig& config)
+void DatabaseAdapter::Transaction::writeConfig( const VectorStorageConfig& config)
 {
 	DatabaseKeyBuffer key( KeyConfig);
 	std::string content( config.tostring( false));
 
-	if (!m_transaction.get()) beginTransaction();
 	m_transaction->write( key.c_str(), key.size(), content.c_str(), content.size());
 }
 
@@ -618,12 +584,11 @@ LshModel DatabaseAdapter::readLshModel() const
 	return LshModel::fromSerialization( content);
 }
 
-void DatabaseAdapter::writeLshModel( const LshModel& model)
+void DatabaseAdapter::Transaction::writeLshModel( const LshModel& model)
 {
 	DatabaseKeyBuffer key( KeyLshModel);	
 	std::string content( model.serialization());
 
-	if (!m_transaction.get()) beginTransaction();
 	m_transaction->write( key.c_str(), key.size(), content.c_str(), content.size());
 }
 
@@ -710,7 +675,7 @@ std::vector<SimRelationMap::Element> DatabaseAdapter::readSimRelations( const Sa
 	}
 }
 
-void DatabaseAdapter::writeSimRelationRow( const SampleIndex& sidx, const SimRelationMap::Row& row)
+void DatabaseAdapter::Transaction::writeSimRelationRow( const SampleIndex& sidx, const SimRelationMap::Row& row)
 {
 	DatabaseKeyBuffer key( KeySimRelationMap);
 	key[ sidx+1];
@@ -723,11 +688,10 @@ void DatabaseAdapter::writeSimRelationRow( const SampleIndex& sidx, const SimRel
 		buffer[ ri->index][ ri->simdist];
 		content.append( buffer.c_str(), buffer.size());
 	}
-	if (!m_transaction.get()) beginTransaction();
 	m_transaction->write( key.c_str(), key.size(), content.c_str(), content.size());
 }
 
-void DatabaseAdapter::writeSimRelationMap( const SimRelationMap& simrelmap)
+void DatabaseAdapter::Transaction::writeSimRelationMap( const SimRelationMap& simrelmap)
 {
 	SampleIndex si = simrelmap.startIndex(), se = simrelmap.endIndex();
 	for (; si != se; ++si)
@@ -797,9 +761,23 @@ std::vector<ConceptIndex> DatabaseAdapter::readSampleConceptIndices( const std::
 	return vectorFromSerialization<ConceptIndex>( blob);
 }
 
-void DatabaseAdapter::writeSampleConceptIndexMap( const std::string& clname, const SampleConceptIndexMap& sfmap)
+void DatabaseAdapter::Transaction::writeSampleConceptIndices( const std::string& clname, const SampleIndex& sidx, const std::vector<ConceptIndex>& concepts)
 {
-	if (!m_transaction.get()) beginTransaction();
+	DatabaseKeyBuffer key( KeySampleConceptIndexMap);
+	key( clname)[ sidx+1];
+	if (concepts.empty())
+	{
+		m_transaction->remove( key.c_str(), key.size());
+	}
+	else
+	{
+		std::string blob = vectorSerialization<ConceptIndex>( concepts);
+		m_transaction->write( key.c_str(), key.size(), blob.c_str(), blob.size());
+	}
+}
+
+void DatabaseAdapter::Transaction::writeSampleConceptIndexMap( const std::string& clname, const SampleConceptIndexMap& sfmap)
+{
 	SampleIndex si = 0, se = sfmap.maxkey()+1;
 	for (; si != se; ++si)
 	{
@@ -837,14 +815,28 @@ std::vector<SampleIndex> DatabaseAdapter::readConceptSampleIndices( const std::s
 	return vectorFromSerialization<SampleIndex>( blob);
 }
 
+void DatabaseAdapter::Transaction::writeConceptSampleIndices( const std::string& clname, const ConceptIndex& cidx, const std::vector<SampleIndex>& features)
+{
+	DatabaseKeyBuffer key( KeyConceptSampleIndexMap);
+	key( clname)[ cidx];
+	if (features.empty())
+	{
+		m_transaction->remove( key.c_str(), key.size());
+	}
+	else
+	{
+		std::string blob = vectorSerialization<ConceptIndex>( features);
+		m_transaction->write( key.c_str(), key.size(), blob.c_str(), blob.size());
+	}
+}
+
 SampleConceptIndexMap DatabaseAdapter::readSampleConceptIndexMap( const std::string& clname) const
 {
 	return readIndexListMap( KeySampleConceptIndexMap, clname);
 }
 
-void DatabaseAdapter::writeConceptSampleIndexMap( const std::string& clname, const ConceptSampleIndexMap& csmap)
+void DatabaseAdapter::Transaction::writeConceptSampleIndexMap( const std::string& clname, const ConceptSampleIndexMap& csmap)
 {
-	if (!m_transaction.get()) beginTransaction();
 	ConceptIndex ci = 1, ce = csmap.maxkey()+1;
 	for (; ci != ce; ++ci)
 	{
@@ -944,105 +936,65 @@ std::vector<SampleIndex> DatabaseAdapter::readConceptSingletons( const std::stri
 	return rt;
 }
 
-std::vector<ConceptIndex> DatabaseAdapter::readConceptDependencies( const std::string& clname, const ConceptIndex& cidx, const std::string& depclname) const
+void DatabaseAdapter::Transaction::deleteSubTree( const KeyPrefix& prefix)
 {
-	DatabaseKeyBuffer key( KeyConceptDependency);
-	key(clname)(depclname)[ cidx];
-
-	std::string blob;
-	if (!m_database->readValue( key.c_str(), key.size(), blob, DatabaseOptions().useCache()))
-	{
-		if (m_errorhnd->hasError())
-		{
-			throw strus::runtime_error( _TXT( "failed to read concept cover dependencies from database: %s"), m_errorhnd->fetchError());
-		}
-		else
-		{
-			return std::vector<ConceptIndex>();
-		}
-	}
-	return vectorFromSerialization<ConceptIndex>( blob);
-}
-
-void DatabaseAdapter::writeConceptDependencies( const std::string& clname, const ConceptIndex& cidx, const std::string& depclname, const std::vector<ConceptIndex>& deplist)
-{
-	if (!m_transaction.get()) beginTransaction();
-	std::string blob = vectorSerialization<SampleIndex>( deplist);
-	DatabaseKeyBuffer key( KeyConceptDependency);
-	key(clname)(depclname)[ cidx];
-	m_transaction->write( key.c_str(), key.size(), blob.c_str(), blob.size());
-}
-
-void DatabaseAdapter::deleteSubTree( const KeyPrefix& prefix)
-{
-	if (!m_transaction.get()) beginTransaction();
 	DatabaseKeyBuffer key( prefix);
 	m_transaction->removeSubTree( key.c_str(), key.size());
 }
 
-void DatabaseAdapter::clear()
+void DatabaseAdapter::Transaction::deleteData()
 {
-	deleteConfig();
-	deleteVariables();
+	writeVariable( VARIABLE_NOF_CONCEPTS, 0);
+	writeVariable( VARIABLE_NOF_SIMRELATIONS, 0);
 	deleteConceptClassNames();
-	deleteSamples();
-	deleteSampleSimhashVectors();
-	deleteLshModel();
 	deleteSimRelationMap();
 	deleteSampleConceptIndexMaps();
 	deleteConceptSampleIndexMaps();
-	deleteConceptDependencies();
-	writeState( 0);
 }
 
-void DatabaseAdapter::deleteConfig()
+void DatabaseAdapter::Transaction::deleteConfig()
 {
 	deleteSubTree( KeyVariable);
 }
 
-void DatabaseAdapter::deleteVariables()
+void DatabaseAdapter::Transaction::deleteVariables()
 {
 	deleteSubTree( KeyVariable);
 }
 
-void DatabaseAdapter::deleteConceptClassNames()
+void DatabaseAdapter::Transaction::deleteConceptClassNames()
 {
 	deleteSubTree( KeyConceptClassNames);
 }
 
-void DatabaseAdapter::deleteSamples()
+void DatabaseAdapter::Transaction::deleteSamples()
 {
 	deleteSubTree( KeySampleVector);
 	deleteSubTree( KeySampleName);
 	deleteSubTree( KeySampleNameInv);
 }
 
-void DatabaseAdapter::deleteSampleSimhashVectors()
+void DatabaseAdapter::Transaction::deleteSampleSimhashVectors()
 {
 	deleteSubTree( KeySampleSimHash);
 }
 
-void DatabaseAdapter::deleteSimRelationMap()
+void DatabaseAdapter::Transaction::deleteSimRelationMap()
 {
 	deleteSubTree( KeySimRelationMap);
 }
 
-void DatabaseAdapter::deleteSampleConceptIndexMaps()
+void DatabaseAdapter::Transaction::deleteSampleConceptIndexMaps()
 {
 	deleteSubTree( KeySampleConceptIndexMap);
 }
 
-void DatabaseAdapter::deleteConceptSampleIndexMaps()
+void DatabaseAdapter::Transaction::deleteConceptSampleIndexMaps()
 {
 	deleteSubTree( KeyConceptSampleIndexMap);
 }
 
-void DatabaseAdapter::deleteConceptDependencies()
-{
-	deleteSubTree( KeyConceptDependency);
-}
-
-void DatabaseAdapter::deleteLshModel()
+void DatabaseAdapter::Transaction::deleteLshModel()
 {
 	deleteSubTree( KeyLshModel);
 }
@@ -1067,7 +1019,6 @@ struct DatabaseKeyNameTab
 		ar[ DatabaseAdapter::KeySimRelationMap - 32] = "simrel";
 		ar[ DatabaseAdapter::KeySampleConceptIndexMap - 32] = "featcon";
 		ar[ DatabaseAdapter::KeyConceptSampleIndexMap - 32] = "confeat";
-		ar[ DatabaseAdapter::KeyConceptDependency -32] = "condep";
 	}
 	const char* operator[]( DatabaseAdapter::KeyPrefix i) const
 	{
@@ -1077,7 +1028,7 @@ struct DatabaseKeyNameTab
 
 static const DatabaseKeyNameTab keyNameTab;
 
-void DatabaseAdapter::dumpKeyValue( std::ostream& out, const strus::DatabaseCursorInterface::Slice& key, const strus::DatabaseCursorInterface::Slice& value)
+void DatabaseAdapter::DumpIterator::dumpKeyValue( std::ostream& out, const strus::DatabaseCursorInterface::Slice& key, const strus::DatabaseCursorInterface::Slice& value)
 {
 	out << keyNameTab[ (KeyPrefix)key.ptr()[0]] << ": ";
 	switch ((KeyPrefix)key.ptr()[0])
@@ -1216,28 +1167,6 @@ void DatabaseAdapter::dumpKeyValue( std::ostream& out, const strus::DatabaseCurs
 			out << std::endl;
 			break;
 		}
-		case DatabaseAdapter::KeyConceptDependency:
-		{
-			const char* cl;
-			std::size_t clsize;
-			const char* depcl;
-			std::size_t depclsize;
-			ConceptIndex sidx;
-			DatabaseKeyScanner scanner( key.ptr()+1, key.size()-1);
-			scanner(cl,clsize)(depcl,depclsize)[ sidx];
-			std::string clstr( cl,clsize);
-			std::string depclstr( depcl,depclsize);
-			out << (clsize?clstr:std::string("_")) << " " << (depclsize?depclstr:std::string("_")) << " " << sidx;
-
-			std::vector<ConceptIndex> far = vectorFromSerialization<ConceptIndex>( value);
-			std::vector<ConceptIndex>::const_iterator fi = far.begin(), fe = far.end();
-			for (; fi != fe; ++fi)
-			{
-				out << " " << *fi;
-			}
-			out << std::endl;
-			break;
-		}
 		default:
 		{
 			throw strus::runtime_error( _TXT( "illegal data base key prefix '%c' for this vector storage storage"), (char)((KeyPrefix)key.ptr()[0]));
@@ -1245,22 +1174,26 @@ void DatabaseAdapter::dumpKeyValue( std::ostream& out, const strus::DatabaseCurs
 	}
 }
 
-bool DatabaseAdapter::dumpFirst( std::ostream& out, const std::string& keyprefix)
+DatabaseAdapter::DumpIterator::DumpIterator( const DatabaseClientInterface* database, const std::string& cursorkey_, ErrorBufferInterface* errorhnd_)
+	:m_errorhnd(errorhnd_),m_cursor(database->createCursor( DatabaseOptions())),m_cursorkey(cursorkey_),m_first(false)
 {
-	m_cursor.reset( m_database->createCursor( DatabaseOptions()));
 	if (!m_cursor.get()) throw strus::runtime_error(_TXT("error creating database cursor"));
-	m_cursorkey = keyprefix;
-	strus::DatabaseCursorInterface::Slice key = m_cursor->seekFirst( m_cursorkey.c_str(), m_cursorkey.size());
-	if (!key.defined()) return false;
-	dumpKeyValue( out, key, m_cursor->value());
-	return true;
 }
 
-bool DatabaseAdapter::dumpNext( std::ostream& out)
+bool DatabaseAdapter::DumpIterator::dumpNext( std::ostream& out)
 {
-	strus::DatabaseCursorInterface::Slice key = m_cursor->seekNext();
-	if (!key.defined()) return false;
-	std::string val( m_cursor->value());
+	strus::DatabaseCursorInterface::Slice key;
+	if (m_first)
+	{
+		key = m_cursor->seekFirst( m_cursorkey.c_str(), m_cursorkey.size());
+		if (!key.defined()) return false;
+		m_first = false;
+	}
+	else
+	{
+		key = m_cursor->seekNext();
+		if (!key.defined()) return false;
+	}
 	dumpKeyValue( out, key, m_cursor->value());
 	return true;
 }

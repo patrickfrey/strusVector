@@ -9,6 +9,8 @@
 #include "vectorStorageSearch.hpp"
 #include "strus/errorBufferInterface.hpp"
 #include "strus/databaseInterface.hpp"
+#include "errorUtils.hpp"
+#include "internationalization.hpp"
 #include <boost/make_shared.hpp>
 
 #define MODULENAME   "standard vector storage"
@@ -16,19 +18,17 @@
 
 using namespace strus;
 
-VectorStorageSearch::VectorStorageSearch( const DatabaseAdapter& database, const VectorStorageConfig& config_, const Index& range_from_, const Index& range_to_, ErrorBufferInterface* errorhnd_)
+VectorStorageSearch::VectorStorageSearch( const Reference<DatabaseAdapter>& database, const VectorStorageConfig& config_, const Index& range_from_, const Index& range_to_, ErrorBufferInterface* errorhnd_)
 	:m_errorhnd(errorhnd_)
 	,m_config(config_)
-	,m_lshmodel(database.readLshModel())
-	,m_samplear(database.readSampleSimhashVector(range_from_,range_to_),1/*prob select random seed*/)
+	,m_lshmodel(database->readLshModel())
+	,m_samplear(database->readSampleSimhashVector(range_from_,range_to_),1/*prob select random seed*/)
+	,m_database(m_config.with_realvecweights?database:Reference<DatabaseAdapter>())
 	,m_range_from(range_from_)
 	,m_range_to(range_to_)
-{
-	if (m_config.with_realvecweights)
-	{
-		m_database = boost::make_shared<DatabaseAdapter>( database);
-	}
-}
+{}
+
+typedef VectorStorageSearchInterface::Result Result;
 
 std::vector<Result> VectorStorageSearch::findSimilar( const std::vector<double>& vec, unsigned int maxNofResults) const
 {

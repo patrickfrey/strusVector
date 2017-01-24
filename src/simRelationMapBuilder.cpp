@@ -22,11 +22,11 @@ using namespace strus;
 #define WEIGHTFACTOR(dd) (dd + dd / 3)
 
 
-SimRelationMapBuilder::SimRelationMapBuilder( const std::vector<SimHash>& samplear, SampleIndex startsampleidx, unsigned int maxdist_, unsigned int maxsimsam_, unsigned int rndsimsam_, unsigned int threads_, bool probabilistic_, Logger& logout, const SimRelationReader* simmapreader_)
+SimRelationMapBuilder::SimRelationMapBuilder( const std::vector<SimHash>& samplear, unsigned int maxdist_, unsigned int maxsimsam_, unsigned int rndsimsam_, unsigned int threads_, bool probabilistic_, Logger& logout, const SimRelationReader* simmapreader_)
 	:m_base(samplear.data()),m_probabilistic(probabilistic_),m_maxdist(maxdist_),m_maxsimsam(maxsimsam_),m_rndsimsam(rndsimsam_),m_threads(threads_),m_index(0),m_benchar(),m_rnd(),m_simmapreader(simmapreader_)
 {
 	m_selectseed = m_rnd.get(0,std::numeric_limits<unsigned int>::max());
-	std::size_t ofs = startsampleidx;
+	std::size_t ofs = 0;
 	unsigned int oi = 0;
 	while (ofs < samplear.size())
 	{

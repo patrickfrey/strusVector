@@ -37,6 +37,7 @@ public:
 
 private:
 	DatabaseAdapter m_database;
+	Reference<DatabaseAdapter::DumpIterator> m_itr;
 	std::string m_chunk;
 	std::string m_keyprefix;
 	ErrorBufferInterface* m_errorhnd;			///< error buffer for exception free interface

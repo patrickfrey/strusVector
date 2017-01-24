@@ -9,6 +9,7 @@
 /// \file vector_std.hpp
 #ifndef _STRUS_VECTOR_STORAGE_STD_LIB_HPP_INCLUDED
 #define _STRUS_VECTOR_STORAGE_STD_LIB_HPP_INCLUDED
+#include <string>
 
 /// \brief strus toplevel namespace
 namespace strus {
@@ -21,9 +22,14 @@ class VectorStorageInterface;
 class DatabaseInterface;
 
 /// \brief Create standard vector space model
-/// \param[in] database database to us for the data repository of the model
 /// \param[in] errorhnd error handler to use
 VectorStorageInterface* createVectorStorage_std( ErrorBufferInterface* errorhnd);
+
+/// \brief Run the assignment of concepts to features inserted
+/// \param[in] database database to use for the data repository of the model
+/// \param[in] config configuration of vector storage and of concept learners
+/// \param[in] commands list of semicolon ';' separated list of commands
+bool runVectorStorageBuild_std( const DatabaseInterface* database, const std::string& config, const std::string& commands, ErrorBufferInterface* errorhnd);
 
 }//namespace
 #endif

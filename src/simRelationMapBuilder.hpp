@@ -24,7 +24,7 @@ namespace strus {
 class SimRelationMapBuilder
 {
 public:
-	SimRelationMapBuilder( const std::vector<SimHash>& samplear, SampleIndex startsampleidx, unsigned int maxdist_, unsigned int maxsimsam_, unsigned int rndsimsam_, unsigned int threads_, bool probabilistic_, Logger& logout, const SimRelationReader* simmapreader_);
+	SimRelationMapBuilder( const std::vector<SimHash>& samplear, unsigned int maxdist_, unsigned int maxsimsam_, unsigned int rndsimsam_, unsigned int threads_, bool probabilistic_, Logger& logout, const SimRelationReader* simmapreader_);
 	bool getNextSimRelationMap( SimRelationMap& res);
 
 public:/*Internal for thread context*/

@@ -25,6 +25,7 @@ using namespace strus;
 
 VectorStorageDump::VectorStorageDump( const DatabaseInterface* database_, const std::string& configsrc, const std::string& keyprefix_, ErrorBufferInterface* errorhnd_)
 	:m_database(database_,configsrc,errorhnd_)
+	,m_itr()
 	,m_chunk()
 	,m_keyprefix(keyprefix_)
 	,m_errorhnd(errorhnd_)
@@ -37,12 +38,12 @@ bool VectorStorageDump::nextChunk( const char*& chunk, std::size_t& chunksize)
 	{
 		std::ostringstream output;
 		std::size_t rowcnt = 0;
-		if (m_chunk.empty())
+		if (!m_itr.get())
 		{
-			if (!m_database.dumpFirst( output, m_keyprefix)) return false;
-			rowcnt += 1;
+			m_itr.reset( m_database.createDumpIterator( m_keyprefix));
+			if (!m_itr.get()) throw strus::runtime_error(_TXT("failed to create vector storage dump cursor"));
 		}
-		while (rowcnt++ <= NofKeyValuePairsPerChunk && m_database.dumpNext( output)){}
+		while (rowcnt++ <= NofKeyValuePairsPerChunk && m_itr->dumpNext( output)){}
 		m_chunk = output.str();
 		chunk = m_chunk.c_str();
 		chunksize = m_chunk.size();

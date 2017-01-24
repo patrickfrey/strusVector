@@ -27,19 +27,20 @@ class VectorStorageSearch
 	:public VectorStorageSearchInterface
 {
 public:
-	VectorStorageSearch( const DatabaseAdapter& database, const VectorStorageConfig& config_, const Index& range_from_, const Index& range_to_, ErrorBufferInterface* errorhnd_);
+	VectorStorageSearch( const Reference<DatabaseAdapter>& database, const VectorStorageConfig& config_, const Index& range_from_, const Index& range_to_, ErrorBufferInterface* errorhnd_);
 
 	virtual ~VectorStorageSearch(){}
 
 	virtual std::vector<Result> findSimilar( const std::vector<double>& vec, unsigned int maxNofResults) const;
 
 	virtual void close();
+
 private:
 	ErrorBufferInterface* m_errorhnd;
 	VectorStorageConfig m_config;
 	LshModel m_lshmodel;
 	SimHashMap m_samplear;
-	boost::shared_ptr<DatabaseAdapter> m_database;
+	Reference<DatabaseAdapter> m_database;
 	Index m_range_from;
 	Index m_range_to;
 };

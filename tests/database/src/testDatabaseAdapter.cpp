@@ -12,7 +12,7 @@
 #include "strus/index.hpp"
 #include "strus/vectorStorageInterface.hpp"
 #include "strus/vectorStorageClientInterface.hpp"
-#include "strus/vectorStorageBuilderInterface.hpp"
+#include "strus/vectorStorageTransactionInterface.hpp"
 #include "strus/databaseInterface.hpp"
 #include "strus/errorBufferInterface.hpp"
 #include "strus/base/configParser.hpp"
@@ -161,7 +161,6 @@ struct TestDataset
 	TestDataset( const strus::VectorStorageConfig& config, unsigned int nofSamples_)
 		:nofConcepts(getNofConcepts( nofSamples_))
 		,nofSamples(nofSamples_)
-		,state((nofSamples_*17)%3 + 1)
 		,lshmodel( config.dim, config.bits, config.variations)
 		,simrelmap(getSimRelationMap( nofSamples, config.gencfg.simdist))
 		,sfmap(getSampleConceptIndexMap( nofSamples))
@@ -180,7 +179,6 @@ struct TestDataset
 
 	strus::Index nofConcepts;
 	strus::Index nofSamples;
-	unsigned int state;
 	strus::LshModel lshmodel;
 	strus::SimRelationMap simrelmap;
 	strus::SampleConceptIndexMap sfmap;
@@ -207,22 +205,22 @@ static void writeDatabase( const strus::VectorStorageConfig& config, const TestD
 		throw std::runtime_error("could not create new test database");
 	}
 	strus::DatabaseAdapter database( dbi.get(), config.databaseConfig, g_errorhnd);
+	strus::Reference<strus::DatabaseAdapter::Transaction> transaction( database.createTransaction());
 
-	database.writeVersion();
-	database.writeNofSamples( dataset.nofSamples);
-	database.writeNofConcepts( MAIN_CONCEPTNAME, dataset.nofConcepts);
-	database.writeState( dataset.state);
+	transaction->writeVersion();
+	transaction->writeNofSamples( dataset.nofSamples);
+	transaction->writeNofConcepts( MAIN_CONCEPTNAME, dataset.nofConcepts);
 	strus::Index si = 0, se = dataset.nofSamples;
 	for (; si != se; ++si)
 	{
-		database.writeSample( si, dataset.sampleNames[si], dataset.sampleVectors[si], dataset.sampleSimHashs[si]);
+		transaction->writeSample( si, dataset.sampleNames[si], dataset.sampleVectors[si], dataset.sampleSimHashs[si]);
 	}
-	database.writeSimRelationMap( dataset.simrelmap);
-	database.writeSampleConceptIndexMap( MAIN_CONCEPTNAME, dataset.sfmap);
-	database.writeConceptSampleIndexMap( MAIN_CONCEPTNAME, dataset.fsmap);
-	database.writeConfig( config);
-	database.writeLshModel( dataset.lshmodel);
-	database.commit();
+	transaction->writeSimRelationMap( dataset.simrelmap);
+	transaction->writeSampleConceptIndexMap( MAIN_CONCEPTNAME, dataset.sfmap);
+	transaction->writeConceptSampleIndexMap( MAIN_CONCEPTNAME, dataset.fsmap);
+	transaction->writeConfig( config);
+	transaction->writeLshModel( dataset.lshmodel);
+	if (!transaction->commit()) throw strus::runtime_error(_TXT("vector storage transaction failed"));
 }
 
 static bool compare( const std::vector<double>& v1, const std::vector<double>& v2)
@@ -317,7 +315,6 @@ static void readAndCheckDatabase( const strus::VectorStorageConfig& config, cons
 	database.checkVersion();
 	if (dataset.nofSamples != database.readNofSamples()) throw std::runtime_error("number of samples does not match");
 	if (dataset.nofConcepts != database.readNofConcepts( MAIN_CONCEPTNAME)) throw std::runtime_error("number of concepts does not match");
-	if (dataset.state != database.readState()) throw std::runtime_error("number of concepts does not match");
 
 	strus::Index si = 0, se = dataset.nofSamples;
 	for (; si != se; ++si)

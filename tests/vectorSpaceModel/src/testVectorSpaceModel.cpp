@@ -11,7 +11,7 @@
 #include "strus/lib/error.hpp"
 #include "strus/vectorStorageInterface.hpp"
 #include "strus/vectorStorageClientInterface.hpp"
-#include "strus/vectorStorageBuilderInterface.hpp"
+#include "strus/vectorStorageTransactionInterface.hpp"
 #include "strus/databaseInterface.hpp"
 #include "strus/errorBufferInterface.hpp"
 #include "strus/base/configParser.hpp"
@@ -210,20 +210,21 @@ int main( int argc, const char** argv)
 		{
 			throw std::runtime_error( g_errorhnd->fetchError());
 		}
+		std::auto_ptr<strus::VectorStorageClientInterface> instance( vmodel->createClient( config, dbi.get()));
+		if (!instance.get()) throw std::runtime_error( g_errorhnd->fetchError());
+
 		// Build the test vectors:
 		std::vector<std::vector<double> > samplear;
 		if (use_model_built)
 		{
-			std::auto_ptr<strus::VectorStorageClientInterface> instance( vmodel->createClient( config, dbi.get()));
-			if (!instance.get()) throw std::runtime_error( g_errorhnd->fetchError());
 			strus::Index si = 0, se = instance->nofFeatures();
 			for (; si != se; ++si)
 			{
 				samplear.push_back( instance->featureVector( si));
 			}
 		}
-		std::auto_ptr<strus::VectorStorageBuilderInterface> builder( vmodel->createBuilder( config, dbi.get()));
-		if (!builder.get()) throw std::runtime_error( g_errorhnd->fetchError());
+		std::auto_ptr<strus::VectorStorageTransactionInterface> transaction( instance->createTransaction());
+		if (!transaction.get()) throw std::runtime_error( g_errorhnd->fetchError());
 
 		if (!use_model_built)
 		{
@@ -244,9 +245,9 @@ int main( int argc, const char** argv)
 				samplear.push_back( vec);
 				char nam[ 64];
 				snprintf( nam, sizeof(nam), "_%u", (unsigned int)sidx);
-				builder->addFeature( nam, vec);
+				transaction->addFeature( nam, vec);
 			}
-			if (!builder->done())
+			if (!transaction->commit())
 			{
 				throw std::runtime_error( "building example vector set for VSM failed");
 			}
@@ -284,11 +285,10 @@ int main( int argc, const char** argv)
 		}
 		// Build the model:
 		std::cerr << "building model" << std::endl;
-		if (!builder->run(""))
+		if (!strus::runVectorStorageBuild_std( dbi.get(), config, "", g_errorhnd))
 		{
 			throw std::runtime_error( "error running VSM builder");
 		}
-		builder.reset();
 		std::cerr << "builder closed" << std::endl;
 
 		// Categorize the input vectors and build some maps out of the assignments of concepts:

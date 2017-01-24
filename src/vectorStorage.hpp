@@ -15,8 +15,6 @@ namespace strus {
 /// \brief Forward declaration
 class VectorStorageClientInterface;
 /// \brief Forward declaration
-class VectorStorageBuilderInterface;
-/// \brief Forward declaration
 class VectorStorageDumpInterface;
 /// \brief Forward declaration
 class ErrorBufferInterface;
@@ -34,14 +32,9 @@ public:
 	VectorStorage( ErrorBufferInterface* errorhnd_);
 
 	virtual bool createStorage( const std::string& configsource, const DatabaseInterface* database) const;
-	virtual bool resetStorage( const std::string& configsource, const DatabaseInterface* database) const;
 
 	virtual VectorStorageClientInterface* createClient( const std::string& configsrc, const DatabaseInterface* database) const;
-	virtual VectorStorageBuilderInterface* createBuilder( const std::string& configsrc, const DatabaseInterface* database) const;
 	virtual VectorStorageDumpInterface* createDump( const std::string& configsource, const DatabaseInterface* database, const std::string& keyprefix) const;
-
-	virtual std::vector<std::string> builderCommands() const;
-	virtual std::string builderCommandDescription( const std::string& command) const;
 
 private:
 	ErrorBufferInterface* m_errorhnd;	///< buffer for reporting errors

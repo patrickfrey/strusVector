@@ -7,6 +7,7 @@
  */
 #include "utils.hpp"
 #include "internationalization.hpp"
+#include "strus/base/utf8.hpp"
 #include <boost/lexical_cast.hpp>
 #include <boost/algorithm/string.hpp>
 #include <unistd.h>
@@ -67,6 +68,34 @@ std::string utils::tostring( int val)
 	{
 		throw strus::runtime_error( _TXT( "failed to convert number to string (out of memory)"));
 	}
+}
+
+std::string utils::utf8clean( const std::string& name)
+{
+	std::string rt;
+	std::size_t si = 0, se = name.size();
+	while (si < se)
+	{
+		unsigned char asciichr = name[si];
+		if (asciichr && asciichr < 128)
+		{
+			rt.push_back( asciichr);
+			++si;
+		}
+		else
+		{
+			std::size_t chrlen = strus::utf8charlen( asciichr);
+			uint32_t chr = strus::utf8decode( name.c_str() + si, chrlen);
+			if (chr)
+			{
+				char buf[ 16];
+				chrlen = strus::utf8encode( buf, chr);
+				rt.append( buf, chrlen);
+			}
+			si += chrlen;
+		}
+	}
+	return rt;
 }
 
 

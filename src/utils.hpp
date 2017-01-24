@@ -26,6 +26,7 @@ bool caseInsensitiveEquals( const std::string& val1, const std::string& val2);
 bool caseInsensitiveStartsWith( const std::string& val, const std::string& prefix);
 int toint( const std::string& val);
 std::string tostring( int val);
+std::string utf8clean( const std::string& name);
 
 void aligned_free( void *ptr);
 void* aligned_malloc( std::size_t size, std::size_t alignment);
