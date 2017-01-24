@@ -286,7 +286,7 @@ int main( int argc, const char** argv)
 		}
 		// Build the model:
 		std::cerr << "building model" << std::endl;
-		if (!strus::runVectorStorageBuild_std( dbi.get(), config, "", g_errorhnd))
+		if (!vmodel->runBuild( "", config, dbi.get()))
 		{
 			throw std::runtime_error( "error running VSM builder");
 		}

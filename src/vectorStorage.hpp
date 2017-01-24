@@ -36,6 +36,8 @@ public:
 	virtual VectorStorageClientInterface* createClient( const std::string& configsrc, const DatabaseInterface* database) const;
 	virtual VectorStorageDumpInterface* createDump( const std::string& configsource, const DatabaseInterface* database, const std::string& keyprefix) const;
 
+	virtual bool runBuild( const std::string& commands, const std::string& configsource, const DatabaseInterface* database);
+
 private:
 	ErrorBufferInterface* m_errorhnd;	///< buffer for reporting errors
 };

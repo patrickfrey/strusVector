@@ -25,12 +25,6 @@ class DatabaseInterface;
 /// \param[in] errorhnd error handler to use
 VectorStorageInterface* createVectorStorage_std( ErrorBufferInterface* errorhnd);
 
-/// \brief Run the assignment of concepts to features inserted
-/// \param[in] database database to use for the data repository of the model
-/// \param[in] config configuration of vector storage and of concept learners
-/// \param[in] commands list of semicolon ';' separated list of commands
-bool runVectorStorageBuild_std( const DatabaseInterface* database, const std::string& config, const std::string& commands, ErrorBufferInterface* errorhnd);
-
 }//namespace
 #endif
 

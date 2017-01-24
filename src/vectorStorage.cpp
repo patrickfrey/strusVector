@@ -9,6 +9,8 @@
 #include "vectorStorage.hpp"
 #include "vectorStorageClient.hpp"
 #include "vectorStorageDump.hpp"
+#include "vectorStorageBuilder.hpp"
+#include "vectorStorageConfig.hpp"
 #include "strus/errorBufferInterface.hpp"
 #include "strus/vectorStorageClientInterface.hpp"
 #include "strus/vectorStorageTransactionInterface.hpp"
@@ -95,4 +97,43 @@ VectorStorageDumpInterface* VectorStorage::createDump( const std::string& config
 	}
 	CATCH_ERROR_ARG1_MAP_RETURN( _TXT("error creating '%s' dump: %s"), MODULENAME, *m_errorhnd, 0);
 }
+
+bool VectorStorage::runBuild( const std::string& commands, const std::string& configstr, const DatabaseInterface* database)
+{
+	try
+	{
+		VectorStorageConfig config( configstr, m_errorhnd);
+		VectorStorageBuilder builder( config, configstr, database, m_errorhnd);
+		char const* si = commands.c_str();
+		const char* se = si + commands.size();
+		for (; si != se && (unsigned char)*si > 32; ++si){}	//... skip spaces
+		if (si == se)
+		{
+			if (!builder.run( "")) throw strus::runtime_error(_TXT("failed to run command: %s"), m_errorhnd->fetchError());
+		}
+		else while (si < se)
+		{
+			for (; si != se && (unsigned char)*si > 32; ++si){}	//... skip spaces
+			if (si == se) break;
+			std::string cmd;
+			char const* start = si;
+			for (; si != se; ++si)
+			{
+				if (*si == ';')
+				{
+					cmd.append( start, si - start);
+					++si;
+					break;
+				}
+			}
+			if (!builder.run( cmd))
+			{
+				throw strus::runtime_error(_TXT("failed to run command '%s': %s"), cmd.c_str(), m_errorhnd->fetchError());
+			}
+		}
+		return true;
+	}
+	CATCH_ERROR_ARG1_MAP_RETURN( _TXT("error creating '%s' dump: %s"), MODULENAME, *m_errorhnd, false);
+}
+
 
