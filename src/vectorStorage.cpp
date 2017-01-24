@@ -98,7 +98,7 @@ VectorStorageDumpInterface* VectorStorage::createDump( const std::string& config
 	CATCH_ERROR_ARG1_MAP_RETURN( _TXT("error creating '%s' dump: %s"), MODULENAME, *m_errorhnd, 0);
 }
 
-bool VectorStorage::runBuild( const std::string& commands, const std::string& configstr, const DatabaseInterface* database)
+bool VectorStorage::runBuild( const std::string& commands, const std::string& configstr, const DatabaseInterface* database) const
 {
 	try
 	{
