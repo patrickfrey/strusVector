@@ -213,5 +213,31 @@ std::vector<SearchResultElement> SimHashMap::findSimilar( const SimHash& sh, uns
 	return ranklist.result( sh.size(), indexofs);
 }
 
-
+std::vector<SearchResultElement> SimHashMap::findSimilarFromSelection( const std::vector<Index>& selection, const SimHash& sh, unsigned short simdist, unsigned int maxNofElements, const Index& indexofs) const
+{
+	RankList ranklist( maxNofElements);
+	unsigned int ranklistSize = 0;
+	std::vector<Index>::const_iterator si = selection.begin(), se = selection.end();
+	for (; si != se; ++si)
+	{
+		if (*si < indexofs) continue;
+		Index sidx = *si - indexofs;
+		if (sidx >= (Index)m_ar.size()) continue;
+		if (m_ar[ sidx].near( sh, simdist))
+		{
+			unsigned short dist = m_ar[ sidx].dist( sh);
+			ranklist.insert( SimRelationMap::Element( sidx, dist));
+			ranklistSize++;
+			if (ranklistSize > maxNofElements)
+			{
+				unsigned short lastdist = ranklist.lastdist();
+				if (lastdist < dist)
+				{
+					simdist = lastdist;
+				}
+			}
+		}
+	}
+	return ranklist.result( sh.size(), indexofs);
+}
 

@@ -30,6 +30,7 @@ public:
 
 	std::vector<SearchResultElement> findSimilar( const SimHash& sh, unsigned short simdist, unsigned short prob_simdist, unsigned int maxNofElements, const Index& indexofs) const;
 	std::vector<SearchResultElement> findSimilar( const SimHash& sh, unsigned short simdist, unsigned int maxNofElements, const Index& indexofs) const;
+	std::vector<SearchResultElement> findSimilarFromSelection( const std::vector<Index>& selection, const SimHash& sh, unsigned short simdist, unsigned int maxNofElements, const Index& indexofs) const;
 
 	const SimHash& operator[]( std::size_t idx) const	{return m_ar[idx];}
 
