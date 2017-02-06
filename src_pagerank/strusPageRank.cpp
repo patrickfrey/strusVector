@@ -166,7 +166,7 @@ static void printUsage()
 	std::cerr << "usage: strusPageRank [options] <inputfile>" << std::endl;
 	std::cerr << "    options     :" << std::endl;
 	std::cerr << "    -h          : print this usage" << std::endl;
-	std::cerr << "    -v          : verbose output, print all declarations to stdout." << std::endl;
+	std::cerr << "    -V          : verbose output, print all declarations to stdout." << std::endl;
 	std::cerr << "    -g          : logarithmic scale page rank calculation." << std::endl;
 	std::cerr << "    -n <NORM>   : normalize result to an integer between 0 and <NORM>." << std::endl;
 	std::cerr << "    -r <PATH>   : specify file <PATH> to write redirect definitions to." << std::endl;
@@ -201,7 +201,7 @@ int main( int argc, const char** argv)
 				printUsage();
 				return 0;
 			}
-			else if (std::strcmp( argv[ argi], "-v") == 0 || std::strcmp( argv[ argi], "--verbose") == 0)
+			else if (std::strcmp( argv[ argi], "-V") == 0 || std::strcmp( argv[ argi], "--verbose") == 0)
 			{
 				verbose = true;
 			}
