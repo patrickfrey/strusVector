@@ -1,0 +1,52 @@
+<!DOCTYPE HTML PUBLIC "-//IETF//DTD HTML//EN">
+<HTML><HEAD></HEAD><BODY>
+<OBJECT type="text/site properties">
+<param name="FrameName" value="right">
+</OBJECT>
+<UL>
+<LI><OBJECT type="text/sitemap"><param name="Name" value="Namespaces"><param name="ImageNumber" value="1"></OBJECT>
+  <UL>
+  <LI><OBJECT type="text/sitemap"><param name="Name" value="Namespace List"><param name="ImageNumber" value="1"></OBJECT>
+    <UL>
+    <LI><OBJECT type="text/sitemap"><param name="Name" value="strus"><param name="Local" value="namespacestrus.html"><param name="ImageNumber" value="11"></OBJECT>
+    </UL>
+  <LI><OBJECT type="text/sitemap"><param name="Name" value="Namespace Members"><param name="Local" value="namespacemembers.html"><param name="ImageNumber" value="11"></OBJECT>
+    <UL>
+    <LI><OBJECT type="text/sitemap"><param name="Name" value="All"><param name="Local" value="namespacemembers.html"><param name="ImageNumber" value="11"></OBJECT>
+    <LI><OBJECT type="text/sitemap"><param name="Name" value="Functions"><param name="Local" value="namespacemembers_func.html"><param name="ImageNumber" value="11"></OBJECT>
+    </UL>
+  </UL>
+<LI><OBJECT type="text/sitemap"><param name="Name" value="Files"><param name="ImageNumber" value="1"></OBJECT>
+  <UL>
+  <LI><OBJECT type="text/sitemap"><param name="Name" value="File List"><param name="ImageNumber" value="1"></OBJECT>
+    <UL>
+    <LI><OBJECT type="text/sitemap"><param name="Name" value="include"><param name="ImageNumber" value="1"></OBJECT>
+      <UL>
+      <LI><OBJECT type="text/sitemap"><param name="Name" value="strus"><param name="ImageNumber" value="1"></OBJECT>
+        <UL>
+        <LI><OBJECT type="text/sitemap"><param name="Name" value="lib"><param name="ImageNumber" value="1"></OBJECT>
+          <UL>
+          <LI><OBJECT type="text/sitemap"><param name="Name" value="vector_std.hpp"><param name="ImageNumber" value="1"></OBJECT>
+            <UL>
+            <LI><OBJECT type="text/sitemap"><param name="Name" value="createVectorStorage_std"><param name="Local" value="vector__std_8hpp.html#a389efec50eca63294e961cbc1e4d4fd7"><param name="ImageNumber" value="11"></OBJECT>
+            </UL>
+          </UL>
+        <LI><OBJECT type="text/sitemap"><param name="Name" value="versionVector.hpp"><param name="ImageNumber" value="1"></OBJECT>
+          <UL>
+          <LI><OBJECT type="text/sitemap"><param name="Name" value="STRUS_VECTOR_VERSION"><param name="Local" value="versionVector_8hpp.html#a85723ded6803fa6fe7b682824eb295e6"><param name="ImageNumber" value="11"></OBJECT>
+          <LI><OBJECT type="text/sitemap"><param name="Name" value="STRUS_VECTOR_VERSION_MAJOR"><param name="Local" value="versionVector_8hpp.html#a841908f8f0dfea4d42eef2a9c6c36ba9"><param name="ImageNumber" value="11"></OBJECT>
+          <LI><OBJECT type="text/sitemap"><param name="Name" value="STRUS_VECTOR_VERSION_MINOR"><param name="Local" value="versionVector_8hpp.html#a6f7710cae3575b2760fbd080a09f9bbb"><param name="ImageNumber" value="11"></OBJECT>
+          <LI><OBJECT type="text/sitemap"><param name="Name" value="STRUS_VECTOR_VERSION_STRING"><param name="Local" value="versionVector_8hpp.html#a5b909de416f06a11618a309dca06bdf6"><param name="ImageNumber" value="11"></OBJECT>
+          </UL>
+        </UL>
+      </UL>
+    </UL>
+  <LI><OBJECT type="text/sitemap"><param name="Name" value="File Members"><param name="Local" value="globals.html"><param name="ImageNumber" value="11"></OBJECT>
+    <UL>
+    <LI><OBJECT type="text/sitemap"><param name="Name" value="All"><param name="Local" value="globals.html"><param name="ImageNumber" value="11"></OBJECT>
+    <LI><OBJECT type="text/sitemap"><param name="Name" value="Macros"><param name="Local" value="globals_defs.html"><param name="ImageNumber" value="11"></OBJECT>
+    </UL>
+  </UL>
+</UL>
+</BODY>
+</HTML>
