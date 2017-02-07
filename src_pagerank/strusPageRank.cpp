@@ -164,6 +164,11 @@ private:
 static void printUsage()
 {
 	std::cerr << "usage: strusPageRank [options] <inputfile>" << std::endl;
+	std::cerr << "    <inputfile> :text file to process, lines with the following syntax:" << std::endl;
+	std::cerr << "        DECLARATION   = \"*\"  ITEMID \"=\" [\"->\"] { ITEMID } \";\"" << std::endl; 
+	std::cerr << "        ITEMID        : document identifier (unicode alpha characters without space)" << std::endl; 
+	std::cerr << "    Each declaration describes the links of a document (left side)" << std::endl; 
+	std::cerr << "    to other documents (right side). Redirects are marked with an arrow (->)." << std::endl; 
 	std::cerr << "    options     :" << std::endl;
 	std::cerr << "    -h          : print this usage" << std::endl;
 	std::cerr << "    -V          : verbose output, print all declarations to stdout." << std::endl;
