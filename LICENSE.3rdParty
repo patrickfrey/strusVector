@@ -1,7 +1,14 @@
 3rd party licenses of strusVector
 ====================
 
-If build with WITH_PAGERANK="YES" (cmake parameter), a Program strusPageRank is built, that uses PageRank. Page Rank has been invented by Lawrence Page (Google). It is patented by the Stanford University (https://www.google.com/patents/US6285999). The program strusPageRank is not deployed with the standard packages. It is the users liability to decide wheter to build this software with or without pagerank and to face possible patent claims. 
+  If built with WITH_PAGERANK="YES" (cmake parameter), the program strusPageWeight is built to use PageRank 
+  as algorithm to calculate the weight of pages.
+  Page Rank has been invented by Lawrence Page (Google). It is patented in the USA by the Stanford University
+  (https://www.google.com/patents/US6285999). The program strusPageRank is not deployed with the standard 
+  packages. It is the users liability to decide wheter to build this software with or without pagerank 
+  and to face possible patent claims.
+  If built with WITH_PAGERANK="NO" (cmake parameter - default) the program strusPageWeight is built to
+  simply count the links referencing a page as algorithm to calculate the page weights.
 
 Table of Contents
 -----------------
