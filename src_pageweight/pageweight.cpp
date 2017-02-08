@@ -6,14 +6,15 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 /// \brief Implementation of a page rank calculation 
-#include "pagerank.hpp"
+#include "pageweight.hpp"
+#include "pageweightdefs.hpp"
 #include "strus/base/string_format.hpp"
 #include "strus/base/fileio.hpp"
 #include "armadillo"
 
 using namespace strus;
 
-PageRank::PageId PageRank::getPageId( const std::string& name) const
+PageWeight::PageId PageWeight::getPageId( const std::string& name) const
 {
 	IdMap::const_iterator fi = m_idmap.find( name);
 	if (fi == m_idmap.end())
@@ -26,19 +27,19 @@ PageRank::PageId PageRank::getPageId( const std::string& name) const
 	}
 }
 
-std::string PageRank::getPageName( const PageId& id) const
+std::string PageWeight::getPageName( const PageId& id) const
 {
 	if (id == 0 || id > m_idcnt) throw std::runtime_error("illegal page id value (getPageName)");
 	return m_idinv[ id-1];
 }
 
-PageRank::PageId PageRank::getOrCreatePageId( const std::string& name, bool isdef)
+PageWeight::PageId PageWeight::getOrCreatePageId( const std::string& name, bool isdef)
 {
 	IdMap::const_iterator fi = m_idmap.find( name);
 	if (fi == m_idmap.end())
 	{
 		m_idinv.push_back( name);
-		PageRank::PageId newpgid = ++m_idcnt;
+		PageWeight::PageId newpgid = ++m_idcnt;
 		if (isdef)
 		{
 			m_defset.insert( newpgid);
@@ -56,7 +57,7 @@ PageRank::PageId PageRank::getOrCreatePageId( const std::string& name, bool isde
 	}
 }
 
-void PageRank::addLink( const PageId& from, const PageId& to, unsigned int cnt)
+void PageWeight::addLink( const PageId& from, const PageId& to, unsigned int cnt)
 {
 	if (from == 0 || from > m_idcnt) throw std::runtime_error("illegal page id value (addLink)");
 	if (to == 0 || to > m_idcnt) throw std::runtime_error("illegal page id value (addLink)");
@@ -74,14 +75,15 @@ void PageRank::addLink( const PageId& from, const PageId& to, unsigned int cnt)
 	if (to > m_maxcol) m_maxcol = to;
 }
 
-void PageRank::defineRedirect( const PageId& from, const PageId& to)
+void PageWeight::defineRedirect( const PageId& from, const PageId& to)
 {
 	if (from == 0 || from > m_idcnt) throw std::runtime_error("illegal page id value (defineRedirect)");
 	if (to == 0 || to > m_idcnt) throw std::runtime_error("illegal page id value (defineRedirect)");
 	if (from != to) m_redirectMap[ from] = to;
 }
 
-std::vector<double> PageRank::calculate() const
+#if STRUS_WITH_PAGERANK
+std::vector<double> PageWeight::calculate() const
 {
 	// Fill the data structures for initialization of the link matrix:
 	if (m_idcnt == 0) return std::vector<double>();
@@ -171,8 +173,26 @@ std::vector<double> PageRank::calculate() const
 	rt.insert( rt.end(), vv.begin(), vv.end());
 	return rt;
 }
+#else
+std::vector<double> PageWeight::calculate() const
+{
+	std::vector<double> rt( m_idcnt, 0.0);
+	std::map<PageId,unsigned int> linkcntmap;
+	LinkMatrix::const_iterator li = m_linkMatrix.begin(), le = m_linkMatrix.end();
+	for (; li != le; ++li)
+	{
+		linkcntmap[ li->second] += 1;
+	}
+	std::map<PageId,unsigned int>::const_iterator ci = linkcntmap.begin(), ce = linkcntmap.end();
+	for (; ci != ce; ++ci)
+	{
+		rt[ ci->first-1] = (double)ci->second / m_idcnt;
+	}
+	return rt;
+}
+#endif
 
-void PageRank::printRedirectsToFile( const std::string& filename) const
+void PageWeight::printRedirectsToFile( const std::string& filename) const
 {
 	unsigned int ec = writeFile( filename, std::string());
 	if (ec) throw std::runtime_error( string_format( "failed to write redirects to file: %s", ::strerror(ec)));
@@ -205,7 +225,7 @@ void PageRank::printRedirectsToFile( const std::string& filename) const
 }
 
 
-PageRank::PageId PageRank::resolveRedirect( const PageId& pid) const
+PageWeight::PageId PageWeight::resolveRedirect( const PageId& pid) const
 {
 	if (pageDefined( pid))
 	{
@@ -219,9 +239,9 @@ PageRank::PageId PageRank::resolveRedirect( const PageId& pid) const
 	return pid;
 }
 
-PageRank PageRank::reduce() const
+PageWeight PageWeight::reduce() const
 {
-	PageRank rt;
+	PageWeight rt;
 	LinkMatrix newLinkMatrix;
 
 	LinkMatrix::const_iterator li = m_linkMatrix.begin(), le = m_linkMatrix.end();

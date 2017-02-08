@@ -262,6 +262,7 @@ make test
 %{_libdir}/strus/libstrus_vector_std.so.@STRUS_MAJOR_VERSION@.@STRUS_MINOR_VERSION@
 %{_libdir}/strus/libstrus_vector_std.so.@STRUS_MAJOR_VERSION@.@STRUS_MINOR_VERSION@.@STRUS_PATCH_VERSION@
 %{_libdir}/strus/modules/modstrus_storage_vector_std.so
+%{_bindir}/strusPageWeight
 
 %files devel
 %defattr( -, root, root )

@@ -6,7 +6,7 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 /// \brief Test program for pagerank
-#include "pagerank.hpp"
+#include "pageweight.hpp"
 #include <vector>
 #include <iostream>
 #include <stdexcept>
@@ -16,8 +16,8 @@ int main( int argc, const char** argv)
 {
 	try
 	{
-		typedef strus::PageRank::PageId PageId;
-		strus::PageRank pg( 30, 0.85);
+		typedef strus::PageWeight::PageId PageId;
+		strus::PageWeight pg( 30, 0.85);
 		// Example taken from http://mathscinotes.com/2012/01/worked-pagerank-example/
 		PageId i1 = pg.getOrCreatePageId( "A", true);
 		PageId i2 = pg.getOrCreatePageId( "B", true);
