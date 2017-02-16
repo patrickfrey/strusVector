@@ -1,0 +1,30 @@
+<!DOCTYPE HTML PUBLIC "-//IETF//DTD HTML//EN">
+<HTML><HEAD></HEAD><BODY>
+<OBJECT type="text/site properties">
+<param name="FrameName" value="right">
+</OBJECT>
+<UL>
+  <LI><OBJECT type="text/sitemap"><param name="Local" value="namespacestrus.html#a389efec50eca63294e961cbc1e4d4fd7"><param name="Name" value="createVectorStorage_std"></OBJECT>
+  <UL>
+    <LI><OBJECT type="text/sitemap"><param name="Local" value="namespacestrus.html#a389efec50eca63294e961cbc1e4d4fd7"><param name="Name" value="strus"></OBJECT>
+    <LI><OBJECT type="text/sitemap"><param name="Local" value="namespacestrus.html#a389efec50eca63294e961cbc1e4d4fd7"><param name="Name" value="vector_std.hpp"></OBJECT>
+  </UL>
+  <LI><OBJECT type="text/sitemap"><param name="Local" value="namespacestrus.html"><param name="Name" value="strus"></OBJECT>
+  <UL>
+    <LI><OBJECT type="text/sitemap"><param name="Local" value="namespacestrus.html#a389efec50eca63294e961cbc1e4d4fd7"><param name="Name" value="createVectorStorage_std"></OBJECT>
+  </UL>
+  <LI><OBJECT type="text/sitemap"><param name="Local" value="versionVector_8hpp.html#a85723ded6803fa6fe7b682824eb295e6"><param name="Name" value="STRUS_VECTOR_VERSION"></OBJECT>
+  <LI><OBJECT type="text/sitemap"><param name="Local" value="versionVector_8hpp.html#a841908f8f0dfea4d42eef2a9c6c36ba9"><param name="Name" value="STRUS_VECTOR_VERSION_MAJOR"></OBJECT>
+  <LI><OBJECT type="text/sitemap"><param name="Local" value="versionVector_8hpp.html#a6f7710cae3575b2760fbd080a09f9bbb"><param name="Name" value="STRUS_VECTOR_VERSION_MINOR"></OBJECT>
+  <LI><OBJECT type="text/sitemap"><param name="Local" value="versionVector_8hpp.html#a5b909de416f06a11618a309dca06bdf6"><param name="Name" value="STRUS_VECTOR_VERSION_STRING"></OBJECT>
+  <LI><OBJECT type="text/sitemap"><param name="Local" value="vector__std_8hpp.html"><param name="Name" value="vector_std.hpp"></OBJECT>
+  <LI><OBJECT type="text/sitemap"><param name="Local" value="versionVector_8hpp.html"><param name="Name" value="versionVector.hpp"></OBJECT>
+  <UL>
+    <LI><OBJECT type="text/sitemap"><param name="Local" value="versionVector_8hpp.html#a85723ded6803fa6fe7b682824eb295e6"><param name="Name" value="STRUS_VECTOR_VERSION"></OBJECT>
+    <LI><OBJECT type="text/sitemap"><param name="Local" value="versionVector_8hpp.html#a841908f8f0dfea4d42eef2a9c6c36ba9"><param name="Name" value="STRUS_VECTOR_VERSION_MAJOR"></OBJECT>
+    <LI><OBJECT type="text/sitemap"><param name="Local" value="versionVector_8hpp.html#a6f7710cae3575b2760fbd080a09f9bbb"><param name="Name" value="STRUS_VECTOR_VERSION_MINOR"></OBJECT>
+    <LI><OBJECT type="text/sitemap"><param name="Local" value="versionVector_8hpp.html#a5b909de416f06a11618a309dca06bdf6"><param name="Name" value="STRUS_VECTOR_VERSION_STRING"></OBJECT>
+  </UL>
+</UL>
+</BODY>
+</HTML>
