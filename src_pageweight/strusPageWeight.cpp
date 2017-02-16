@@ -5,8 +5,9 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
-/// \brief Program calculating pagerank for a list of link definitions read from stdin
-#include "pagerank.hpp"
+/// \brief Program calculating page weight for a list of link definitions read from stdin
+#include "pageweight.hpp"
+#include "pageweightdefs.hpp"
 #include "strus/base/inputStream.hpp"
 #include "strus/base/string_format.hpp"
 #include <vector>
@@ -163,7 +164,18 @@ private:
 
 static void printUsage()
 {
-	std::cerr << "usage: strusPageRank [options] <inputfile>" << std::endl;
+	std::cerr << "usage: strusPageWeight [options] <inputfile>" << std::endl;
+#if STRUS_WITH_PAGERANK
+	std::cerr << "description: Calculate the weight of a page derived from the linkage of documents with others," << std::endl;
+	std::cerr << "             with help of the pagerank algorithm." << std::endl;
+#else
+	std::cerr << "description: Calculate the weight of a page derived from the number of links pointing to a document." << std::endl;
+#endif
+	std::cerr << "    <inputfile> :text file to process, lines with the following syntax:" << std::endl;
+	std::cerr << "        DECLARATION   = \"*\"  ITEMID \"=\" [\"->\"] { ITEMID } \";\"" << std::endl; 
+	std::cerr << "        ITEMID        : document identifier (unicode alpha characters without space)" << std::endl; 
+	std::cerr << "    Each declaration describes the links of a document (left side)" << std::endl; 
+	std::cerr << "    to other documents (right side). Redirects are marked with an arrow (->)." << std::endl; 
 	std::cerr << "    options     :" << std::endl;
 	std::cerr << "    -h          : print this usage" << std::endl;
 	std::cerr << "    -V          : verbose output, print all declarations to stdout." << std::endl;
@@ -191,7 +203,7 @@ int main( int argc, const char** argv)
 		bool logscale = false;
 		std::string redirectFilename;
 		std::string tokensFilename;
-		int iterations = strus::PageRank::NofIterations;
+		int iterations = strus::PageWeight::NofIterations;
 		int normval = 0;
 
 		for (; argi < argc; ++argi)
@@ -261,7 +273,7 @@ int main( int argc, const char** argv)
 			printUsage();
 			return -1;
 		}
-		strus::PageRank pagerank( iterations);
+		strus::PageWeight pageweight( iterations);
 		InputParser input( argv[ argi]);
 		LexemId lid;
 		std::string lname;
@@ -324,7 +336,7 @@ int main( int argc, const char** argv)
 				case LEXEM_ENDRULE:
 				{
 					bool isdecl = !linknames.empty();
-					strus::PageRank::PageId dpg = pagerank.getOrCreatePageId( declname, isdecl);
+					strus::PageWeight::PageId dpg = pageweight.getOrCreatePageId( declname, isdecl);
 					if (declname.empty())
 					{
 						std::cerr << "empty declaration found" << std::endl;
@@ -334,8 +346,8 @@ int main( int argc, const char** argv)
 						if (!redirectname.empty())
 						{
 							// declare redirect
-							strus::PageRank::PageId rpg = pagerank.getOrCreatePageId( redirectname, false);
-							pagerank.defineRedirect( dpg, rpg);
+							strus::PageWeight::PageId rpg = pageweight.getOrCreatePageId( redirectname, false);
+							pageweight.defineRedirect( dpg, rpg);
 							if (verbose)
 							{
 								std::cerr << "redirect " << declname << " -> " << redirectname << std::endl;
@@ -346,8 +358,8 @@ int main( int argc, const char** argv)
 							li = linknames.begin(), le = linknames.end();
 						for (; li != le; ++li)
 						{
-							strus::PageRank::PageId lpg = pagerank.getOrCreatePageId( *li, false);
-							pagerank.addLink( dpg, lpg);
+							strus::PageWeight::PageId lpg = pageweight.getOrCreatePageId( *li, false);
+							pageweight.addLink( dpg, lpg);
 							if (verbose)
 							{
 								std::cerr << "link " << declname << " = " << *li << std::endl;
@@ -364,38 +376,38 @@ int main( int argc, const char** argv)
 		if (!redirectFilename.empty())
 		{
 			std::cerr << "write redirects to file " << redirectFilename << std::endl;
-			pagerank.printRedirectsToFile( redirectFilename);
+			pageweight.printRedirectsToFile( redirectFilename);
 		}
 		std::cerr << "remove garbagge (eliminate links to nowhere and resolve redirects)" << std::endl;
-		pagerank = pagerank.reduce();
+		pageweight = pageweight.reduce();
 		std::cerr << "calculate ..." << std::endl;
-		std::vector<double> pagerankResults = pagerank.calculate();
+		std::vector<double> pageweightResults = pageweight.calculate();
 
 		std::cerr << "output results ..." << std::endl;
-		std::vector<double>::const_iterator ri = pagerankResults.begin(), re = pagerankResults.end();
+		std::vector<double>::const_iterator ri = pageweightResults.begin(), re = pageweightResults.end();
 		double maxresval = 0.0;
 		if (normval > 0)
 		{
-			for (strus::PageRank::PageId rid=1; ri != re; ++ri,++rid)
+			for (strus::PageWeight::PageId rid=1; ri != re; ++ri,++rid)
 			{
 				double resval = *ri;
 				if (logscale)
 				{
-					resval = std::log10( resval * pagerank.nofPages() + 1);
+					resval = std::log10( resval * pageweight.nofPages() + 1);
 				}
 				if (resval > maxresval)
 				{
 					maxresval = resval;
 				}
 			}
-			ri = pagerankResults.begin();
+			ri = pageweightResults.begin();
 		}
-		for (strus::PageRank::PageId rid=1; ri != re; ++ri,++rid)
+		for (strus::PageWeight::PageId rid=1; ri != re; ++ri,++rid)
 		{
 			double resval = *ri;
 			if (logscale)
 			{
-				resval = std::log10( resval * pagerank.nofPages() + 1);
+				resval = std::log10( resval * pageweight.nofPages() + 1);
 			}
 			if (normval > 0)
 			{
@@ -404,11 +416,11 @@ int main( int argc, const char** argv)
 					resval = 0.0;
 				}
 				resval = (resval / maxresval) * normval;
-				std::cout << pagerank.getPageName( rid) << "\t" << (unsigned int)resval << std::endl;
+				std::cout << pageweight.getPageName( rid) << "\t" << (unsigned int)resval << std::endl;
 			}
 			else
 			{
-				std::cout << pagerank.getPageName( rid) << "\t" << resval << std::endl;
+				std::cout << pageweight.getPageName( rid) << "\t" << resval << std::endl;
 			}
 		}
 		return 0;

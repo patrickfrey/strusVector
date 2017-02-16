@@ -6,8 +6,8 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 /// \brief Implementation of a page rank calculation 
-#ifndef _STRUS_VECTOR_PAGERANK_IMPLEMENTATION_HPP_INCLUDED
-#define _STRUS_VECTOR_PAGERANK_IMPLEMENTATION_HPP_INCLUDED
+#ifndef _STRUS_VECTOR_PAGEWEIGHT_IMPLEMENTATION_HPP_INCLUDED
+#define _STRUS_VECTOR_PAGEWEIGHT_IMPLEMENTATION_HPP_INCLUDED
 #include <string>
 #include <vector>
 #include <map>
@@ -20,16 +20,16 @@ class ErrorBufferInterface;
 
 /// \brief Simple, not very sophisticated implementation of a page rank calculation
 /// \note This class is a calculation based on the patented page rank algorithm (http://www.google.com/patents/US6285999). In order to use it with Strus, you have to explicitely enable its building with the CMake flag -DWITH_PAGERANK="YES". Strus is built without page rank by default.
-class PageRank
+class PageWeight
 {
 public:
 	enum {NofIterations = 32};
 
-	explicit PageRank( unsigned int nofIterations_=NofIterations, double dampeningFactor_ = 0.85)
+	explicit PageWeight( unsigned int nofIterations_=NofIterations, double dampeningFactor_ = 0.85)
 		:m_idcnt(0)
 		,m_maxrow(0),m_maxcol(0)
 		,m_nofIterations(nofIterations_),m_dampeningFactor(dampeningFactor_){}
-	PageRank( const PageRank& o)
+	PageWeight( const PageWeight& o)
 		:m_redirectMap(o.m_redirectMap)
 		,m_linkMatrix(o.m_linkMatrix)
 		,m_idmap(o.m_idmap)
@@ -41,7 +41,7 @@ public:
 		,m_nofIterations(o.m_nofIterations)
 		,m_dampeningFactor(o.m_dampeningFactor){}
 
-	~PageRank(){}
+	~PageWeight(){}
 
 	typedef unsigned int PageId;
 	PageId getPageId( const std::string& name) const;
@@ -60,7 +60,7 @@ public:
 
 	void printRedirectsToFile( const std::string& filename) const;
 
-	PageRank reduce() const;
+	PageWeight reduce() const;
 	bool pageDefined( const PageId& pid) const
 	{
 		return m_defset.find(pid) != m_defset.end();

@@ -22,16 +22,16 @@ link_directories(
 # ------------------------------
 # PROGRAM
 # ------------------------------
-add_library( strus_pagerank_static STATIC pagerank.cpp )
-target_link_libraries( strus_pagerank_static strus_base "${Boost_LIBRARIES}" "${Intl_LIBRARIES}" )
+add_library( strus_pageweight_static STATIC pageweight.cpp )
+target_link_libraries( strus_pageweight_static strus_base "${Boost_LIBRARIES}" "${Intl_LIBRARIES}" )
 
-add_executable( strusPageRank  strusPageRank.cpp )
-target_link_libraries( strusPageRank strus_base strus_error strus_pagerank_static ${Boost_LIBRARIES} ${Intl_LIBRARIES} )
+add_executable( strusPageWeight  strusPageWeight.cpp )
+target_link_libraries( strusPageWeight strus_base strus_error strus_pageweight_static ${Boost_LIBRARIES} ${Intl_LIBRARIES} )
 
 
 # ------------------------------
 # INSTALLATION
 # ------------------------------
-install( TARGETS strusPageRank
+install( TARGETS strusPageWeight
            RUNTIME DESTINATION bin )
 

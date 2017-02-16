@@ -6,7 +6,7 @@ include(cmake/install_prefix.cmake)
 # Project globals:
 project( StrusVector )
 set( STRUS_MAJOR_VERSION 0 )
-set( STRUS_MINOR_VERSION 13 )
+set( STRUS_MINOR_VERSION 14 )
 set( STRUS_PATCH_VERSION 0 )
 set( STRUS_VERSION ${STRUS_MAJOR_VERSION}.${STRUS_MINOR_VERSION}.${STRUS_PATCH_VERSION} )
 
@@ -30,6 +30,12 @@ configure_file( "${PROJECT_SOURCE_DIR}/dist/redhat/strusvector.spec.in"  "${PROJ
 set( STRUS_GETTEXT_PACKAGE "strus-dom" )	#... 1st parameter of bindtextdomain(...)
 set( STRUS_GETTEXT_LOCALEDIR "" )			#... 2nd parameter of bindtextdomain(...)
 configure_file( "${PROJECT_SOURCE_DIR}/src/internationalization.cpp.in"  "${PROJECT_SOURCE_DIR}/src/internationalization.cpp"  @ONLY )
+IF (WITH_PAGERANK STREQUAL "YES")
+set( STRUS_WITH_PAGERANK 1 )
+ELSE (WITH_PAGERANK STREQUAL "YES")
+set( STRUS_WITH_PAGERANK 0 )
+ENDIF (WITH_PAGERANK STREQUAL "YES")
+configure_file( "${PROJECT_SOURCE_DIR}/src_pageweight/pageweightdefs.hpp.in"  "${PROJECT_SOURCE_DIR}/src_pageweight/pageweightdefs.hpp"  @ONLY )
 
 enable_testing()
 
@@ -37,9 +43,7 @@ enable_testing()
 add_subdirectory( 3rdParty )
 add_subdirectory( src )
 add_subdirectory( tests )
-IF (WITH_PAGERANK STREQUAL "YES")
-add_subdirectory( src_pagerank )
-ENDIF (WITH_PAGERANK STREQUAL "YES")
+add_subdirectory( src_pageweight )
  
 include( cmake/report_build_settings.cmake )
 

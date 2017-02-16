@@ -38,6 +38,7 @@ Testing/
 *.cmake.user
 include/strus/versionVector.hpp
 src/utils/internationalization.cpp
+src_pageweight/pageweightdefs.hpp
 dist/obs/deploy_to_obs.sh
 dist/archlinux/PKGBUILD
 dist/obs/strusvector.dsc
@@ -55,7 +56,7 @@ dist/redhat/strusvector.spec
 3rdParty/armadillo/include/armadillo_bits/config.hpp
 
 # Compiled Programs
-src_pagerank/strusPageRank
+src_pageweight/strusPageWeight
 tests/armadillo/src/testArmadillo
 tests/vectorSpaceModel/src/testVectorSpaceModel
 tests/vectorSpaceModel/src/testLshVectorSpaceModel
