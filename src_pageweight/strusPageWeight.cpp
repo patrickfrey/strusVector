@@ -7,6 +7,7 @@
  */
 /// \brief Program calculating page weight for a list of link definitions read from stdin
 #include "pageweight.hpp"
+#include "pageweightdefs.hpp"
 #include "strus/base/inputStream.hpp"
 #include "strus/base/string_format.hpp"
 #include <vector>
@@ -164,6 +165,12 @@ private:
 static void printUsage()
 {
 	std::cerr << "usage: strusPageWeight [options] <inputfile>" << std::endl;
+#if STRUS_WITH_PAGERANK
+	std::cerr << "description: Calculate the weight of a page derived from the linkage of documents with others," << std::endl;
+	std::cerr << "             with help of the pagerank algorithm." << std::endl;
+#else
+	std::cerr << "description: Calculate the weight of a page derived from the number of links pointing to a document." << std::endl;
+#endif
 	std::cerr << "    <inputfile> :text file to process, lines with the following syntax:" << std::endl;
 	std::cerr << "        DECLARATION   = \"*\"  ITEMID \"=\" [\"->\"] { ITEMID } \";\"" << std::endl; 
 	std::cerr << "        ITEMID        : document identifier (unicode alpha characters without space)" << std::endl; 
