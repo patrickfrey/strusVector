@@ -20,7 +20,9 @@ using namespace strus;
 using namespace strus::utils;
 
 #ifdef __GNUC__
+#ifndef __clang__
 #pragma GCC optimize "2"
+#endif
 #endif
 #undef STRUS_LOWLEVEL_DEBUG
 
