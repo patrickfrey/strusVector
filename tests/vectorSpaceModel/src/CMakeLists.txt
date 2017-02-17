@@ -8,6 +8,7 @@ include_directories(
 	"${PROJECT_SOURCE_DIR}/src"
 	"${PROJECT_SOURCE_DIR}/include"
 	"${strusbase_INCLUDE_DIRS}"
+	"${strus_INCLUDE_DIRS}"
 )
 link_directories(
 	"${PROJECT_SOURCE_DIR}/src"

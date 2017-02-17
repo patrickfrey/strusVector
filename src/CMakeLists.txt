@@ -41,6 +41,8 @@ include_directories(
 	"${PROJECT_SOURCE_DIR}/3rdParty/armadillo/include/"
 	"${PROJECT_SOURCE_DIR}/include"
 	"${strusbase_INCLUDE_DIRS}"
+	"${strus_INCLUDE_DIRS}"
+	"${strusmodule_INCLUDE_DIRS}"
 )
 link_directories(
 	"${Boost_LIBRARY_DIRS}"
