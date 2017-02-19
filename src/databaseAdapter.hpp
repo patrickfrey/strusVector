@@ -81,7 +81,7 @@ public:
 		KeyLshModel = 'L',
 		KeySimRelationMap = 'M',
 		KeySampleConceptIndexMap = 'f',
-		KeyConceptSampleIndexMap = 's',
+		KeyConceptSampleIndexMap = 's'
 	};
 
 	class Transaction
