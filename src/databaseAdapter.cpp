@@ -21,6 +21,12 @@
 #include <iostream>
 #include <sstream>
 
+#if __cplusplus <= 199711L
+namespace std {
+	typedef auto_ptr unique_ptr;
+	//... only a valid replacement in this module, since we do not have assignments of unique_ptr
+}
+#endif
 using namespace strus;
 
 #define VARIABLE_NOF_SAMPLES  "samples"
@@ -171,7 +177,7 @@ unsigned int DatabaseAdapter::readVariable( const std::string& name) const
 std::vector<std::pair<std::string,uint64_t> > DatabaseAdapter::readVariables() const
 {
 	std::vector<std::pair<std::string,uint64_t> > rt;
-	std::auto_ptr<DatabaseCursorInterface> cursor( m_database->createCursor( DatabaseOptions()));
+	std::unique_ptr<DatabaseCursorInterface> cursor( m_database->createCursor( DatabaseOptions()));
 	if (!cursor.get()) throw strus::runtime_error(_TXT("failed to create cursor to read variables: %s"), m_errorhnd->fetchError());
 
 	DatabaseKeyBuffer key( KeyVariable);
@@ -468,7 +474,7 @@ SimHash DatabaseAdapter::readSimhash( const KeyPrefix& prefix, const SampleIndex
 std::vector<SimHash> DatabaseAdapter::readSimhashVector( const KeyPrefix& prefix, const SampleIndex& range_from, const SampleIndex& range_to) const
 {
 	std::vector<SimHash> rt;
-	std::auto_ptr<DatabaseCursorInterface> cursor( m_database->createCursor( DatabaseOptions()));
+	std::unique_ptr<DatabaseCursorInterface> cursor( m_database->createCursor( DatabaseOptions()));
 	if (!cursor.get()) throw strus::runtime_error(_TXT("failed to create cursor to read sim hash vector: %s"), m_errorhnd->fetchError());
 
 	DatabaseKeyBuffer key( prefix);
@@ -597,7 +603,7 @@ SimRelationMap DatabaseAdapter::readSimRelationMap() const
 	SimRelationMap rt;
 	DatabaseKeyBuffer key( KeySimRelationMap);
 
-	std::auto_ptr<DatabaseCursorInterface> cursor( m_database->createCursor( DatabaseOptions()));
+	std::unique_ptr<DatabaseCursorInterface> cursor( m_database->createCursor( DatabaseOptions()));
 	if (!cursor.get()) throw strus::runtime_error(_TXT("failed to create cursor to read similarity relation map: %s"), m_errorhnd->fetchError());
 
 	DatabaseCursorInterface::Slice slice = cursor->seekFirst( key.c_str(), key.size());
@@ -628,7 +634,7 @@ SampleIndex DatabaseAdapter::readLastSimRelationIndex() const
 {
 	DatabaseKeyBuffer key( KeySimRelationMap);
 
-	std::auto_ptr<DatabaseCursorInterface> cursor( m_database->createCursor( DatabaseOptions()));
+	std::unique_ptr<DatabaseCursorInterface> cursor( m_database->createCursor( DatabaseOptions()));
 	if (!cursor.get()) throw strus::runtime_error(_TXT("failed to create cursor to read similarity relation map: %s"), m_errorhnd->fetchError());
 
 	DatabaseCursorInterface::Slice slice = cursor->seekLast( key.c_str(), key.size());
@@ -708,7 +714,7 @@ std::vector<SampleIndex> DatabaseAdapter::readSimSingletons() const
 	std::vector<SampleIndex> rt;
 	DatabaseKeyBuffer key( KeySimRelationMap);
 
-	std::auto_ptr<DatabaseCursorInterface> cursor( m_database->createCursor( DatabaseOptions()));
+	std::unique_ptr<DatabaseCursorInterface> cursor( m_database->createCursor( DatabaseOptions()));
 	if (!cursor.get()) throw strus::runtime_error(_TXT("failed to create cursor to read similarity relation map: %s"), m_errorhnd->fetchError());
 
 	SampleIndex prev_sidx = 0;
@@ -861,7 +867,7 @@ IndexListMap<strus::Index,strus::Index> DatabaseAdapter::readIndexListMap( const
 	DatabaseKeyBuffer key( prefix);
 	key(clname);
 
-	std::auto_ptr<DatabaseCursorInterface> cursor( m_database->createCursor( DatabaseOptions()));
+	std::unique_ptr<DatabaseCursorInterface> cursor( m_database->createCursor( DatabaseOptions()));
 	if (!cursor.get()) throw strus::runtime_error(_TXT("failed to create cursor to read index map: %s"), m_errorhnd->fetchError());
 
 	DatabaseCursorInterface::Slice slice = cursor->seekFirst( key.c_str(), key.size());
@@ -901,7 +907,7 @@ std::vector<SampleIndex> DatabaseAdapter::readConceptSingletons( const std::stri
 	DatabaseKeyBuffer key( KeySampleConceptIndexMap);
 	key(clname);
 
-	std::auto_ptr<DatabaseCursorInterface> cursor( m_database->createCursor( DatabaseOptions()));
+	std::unique_ptr<DatabaseCursorInterface> cursor( m_database->createCursor( DatabaseOptions()));
 	if (!cursor.get()) throw strus::runtime_error(_TXT("failed to create cursor to read similarity relation map: %s"), m_errorhnd->fetchError());
 
 	SampleIndex prev_sidx = 0;
