@@ -33,13 +33,6 @@
 
 #define MAIN_CONCEPTNAME ""
 
-#if __cplusplus <= 199711L
-namespace std {
-	typedef auto_ptr unique_ptr;
-	//... only a valid replacement in this module, since we do not have assignments of unique_ptr
-}
-#endif
-
 static void initRandomNumberGenerator()
 {
 	time_t nowtime;

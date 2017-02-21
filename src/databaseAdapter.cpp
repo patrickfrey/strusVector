@@ -21,12 +21,6 @@
 #include <iostream>
 #include <sstream>
 
-#if __cplusplus <= 199711L
-namespace std {
-	typedef auto_ptr unique_ptr;
-	//... only a valid replacement in this module, since we do not have assignments of unique_ptr
-}
-#endif
 using namespace strus;
 
 #define VARIABLE_NOF_SAMPLES  "samples"
