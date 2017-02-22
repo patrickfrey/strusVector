@@ -99,6 +99,17 @@ Index VectorStorageClient::featureIndex( const std::string& name) const
 	CATCH_ERROR_ARG1_MAP_RETURN( _TXT("error in client interface of '%s' getting index of feature by its name: %s"), MODULENAME, *m_errorhnd, -1);
 }
 
+double VectorStorageClient::vectorSimilarity( const std::vector<double>& v1, const std::vector<double>& v2) const
+{
+	try
+	{
+		arma::vec vv1 = arma::vec( v1);
+		arma::vec vv2 = arma::vec( v2);
+		return arma::norm_dot( vv1, vv2);
+	}
+	CATCH_ERROR_ARG1_MAP_RETURN( _TXT("error in client interface of '%s' calculating vector similarity: %s"), MODULENAME, *m_errorhnd, -1);
+}
+
 std::vector<Index> VectorStorageClient::conceptFeatures( const std::string& conceptClass, const Index& conceptid) const
 {
 	try
