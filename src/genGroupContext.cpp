@@ -737,7 +737,7 @@ void GenGroupContext::eliminateRedundantGroups( const GenGroupParameter& paramet
 #endif
 	if (m_logout) m_logout << _TXT("eliminate circular references from the graph");
 	eliminateCircularReferences( groupDependencyGraph, m_groupMap);
-	if (m_logout) m_logout << string_format( _TXT("got %u dependencies after elimination"), groupDependencyGraph.size());
+	if (m_logout) m_logout << string_format( _TXT("got %u dependencies after elimination"), (unsigned int)groupDependencyGraph.size());
 #ifdef STRUS_LOWLEVEL_DEBUG
 	{
 		DependencyGraph::const_iterator di = groupDependencyGraph.begin(), de = groupDependencyGraph.end();
@@ -778,7 +778,7 @@ void GenGroupContext::collectResults(
 			singletons.push_back( si);
 		}
 	}
-	if (m_logout) m_logout << string_format( _TXT("found %u singletons"), singletons.size());
+	if (m_logout) m_logout << string_format( _TXT("found %u singletons"), (unsigned int)singletons.size());
 
 	// Add the groups to the result and collect group members into conceptSampleIndexMap:
 	std::vector<ConceptIndex> gidmap( m_cntalloc->nofGroupIdsAllocated(), 0);
