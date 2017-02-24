@@ -246,7 +246,7 @@ static bool compare( const std::vector<double>& v1, const std::vector<double>& v
 	}
 	else
 	{
-		std::cerr << strus::string_format( "vectors have different length %u != %u", v1.size(), v2.size()) << std::endl;
+		std::cerr << strus::string_format( "vectors have different length %u != %u", (unsigned int)v1.size(), (unsigned int)v2.size()) << std::endl;
 		return false;
 	}
 }

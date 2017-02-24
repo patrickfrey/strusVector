@@ -210,7 +210,7 @@ void VectorStorageBuilder::buildSimRelationMap( const SimRelationReader* simmapr
 	const char* logfile = m_config.logfile.empty()?0:m_config.logfile.c_str();
 	Logger logout( logfile);
 
-	if (logout) logout << string_format( _TXT("calculate similarity relation matrix for %u features (selection %s)"), m_samplear.size(), m_config.with_probsim?_TXT("probabilistic selection"):_TXT("try all"));
+	if (logout) logout << string_format( _TXT("calculate similarity relation matrix for %u features (selection %s)"), (unsigned int)m_samplear.size(), m_config.with_probsim?_TXT("probabilistic selection"):_TXT("try all"));
 	uint64_t total_nof_similarities = 0;
 	SimRelationMapBuilder simrelbuilder( m_samplear, m_config.maxdist, m_config.maxsimsam, m_config.rndsimsam, m_config.threads, m_config.with_probsim, logout, simmapreader);
 	SimRelationMap simrelmap_part;
