@@ -1176,7 +1176,7 @@ void DatabaseAdapter::DumpIterator::dumpKeyValue( std::ostream& out, const strus
 }
 
 DatabaseAdapter::DumpIterator::DumpIterator( const DatabaseClientInterface* database, const std::string& cursorkey_, ErrorBufferInterface* errorhnd_)
-	:m_errorhnd(errorhnd_),m_cursor(database->createCursor( DatabaseOptions())),m_cursorkey(cursorkey_),m_first(false)
+	:m_errorhnd(errorhnd_),m_cursor(database->createCursor( DatabaseOptions())),m_cursorkey(cursorkey_),m_first(true)
 {
 	if (!m_cursor.get()) throw strus::runtime_error(_TXT("error creating database cursor"));
 }
