@@ -17,6 +17,14 @@ link_directories(
 	"${strusbase_LIBRARY_DIRS}"
 )
 
+# some hacks to make FreeBSD work
+if(CMAKE_SYSTEM_NAME MATCHES "FreeBSD")
+    set(FREEBSD true)
+endif(CMAKE_SYSTEM_NAME MATCHES "FreeBSD")
+if(FREEBSD)
+  set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -Wl,-rpath=/usr/local/lib/gcc5 -L/usr/local/lib/gcc5 -lgcc_s -lquadmath")
+endif()
+
 add_executable( testLshSimHash testLshSimHash.cpp)
 target_link_libraries( testLshSimHash strus_vector_static  ${Boost_LIBRARIES} ${Intl_LIBRARIES} strus_armadillo )
 
