@@ -331,6 +331,14 @@ else()
 endif()
 
 
+## add proper link paths on FreeBSD for lapack
+if(CMAKE_SYSTEM_NAME MATCHES "FreeBSD")
+    set(FREEBSD true)
+endif(CMAKE_SYSTEM_NAME MATCHES "FreeBSD")
+if(FREEBSD)
+  set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -Wl,-rpath=/usr/local/lib/gcc5 -L/usr/local/lib/gcc5 -lgcc_s -lquadmath")
+endif()
+
 ## necessary when linking with Intel MKL on Linux systems
 if(${CMAKE_SYSTEM_NAME} MATCHES "Linux")
   set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -Wl,--no-as-needed")
@@ -346,7 +354,7 @@ message(STATUS "CMAKE_SHARED_LINKER_FLAGS = ${CMAKE_SHARED_LINKER_FLAGS}")
 message(STATUS "CMAKE_REQUIRED_INCLUDES   = ${CMAKE_REQUIRED_INCLUDES}"  )
 
 
-add_library( strus_armadillo ${PROJECT_SOURCE_DIR}/src/wrapper.cpp )
+add_library( strus_armadillo SHARED ${PROJECT_SOURCE_DIR}/src/wrapper.cpp )
 target_link_libraries( strus_armadillo ${ARMA_LIBS} )
 set_target_properties(
     strus_armadillo
