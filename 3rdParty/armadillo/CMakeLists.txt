@@ -339,6 +339,14 @@ if(FREEBSD)
   set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -Wl,-rpath=/usr/local/lib/gcc5 -L/usr/local/lib/gcc5 -lgcc_s -lquadmath")
 endif()
 
+# add proper link paths o OpenBSD for lapack and BLAS
+if(CMAKE_SYSTEM_NAME MATCHES "OpenBSD")
+    set(OPENBSD true)
+endif(CMAKE_SYSTEM_NAME MATCHES "OpenBSD")
+if(OPENBSD)
+  set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -lg2c")
+endif()
+
 ## necessary when linking with Intel MKL on Linux systems
 if(${CMAKE_SYSTEM_NAME} MATCHES "Linux")
   set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -Wl,--no-as-needed")

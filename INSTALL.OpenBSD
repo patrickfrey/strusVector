@@ -3,7 +3,7 @@ OpenBSD 6.0
 
 Use 'lang/gcc/4.9' from ports (package 'gcc' and 'g++', the base gcc is too old).
 
-Install 'gcc' 'g++' 'cmake', 'gmake', 'boost', 'gettext', 'gettext-tools' and 'liblapacke' as
+Install 'gcc' 'g++' 'cmake', 'gmake', 'boost', 'gettext', 'gettext-tools' and 'lapack' as
 packages or from the ports collection.
 
 Build strusVector with:
@@ -14,7 +14,7 @@ cmake -DCMAKE_INSTALL_PREFIX=/usr/local -DCMAKE_BUILD_TYPE=Release -DLIB_INSTALL
 	-DCMAKE_MAKE_PROGRAM=/usr/local/bin/gmake .
 gmake
 
-We must use 'gcc' (4.9, same toolchain) as 'boost' and 'liblapacke' require features from newer
+We must use 'gcc' (4.9, same toolchain) as 'boost' and 'lapack' require features from newer
 gcc's!
 
 Running the tests:
