@@ -3,7 +3,7 @@ FreeBSD 10.2 on SPARC64
 
 Use 'gcc48' from ports.
 
-Build 'cmake', 'liblapacke'
+Build 'cmake', 'liblapack'
 
 Build 'gettext' and 'gettext-tools' from ports.
 
@@ -16,7 +16,7 @@ cmake -DCMAKE_INSTALL_PREFIX=/usr/local -DCMAKE_BUILD_TYPE=Release -DLIB_INSTALL
         -DCMAKE_CXX_COMPILER=g++48 -DCMAKE_C_COMPILER=gcc48 .
 make
 
-We must use 'gcc48' (same toolchain) as 'boost' and 'liblapacke' require features from newer
+We must use 'gcc48' (same toolchain) as 'boost' and 'liblapack' require features from newer
 gcc's!
 
 Running the tests:
@@ -28,7 +28,7 @@ FreeBSD 10.2 on x86_64, i686
 ----------------------------
 
 Install packages with 'pkg install':
-- liblapacke, cmake, boost-libs
+- liblapack, cmake, boost-libs
 
 Build using the clang/clang++ toolchain:
 
