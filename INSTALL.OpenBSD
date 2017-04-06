@@ -17,6 +17,8 @@ gmake
 We must use 'gcc' (4.9, same toolchain) as 'boost' and 'lapack' require features from newer
 gcc's!
 
+You might also have to manually install the 'g77' package to provide 'libg2c'.
+
 Running the tests:
 
 gmake test
