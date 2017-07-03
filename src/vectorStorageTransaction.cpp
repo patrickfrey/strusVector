@@ -101,7 +101,7 @@ bool VectorStorageTransaction::commit()
 					}
 					std::vector<SampleIndex> old_sar = m_database->readConceptSampleIndices( clname, rf->first);
 					std::vector<SampleIndex> join_sar;
-					std::merge( new_sar.begin(), new_sar.end(), old_sar.begin(), old_sar.end(), join_sar.begin());
+					std::merge( new_sar.begin(), new_sar.end(), old_sar.begin(), old_sar.end(),  std::back_inserter( join_sar));
 					m_transaction->writeConceptSampleIndices( clname, rf->first, join_sar);
 				}
 			}
@@ -119,7 +119,7 @@ bool VectorStorageTransaction::commit()
 					}
 					std::vector<SampleIndex> old_sar = m_database->readSampleConceptIndices( clname, rf->first);
 					std::vector<SampleIndex> join_sar;
-					std::merge( new_sar.begin(), new_sar.end(), old_sar.begin(), old_sar.end(), join_sar.begin());
+					std::merge( new_sar.begin(), new_sar.end(), old_sar.begin(), old_sar.end(),  std::back_inserter(join_sar));
 					m_transaction->writeSampleConceptIndices( clname, rf->first, join_sar);
 				}
 			}
