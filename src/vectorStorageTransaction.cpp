@@ -84,7 +84,23 @@ bool VectorStorageTransaction::commit()
 			}
 			m_transaction->writeNofSamples( lastSampleIdx + si);
 		}
+		std::vector<std::string> clnames = m_database->readConceptClassNames();
+		std::set<std::string> clset( clnames.begin(), clnames.end());
+		bool conceptClassesUpdated = false;
 		ConceptTypeMap::const_iterator ti = m_conceptTypeMap.begin(), te = m_conceptTypeMap.end();
+		for (; ti != te; ++ti)
+		{
+			if (clset.find( ti->first) == clset.end())
+			{
+				clset.insert( ti->first);
+				conceptClassesUpdated = true;
+			}
+		}
+		if (conceptClassesUpdated)
+		{
+			m_transaction->writeConceptClassNames( std::vector<std::string>( clset.begin(), clset.end()));
+		}
+		ti = m_conceptTypeMap.begin();
 		for (; ti != te; ++ti)
 		{
 			{
