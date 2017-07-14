@@ -53,7 +53,9 @@ public:
 	virtual unsigned int nofFeatures() const;
 
 	virtual std::string config() const;
-	
+
+	virtual void close();
+
 public:/*VectorStorageTransaction*/
 	friend class TransactionLock;
 	class TransactionLock

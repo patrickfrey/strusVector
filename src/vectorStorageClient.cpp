@@ -146,3 +146,10 @@ std::string VectorStorageClient::config() const
 	CATCH_ERROR_ARG1_MAP_RETURN( _TXT("error in client interface of '%s' mapping configuration to string: %s"), MODULENAME, *m_errorhnd, std::string());
 }
 
+void VectorStorageClient::close()
+{
+	m_database->close();
+}
+
+
+
