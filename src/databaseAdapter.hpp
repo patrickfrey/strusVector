@@ -66,6 +66,7 @@ public:
 	VectorStorageConfig readConfig() const;
 	LshModel readLshModel() const;
 	bool isempty();
+	void close();
 
 public:
 	enum KeyPrefix

@@ -566,6 +566,11 @@ bool DatabaseAdapter::isempty()
 	return false;
 }
 
+void DatabaseAdapter::close()
+{
+	m_database->close();
+}
+
 LshModel DatabaseAdapter::readLshModel() const
 {
 	DatabaseKeyBuffer key( KeyLshModel);
