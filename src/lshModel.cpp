@@ -134,7 +134,7 @@ SimHash LshModel::simHash( const arma::vec& vec) const
 	std::vector<bool> rt;
 	if (m_dim != vec.size())
 	{
-		throw strus::runtime_error( _TXT("vector must have dimension of model: dim=%u != vector=%u"), m_dim, vec.size());
+		throw strus::runtime_error( _TXT("vector must have dimension of model: dim=%u != vector=%u"), (unsigned int)m_dim, (unsigned int)vec.size());
 	}
 	std::vector<arma::mat>::const_iterator roti = m_rotations.begin(), rote = m_rotations.end();
 	for (; roti != rote; ++roti)
