@@ -11,7 +11,7 @@ include_directories(
 	"${strus_INCLUDE_DIRS}"
 )
 link_directories(
-	"${PROJECT_SOURCE_DIR}/src"
+	"${CMAKE_CURRENT_BINARY_DIR}/../../../src"
 	"${PROJECT_BINARY_DIR}/3rdParty/armadillo"
 	"${Boost_LIBRARY_DIRS}"
 	"${strusbase_LIBRARY_DIRS}"

@@ -46,8 +46,7 @@ include_directories(
 )
 link_directories(
 	"${Boost_LIBRARY_DIRS}"
-	"${PROJECT_SOURCE_DIR}/src"
-	"${PROJECT_BINARY_DIR}/3rdParty/armadillo"
+	"${CMAKE_CURRENT_BINARY_DIR}/../3rdParty/armadillo" 
 	"${strusbase_LIBRARY_DIRS}"
 )
 

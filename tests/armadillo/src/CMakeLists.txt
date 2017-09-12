@@ -7,7 +7,7 @@ include_directories(
 	"${PROJECT_BINARY_DIR}/include"
 )
 link_directories(
-	"${PROJECT_BINARY_DIR}/3rdParty/armadillo"
+	"${CMAKE_CURRENT_BINARY_DIR}/../../../3rdParty/armadillo"
 )
 
 # some hacks to make FreeBSD work
