@@ -15,6 +15,7 @@ Table of Contents
 
   boost
   lapack
+  blas
   armadillo
 
 boost
@@ -25,6 +26,11 @@ Lapack
 ---------
    Link: http://www.netlib.org/lapack/
    License:  Modified BSD   (http://www.netlib.org/lapack/LICENSE.txt)
+
+BLAS
+---------
+   License: "The reference BLAS is a freely-available software package. It can be included in commercial software packages. We only ask that proper credit be given to the authors."
+   Link: http://www.netlib.org/blas/#_licensing
 
 Armadillo
 ------------

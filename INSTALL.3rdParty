@@ -4,6 +4,6 @@ Library dependencies of strus:
 
 Ubuntu:
 	sudo apt-get install liboost-all-dev
-	sudo apt-get install liblapacke-dev
+	sudo apt-get install liblapacke-dev libblas-dev
 
 
