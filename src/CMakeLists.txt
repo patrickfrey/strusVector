@@ -70,7 +70,6 @@ set_target_properties(
 add_library( modstrus_storage_vector_std  MODULE  modstrus_storage_vector_std.cpp )
 set_target_properties( modstrus_storage_vector_std PROPERTIES PREFIX "")
 target_link_libraries( modstrus_storage_vector_std strus_module_storage strus_vector_std ${Intl_LIBRARIES} ${Boost_LIBRARIES} )
-set( STRUS_MODULE_PATH "${STRUS_MODULE_PATH}:${CMAKE_CURRENT_BINARY_DIR}" )
 
 # ------------------------------
 # INSTALLATION
