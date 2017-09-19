@@ -2,12 +2,11 @@ cmake_minimum_required(VERSION 2.8 FATAL_ERROR)
 
 include_directories(
 	"${Intl_INCLUDE_DIRS}"
-	"${PROJECT_BINARY_DIR}/3rdParty/armadillo/include"
-	"${PROJECT_SOURCE_DIR}/3rdParty/armadillo/include"
-	"${PROJECT_BINARY_DIR}/include"
+	"${ARMADILLO_INCLUDE_DIRS}"
+	"${VECTOR_INCLUDE_DIRS}"
 )
 link_directories(
-	"${CMAKE_CURRENT_BINARY_DIR}/../../../3rdParty/armadillo"
+	"${ARMADILLO_LIBRARY_DIRS}"
 )
 
 # some hacks to make FreeBSD work

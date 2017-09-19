@@ -6,16 +6,14 @@ cmake_minimum_required(VERSION 2.8 FATAL_ERROR)
 include_directories(
 	"${Boost_INCLUDE_DIRS}"
 	"${Intl_INCLUDE_DIRS}"
-	"${PROJECT_BINARY_DIR}/3rdParty/armadillo/include/"
-	"${PROJECT_SOURCE_DIR}/3rdParty/armadillo/include/"
-	"${PROJECT_SOURCE_DIR}/include"
+	"${ARMADILLO_INCLUDE_DIRS}"
+	"${VECTOR_INCLUDE_DIRS}"
 	"${strusbase_INCLUDE_DIRS}"
 )
 link_directories(
 	"${Boost_LIBRARY_DIRS}"
-	"${PROJECT_SOURCE_DIR}/src"
-	"${PROJECT_SOURCE_DIR}/src_pagerank"
-	"${PROJECT_BINARY_DIR}/3rdParty/armadillo"
+	"${VECTOR_LIBRARY_DIRS}"
+	"${ARMADILLO_LIBRARY_DIRS}"
 	"${strusbase_LIBRARY_DIRS}"
 )
 

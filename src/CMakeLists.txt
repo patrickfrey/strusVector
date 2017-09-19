@@ -37,16 +37,15 @@ set(
 include_directories(
 	"${Boost_INCLUDE_DIRS}"
 	"${Intl_INCLUDE_DIRS}"
-	"${PROJECT_BINARY_DIR}/3rdParty/armadillo/include/"
-	"${PROJECT_SOURCE_DIR}/3rdParty/armadillo/include/"
-	"${PROJECT_SOURCE_DIR}/include"
+	"${ARMADILLO_INCLUDE_DIRS}"
+	"${VECTOR_INCLUDE_DIRS}"
 	"${strusbase_INCLUDE_DIRS}"
 	"${strus_INCLUDE_DIRS}"
 	"${strusmodule_INCLUDE_DIRS}"
 )
 link_directories(
 	"${Boost_LIBRARY_DIRS}"
-	"${CMAKE_CURRENT_BINARY_DIR}/../3rdParty/armadillo" 
+	"${ARMADILLO_LIBRARY_DIRS}"
 	"${strusbase_LIBRARY_DIRS}"
 )
 

@@ -43,6 +43,15 @@ configure_file( "${PROJECT_SOURCE_DIR}/src_pageweight/pageweightdefs.hpp.in"  "$
 
 enable_testing()
 
+set( ARMADILLO_INCLUDE_DIRS        "${CMAKE_CURRENT_BINARY_DIR}/3rdParty/armadillo/include"  "${PROJECT_SOURCE_DIR}/3rdParty/armadillo/include" )
+set( ARMADILLO_LIBRARY_DIRS        "${CMAKE_CURRENT_BINARY_DIR}/3rdParty/armadillo" )
+set( VECTOR_INCLUDE_DIRS             "${CMAKE_CURRENT_BINARY_DIR}/include"  "${PROJECT_SOURCE_DIR}/include" )
+set( VECTOR_LIBRARY_DIRS             "${CMAKE_CURRENT_BINARY_DIR}/src" )
+set( PAGEWEIGHT_INCLUDE_DIRS    "${CMAKE_CURRENT_BINARY_DIR}/src_pageweight" )
+set( PAGEWEIGHT_LIBRARY_DIRS    "${CMAKE_CURRENT_BINARY_DIR}/src_pageweight" )
+set( MAIN_SOURCE_DIR                     "${PROJECT_SOURCE_DIR}/src" )
+set( MAIN_TESTS_DIR                        "${PROJECT_SOURCE_DIR}/tests" )
+
 # Subdirectories:
 add_subdirectory( 3rdParty )
 add_subdirectory( src )
