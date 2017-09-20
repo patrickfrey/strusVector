@@ -43,6 +43,7 @@ configure_file( "${PROJECT_SOURCE_DIR}/src_pageweight/pageweightdefs.hpp.in"  "$
 
 enable_testing()
 
+# Path declarations:
 set( ARMADILLO_INCLUDE_DIRS        "${CMAKE_CURRENT_BINARY_DIR}/3rdParty/armadillo/include"  "${PROJECT_SOURCE_DIR}/3rdParty/armadillo/include" )
 set( ARMADILLO_LIBRARY_DIRS        "${CMAKE_CURRENT_BINARY_DIR}/3rdParty/armadillo" )
 set( VECTOR_INCLUDE_DIRS             "${CMAKE_CURRENT_BINARY_DIR}/include"  "${PROJECT_SOURCE_DIR}/include" )
