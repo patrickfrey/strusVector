@@ -68,6 +68,5 @@ tests/vectorSpaceModel/src/strusInspectVsm
 tests/pagerank/src/testPageRank
 tests/database/src/testDatabaseAdapter
 tests/vectorSpaceModel/vsmodel/
-.travis.yml
 
 
