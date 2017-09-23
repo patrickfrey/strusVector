@@ -51,7 +51,7 @@ GenModelConfig::GenModelConfig( const std::string& config, unsigned int maxdist,
 	std::string::const_iterator si = src.begin(), se = src.end();
 	for (; si != se && ((unsigned char)*si <= 32 || *si == ';'); ++si)
 	{}
-	if (si != se) throw strus::runtime_error(_TXT("unknown configuration parameter for gen model (vector storage)"));
+	if (si != se) throw strus::runtime_error( "%s", _TXT("unknown configuration parameter for gen model (vector storage)"));
 }
 
 void GenModelConfig::parse( std::string& src, unsigned int maxdist, ErrorBufferInterface* errorhnd)
@@ -64,17 +64,17 @@ void GenModelConfig::parse( std::string& src, unsigned int maxdist, ErrorBufferI
 	}
 	if (simdist > maxdist)
 	{
-		throw strus::runtime_error(_TXT("the 'simdist' configuration parameter must not be bigger than 'maxdist'"));
+		throw strus::runtime_error( "%s", _TXT("the 'simdist' configuration parameter must not be bigger than 'maxdist'"));
 	}
 	(void)extractUIntFromConfigString( raddist, src, "raddist", errorhnd);
 	if (raddist > simdist)
 	{
-		throw strus::runtime_error(_TXT("the 'raddist' configuration parameter must not be bigger than 'simdist'"));
+		throw strus::runtime_error( "%s", _TXT("the 'raddist' configuration parameter must not be bigger than 'simdist'"));
 	}
 	(void)extractUIntFromConfigString( eqdist, src, "eqdist", errorhnd);
 	if (eqdist > simdist)
 	{
-		throw strus::runtime_error(_TXT("the 'eqdist' configuration parameter must not be bigger than 'simdist'"));
+		throw strus::runtime_error( "%s", _TXT("the 'eqdist' configuration parameter must not be bigger than 'simdist'"));
 	}
 	(void)extractUIntFromConfigString( probdist, src, "probdist", errorhnd);
 	(void)extractUIntFromConfigString( mutations, src, "mutations", errorhnd);
@@ -97,7 +97,7 @@ void GenModelConfig::parse( std::string& src, unsigned int maxdist, ErrorBufferI
 
 	if (mutations == 0 || descendants == 0 || maxage == 0 || iterations == 0)
 	{
-		throw strus::runtime_error(_TXT("error in vector storage configuration: mutations, descendants, maxage or iterations values must not be zero"));
+		throw strus::runtime_error( "%s", _TXT("error in vector storage configuration: mutations, descendants, maxage or iterations values must not be zero"));
 	}
 	if (errorhnd->hasError())
 	{
@@ -199,7 +199,7 @@ VectorStorageConfig::VectorStorageConfig( const std::string& config, ErrorBuffer
 	if (!maxconcepts && maxfeatures)
 	{
 		maxconcepts = (maxfeatures / 2) * gencfg.assignments + 2;
-		if (maxfeatures > maxconcepts) throw strus::runtime_error(_TXT("'maxconcepts' has to be specified, because default maxconcepts = (maxfeatures * assignments / 2) exceeds domain"));
+		if (maxfeatures > maxconcepts) throw strus::runtime_error( "%s", _TXT("'maxconcepts' has to be specified, because default maxconcepts = (maxfeatures * assignments / 2) exceeds domain"));
 	}
 	if (extractBooleanFromConfigString( with_probsim, src, "probsim", errorhnd)){}
 	if (extractBooleanFromConfigString( with_forcesim, src, "forcesim", errorhnd)){}
@@ -217,15 +217,15 @@ VectorStorageConfig::VectorStorageConfig( const std::string& config, ErrorBuffer
 		char const* namestart = ee;
 		while (*ee && (unsigned char)*ee != ':' && (unsigned char)*ee != ' ')
 		{
-			if ((*ee|32) < 'a' || (*ee|32) > 'z') throw strus::runtime_error(_TXT("expected identifier at start of alternative gen configuration in vector storage"));
+			if ((*ee|32) < 'a' || (*ee|32) > 'z') throw strus::runtime_error( "%s", _TXT("expected identifier at start of alternative gen configuration in vector storage"));
 			++ee;
 		}
 		std::string name( namestart, ee - namestart);
 		while (*ee && (unsigned char)*ee <= 32) ++ee;
-		if (*ee != ':') throw strus::runtime_error(_TXT("expected colon ':' after identifier at start of alternative gen configuration in vector storage"));
+		if (*ee != ':') throw strus::runtime_error( "%s", _TXT("expected colon ':' after identifier at start of alternative gen configuration in vector storage"));
 		++ee;
 		GenModelConfig altgencfg( ee, maxdist, errorhnd, gencfg);
-		if (altgenmap.find( name) != altgenmap.end()) throw strus::runtime_error(_TXT("duplicate definition of alternative gen configuration in vector storage"));
+		if (altgenmap.find( name) != altgenmap.end()) throw strus::runtime_error( "%s", _TXT("duplicate definition of alternative gen configuration in vector storage"));
 		altgenmap[ name] = altgencfg;
 	}
 	std::string condepdefstr;
@@ -238,7 +238,7 @@ VectorStorageConfig::VectorStorageConfig( const std::string& config, ErrorBuffer
 		}
 		char const* cc = condepdefstr.c_str();
 		for (; *cc && *cc != ':'; ++cc){}
-		if (!*cc) throw strus::runtime_error(_TXT("illegal concept class dependency definition in config (missing colon ':')"));
+		if (!*cc) throw strus::runtime_error( "%s", _TXT("illegal concept class dependency definition in config (missing colon ':')"));
 		ConceptClassDependency dep( utils::trim( std::string(condepdefstr.c_str(),cc-condepdefstr.c_str())), utils::trim( std::string(cc+1)));
 		conceptClassDependecies.push_back( dep);
 		if (!dep.first.empty() && altgenmap.find( dep.first) == altgenmap.end()) throw strus::runtime_error(_TXT("undefined concept class '%s' referenced in dependency"), dep.first.c_str());
@@ -246,7 +246,7 @@ VectorStorageConfig::VectorStorageConfig( const std::string& config, ErrorBuffer
 	}
 	if (dim == 0 || bits == 0 || variations == 0)
 	{
-		throw strus::runtime_error(_TXT("error in vector storage configuration: dim, bits or var values must not be zero"));
+		throw strus::runtime_error( "%s", _TXT("error in vector storage configuration: dim, bits or var values must not be zero"));
 	}
 	databaseConfig = utils::trim(src);	//... rest is database configuration
 	while (databaseConfig.size() && databaseConfig[ databaseConfig.size()-1] == ';') databaseConfig.resize( databaseConfig.size()-1);

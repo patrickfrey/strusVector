@@ -60,7 +60,7 @@ private:
 	template <class Functor>
 	SimHash BINOP( const SimHash& o) const
 	{
-		if (size() != o.size()) throw strus::runtime_error(_TXT("binary sim hash operation on incompatible operands"));
+		if (size() != o.size()) throw strus::runtime_error( "%s", _TXT("binary sim hash operation on incompatible operands"));
 		SimHash rt( size(), false);
 		uint64_t* ri = rt.m_ar;
 		uint64_t const* ai = m_ar; const uint64_t* ae = m_ar + arsize();
@@ -71,7 +71,7 @@ private:
 	template <class Functor>
 	SimHash& BINOP_ASSIGN( const SimHash& o)
 	{
-		if (size() != o.size()) throw strus::runtime_error(_TXT("binary sim hash operation on incompatible operands"));
+		if (size() != o.size()) throw strus::runtime_error( "%s", _TXT("binary sim hash operation on incompatible operands"));
 		uint64_t* ai = m_ar; uint64_t* ae = m_ar + arsize();
 		uint64_t const* oi = o.m_ar;
 		for (; ai != ae; ++ai,++oi) *ai = Functor::call( *ai, *oi);

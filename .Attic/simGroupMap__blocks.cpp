@@ -83,7 +83,7 @@ const SimGroupRef& SimGroupMap::get( const ConceptIndex& cidx) const
 	std::size_t blockofs = (cidx-1) % Block::Size;
 	if (blockidx > m_arsize)
 	{
-		throw strus::runtime_error(_TXT("array bound read in similarity group map"));
+		throw strus::runtime_error( "%s", _TXT("array bound read in similarity group map"));
 	}
 	BlockRef blk = m_ar[ blockidx];
 	if (!blk.get()) return m_null;
@@ -96,7 +96,7 @@ void SimGroupMap::setGroup( const ConceptIndex& cidx, const SimGroupRef& group)
 	std::size_t blockofs = (cidx-1) % Block::Size;
 	if (blockidx > m_arsize)
 	{
-		throw strus::runtime_error(_TXT("array bound write in similarity group map"));
+		throw strus::runtime_error( "%s", _TXT("array bound write in similarity group map"));
 	}
 	BlockRef blk = m_ar[ blockidx];
 	if (!blk.get())
@@ -113,7 +113,7 @@ void SimGroupMap::resetGroup( const ConceptIndex& cidx)
 	std::size_t blockofs = (cidx-1) % Block::Size;
 	if (blockidx > m_arsize)
 	{
-		throw strus::runtime_error(_TXT("array bound write in similarity group map"));
+		throw strus::runtime_error( "%s", _TXT("array bound write in similarity group map"));
 	}
 	BlockRef blk = m_ar[ blockidx];
 	if (blk.get())

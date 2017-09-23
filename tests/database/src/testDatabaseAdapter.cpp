@@ -220,7 +220,7 @@ static void writeDatabase( const strus::VectorStorageConfig& config, const TestD
 	transaction->writeConceptSampleIndexMap( MAIN_CONCEPTNAME, dataset.fsmap);
 	transaction->writeConfig( config);
 	transaction->writeLshModel( dataset.lshmodel);
-	if (!transaction->commit()) throw strus::runtime_error(_TXT("vector storage transaction failed"));
+	if (!transaction->commit()) throw strus::runtime_error( "%s", _TXT("vector storage transaction failed"));
 }
 
 static bool compare( const std::vector<double>& v1, const std::vector<double>& v2)

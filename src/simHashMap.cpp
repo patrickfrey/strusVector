@@ -43,7 +43,7 @@ void SimHashMap::initBench()
 	std::size_t si = 0, se = m_ar.size();
 	for (; si != se; ++si)
 	{
-		if (m_ar[si].size() != m_vecsize) throw strus::runtime_error(_TXT("inconsistent dataset passed to sim hash map (sim hash element sizes differ)"));
+		if (m_ar[si].size() != m_vecsize) throw strus::runtime_error( "%s", _TXT("inconsistent dataset passed to sim hash map (sim hash element sizes differ)"));
 		m_selar1[ si] = m_ar[ si].ar()[ m_select1];
 		m_selar2[ si] = m_ar[ si].ar()[ m_select2];
 	}
@@ -55,7 +55,7 @@ struct RankList
 	RankList( unsigned int maxNofRanks_)
 		:m_nofRanks(0),m_maxNofRanks(maxNofRanks_)
 	{
-		if (maxNofRanks_ == 0 || m_maxNofRanks > MaxIndexSize) throw strus::runtime_error( _TXT( "illegal value for max number of ranks"));
+		if (maxNofRanks_ == 0 || m_maxNofRanks > MaxIndexSize) throw strus::runtime_error( "%s",  _TXT( "illegal value for max number of ranks"));
 		for (unsigned int ii=0; ii<m_maxNofRanks; ++ii) m_brute_index[ii] = ii;
 	}
 

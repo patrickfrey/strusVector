@@ -89,7 +89,7 @@ VectorStorageBuilder::VectorStorageBuilder( const VectorStorageConfig& config_, 
 	m_config = VectorStorageConfig( configstr_, errorhnd_, cfg);
 	if (!m_config.isBuildCompatible( cfg))
 	{
-		throw strus::runtime_error(_TXT("loading vector storage with incompatible configuration"));
+		throw strus::runtime_error( "%s", _TXT("loading vector storage with incompatible configuration"));
 	}
 	if (m_config.maxdist > cfg.maxdist)
 	{
@@ -126,7 +126,7 @@ bool VectorStorageBuilder::run( const std::string& command)
 	{
 		if (m_samplear.empty())
 		{
-			throw strus::runtime_error(_TXT("no features defined to learn concepts"));
+			throw strus::runtime_error( "%s", _TXT("no features defined to learn concepts"));
 		}
 		learnConcepts();
 		return true;

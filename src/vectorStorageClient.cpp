@@ -26,7 +26,7 @@ VectorStorageClient::VectorStorageClient( const VectorStorageConfig& config_, co
 {
 	m_database.reset( new DatabaseAdapter( database_,config_.databaseConfig,errorhnd_));
 	m_database->checkVersion();
-	if (m_database->isempty()) throw strus::runtime_error(_TXT("try to open a vector storage that is empty, need to be built first"));
+	if (m_database->isempty()) throw strus::runtime_error( "%s", _TXT("try to open a vector storage that is empty, need to be built first"));
 	VectorStorageConfig cfg = m_database->readConfig();
 	m_config = VectorStorageConfig( configstr_, errorhnd_, cfg);
 }

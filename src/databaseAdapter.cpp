@@ -80,7 +80,7 @@ struct VectorStorageHdr
 
 	void check()
 	{
-		if (_id != FILEID) throw strus::runtime_error(_TXT("unknown file type, expected strus standard vector storage binary file"));
+		if (_id != FILEID) throw strus::runtime_error( "%s", _TXT("unknown file type, expected strus standard vector storage binary file"));
 		if (version_major != STRUS_VECTOR_VERSION_MAJOR) throw strus::runtime_error(_TXT("major version (%u) of loaded strus standard vector storage binary file does not match"), version_major);
 		if (version_minor > STRUS_VECTOR_VERSION_MINOR) throw strus::runtime_error(_TXT("minor version (%u) of loaded strus standard vector storage binary file does not match (newer than your version of strus)"), version_minor);
 	}
@@ -113,11 +113,11 @@ void DatabaseAdapter::checkVersion()
 		}
 		else
 		{
-			throw strus::runtime_error( _TXT( "failed to read non exising version from database"));
+			throw strus::runtime_error( "%s", _TXT( "failed to read non exising version from database"));
 		}
 	}
 	VectorStorageHdr hdr;
-	if (content.size() < sizeof(hdr)) throw strus::runtime_error(_TXT("unknown version format"));
+	if (content.size() < sizeof(hdr)) throw strus::runtime_error( "%s", _TXT("unknown version format"));
 	std::memcpy( &hdr, content.c_str(), sizeof(hdr));
 	hdr.ntoh();
 	hdr.check();
@@ -240,7 +240,7 @@ static std::vector<ScalarType> vectorFromSerialization( const char* blob, std::s
 	rt.reserve( blobsize / sizeof(NetScalarType));
 	if (blobsize % sizeof(NetScalarType) != 0)
 	{
-		throw strus::runtime_error(_TXT("corrupt data in vector serialization"));
+		throw strus::runtime_error( "%s", _TXT("corrupt data in vector serialization"));
 	}
 	NetScalarType const* ri = (const NetScalarType*)blob;
 	const NetScalarType* re = ri + blobsize / sizeof(NetScalarType);
@@ -460,7 +460,7 @@ SimHash DatabaseAdapter::readSimhash( const KeyPrefix& prefix, const SampleIndex
 		}
 		else
 		{
-			throw strus::runtime_error(_TXT("accessing sim hash value of undefined feature"));
+			throw strus::runtime_error( "%s", _TXT("accessing sim hash value of undefined feature"));
 		}
 	}
 	return SimHash::fromSerialization( content);
@@ -533,7 +533,7 @@ VectorStorageConfig DatabaseAdapter::readConfig() const
 		}
 		else
 		{
-			throw strus::runtime_error( _TXT( "failed to read non existing configuration from database"));
+			throw strus::runtime_error( "%s", _TXT( "failed to read non existing configuration from database"));
 		}
 	}
 	return VectorStorageConfig( content, m_errorhnd);
@@ -584,7 +584,7 @@ LshModel DatabaseAdapter::readLshModel() const
 		}
 		else
 		{
-			throw strus::runtime_error( _TXT( "failed to read non existing LSH model from database"));
+			throw strus::runtime_error( "%s", _TXT( "failed to read non existing LSH model from database"));
 		}
 	}
 	return LshModel::fromSerialization( content);
@@ -801,7 +801,7 @@ std::vector<SampleIndex> DatabaseAdapter::readConceptSampleIndices( const std::s
 {
 	if (cidx == 0)
 	{
-		throw strus::runtime_error(_TXT("illegal key (null) for concept"));
+		throw strus::runtime_error( "%s", _TXT("illegal key (null) for concept"));
 	}
 	DatabaseKeyBuffer key( KeyConceptSampleIndexMap);
 	key(clname)[ cidx];
@@ -885,7 +885,7 @@ IndexListMap<strus::Index,strus::Index> DatabaseAdapter::readIndexListMap( const
 		const char* ce = ci + content.size();
 		if ((ce - ci) % (sizeof(strus::Index)) != 0)
 		{
-			throw strus::runtime_error(_TXT("corrupt row of index list map"));
+			throw strus::runtime_error( "%s", _TXT("corrupt row of index list map"));
 		}
 		std::vector<strus::Index> elems;
 		for (; ci < ce; ci += sizeof(strus::Index))
@@ -1042,7 +1042,7 @@ void DatabaseAdapter::DumpIterator::dumpKeyValue( std::ostream& out, const strus
 		case DatabaseAdapter::KeyVersion:
 		{
 			VectorStorageHdr hdr;
-			if (value.size() < sizeof(hdr)) throw strus::runtime_error(_TXT("unknown version format"));
+			if (value.size() < sizeof(hdr)) throw strus::runtime_error( "%s", _TXT("unknown version format"));
 			std::memcpy( &hdr, value.ptr(), sizeof(hdr));
 			hdr.ntoh();
 			out << hdr.name << " " << hdr.version_major << "." << hdr.version_minor << std::endl;
@@ -1183,7 +1183,7 @@ void DatabaseAdapter::DumpIterator::dumpKeyValue( std::ostream& out, const strus
 DatabaseAdapter::DumpIterator::DumpIterator( const DatabaseClientInterface* database, const std::string& cursorkey_, ErrorBufferInterface* errorhnd_)
 	:m_errorhnd(errorhnd_),m_cursor(database->createCursor( DatabaseOptions())),m_cursorkey(cursorkey_),m_first(true)
 {
-	if (!m_cursor.get()) throw strus::runtime_error(_TXT("error creating database cursor"));
+	if (!m_cursor.get()) throw strus::runtime_error( "%s", _TXT("error creating database cursor"));
 }
 
 bool DatabaseAdapter::DumpIterator::dumpNext( std::ostream& out)
