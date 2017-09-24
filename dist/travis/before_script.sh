@@ -25,6 +25,7 @@ case $OS in
 		brew install \
 			cmake \
 			boost \
+			gettext \
 			snappy \
 			leveldb \
 			|| true
