@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 2.6 FATAL_ERROR)
+cmake_minimum_required(VERSION 2.8 FATAL_ERROR)
 
 # --------------------------------------
 # SOURCES AND INCLUDES
@@ -37,15 +37,15 @@ set(
 include_directories(
 	"${Boost_INCLUDE_DIRS}"
 	"${Intl_INCLUDE_DIRS}"
-	"${PROJECT_BINARY_DIR}/3rdParty/armadillo/include/"
-	"${PROJECT_SOURCE_DIR}/3rdParty/armadillo/include/"
-	"${PROJECT_SOURCE_DIR}/include"
+	"${ARMADILLO_INCLUDE_DIRS}"
+	"${VECTOR_INCLUDE_DIRS}"
 	"${strusbase_INCLUDE_DIRS}"
+	"${strus_INCLUDE_DIRS}"
+	"${strusmodule_INCLUDE_DIRS}"
 )
 link_directories(
 	"${Boost_LIBRARY_DIRS}"
-	"${PROJECT_SOURCE_DIR}/src"
-	"${PROJECT_BINARY_DIR}/3rdParty/armadillo"
+	"${ARMADILLO_LIBRARY_DIRS}"
 	"${strusbase_LIBRARY_DIRS}"
 )
 
@@ -54,6 +54,7 @@ link_directories(
 # ------------------------------
 add_library( strus_vector_static STATIC ${libstrus_vector_source_files} )
 target_link_libraries( strus_vector_static strus_base strus_armadillo )
+set_property( TARGET strus_vector_static PROPERTY POSITION_INDEPENDENT_CODE TRUE )
 
 add_library( strus_vector_std SHARED libstrus_vector_std.cpp )
 target_link_libraries( strus_vector_std strus_vector_static strus_base strus_armadillo ${Intl_LIBRARIES} ${Boost_LIBRARIES} )

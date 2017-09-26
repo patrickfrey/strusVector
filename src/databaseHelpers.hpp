@@ -35,7 +35,7 @@ public:
 	template <typename ScalarType>
 	DatabaseKeyBuffer& operator[]( const ScalarType& val)
 	{
-		if (8 + m_itr > MaxKeySize) throw strus::runtime_error(_TXT("array bound write in database key buffer"));
+		if (8 + m_itr > MaxKeySize) throw strus::runtime_error( "%s", _TXT("array bound write in database key buffer"));
 		std::size_t sz = utf8encode( m_buf + m_itr, val);
 		if (!sz) throw strus::runtime_error( _TXT( "illegal unicode character (%s)"), __FUNCTION__);
 		m_itr += sz;
@@ -44,7 +44,7 @@ public:
 	}
 	DatabaseKeyBuffer& operator()( const std::string& str)
 	{
-		if (str.size() + 1 + m_itr > MaxKeySize) throw strus::runtime_error(_TXT("array bound write in database key buffer"));
+		if (str.size() + 1 + m_itr > MaxKeySize) throw strus::runtime_error( "%s", _TXT("array bound write in database key buffer"));
 		std::memcpy( m_buf + m_itr, str.c_str(), str.size()+1);
 		m_itr += str.size() + 1;
 		m_buf[ m_itr] = 0;
@@ -75,7 +75,7 @@ public:
 		while (m_itr != m_end && *m_itr != '\0') ++m_itr;
 		if (m_itr == m_end)
 		{
-			throw strus::runtime_error(_TXT("illegal key in database"));
+			throw strus::runtime_error( "%s", _TXT("illegal key in database"));
 		}
 		strsize = m_itr - str;
 		++m_itr;
@@ -85,7 +85,7 @@ public:
 	DatabaseKeyScanner& operator[]( Index& val)
 	{
 		unsigned char keylen = utf8charlen( *m_itr);
-		if (!keylen || keylen > m_end - m_itr) throw strus::runtime_error(_TXT("array bound read in database key scanner"));
+		if (!keylen || keylen > m_end - m_itr) throw strus::runtime_error( "%s", _TXT("array bound read in database key scanner"));
 		val = utf8decode( m_itr, keylen);
 		m_itr += keylen;
 		return *this;
@@ -114,7 +114,7 @@ public:
 	{
 		typedef typename ByteOrder<ScalarType>::net_value_type NetScalarType;
 
-		if (sizeof(NetScalarType) + m_itr > MaxValueSize) throw strus::runtime_error(_TXT("array bound write in database value buffer"));
+		if (sizeof(NetScalarType) + m_itr > MaxValueSize) throw strus::runtime_error( "%s", _TXT("array bound write in database value buffer"));
 		NetScalarType val_n = ByteOrder<ScalarType>::hton( val);
 		std::memcpy( m_buf + m_itr, &val_n, sizeof(val_n));
 		m_itr += sizeof(val_n);
@@ -144,7 +144,7 @@ public:
 	{
 		typedef typename ByteOrder<ScalarType>::net_value_type NetScalarType;
 
-		if (sizeof(NetScalarType) > (unsigned int)(m_end - m_itr)) throw strus::runtime_error(_TXT("array bound read in database value scanner"));
+		if (sizeof(NetScalarType) > (unsigned int)(m_end - m_itr)) throw strus::runtime_error( "%s", _TXT("array bound read in database value scanner"));
 		NetScalarType val_n;
 		std::memcpy( &val_n, m_itr, sizeof(val_n));
 		m_itr += sizeof(val_n);

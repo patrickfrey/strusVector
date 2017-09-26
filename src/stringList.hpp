@@ -33,7 +33,7 @@ public:
 	{
 		if (0!=std::memchr( value.c_str(), '\0', value.size()))
 		{
-			throw strus::runtime_error(_TXT("string list element contains null bytes"));
+			throw strus::runtime_error( "%s", _TXT("string list element contains null bytes"));
 		}
 		m_indexlist.push_back( m_strings.size());
 		m_strings.append( value);
@@ -42,7 +42,7 @@ public:
 
 	const char* operator[]( std::size_t idx) const
 	{
-		if (idx >= m_indexlist.size()) throw strus::runtime_error(_TXT("array bound read in string list"));
+		if (idx >= m_indexlist.size()) throw strus::runtime_error( "%s", _TXT("array bound read in string list"));
 		return m_strings.c_str() + m_indexlist[idx];
 	}
 

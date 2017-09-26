@@ -44,6 +44,8 @@ public:
 
 	virtual Index featureIndex( const std::string& name) const;
 
+	virtual double vectorSimilarity( const std::vector<double>& v1, const std::vector<double>& v2) const;
+	
 	virtual std::vector<Index> conceptFeatures( const std::string& conceptClass, const Index& conceptid) const;
 
 	virtual unsigned int nofConcepts( const std::string& conceptClass) const;
@@ -51,7 +53,9 @@ public:
 	virtual unsigned int nofFeatures() const;
 
 	virtual std::string config() const;
-	
+
+	virtual void close();
+
 public:/*VectorStorageTransaction*/
 	friend class TransactionLock;
 	class TransactionLock

@@ -53,7 +53,7 @@ LshModel::LshModel( std::size_t dim_, std::size_t nofbits_, std::size_t variatio
 	{
 		if (arma::rank( *ri, std::numeric_limits<float>::epsilon()) < m_dim)
 		{
-			throw strus::runtime_error( _TXT( "illegal rotation matrix in model"));
+			throw strus::runtime_error( "%s", _TXT( "illegal rotation matrix in model"));
 		}
 	}
 }
@@ -134,7 +134,7 @@ SimHash LshModel::simHash( const arma::vec& vec) const
 	std::vector<bool> rt;
 	if (m_dim != vec.size())
 	{
-		throw strus::runtime_error( _TXT("vector must have dimension of model: dim=%u != vector=%u"), m_dim, vec.size());
+		throw strus::runtime_error( _TXT("vector must have dimension of model: dim=%u != vector=%u"), (unsigned int)m_dim, (unsigned int)vec.size());
 	}
 	std::vector<arma::mat>::const_iterator roti = m_rotations.begin(), rote = m_rotations.end();
 	for (; roti != rote; ++roti)
@@ -307,7 +307,7 @@ LshModel LshModel::fromSerialization( const char* blob, std::size_t blobsize)
 {
 	DumpStructHeader hdr;
 	char const* src = blob;
-	if (blobsize < sizeof( DumpStructHeader)) throw strus::runtime_error(_TXT("lsh model dump is corrupt (dump header too small)"));
+	if (blobsize < sizeof( DumpStructHeader)) throw strus::runtime_error( "%s", _TXT("lsh model dump is corrupt (dump header too small)"));
 	std::memcpy( &hdr, src, sizeof( DumpStructHeader));
 	src += sizeof( DumpStructHeader);
 	hdr.conv_ntoh();
@@ -315,7 +315,7 @@ LshModel LshModel::fromSerialization( const char* blob, std::size_t blobsize)
 	DumpStruct st( hdr.dim, hdr.nofbits, hdr.variations);
 	if (st.contentAllocSize() > (blobsize - (src - blob)))
 	{
-		throw strus::runtime_error(_TXT("LSH model dump is corrupt (dump too small)"));
+		throw strus::runtime_error( "%s", _TXT("LSH model dump is corrupt (dump too small)"));
 	}
 	st.loadValues( src);
 	src += st.contentAllocSize();
@@ -343,7 +343,7 @@ LshModel LshModel::fromSerialization( const char* blob, std::size_t blobsize)
 	}
 	if (ai != ae)
 	{
-		throw strus::runtime_error( _TXT( "lsh model dump is corrupt"));
+		throw strus::runtime_error( "%s", _TXT( "lsh model dump is corrupt"));
 	}
 	return LshModel( hdr.dim, hdr.nofbits, hdr.variations, modelMatrix, rotations);
 }

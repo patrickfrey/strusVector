@@ -24,11 +24,11 @@ LshBench::LshBench( const SimHash* base_, const strus::Index& basesize_, unsigne
 	std::memset( m_ar, 0, sizeof(*m_ar)*Width);
 	if (m_basesize <= 0)
 	{
-		if (m_basesize < 0) throw strus::runtime_error(_TXT("illegal range passed to LshBench"));
+		if (m_basesize < 0) throw strus::runtime_error( "%s", _TXT("illegal range passed to LshBench"));
 		return;
 	}
 	m_shsize = m_base[0].size();
-	if (m_shsize == 0) throw strus::runtime_error(_TXT("empty simhash values passed to LshBench"));
+	if (m_shsize == 0) throw strus::runtime_error( "%s", _TXT("empty simhash values passed to LshBench"));
 	m_maxdiff = seeksimdist * 64 / m_shsize;
 }
 
@@ -40,7 +40,7 @@ LshBench::LshBench( const LshBench& o)
 strus::Index LshBench::init( const strus::Index& ofs_)
 {
 	// Initializes m_size,m_ofs and m_ar:
-	if (ofs_ >= m_basesize) throw strus::runtime_error(_TXT("illegal range passed to LshBench::init"));
+	if (ofs_ >= m_basesize) throw strus::runtime_error( "%s", _TXT("illegal range passed to LshBench::init"));
 	m_ofs = ofs_;
 	strus::Index restsize = m_basesize - m_ofs;
 	m_size = restsize>Width?Width:restsize;
@@ -48,7 +48,7 @@ strus::Index LshBench::init( const strus::Index& ofs_)
 	strus::Index ai = 0, ae = m_size;
 	for (; ai != ae; ++ai)
 	{
-		if (m_base[m_ofs+ai].size() != m_shsize) throw strus::runtime_error(_TXT("empty simhash values passed to LshBench::init"));
+		if (m_base[m_ofs+ai].size() != m_shsize) throw strus::runtime_error( "%s", _TXT("empty simhash values passed to LshBench::init"));
 		m_ar[ai] = selmask( m_base[m_ofs+ai]);
 	}
 	return m_size;

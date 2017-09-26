@@ -288,7 +288,7 @@ std::vector<SimHash> GenModel::run(
 	std::vector<SimHash> rt;
 	groupContext.collectResults( rt, singletons, sampleConceptIndexMap, conceptSampleIndexMap, genParameter);
 
-	if (groupContext.logout()) groupContext.logout() << string_format( _TXT("done, got %u categories"), rt.size());
+	if (groupContext.logout()) groupContext.logout() << string_format( _TXT("done, got %u categories"), (unsigned int)rt.size());
 	return rt;
 }
 

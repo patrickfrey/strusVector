@@ -52,7 +52,7 @@ unsigned int Random::get( unsigned int min_, unsigned int max_)
 {
 	if (min_ >= max_)
 	{
-		throw strus::runtime_error( _TXT("illegal range passed to pseudo random number generator"));
+		throw strus::runtime_error( "%s",  _TXT("illegal range passed to pseudo random number generator"));
 	}
 	m_value = uint32_hash( m_value + 1 + m_incr++);
 	unsigned int iv = max_ - min_;

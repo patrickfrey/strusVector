@@ -29,7 +29,7 @@ VectorStorageTransaction::VectorStorageTransaction(
 {
 	if (!m_transaction.get())
 	{
-		throw strus::runtime_error(_TXT("failed to create transaction"));
+		throw strus::runtime_error( "%s", _TXT("failed to create transaction"));
 	}
 }
 
@@ -84,7 +84,23 @@ bool VectorStorageTransaction::commit()
 			}
 			m_transaction->writeNofSamples( lastSampleIdx + si);
 		}
+		std::vector<std::string> clnames = m_database->readConceptClassNames();
+		std::set<std::string> clset( clnames.begin(), clnames.end());
+		bool conceptClassesUpdated = false;
 		ConceptTypeMap::const_iterator ti = m_conceptTypeMap.begin(), te = m_conceptTypeMap.end();
+		for (; ti != te; ++ti)
+		{
+			if (clset.find( ti->first) == clset.end())
+			{
+				clset.insert( ti->first);
+				conceptClassesUpdated = true;
+			}
+		}
+		if (conceptClassesUpdated)
+		{
+			m_transaction->writeConceptClassNames( std::vector<std::string>( clset.begin(), clset.end()));
+		}
+		ti = m_conceptTypeMap.begin();
 		for (; ti != te; ++ti)
 		{
 			{
@@ -101,7 +117,7 @@ bool VectorStorageTransaction::commit()
 					}
 					std::vector<SampleIndex> old_sar = m_database->readConceptSampleIndices( clname, rf->first);
 					std::vector<SampleIndex> join_sar;
-					std::merge( new_sar.begin(), new_sar.end(), old_sar.begin(), old_sar.end(), join_sar.begin());
+					std::merge( new_sar.begin(), new_sar.end(), old_sar.begin(), old_sar.end(),  std::back_inserter( join_sar));
 					m_transaction->writeConceptSampleIndices( clname, rf->first, join_sar);
 				}
 			}
@@ -119,7 +135,7 @@ bool VectorStorageTransaction::commit()
 					}
 					std::vector<SampleIndex> old_sar = m_database->readSampleConceptIndices( clname, rf->first);
 					std::vector<SampleIndex> join_sar;
-					std::merge( new_sar.begin(), new_sar.end(), old_sar.begin(), old_sar.end(), join_sar.begin());
+					std::merge( new_sar.begin(), new_sar.end(), old_sar.begin(), old_sar.end(),  std::back_inserter(join_sar));
 					m_transaction->writeSampleConceptIndices( clname, rf->first, join_sar);
 				}
 			}

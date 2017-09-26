@@ -197,8 +197,8 @@ int main( int argc, const char** argv)
 			if (!g_errorhnd) throw std::runtime_error("failed to create error buffer structure");
 		}
 		// Build all objects:
-		std::auto_ptr<strus::DatabaseInterface> dbi( strus::createDatabaseType_leveldb( g_errorhnd));
-		std::auto_ptr<strus::VectorStorageInterface> vmodel( createVectorStorage_std( g_errorhnd));
+		std::unique_ptr<strus::DatabaseInterface> dbi( strus::createDatabaseType_leveldb( g_errorhnd));
+		std::unique_ptr<strus::VectorStorageInterface> vmodel( createVectorStorage_std( g_errorhnd));
 		if (!dbi.get() || !vmodel.get() || g_errorhnd->hasError()) throw std::runtime_error( g_errorhnd->fetchError());
 
 		// Remove traces of old test model before creating a new one:
@@ -211,7 +211,7 @@ int main( int argc, const char** argv)
 		{
 			throw std::runtime_error( g_errorhnd->fetchError());
 		}
-		std::auto_ptr<strus::VectorStorageClientInterface> instance( vmodel->createClient( config, dbi.get()));
+		std::unique_ptr<strus::VectorStorageClientInterface> instance( vmodel->createClient( config, dbi.get()));
 		if (!instance.get()) throw std::runtime_error( g_errorhnd->fetchError());
 
 		// Build the test vectors:
@@ -224,7 +224,7 @@ int main( int argc, const char** argv)
 				samplear.push_back( instance->featureVector( si));
 			}
 		}
-		std::auto_ptr<strus::VectorStorageTransactionInterface> transaction( instance->createTransaction());
+		std::unique_ptr<strus::VectorStorageTransactionInterface> transaction( instance->createTransaction());
 		if (!transaction.get()) throw std::runtime_error( g_errorhnd->fetchError());
 
 		if (!use_model_built)
@@ -294,7 +294,7 @@ int main( int argc, const char** argv)
 
 		// Categorize the input vectors and build some maps out of the assignments of concepts:
 		std::cerr << "load model to categorize vectors" << std::endl;
-		std::auto_ptr<strus::VectorStorageClientInterface> categorizer( vmodel->createClient( config, dbi.get()));
+		std::unique_ptr<strus::VectorStorageClientInterface> categorizer( vmodel->createClient( config, dbi.get()));
 		if (!categorizer.get())
 		{
 			throw std::runtime_error( "failed to create VSM client interface from model stored");
