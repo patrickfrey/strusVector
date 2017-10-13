@@ -429,3 +429,95 @@ int main( int argc, const char** argv)
 	}
 }
 
+# Project textwolf
+wget https://github.com/patrickfrey/textwolf/archive/master.zip
+unzip master.zip && rm master.zip
+
+# Project hyperscan
+wget https://github.com/01org/hyperscan/archive/master.zip
+unzip master.zip && rm master.zip
+
+# Project fmt
+wget https://github.com/fmtlib/fmt/archive/master.zip
+unzip master.zip && rm master.zip
+
+# Project lua
+wget https://github.com/lua/lua/archive/master.zip
+unzip master.zip && rm master.zip
+
+# Project papuga
+wget https://github.com/patrickfrey/papuga/archive/master.zip
+unzip master.zip && rm master.zip
+cd papuga-master/3rdParty && cp -Rf ../../textwolf-master/* textwolf/ && cd ../..
+cd papuga-master/3rdParty && cp -Rf ../../fmt-master/* fmt/ && cd ../..
+cd papuga-master/3rdParty && cp -Rf ../../lua-master/* lua/ && cd ../..
+
+# Project strusBase
+wget https://github.com/patrickfrey/strusBase/archive/0.15.3.zip
+unzip 0.15.3.zip && rm 0.15.3.zip
+cd strusBase-0.15.3/ && cmake -DBOOST_ROOT=/opt/boost_1_57_0/ -DCPP_LANGUAGE_VERSION=11 -DCMAKE_BUILD_TYPE=Release . && make && sudo LD_LIBRARY_PATH=/opt/boost_1_57_0/lib make install && cd ..
+
+# Project strus
+wget https://github.com/patrickfrey/strus/archive/0.15.3.zip
+unzip 0.15.3.zip && rm 0.15.3.zip
+cd strus-0.15.3/ && cmake -DBOOST_ROOT=/opt/boost_1_57_0/ -DCPP_LANGUAGE_VERSION=11 -DCMAKE_BUILD_TYPE=Release . && make && sudo LD_LIBRARY_PATH=/opt/boost_1_57_0/lib make install && cd ..
+
+# Project strusAnalyzer
+wget https://github.com/patrickfrey/strusAnalyzer/archive/0.15.3.zip
+unzip 0.15.3.zip && rm 0.15.3.zip
+cd strusAnalyzer-0.15.3/3rdParty && cp -Rf ../../textwolf-master/* textwolf/ && cd ../..
+cd strusAnalyzer-0.15.3/ && cmake -DBOOST_ROOT=/opt/boost_1_57_0/ -DCPP_LANGUAGE_VERSION=11 -DCMAKE_BUILD_TYPE=Release . && make && sudo LD_LIBRARY_PATH=/opt/boost_1_57_0/lib make install && cd ..
+
+# Project strusTrace
+wget https://github.com/patrickfrey/strusTrace/archive/0.15.3.zip
+unzip 0.15.3.zip && rm 0.15.3.zip
+cd strusTrace-0.15.3/ && cmake -DBOOST_ROOT=/opt/boost_1_57_0/ -DCPP_LANGUAGE_VERSION=11 -DCMAKE_BUILD_TYPE=Release . && make && sudo LD_LIBRARY_PATH=/opt/boost_1_57_0/lib make install && cd ..
+
+# Project strusModule
+wget https://github.com/patrickfrey/strusModule/archive/0.15.3.zip
+unzip 0.15.3.zip && rm 0.15.3.zip
+cd strusModule-0.15.3/ && cmake -DBOOST_ROOT=/opt/boost_1_57_0/ -DCPP_LANGUAGE_VERSION=11 -DCMAKE_BUILD_TYPE=Release . && make && sudo LD_LIBRARY_PATH=/opt/boost_1_57_0/lib make install && cd ..
+
+# Project strusRpc
+wget https://github.com/patrickfrey/strusRpc/archive/0.15.3.zip
+unzip 0.15.3.zip && rm 0.15.3.zip
+cd strusRpc-0.15.3/ && cmake -DBOOST_ROOT=/opt/boost_1_57_0/ -DCPP_LANGUAGE_VERSION=11 -DCMAKE_BUILD_TYPE=Release . && make && sudo LD_LIBRARY_PATH=/opt/boost_1_57_0/lib make install && cd ..
+
+# Project strusPattern
+wget https://github.com/patrickfrey/strusPattern/archive/0.15.3.zip
+unzip 0.15.3.zip && rm 0.15.3.zip
+cd strusPattern-0.15.3/3rdParty && cp -Rf ../../textwolf-master/* textwolf/ && cd ../..
+cd strusPattern-0.15.3/3rdParty && cp -Rf ../../hyperscan-master/* hyperscan/ && cd ../..
+cd strusPattern-0.15.3/ && cmake -DBOOST_ROOT=/opt/boost_1_57_0/ -DCPP_LANGUAGE_VERSION=11 -DCMAKE_BUILD_TYPE=Release . && make && sudo LD_LIBRARY_PATH=/opt/boost_1_57_0/lib make install && cd ..
+
+# Project strusVector
+wget https://github.com/patrickfrey/strusVector/archive/0.15.3.zip
+unzip 0.15.3.zip && rm 0.15.3.zip
+cd strusVector-0.15.3/ && cmake -DBOOST_ROOT=/opt/boost_1_57_0/ -DCPP_LANGUAGE_VERSION=11 -DCMAKE_BUILD_TYPE=Release . && make && sudo LD_LIBRARY_PATH=/opt/boost_1_57_0/lib make install && cd ..
+
+# Project strusUtilities
+wget https://github.com/patrickfrey/strusUtilities/archive/0.15.3.zip
+unzip 0.15.3.zip && rm 0.15.3.zip
+cd strusUtilities-0.15.3/ && cmake -DBOOST_ROOT=/opt/boost_1_57_0/ -DCPP_LANGUAGE_VERSION=11 -DCMAKE_BUILD_TYPE=Release . && make && sudo LD_LIBRARY_PATH=/opt/boost_1_57_0/lib make install && cd ..
+
+# Project strusBindings
+wget https://github.com/patrickfrey/strusBindings/archive/0.15.3.zip
+unzip 0.15.3.zip && rm 0.15.3.zip
+cd strusBindings-0.15.3/3rdParty && cp -Rf ../../textwolf-master/* textwolf/ && cd ../..
+cd strusBindings-0.15.3/3rdParty && cp -Rf ../../papuga-master/* papuga/ && cd ../..
+cd strusBindings-0.15.3/ && cmake -DBOOST_ROOT=/opt/boost_1_57_0/ -DCPP_LANGUAGE_VERSION=11 -DCMAKE_BUILD_TYPE=Release -DWITH_PHP=YES -DWITH_PYTHON=YES -DWITH_STRUS_VECTOR=YES -DWITH_STRUS_PATTERN=YES . && make && sudo LD_LIBRARY_PATH=/opt/boost_1_57_0/lib make install && cd ..
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
