@@ -18,6 +18,7 @@
 #include "strus/base/configParser.hpp"
 #include "strus/base/stdint.h"
 #include "strus/base/fileio.hpp"
+#include "strus/base/local_ptr.hpp"
 #include "strus/base/string_format.hpp"
 #include "vectorStorageConfig.hpp"
 #include "indexListMap.hpp"
@@ -192,7 +193,7 @@ struct TestDataset
 
 static void writeDatabase( const strus::VectorStorageConfig& config, const TestDataset& dataset)
 {
-	std::unique_ptr<strus::DatabaseInterface> dbi( strus::createDatabaseType_leveldb( g_errorhnd));
+	strus::local_ptr<strus::DatabaseInterface> dbi( strus::createDatabaseType_leveldb( g_errorhnd));
 	if (dbi->exists( config.databaseConfig))
 	{
 		if (!dbi->destroyDatabase( config.databaseConfig))
@@ -234,9 +235,9 @@ static bool compare( const std::vector<double>& v1, const std::vector<double>& v
 		{
 			for (unsigned int vv=0; vv != vidx; ++vv)
 			{
-				std::cerr << strus::string_format("%u: %lf == %lf", vv, v1[vv], v2[vv]) << std::endl;
+				std::cerr << strus::string_format("%u: %f == %f", vv, v1[vv], v2[vv]) << std::endl;
 			}
-			std::cerr << strus::string_format("diff of %u: %lf and %lf is bigger than %lf", vidx, *vi1, *vi2, VEC_EPSILON) << std::endl;
+			std::cerr << strus::string_format("diff of %u: %f and %f is bigger than %f", vidx, *vi1, *vi2, VEC_EPSILON) << std::endl;
 			return false;
 		}
 	}
@@ -309,7 +310,7 @@ static bool compare( const strus::LshModel& m1, const strus::LshModel& m2)
 
 static void readAndCheckDatabase( const strus::VectorStorageConfig& config, const TestDataset& dataset)
 {
-	std::unique_ptr<strus::DatabaseInterface> dbi( strus::createDatabaseType_leveldb( g_errorhnd));
+	strus::local_ptr<strus::DatabaseInterface> dbi( strus::createDatabaseType_leveldb( g_errorhnd));
 	strus::DatabaseAdapter database( dbi.get(), config.databaseConfig, g_errorhnd);
 
 	database.checkVersion();
@@ -432,7 +433,7 @@ int main( int argc, const char** argv)
 		writeDatabase( config, dataset);
 		readAndCheckDatabase( config, dataset);
 
-		std::unique_ptr<strus::DatabaseInterface> dbi( strus::createDatabaseType_leveldb( g_errorhnd));
+		strus::local_ptr<strus::DatabaseInterface> dbi( strus::createDatabaseType_leveldb( g_errorhnd));
 		if (dbi.get())
 		{
 			(void)dbi->destroyDatabase( config.databaseConfig);
