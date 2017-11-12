@@ -16,8 +16,6 @@
 
 namespace strus {
 
-typedef VectorStorageSearchInterface::Result SearchResultElement;
-
 /// \brief Map for fast scan for similar SimHashes 
 class SimHashMap
 {
@@ -28,9 +26,9 @@ public:
 		:m_ar(ar_),m_selar1(0),m_selar2(0),m_select1(0),m_select2(0),m_vecsize(0),m_seed(seed_){initBench();}
 	~SimHashMap();
 
-	std::vector<SearchResultElement> findSimilar( const SimHash& sh, unsigned short simdist, unsigned short prob_simdist, unsigned int maxNofElements, const Index& indexofs) const;
-	std::vector<SearchResultElement> findSimilar( const SimHash& sh, unsigned short simdist, unsigned int maxNofElements, const Index& indexofs) const;
-	std::vector<SearchResultElement> findSimilarFromSelection( const std::vector<Index>& selection, const SimHash& sh, unsigned short simdist, unsigned int maxNofElements, const Index& indexofs) const;
+	std::vector<VectorQueryResult> findSimilar( const SimHash& sh, unsigned short simdist, unsigned short prob_simdist, unsigned int maxNofElements, const Index& indexofs) const;
+	std::vector<VectorQueryResult> findSimilar( const SimHash& sh, unsigned short simdist, unsigned int maxNofElements, const Index& indexofs) const;
+	std::vector<VectorQueryResult> findSimilarFromSelection( const std::vector<Index>& selection, const SimHash& sh, unsigned short simdist, unsigned int maxNofElements, const Index& indexofs) const;
 
 	const SimHash& operator[]( std::size_t idx) const	{return m_ar[idx];}
 

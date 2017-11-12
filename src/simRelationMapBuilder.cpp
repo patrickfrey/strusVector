@@ -153,10 +153,10 @@ public:
 		return m_errormsg;
 	}
 
-	void pushResult( const SimRelationMap& result)
+	void pushResult( const SimRelationMap& result_)
 	{
 		utils::ScopedLock lock( m_mutex);
-		m_simrelmap.join( result);
+		m_simrelmap.join( result_);
 	}
 
 	const SimRelationMap& result()

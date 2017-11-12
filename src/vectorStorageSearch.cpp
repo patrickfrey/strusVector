@@ -28,15 +28,13 @@ VectorStorageSearch::VectorStorageSearch( const Reference<DatabaseAdapter>& data
 	,m_range_to(range_to_)
 {}
 
-typedef VectorStorageSearchInterface::Result Result;
-
-std::vector<Result> VectorStorageSearch::findSimilar( const std::vector<double>& vec, unsigned int maxNofResults) const
+std::vector<VectorQueryResult> VectorStorageSearch::findSimilar( const std::vector<double>& vec, unsigned int maxNofResults) const
 {
 	try
 	{
 		if (m_config.with_realvecweights && m_database.get())
 		{
-			std::vector<Result> rt;
+			std::vector<VectorQueryResult> rt;
 			rt.reserve( maxNofResults * 2 + 10);
 
 			arma::vec vv = arma::vec( vec);
@@ -49,13 +47,13 @@ std::vector<Result> VectorStorageSearch::findSimilar( const std::vector<double>&
 			{
 				rt = m_samplear.findSimilar( hash, m_config.maxdist, maxNofResults * 2 + 10, m_range_from);
 			}
-			std::vector<Result>::iterator ri = rt.begin(), re = rt.end();
+			std::vector<VectorQueryResult>::iterator ri = rt.begin(), re = rt.end();
 			for (; ri != re; ++ri)
 			{
 				arma::vec resvv( m_database->readSampleVector( ri->featidx()));
 				ri->setWeight( arma::norm_dot( vv, resvv));
 			}
-			std::sort( rt.begin(), rt.end(), std::greater<strus::VectorStorageSearchInterface::Result>());
+			std::sort( rt.begin(), rt.end(), std::greater<VectorQueryResult>());
 			rt.resize( maxNofResults);
 			return rt;
 		}
@@ -72,14 +70,14 @@ std::vector<Result> VectorStorageSearch::findSimilar( const std::vector<double>&
 			}
 		}
 	}
-	CATCH_ERROR_ARG1_MAP_RETURN( _TXT("error in similar vector search of '%s': %s"), MODULENAME, *m_errorhnd, std::vector<Result>());
+	CATCH_ERROR_ARG1_MAP_RETURN( _TXT("error in similar vector search of '%s': %s"), MODULENAME, *m_errorhnd, std::vector<VectorQueryResult>());
 }
 
-std::vector<Result> VectorStorageSearch::findSimilarFromSelection( const std::vector<Index>& candidates, const std::vector<double>& vec, unsigned int maxNofResults) const
+std::vector<VectorQueryResult> VectorStorageSearch::findSimilarFromSelection( const std::vector<Index>& candidates, const std::vector<double>& vec, unsigned int maxNofResults) const
 {
 	try
 	{
-		std::vector<Result> rt;
+		std::vector<VectorQueryResult> rt;
 		arma::vec vv = arma::vec( vec);
 		SimHash hash( m_lshmodel.simHash( arma::normalise( vv)));
 
@@ -95,18 +93,18 @@ std::vector<Result> VectorStorageSearch::findSimilarFromSelection( const std::ve
 		}
 		if (m_config.with_realvecweights && m_database.get())
 		{
-			std::vector<Result>::iterator ri = rt.begin(), re = rt.end();
+			std::vector<VectorQueryResult>::iterator ri = rt.begin(), re = rt.end();
 			for (; ri != re; ++ri)
 			{
 				arma::vec resvv( m_database->readSampleVector( ri->featidx()));
 				ri->setWeight( arma::norm_dot( vv, resvv));
 			}
-			std::sort( rt.begin(), rt.end(), std::greater<strus::VectorStorageSearchInterface::Result>());
+			std::sort( rt.begin(), rt.end(), std::greater<VectorQueryResult>());
 			rt.resize( maxNofResults);
 		}
 		return rt;
 	}
-	CATCH_ERROR_ARG1_MAP_RETURN( _TXT("error in similar vector search from selection of '%s': %s"), MODULENAME, *m_errorhnd, std::vector<Result>());
+	CATCH_ERROR_ARG1_MAP_RETURN( _TXT("error in similar vector search from selection of '%s': %s"), MODULENAME, *m_errorhnd, std::vector<VectorQueryResult>());
 }
 
 void VectorStorageSearch::close()

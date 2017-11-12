@@ -31,8 +31,8 @@ public:
 
 	virtual ~VectorStorageSearch(){}
 
-	virtual std::vector<Result> findSimilar( const std::vector<double>& vec, unsigned int maxNofResults) const;
-	virtual std::vector<Result> findSimilarFromSelection( const std::vector<Index>& candidates, const std::vector<double>& vec, unsigned int maxNofResults) const;
+	virtual std::vector<VectorQueryResult> findSimilar( const std::vector<double>& vec, unsigned int maxNofResults) const;
+	virtual std::vector<VectorQueryResult> findSimilarFromSelection( const std::vector<Index>& candidates, const std::vector<double>& vec, unsigned int maxNofResults) const;
 
 	virtual void close();
 
