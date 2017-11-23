@@ -17,7 +17,7 @@ include( cmake/boost.cmake )
 include( cmake/intl.cmake )
 include( cmake/find_strus_package.cmake )
 include( cmake/build_rules.cmake )
-endif()
+endif(NOT STRUS_ALL)
 include( cmake/find_leveldb.cmake )
 
 find_strus_package( base )
