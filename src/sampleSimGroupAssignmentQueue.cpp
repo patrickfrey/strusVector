@@ -7,8 +7,6 @@
  */
 /// \brief Queue for sample to group assignments
 #include "sampleSimGroupAssignmentQueue.hpp"
-#include "utils.hpp"
-#include "cacheLineSize.hpp"
 #include "internationalization.hpp"
 #include <vector>
 #include <limits>
@@ -18,7 +16,7 @@ using namespace strus;
 
 void SampleSimGroupAssignmentQueue::push( const SampleIndex& sampleIndex, const ConceptIndex& conceptIndex)
 {
-	utils::ScopedLock lock( m_mutex);
+	strus::scoped_lock lock( m_mutex);
 	m_ar.push_back( SampleSimGroupAssignment( sampleIndex, conceptIndex));
 }
 
@@ -26,7 +24,7 @@ std::vector<SampleSimGroupAssignment> SampleSimGroupAssignmentQueue::fetchAll()
 {
 	std::vector<SampleSimGroupAssignment> rt;
 	{
-		utils::ScopedLock lock( m_mutex);
+		strus::scoped_lock lock( m_mutex);
 		rt = m_ar;
 	}
 	m_ar.clear();

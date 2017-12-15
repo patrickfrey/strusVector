@@ -9,9 +9,9 @@
 #ifndef _STRUS_VECTOR_SIM_GROUP_MAP_HPP_INCLUDED
 #define _STRUS_VECTOR_SIM_GROUP_MAP_HPP_INCLUDED
 #include "simGroup.hpp"
-#include "utils.hpp"
 #include "internationalization.hpp"
-#include "cacheLineSize.hpp"
+#include "strus/base/atomic.hpp"
+#include "strus/base/shared_ptr.hpp"
 #include <vector>
 
 namespace strus {
@@ -32,7 +32,7 @@ public:
 	void setCounter( const ConceptIndex& value);
 
 private:
-	utils::AtomicCounter<ConceptIndex> m_cnt;
+	strus::AtomicCounter<ConceptIndex> m_cnt;
 	ConceptIndex m_maxNofCount;
 };
 
@@ -52,7 +52,7 @@ private:
 	std::vector<ConceptIndex> m_freeList;
 };
 
-typedef boost::shared_ptr<SimGroup> SimGroupRef;
+typedef strus::shared_ptr<SimGroup> SimGroupRef;
 
 class SimGroupMap
 {

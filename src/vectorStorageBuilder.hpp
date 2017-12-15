@@ -13,7 +13,6 @@
 #include "lshModel.hpp"
 #include "genModel.hpp"
 #include "simHash.hpp"
-#include "utils.hpp"
 #include <vector>
 #include <string>
 

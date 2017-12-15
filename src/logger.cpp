@@ -55,7 +55,7 @@ Logger& Logger::operator << (const std::string& line)
 		localtime_r( &tim, &timrec);
 		::strftime( timstr, sizeof(timstr), "%Y-%m-%d %H:%M:%S", &timrec);
 		std::string logline( string_format( "%s %s", timstr, line.c_str()));
-		utils::ScopedLock lock( m_mutex);
+		strus::scoped_lock lock( m_mutex);
 		(*m_logout) << logline << std::endl;
 	}
 	return *this;
@@ -63,7 +63,7 @@ Logger& Logger::operator << (const std::string& line)
 
 void Logger::countItems( unsigned int addcnt)
 {
-	utils::ScopedLock lock( m_mutex);
+	strus::scoped_lock lock( m_mutex);
 	m_count += addcnt;
 }
 
@@ -71,7 +71,7 @@ void Logger::printAccuLine( const char* format)
 {
 	unsigned int count_value;
 	{
-		utils::ScopedLock lock( m_mutex);
+		strus::scoped_lock lock( m_mutex);
 		count_value = m_count;
 		m_count = 0;
 	}

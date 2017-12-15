@@ -23,7 +23,6 @@
 #include "databaseAdapter.hpp"
 #include "internationalization.hpp"
 #include "errorUtils.hpp"
-#include "utils.hpp"
 #include "logger.hpp"
 #include "simHash.hpp"
 #include "simHashMap.hpp"
@@ -37,8 +36,6 @@
 #include "armadillo"
 #include <memory>
 #include <limits>
-#include <boost/shared_ptr.hpp>
-#include <boost/make_shared.hpp>
 
 using namespace strus;
 #define MODULENAME   "standard vector storage"

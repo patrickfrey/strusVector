@@ -13,7 +13,6 @@
 #include "genGroupContext.hpp"
 
 using namespace strus;
-using namespace strus::utils;
 
 typedef std::pair<ConceptIndex,ConceptIndex> Dependency;
 typedef std::set<Dependency> DependencyGraph;
