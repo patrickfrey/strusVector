@@ -129,9 +129,9 @@ public:
 		{
 			m_ctx->reportError( string_format( _TXT("out of memory in thread %u"), m_threadid));
 		}
-		catch (const boost::thread_interrupted&)
+		catch (...)
 		{
-			m_ctx->reportError( string_format( _TXT("failed to complete calculation: thread %u interrupted"), m_threadid));
+			m_ctx->reportError( string_format( _TXT("failed to complete calculation: uncaught exception in thread %u"), m_threadid));
 		}
 		m_errorhnd->releaseContext();
 	}
@@ -174,12 +174,15 @@ std::vector<SimHash> strus::getSimhashValues(
 				new SimhashBuilder( &context, &lshmodel, ti+1, errorhnd));
 		}
 		{
-			boost::thread_group tgroup;
+			std::vector<strus::Reference<strus::thread> > threadGroup;
 			for (unsigned int ti=0; ti<threads; ++ti)
 			{
-				tgroup.create_thread( boost::bind( &SimhashBuilder::run, processorList[ti].get()));
+				SimhashBuilder* ctx = processorList[ti].get();
+				strus::Reference<strus::thread> th( new strus::thread( &SimhashBuilder::run, ctx));
+				threadGroup.push_back( th);
 			}
-			tgroup.join_all();
+			std::vector<strus::Reference<strus::thread> >::iterator gi = threadGroup.begin(), ge = threadGroup.end();
+			for (; gi != ge; ++gi) (*gi)->join();
 		}
 		if (context.hasError())
 		{

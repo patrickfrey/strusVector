@@ -8,6 +8,7 @@
 /// \brief Multithreading context for the genetic algorithms
 #include "genGroupThreadContext.hpp"
 #include "strus/errorBufferInterface.hpp"
+#include "strus/reference.hpp"
 #include <algorithm>
 
 using namespace strus;
@@ -23,10 +24,10 @@ void GenGroupThreadContext::run( GenGroupProcedure proc, std::size_t startidx, s
 {
 	if (m_nofThreads && (endidx - startidx > STRUS_CACHELINE_SIZE))
 	{
-		boost::thread_group tgroup;
 		std::size_t chunksize = (endidx - startidx + m_nofThreads - 1) / m_nofThreads;
 		chunksize = ((chunksize + STRUS_CACHELINE_SIZE -1) / STRUS_CACHELINE_SIZE) * STRUS_CACHELINE_SIZE;
 
+		std::vector<strus::Reference<strus::thread> > threadGroup;
 		std::size_t startchunkidx = startidx;
 		unsigned int ti=0, te=m_nofThreads;
 		for (ti=0; ti<te && startchunkidx < endidx; ++ti,startchunkidx += chunksize)
@@ -34,9 +35,11 @@ void GenGroupThreadContext::run( GenGroupProcedure proc, std::size_t startidx, s
 			std::size_t endchunkidx = startchunkidx + chunksize;
 			if (endchunkidx > endidx) endchunkidx = endidx;
 
-			tgroup.create_thread( boost::bind( proc, m_parameter, m_glbcnt, m_groupctx, m_simrelreader, startchunkidx, endchunkidx, m_errorhnd));
+			strus::Reference<strus::thread> th( new strus::thread( proc, m_parameter, m_glbcnt, m_groupctx, m_simrelreader, startchunkidx, endchunkidx, m_errorhnd));
+			threadGroup.push_back( th);
 		}
-		tgroup.join_all();
+		std::vector<strus::Reference<strus::thread> >::iterator gi = threadGroup.begin(), ge = threadGroup.end();
+		for (; gi != ge; ++gi) (*gi)->join();
 	}
 	else
 	{

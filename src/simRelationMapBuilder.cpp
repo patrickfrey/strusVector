@@ -200,9 +200,9 @@ public:
 		{
 			m_ctx->reportError( string_format( _TXT("out of memory in thread %u"), m_threadid));
 		}
-		catch (const boost::thread_interrupted&)
+		catch (...)
 		{
-			m_ctx->reportError( string_format( _TXT("failed to complete calculation: thread %u interrupted"), m_threadid));
+			m_ctx->reportError( string_format( _TXT("failed to complete calculation: uncaught exception in thread %u"), m_threadid));
 		}
 	}
 
@@ -240,12 +240,15 @@ bool SimRelationMapBuilder::getNextSimRelationMap( SimRelationMap& res)
 			processorList.push_back( new ThreadLocalContext( &threadGlobalContext, this, ti+1));
 		}
 		{
-			boost::thread_group tgroup;
+			std::vector<strus::Reference<strus::thread> > threadGroup;
 			for (ti=0; ti<te; ++ti)
 			{
-				tgroup.create_thread( boost::bind( &ThreadLocalContext::run, processorList[ti].get()));
+				ThreadLocalContext* tc = processorList[ ti].get();
+				strus::Reference<strus::thread> th( new strus::thread( &ThreadLocalContext::run, tc));
+				threadGroup.push_back( th);
 			}
-			tgroup.join_all();
+			std::vector<strus::Reference<strus::thread> >::iterator gi = threadGroup.begin(), ge = threadGroup.end();
+			for (; gi != ge; ++gi) (*gi)->join();
 		}
 		if (threadGlobalContext.hasError())
 		{
