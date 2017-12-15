@@ -12,6 +12,7 @@
 #include "strus/reference.hpp"
 #include "vectorStorageConfig.hpp"
 #include "databaseAdapter.hpp"
+#include "strus/base/thread.hpp"
 #include <vector>
 #include <string>
 
@@ -72,14 +73,14 @@ public:/*VectorStorageTransaction*/
 		}
 
 	private:
-		utils::Mutex* m_mutex;
+		strus::mutex* m_mutex;
 	};
 
 private:
 	ErrorBufferInterface* m_errorhnd;
 	Reference<DatabaseAdapter> m_database;
 	VectorStorageConfig m_config;
-	utils::Mutex m_transaction_mutex;	///< mutual exclusion in the critical part of a transaction
+	strus::mutex m_transaction_mutex;	///< mutual exclusion in the critical part of a transaction
 };
 
 }//namespace

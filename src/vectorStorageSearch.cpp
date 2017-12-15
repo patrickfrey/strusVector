@@ -11,7 +11,6 @@
 #include "strus/databaseInterface.hpp"
 #include "errorUtils.hpp"
 #include "internationalization.hpp"
-#include <boost/make_shared.hpp>
 
 #define MODULENAME   "standard vector storage"
 #undef STRUS_LOWLEVEL_DEBUG

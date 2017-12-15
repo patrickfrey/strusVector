@@ -9,13 +9,13 @@
 #include "simRelationMapBuilder.hpp"
 #include "simHash.hpp"
 #include "lshBench.hpp"
-#include "utils.hpp"
 #include "strus/base/string_format.hpp"
+#include "strus/base/atomic.hpp"
+#include "strus/base/thread.hpp"
 #include "strus/reference.hpp"
 #include <vector>
 #include <algorithm>
 #include <limits>
-#include <boost/thread.hpp>
 
 using namespace strus;
 
@@ -138,7 +138,7 @@ public:
 
 	void reportError( const std::string& msg)
 	{
-		utils::ScopedLock lock( m_mutex);
+		strus::scoped_lock lock( m_mutex);
 		m_errormsg.append( msg);
 		m_errormsg.push_back( '\n');
 	}
@@ -155,7 +155,7 @@ public:
 
 	void pushResult( const SimRelationMap& result_)
 	{
-		utils::ScopedLock lock( m_mutex);
+		strus::scoped_lock lock( m_mutex);
 		m_simrelmap.join( result_);
 	}
 
@@ -165,9 +165,9 @@ public:
 	}
 
 private:
-	utils::AtomicCounter<SampleIndex> m_sampleIndex;
+	strus::AtomicCounter<SampleIndex> m_sampleIndex;
 	std::size_t m_endSampleIndex;
-	utils::Mutex m_mutex;
+	strus::mutex m_mutex;
 	std::string m_errormsg;
 	SimRelationMap m_simrelmap;
 };
@@ -200,9 +200,9 @@ public:
 		{
 			m_ctx->reportError( string_format( _TXT("out of memory in thread %u"), m_threadid));
 		}
-		catch (const boost::thread_interrupted&)
+		catch (...)
 		{
-			m_ctx->reportError( string_format( _TXT("failed to complete calculation: thread %u interrupted"), m_threadid));
+			m_ctx->reportError( string_format( _TXT("failed to complete calculation: uncaught exception in thread %u"), m_threadid));
 		}
 	}
 
@@ -240,12 +240,15 @@ bool SimRelationMapBuilder::getNextSimRelationMap( SimRelationMap& res)
 			processorList.push_back( new ThreadLocalContext( &threadGlobalContext, this, ti+1));
 		}
 		{
-			boost::thread_group tgroup;
+			std::vector<strus::Reference<strus::thread> > threadGroup;
 			for (ti=0; ti<te; ++ti)
 			{
-				tgroup.create_thread( boost::bind( &ThreadLocalContext::run, processorList[ti].get()));
+				ThreadLocalContext* tc = processorList[ ti].get();
+				strus::Reference<strus::thread> th( new strus::thread( &ThreadLocalContext::run, tc));
+				threadGroup.push_back( th);
 			}
-			tgroup.join_all();
+			std::vector<strus::Reference<strus::thread> >::iterator gi = threadGroup.begin(), ge = threadGroup.end();
+			for (; gi != ge; ++gi) (*gi)->join();
 		}
 		if (threadGlobalContext.hasError())
 		{

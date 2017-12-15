@@ -14,6 +14,7 @@
 #include "internationalization.hpp"
 #include "strus/base/utf8.hpp"
 #include "strus/base/string_format.hpp"
+#include "strus/base/string_conv.hpp"
 #include "strus/errorBufferInterface.hpp"
 
 using namespace strus;
@@ -112,17 +113,17 @@ bool VectorStorageBuilder::run( const std::string& command)
 		finalize();
 		return true;
 	}
-	else if (utils::caseInsensitiveEquals( command, "rebase"))
+	else if (strus::caseInsensitiveEquals( command, "rebase"))
 	{
 		rebase();
 		return true;
 	}
-	else if (utils::caseInsensitiveEquals( command, "base"))
+	else if (strus::caseInsensitiveEquals( command, "base"))
 	{
 		buildSimilarityRelationMap();
 		return true;
 	}
-	else if (utils::caseInsensitiveEquals( command, "learn"))
+	else if (strus::caseInsensitiveEquals( command, "learn"))
 	{
 		if (m_samplear.empty())
 		{
@@ -131,7 +132,7 @@ bool VectorStorageBuilder::run( const std::string& command)
 		learnConcepts();
 		return true;
 	}
-	else if (utils::caseInsensitiveEquals( command, "clear"))
+	else if (strus::caseInsensitiveEquals( command, "clear"))
 	{
 		m_transaction->deleteData();
 		m_transaction->commit();

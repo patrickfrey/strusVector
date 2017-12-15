@@ -11,7 +11,6 @@
 #include "simGroup.hpp"
 #include "simGroupIdMap.hpp"
 #include "sharedArrayMutex.hpp"
-#include "utils.hpp"
 #include <map>
 #include <cstring>
 

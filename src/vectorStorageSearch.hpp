@@ -12,7 +12,6 @@
 #include "vectorStorageConfig.hpp"
 #include "databaseAdapter.hpp"
 #include "simHashMap.hpp"
-#include <boost/shared_ptr.hpp>
 
 
 namespace strus {

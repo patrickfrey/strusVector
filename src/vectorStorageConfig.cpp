@@ -9,7 +9,7 @@
 #include "vectorStorageConfig.hpp"
 #include "strus/errorBufferInterface.hpp"
 #include "strus/base/configParser.hpp"
-#include "utils.hpp"
+#include "strus/base/string_conv.hpp"
 #include "internationalization.hpp"
 #include <iostream>
 #include <sstream>
@@ -239,7 +239,7 @@ VectorStorageConfig::VectorStorageConfig( const std::string& config, ErrorBuffer
 		char const* cc = condepdefstr.c_str();
 		for (; *cc && *cc != ':'; ++cc){}
 		if (!*cc) throw strus::runtime_error( "%s", _TXT("illegal concept class dependency definition in config (missing colon ':')"));
-		ConceptClassDependency dep( utils::trim( std::string(condepdefstr.c_str(),cc-condepdefstr.c_str())), utils::trim( std::string(cc+1)));
+		ConceptClassDependency dep( string_conv::trim( std::string(condepdefstr.c_str(),cc-condepdefstr.c_str())), string_conv::trim( std::string(cc+1)));
 		conceptClassDependecies.push_back( dep);
 		if (!dep.first.empty() && altgenmap.find( dep.first) == altgenmap.end()) throw strus::runtime_error(_TXT("undefined concept class '%s' referenced in dependency"), dep.first.c_str());
 		if (!dep.second.empty() && altgenmap.find( dep.second) == altgenmap.end()) throw strus::runtime_error(_TXT("undefined concept class '%s' referenced in dependency"), dep.second.c_str());
@@ -248,7 +248,7 @@ VectorStorageConfig::VectorStorageConfig( const std::string& config, ErrorBuffer
 	{
 		throw strus::runtime_error( "%s", _TXT("error in vector storage configuration: dim, bits or var values must not be zero"));
 	}
-	databaseConfig = utils::trim(src);	//... rest is database configuration
+	databaseConfig = string_conv::trim(src);	//... rest is database configuration
 	while (databaseConfig.size() && databaseConfig[ databaseConfig.size()-1] == ';') databaseConfig.resize( databaseConfig.size()-1);
 
 	if (errorhnd->hasError())

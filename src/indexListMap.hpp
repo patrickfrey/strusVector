@@ -9,11 +9,9 @@
 #ifndef _STRUS_INDEX_LIST_MAP_HPP_INCLUDED
 #define _STRUS_INDEX_LIST_MAP_HPP_INCLUDED
 #include "strus/base/hton.hpp"
-#include "utils.hpp"
 #include "internationalization.hpp"
 #include <vector>
 #include <map>
-
 
 namespace strus {
 
