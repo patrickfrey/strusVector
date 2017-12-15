@@ -12,7 +12,7 @@
 #include "errorUtils.hpp"
 #include "internationalization.hpp"
 #include "strus/errorBufferInterface.hpp"
-#include "utils.hpp"
+#include "strus/base/string_conv.hpp"
 #include <algorithm>
 
 #define MODULENAME   "standard vector storage"
@@ -38,7 +38,9 @@ void VectorStorageTransaction::addFeature( const std::string& name, const std::v
 	try
 	{
 		m_vecar.push_back( vec);
-		m_namear.push_back( utils::utf8clean( name));
+		StringConvError err = StringConvOk;
+		m_namear.push_back( strus::utf8clean( name, err));
+		if (err != StringConvOk) throw strus::stringconv_exception( err);
 	}
 	CATCH_ERROR_ARG1_MAP( _TXT("error adding feature to '%s': %s"), MODULENAME, *m_errorhnd);
 }

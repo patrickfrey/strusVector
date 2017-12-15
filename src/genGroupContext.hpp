@@ -18,7 +18,7 @@
 #include "sampleSimGroupAssignmentQueue.hpp"
 #include "sharedArrayMutex.hpp"
 #include "indexListMap.hpp"
-#include "utils.hpp"
+#include "strus/base/thread.hpp"
 #include <vector>
 #include <list>
 #include <set>
@@ -150,7 +150,7 @@ public:
 	}
 	void reportError( const std::string& msg)
 	{
-		utils::ScopedLock lock( m_errmutex);
+		strus::scoped_lock lock( m_errmutex);
 		if (m_logout) m_logout << msg;
 		m_error.append( msg);
 	}
@@ -181,7 +181,7 @@ private:
 	SimGroupMap m_groupMap;					//< map of similarity groups
 	SharedSampleSimGroupMap m_sampleSimGroupMap;		//< map of sample idx to group idx
 	SampleSimGroupAssignmentQueue m_groupAssignQueue;	//< queue for cross assignements to groups
-	utils::Mutex m_errmutex;
+	strus::mutex m_errmutex;
 	std::string m_error;
 };
 

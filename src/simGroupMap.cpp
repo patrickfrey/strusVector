@@ -7,11 +7,10 @@
  */
 /// \brief Collection of similarity groups for thread safe access
 #include "simGroupMap.hpp"
-#include "cacheLineSize.hpp"
 #include "strus/base/string_format.hpp"
+#include "strus/base/malloc.hpp"
 
 using namespace strus;
-using namespace strus::utils;
 
 ConceptIndex GlobalCountAllocator::get( unsigned int cnt)
 {
@@ -26,7 +25,7 @@ ConceptIndex GlobalCountAllocator::get( unsigned int cnt)
 
 void GlobalCountAllocator::setCounter( const ConceptIndex& value)
 {
-	m_cnt.set( ((value-1 + CacheLineSize-1) / CacheLineSize) * CacheLineSize + 1);
+	m_cnt.set( ((value-1 + STRUS_CACHELINE_SIZE-1) / STRUS_CACHELINE_SIZE) * STRUS_CACHELINE_SIZE + 1);
 }
 
 ConceptIndex SimGroupIdAllocator::alloc()
@@ -34,8 +33,8 @@ ConceptIndex SimGroupIdAllocator::alloc()
 	ConceptIndex rt;
 	if (m_freeList.empty())
 	{
-		ConceptIndex first = m_cnt->get( CacheLineSize);
-		unsigned int ci = first + CacheLineSize-1, ce = first;
+		ConceptIndex first = m_cnt->get( STRUS_CACHELINE_SIZE);
+		unsigned int ci = first + STRUS_CACHELINE_SIZE-1, ce = first;
 		for (; ci != ce; --ci)
 		{
 			m_freeList.push_back( ci);
@@ -59,9 +58,9 @@ SimGroupMap::SimGroupMap()
 	:m_armem(0),m_ar(0),m_arsize(0){}
 
 SimGroupMap::SimGroupMap( std::size_t maxNofGroups)
-	:m_armem(0),m_ar(0),m_arsize(((maxNofGroups + CacheLineSize - 1) / CacheLineSize) * CacheLineSize)
+	:m_armem(0),m_ar(0),m_arsize(((maxNofGroups + STRUS_CACHELINE_SIZE - 1) / STRUS_CACHELINE_SIZE) * STRUS_CACHELINE_SIZE)
 {
-	m_armem = utils::aligned_malloc( m_arsize * sizeof(SimGroupRef), CacheLineSize);
+	m_armem = strus::aligned_malloc( m_arsize * sizeof(SimGroupRef), STRUS_CACHELINE_SIZE);
 	if (!m_armem) throw std::bad_alloc();
 	m_ar = new (m_armem) SimGroupRef[ m_arsize];
 }
@@ -73,7 +72,7 @@ SimGroupMap::~SimGroupMap()
 	{
 		m_ar[ai].~SimGroupRef();
 	}
-	utils::aligned_free( m_armem);
+	strus::aligned_free( m_armem);
 	m_armem = 0;
 }
 

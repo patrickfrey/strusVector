@@ -9,13 +9,13 @@
 #include "simRelationMapBuilder.hpp"
 #include "simHash.hpp"
 #include "lshBench.hpp"
-#include "utils.hpp"
 #include "strus/base/string_format.hpp"
+#include "strus/base/atomic.hpp"
+#include "strus/base/thread.hpp"
 #include "strus/reference.hpp"
 #include <vector>
 #include <algorithm>
 #include <limits>
-#include <boost/thread.hpp>
 
 using namespace strus;
 
@@ -138,7 +138,7 @@ public:
 
 	void reportError( const std::string& msg)
 	{
-		utils::ScopedLock lock( m_mutex);
+		strus::scoped_lock lock( m_mutex);
 		m_errormsg.append( msg);
 		m_errormsg.push_back( '\n');
 	}
@@ -155,7 +155,7 @@ public:
 
 	void pushResult( const SimRelationMap& result_)
 	{
-		utils::ScopedLock lock( m_mutex);
+		strus::scoped_lock lock( m_mutex);
 		m_simrelmap.join( result_);
 	}
 
@@ -165,9 +165,9 @@ public:
 	}
 
 private:
-	utils::AtomicCounter<SampleIndex> m_sampleIndex;
+	strus::AtomicCounter<SampleIndex> m_sampleIndex;
 	std::size_t m_endSampleIndex;
-	utils::Mutex m_mutex;
+	strus::mutex m_mutex;
 	std::string m_errormsg;
 	SimRelationMap m_simrelmap;
 };

@@ -14,7 +14,6 @@
 #include "strus/errorBufferInterface.hpp"
 #include "internationalization.hpp"
 #include "errorUtils.hpp"
-#include "utils.hpp"
 #include <string>
 #include <iostream>
 #include <sstream>

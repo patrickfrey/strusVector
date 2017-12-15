@@ -11,13 +11,12 @@
 #include "random.hpp"
 #include "simGroupIdMap.hpp"
 #include "strus/base/string_format.hpp"
+#include "strus/base/shared_ptr.hpp"
 #include "strus/errorBufferInterface.hpp"
-#include <boost/make_shared.hpp>
 #include <iostream>
 #include <sstream>
 
 using namespace strus;
-using namespace strus::utils;
 
 #ifdef __GNUC__
 #ifndef __clang__
@@ -250,7 +249,7 @@ bool GenGroupContext::tryAddGroupMember(
 			return false;
 		}
 	}
-	SimGroupRef newgroup = boost::make_shared<SimGroup>( *group);
+	SimGroupRef newgroup( new SimGroup( *group));
 	if (!newgroup->addMember( newmember))
 	{
 		throw strus::runtime_error( "%s", _TXT("internal: inconsistency in group (try add group member)"));
@@ -336,7 +335,7 @@ void GenGroupContext::tryGroupAssignments(
 			SimGroupRef group = m_groupMap.get( ai->conceptIndex);
 			if (!group.get() || !(*m_samplear)[ai->sampleIndex].near( group->gencode(), parameter.simdist)) continue; 
 
-			SimGroupRef newgroup = boost::make_shared<SimGroup>( *group);
+			SimGroupRef newgroup( new SimGroup( *group));
 			{
 				SharedSampleSimGroupMap::Lock SLOCK( &m_sampleSimGroupMap, ai->sampleIndex);
 				if (!m_sampleSimGroupMap.insert( SLOCK, ai->conceptIndex)) continue;
@@ -385,7 +384,7 @@ bool GenGroupContext::greedyChaseFreeFeatures(
 			SimGroupRef group = m_groupMap.get( bestmatch_simgroup);
 			if (group.get())
 			{
-				SimGroupRef testgroup = boost::make_shared<SimGroup>( *group);
+				SimGroupRef testgroup( new SimGroup( *group));
 				testgroup->addMember( neighbour.index);
 				testgroup->doMutation( *m_samplear, parameter.descendants, age_mutations( *testgroup, parameter.maxage, parameter.mutations), age_mutation_votes( *testgroup, parameter.maxage, parameter.votes), parameter.fdf);
 				if (testgroup->fitness( *m_samplear, parameter.fdf) > group->fitness( *m_samplear, parameter.fdf))
@@ -398,7 +397,7 @@ bool GenGroupContext::greedyChaseFreeFeatures(
 		}
 		// ...if we did not find a close group, then we found a new one with the two elements as members:
 		ConceptIndex newgroupidx = groupIdAllocator.alloc();
-		SimGroupRef newgroup = boost::make_shared<SimGroup>( *m_samplear, sidx, neighbour.index, newgroupidx);
+		SimGroupRef newgroup( new SimGroup( *m_samplear, sidx, neighbour.index, newgroupidx));
 		(void)newgroup->doMutation( *m_samplear, parameter.descendants, age_mutations( *newgroup, parameter.maxage, parameter.mutations), age_mutation_votes( *newgroup, parameter.maxage, parameter.votes), parameter.fdf);
 		bool success_nb = false;
 		{
@@ -478,7 +477,7 @@ void GenGroupContext::greedyNeighbourGroupInterchange(
 				if (!group->isMember( *mi))
 				{
 					// Add eqdist member of sim_group to newgroup:
-					SimGroupRef newgroup = boost::make_shared<SimGroup>( *group);
+					SimGroupRef newgroup( new SimGroup( *group));
 					{
 						SharedSampleSimGroupMap::Lock SLOCK( &m_sampleSimGroupMap, *mi);
 						if (!m_sampleSimGroupMap.insert( SLOCK, group_id)) continue;
@@ -673,7 +672,7 @@ bool GenGroupContext::unfittestGroupElimination(
 	bool doRemoveGroup = false;
 	if (doRemoveMember)
 	{
-		SimGroupRef newgroup = boost::make_shared<SimGroup>( *group);
+		SimGroupRef newgroup( new SimGroup( *group));
 		if (newgroup->removeMember( toRemoveMember))
 		{
 			SharedSampleSimGroupMap::Lock SLOCK( &m_sampleSimGroupMap, toRemoveMember);

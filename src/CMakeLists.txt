@@ -5,7 +5,6 @@ cmake_minimum_required(VERSION 2.8 FATAL_ERROR)
 # --------------------------------------
 set(
 	libstrus_vector_source_files
-	utils.cpp
 	logger.cpp
 	internationalization.cpp
 	random.cpp

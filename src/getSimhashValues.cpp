@@ -8,13 +8,13 @@
 /// \brief Function for evaluating similarity relations (incl. multithreaded)
 #include "getSimhashValues.hpp"
 #include "lshModel.hpp"
-#include "utils.hpp"
 #include "strus/base/string_format.hpp"
+#include "strus/base/thread.hpp"
+#include "strus/base/atomic.hpp"
 #include "strus/reference.hpp"
 #include "strus/errorBufferInterface.hpp"
 #include <memory>
 #include <iostream>
-#include <boost/thread.hpp>
 #include "armadillo"
 
 #undef STRUS_LOWLEVEL_DEBUG
@@ -65,7 +65,7 @@ public:
 
 	void reportError( const std::string& msg)
 	{
-		utils::ScopedLock lock( m_mutex);
+		strus::scoped_lock lock( m_mutex);
 		m_errormsg.append( msg);
 		m_errormsg.push_back( '\n');
 	}
@@ -81,12 +81,12 @@ public:
 	}
 
 private:
-	utils::AtomicCounter<unsigned int> m_chunkIndex;
+	strus::AtomicCounter<unsigned int> m_chunkIndex;
 	SimHash* m_resar;
 	const std::vector<double>* m_vecar;
 	std::size_t m_arsize;
 	std::size_t m_chunksize;
-	utils::Mutex m_mutex;
+	strus::mutex m_mutex;
 	std::string m_errormsg;
 };
 

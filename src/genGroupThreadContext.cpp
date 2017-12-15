@@ -8,9 +8,6 @@
 /// \brief Multithreading context for the genetic algorithms
 #include "genGroupThreadContext.hpp"
 #include "strus/errorBufferInterface.hpp"
-#include "cacheLineSize.hpp"
-#include "utils.hpp"
-#include <boost/thread.hpp>
 #include <algorithm>
 
 using namespace strus;
@@ -24,11 +21,11 @@ GenGroupThreadContext::GenGroupThreadContext( GlobalCountAllocator* glbcnt_, Gen
 
 void GenGroupThreadContext::run( GenGroupProcedure proc, std::size_t startidx, std::size_t endidx)
 {
-	if (m_nofThreads && (endidx - startidx > CacheLineSize))
+	if (m_nofThreads && (endidx - startidx > STRUS_CACHELINE_SIZE))
 	{
 		boost::thread_group tgroup;
 		std::size_t chunksize = (endidx - startidx + m_nofThreads - 1) / m_nofThreads;
-		chunksize = ((chunksize + CacheLineSize -1) / CacheLineSize) * CacheLineSize;
+		chunksize = ((chunksize + STRUS_CACHELINE_SIZE -1) / STRUS_CACHELINE_SIZE) * STRUS_CACHELINE_SIZE;
 
 		std::size_t startchunkidx = startidx;
 		unsigned int ti=0, te=m_nofThreads;
@@ -64,7 +61,7 @@ void GenGroupThreadContext::runGroupAssignments()
 		std::size_t endidx = m_glbcnt->nofGroupIdsAllocated()+1;
 		std::size_t startidx = 1;
 		std::size_t chunksize = (endidx - startidx + (m_nofThreads - 1)) / m_nofThreads;
-		chunksize = ((chunksize + CacheLineSize -1) / CacheLineSize) * CacheLineSize;
+		chunksize = ((chunksize + STRUS_CACHELINE_SIZE -1) / STRUS_CACHELINE_SIZE) * STRUS_CACHELINE_SIZE;
 
 		std::size_t startchunkidx = startidx;
 		unsigned int ti=0, te=m_nofThreads;

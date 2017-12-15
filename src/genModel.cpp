@@ -180,7 +180,7 @@ std::vector<SimHash> GenModel::run(
 	unsigned int maxconcepts = maxconcepts_ ? maxconcepts_ : samplear.size() * FEATURE_MAXNOFCONCEPT_RELATION;
 	if (maxconcepts < (1<<16))
 	{
-		maxconcepts += nofThreads * CacheLineSize + CacheLineSize;
+		maxconcepts += nofThreads * STRUS_CACHELINE_SIZE + STRUS_CACHELINE_SIZE;
 	}
 	GlobalCountAllocator glbcntalloc( maxconcepts);
 	GenGroupParameter genParameter;
