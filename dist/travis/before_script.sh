@@ -29,7 +29,7 @@ case $OS in
 			snappy \
 			leveldb \
 			lapack \
-			blas \
+			openblas \
 			|| true
 		# make sure cmake finds the brew version of gettext
 		brew link --force gettext || true
