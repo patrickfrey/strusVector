@@ -41,6 +41,7 @@ include_directories(
 	"${strusbase_INCLUDE_DIRS}"
 	"${strus_INCLUDE_DIRS}"
 	"${strusmodule_INCLUDE_DIRS}"
+	"${MAIN_SOURCE_DIR}"
 )
 link_directories(
 	${Boost_LIBRARY_DIRS}
