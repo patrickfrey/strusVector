@@ -6,7 +6,7 @@ cmake_minimum_required(VERSION 2.8 FATAL_ERROR)
 set(
 	libstrus_vector_source_files
 	logger.cpp
-	internationalization.cpp
+	${CMAKE_CURRENT_BINARY_DIR}/internationalization.cpp
 	random.cpp
 	simHash.cpp
 	simHashMap.cpp
