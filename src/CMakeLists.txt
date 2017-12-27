@@ -47,14 +47,13 @@ link_directories(
 	${Boost_LIBRARY_DIRS}
 	"${ARMADILLO_LIBRARY_DIRS}"
 	"${strusbase_LIBRARY_DIRS}"
-	${Intl_LIBRARIES}
 )
 
 # ------------------------------
 # MODULE 
 # ------------------------------
 add_library( strus_vector_static STATIC ${libstrus_vector_source_files} )
-target_link_libraries( strus_vector_static strus_base strus_armadillo )
+target_link_libraries( strus_vector_static strus_base strus_armadillo ${Intl_LIBRARIES} )
 set_property( TARGET strus_vector_static PROPERTY POSITION_INDEPENDENT_CODE TRUE )
 
 add_library( strus_vector_std SHARED libstrus_vector_std.cpp )

@@ -21,7 +21,7 @@ link_directories(
 # PROGRAM
 # ------------------------------
 add_library( strus_pageweight_static STATIC pageweight.cpp )
-target_link_libraries( strus_pageweight_static strus_base "${Boost_LIBRARIES}" "${Intl_LIBRARIES}" )
+target_link_libraries( strus_pageweight_static strus_base ${Boost_LIBRARIES} ${Intl_LIBRARIES} )
 set_property( TARGET strus_pageweight_static PROPERTY POSITION_INDEPENDENT_CODE TRUE )
 
 add_executable( strusPageWeight  strusPageWeight.cpp )
