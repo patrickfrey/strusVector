@@ -47,6 +47,7 @@ link_directories(
 	${Boost_LIBRARY_DIRS}
 	"${ARMADILLO_LIBRARY_DIRS}"
 	"${strusbase_LIBRARY_DIRS}"
+	${Intl_LIBRARIES}
 )
 
 # ------------------------------
