@@ -70,6 +70,14 @@ add_library( modstrus_storage_vector_std  MODULE  modstrus_storage_vector_std.cp
 set_target_properties( modstrus_storage_vector_std PROPERTIES PREFIX "")
 target_link_libraries( modstrus_storage_vector_std strus_module_storage strus_vector_std ${Intl_LIBRARIES} ${Boost_LIBRARIES} )
 
+# Copy pattern module into a created directory easy relocatable by tests:
+add_custom_command( TARGET modstrus_storage_vector_std POST_BUILD
+					  COMMAND ${CMAKE_COMMAND} -E make_directory  ${CMAKE_BINARY_DIR}/modules/strus
+					  COMMENT "Create local module directory '${CMAKE_BINARY_DIR}/modules/strus/' " )
+add_custom_command( TARGET modstrus_storage_vector_std POST_BUILD
+					  COMMAND ${CMAKE_COMMAND} -E copy_if_different  $<TARGET_FILE:modstrus_storage_vector_std>  ${CMAKE_BINARY_DIR}/modules/strus/
+					  COMMENT "Copy strus standard vector module built to local module directory" )
+
 # ------------------------------
 # INSTALLATION
 # ------------------------------
