@@ -71,4 +71,7 @@ tests/pagerank/src/testPageRank
 tests/database/src/testDatabaseAdapter
 tests/vectorSpaceModel/vsmodel/
 
+# deploy to obs tar:
+strusvector-*.tar.gz
+
 
