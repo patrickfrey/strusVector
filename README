@@ -1,2 +1,18 @@
-# strusVector
-Provides a mapping of vectors to features for strus 
+This project implements a vector storage for searching for similar vectors.
+It uses LSH to scan for similar vectors. Scanning 10'000'000 vectors of dimension 300 represented as 2048 LSH bits,
+takes about 25 milliseconds with a single thread on an Intel NUC. StrusVector does not follow odd ideas, that LSH values can be used to
+split the search space. All candidates have to be visited. Performace is gained by checking the evidence for a match with a subset of the bit vector
+compared and by optimizing on the number of cache lines loaded during search.
+
+Licenced as MPLv2 (Mozilla Public License, Version 2 - https://www.mozilla.org/en-US/MPL/2.0)
+For 3rdParty licenses see LICENSE.3rdParty
+
+The project Strus implements a set of libraries, tools for building a competitive, 
+scalable search engine for text retrieval.
+It is a solution for small projects as well as larger scale applications.
+Strus project homepage at http://project-strus.net with articles, links, documentation.
+
+For installation see description files INSTALL.<platform> in the top level directory of the project.
+
+The project is built regularly with Travis (https://travis-ci.org/patrickfrey/strusVector) 
+and with OpenSuse (https://build.opensuse.org/package/show/home:PatrickFrey/strusvector):
