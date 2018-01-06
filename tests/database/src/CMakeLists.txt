@@ -22,7 +22,7 @@ if(CMAKE_SYSTEM_NAME MATCHES "FreeBSD")
     set(FREEBSD true)
 endif(CMAKE_SYSTEM_NAME MATCHES "FreeBSD")
 if(FREEBSD)
-  set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -Wl,-rpath=/usr/local/lib/gcc5 -L/usr/local/lib/gcc5 -lgcc_s -lquadmath")
+  set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -Wl,-rpath=/usr/local/lib/gcc6 -L/usr/local/lib/gcc6 -lgcc_s -lquadmath")
 endif()
 
 add_executable( testDatabaseAdapter testDatabaseAdapter.cpp)
