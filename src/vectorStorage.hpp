@@ -9,6 +9,7 @@
 #ifndef _STRUS_VECTOR_STORAGE_IMPLEMENTATION_HPP_INCLUDED
 #define _STRUS_VECTOR_STORAGE_IMPLEMENTATION_HPP_INCLUDED
 #include "strus/vectorStorageInterface.hpp"
+#include <string>
 
 namespace strus {
 
@@ -27,9 +28,9 @@ class VectorStorage
 	:public VectorStorageInterface
 {
 public:
+	VectorStorage( const std::string& workdir_, ErrorBufferInterface* errorhnd_)
+		:m_errorhnd(errorhnd_),m_workdir(workdir_){}
 	virtual ~VectorStorage(){}
-
-	VectorStorage( ErrorBufferInterface* errorhnd_);
 
 	virtual bool createStorage( const std::string& configsource, const DatabaseInterface* database) const;
 
@@ -40,6 +41,7 @@ public:
 
 private:
 	ErrorBufferInterface* m_errorhnd;	///< buffer for reporting errors
+	std::string m_workdir;
 };
 
 }//namespace

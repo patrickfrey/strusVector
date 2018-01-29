@@ -23,7 +23,7 @@ class DatabaseInterface;
 
 /// \brief Create standard vector space model
 /// \param[in] errorhnd error handler to use
-VectorStorageInterface* createVectorStorage_std( ErrorBufferInterface* errorhnd);
+VectorStorageInterface* createVectorStorage_std( const std::string& wordir, ErrorBufferInterface* errorhnd);
 
 }//namespace
 #endif
