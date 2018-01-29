@@ -198,8 +198,8 @@ int main( int argc, const char** argv)
 			if (!g_errorhnd) throw std::runtime_error("failed to create error buffer structure");
 		}
 		// Build all objects:
-		strus::local_ptr<strus::DatabaseInterface> dbi( strus::createDatabaseType_leveldb( g_errorhnd));
-		strus::local_ptr<strus::VectorStorageInterface> vmodel( createVectorStorage_std( g_errorhnd));
+		strus::local_ptr<strus::DatabaseInterface> dbi( strus::createDatabaseType_leveldb( "", g_errorhnd));
+		strus::local_ptr<strus::VectorStorageInterface> vmodel( strus::createVectorStorage_std( "", g_errorhnd));
 		if (!dbi.get() || !vmodel.get() || g_errorhnd->hasError()) throw std::runtime_error( g_errorhnd->fetchError());
 
 		// Remove traces of old test model before creating a new one:

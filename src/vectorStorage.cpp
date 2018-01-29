@@ -44,12 +44,6 @@ using namespace strus;
 
 #define MAIN_CONCEPT_CLASSNAME ""
 
-
-
-VectorStorage::VectorStorage( ErrorBufferInterface* errorhnd_)
-	:m_errorhnd(errorhnd_){}
-
-
 bool VectorStorage::createStorage( const std::string& configsource, const DatabaseInterface* dbi) const
 {
 	try
