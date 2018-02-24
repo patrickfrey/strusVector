@@ -3,8 +3,7 @@ cmake_minimum_required(VERSION 2.8 FATAL_ERROR)
 # --------------------------------------
 # SOURCES AND INCLUDES
 # --------------------------------------
-set(
-	libstrus_vector_source_files
+set( source_files
 	logger.cpp
 	${CMAKE_CURRENT_BINARY_DIR}/internationalization.cpp
 	random.cpp
@@ -52,7 +51,9 @@ link_directories(
 # ------------------------------
 # MODULE 
 # ------------------------------
-add_library( strus_vector_static STATIC ${libstrus_vector_source_files} )
+add_cppcheck( strus_vector ${source_files} libstrus_vector_std.cpp modstrus_storage_vector_std.cpp )
+
+add_library( strus_vector_static STATIC ${source_files} )
 target_link_libraries( strus_vector_static strus_base strus_armadillo ${Intl_LIBRARIES} )
 set_property( TARGET strus_vector_static PROPERTY POSITION_INDEPENDENT_CODE TRUE )
 
