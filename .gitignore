@@ -36,9 +36,6 @@ cmake/uninstall.cmake
 DartConfiguration.tcl
 Testing/
 *.cmake.user
-include/strus/versionVector.hpp
-src/internationalization.cpp
-src_pageweight/pageweightdefs.hpp
 dist/obs/deploy_to_obs.sh
 dist/archlinux/PKGBUILD
 dist/obs/strusvector.dsc
