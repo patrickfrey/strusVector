@@ -125,7 +125,7 @@ int main( int argc, const char** argv)
 	try
 	{
 		int rt = 0;
-		g_errorhnd = strus::createErrorBuffer_standard( 0, 1);
+		g_errorhnd = strus::createErrorBuffer_standard( 0, 1, NULL/*debug trace interface*/);
 		if (!g_errorhnd) throw std::runtime_error("failed to create error buffer structure");
 
 		initRandomNumberGenerator();
@@ -194,7 +194,7 @@ int main( int argc, const char** argv)
 		if (nofThreads > 1)
 		{
 			delete g_errorhnd;
-			g_errorhnd = strus::createErrorBuffer_standard( 0, nofThreads+2);
+			g_errorhnd = strus::createErrorBuffer_standard( 0, nofThreads+2, NULL/*debug trace interface*/);
 			if (!g_errorhnd) throw std::runtime_error("failed to create error buffer structure");
 		}
 		// Build all objects:
