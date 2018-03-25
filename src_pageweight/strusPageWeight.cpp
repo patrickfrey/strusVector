@@ -284,9 +284,10 @@ int main( int argc, const char** argv)
 		// Parse input:
 		while (input.parseLexem( lid, lname))
 		{
-#ifdef STRUS_LOWLEVEL_DEBUG
-			std::cerr << lexemIdName( lid) << " " << lname << std::endl;
-#endif
+			if (verbose)
+			{
+				std::cerr << "lexem " << lexemIdName( lid) << " " << lname << std::endl;
+			}
 		AGAIN:
 			switch (lid)
 			{
