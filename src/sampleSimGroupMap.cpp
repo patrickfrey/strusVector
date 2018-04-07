@@ -10,6 +10,7 @@
 #include "internationalization.hpp"
 #include "errorUtils.hpp"
 #include "strus/base/malloc.hpp"
+#include "strus/base/platform.hpp"
 #include <cstring>
 
 using namespace strus;
@@ -21,8 +22,8 @@ void SampleSimGroupMap::init()
 	{
 		throw std::bad_alloc();
 	}
-	m_nodear = (Node*)strus::aligned_malloc( m_nodearsize * sizeof(Node), STRUS_CACHELINE_SIZE);
-	m_refs = (ConceptIndex*)strus::aligned_malloc( m_nodearsize * m_maxnodesize * sizeof(ConceptIndex), STRUS_CACHELINE_SIZE);
+	m_nodear = (Node*)strus::aligned_malloc( m_nodearsize * sizeof(Node), strus::platform::CacheLineSize);
+	m_refs = (ConceptIndex*)strus::aligned_malloc( m_nodearsize * m_maxnodesize * sizeof(ConceptIndex), strus::platform::CacheLineSize);
 	if (!m_nodear || !m_refs)
 	{
 		if (m_nodear) strus::aligned_free(m_nodear);

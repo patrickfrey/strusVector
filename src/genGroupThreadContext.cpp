@@ -9,6 +9,7 @@
 #include "genGroupThreadContext.hpp"
 #include "strus/errorBufferInterface.hpp"
 #include "strus/reference.hpp"
+#include "strus/base/platform.hpp"
 #include <algorithm>
 
 using namespace strus;
@@ -22,10 +23,10 @@ GenGroupThreadContext::GenGroupThreadContext( GlobalCountAllocator* glbcnt_, Gen
 
 void GenGroupThreadContext::run( GenGroupProcedure proc, std::size_t startidx, std::size_t endidx)
 {
-	if (m_nofThreads && (endidx - startidx > STRUS_CACHELINE_SIZE))
+	if (m_nofThreads && (endidx - startidx > strus::platform::CacheLineSize))
 	{
 		std::size_t chunksize = (endidx - startidx + m_nofThreads - 1) / m_nofThreads;
-		chunksize = ((chunksize + STRUS_CACHELINE_SIZE -1) / STRUS_CACHELINE_SIZE) * STRUS_CACHELINE_SIZE;
+		chunksize = ((chunksize + strus::platform::CacheLineSize -1) / strus::platform::CacheLineSize) * strus::platform::CacheLineSize;
 
 		std::vector<strus::Reference<strus::thread> > threadGroup;
 		std::size_t startchunkidx = startidx;
@@ -63,7 +64,7 @@ void GenGroupThreadContext::runGroupAssignments()
 		std::size_t endidx = m_glbcnt->nofGroupIdsAllocated()+1;
 		std::size_t startidx = 1;
 		std::size_t chunksize = (endidx - startidx + (m_nofThreads - 1)) / m_nofThreads;
-		chunksize = ((chunksize + STRUS_CACHELINE_SIZE -1) / STRUS_CACHELINE_SIZE) * STRUS_CACHELINE_SIZE;
+		chunksize = ((chunksize + strus::platform::CacheLineSize -1) / strus::platform::CacheLineSize) * strus::platform::CacheLineSize;
 
 		std::vector<strus::Reference<strus::thread> > threadGroup;
 		std::size_t startchunkidx = startidx;

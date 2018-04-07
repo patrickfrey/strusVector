@@ -10,6 +10,7 @@
 #define _STRUS_VECTOR_SHARED_ARRAY_HPP_INCLUDED
 #include "strus/base/malloc.hpp"
 #include "strus/base/thread.hpp"
+#include "strus/base/platform.hpp"
 #include <new>
 #include <stdexcept>
 
@@ -28,7 +29,7 @@ public:
 		}
 		m_arsize = (std::size_t)m_mod * MaxNofMutex;
 		m_mutexarsize = (m_arsize) / m_mod;
-		m_mutexarmem = strus::aligned_malloc( m_mutexarsize * sizeof(strus::recursive_mutex), STRUS_CACHELINE_SIZE);
+		m_mutexarmem = strus::aligned_malloc( m_mutexarsize * sizeof(strus::recursive_mutex), strus::platform::CacheLineSize);
 		m_mutexar = new (m_mutexarmem)strus::recursive_mutex[ m_mutexarsize];
 	}
 	~SharedArrayMutex()

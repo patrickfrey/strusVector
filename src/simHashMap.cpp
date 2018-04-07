@@ -12,6 +12,7 @@
 #include "strus/base/bitOperations.hpp"
 #include "strus/base/malloc.hpp"
 #include "strus/base/thread.hpp"
+#include "strus/base/platform.hpp"
 #include <vector>
 #include <string>
 #include <stdexcept>
@@ -32,8 +33,8 @@ void SimHashMap::initBench()
 	if (mod > 1) mod -= 1;
 	m_select1 = (m_seed+0) % mod;
 	m_select2 = (m_seed+1) % mod;
-	m_selar1 = (uint64_t*)strus::aligned_malloc( m_ar.size() * sizeof(uint64_t), STRUS_CACHELINE_SIZE);
-	m_selar2 = (uint64_t*)strus::aligned_malloc( m_ar.size() * sizeof(uint64_t), STRUS_CACHELINE_SIZE);
+	m_selar1 = (uint64_t*)strus::aligned_malloc( m_ar.size() * sizeof(uint64_t), strus::platform::CacheLineSize);
+	m_selar2 = (uint64_t*)strus::aligned_malloc( m_ar.size() * sizeof(uint64_t), strus::platform::CacheLineSize);
 	if (!m_selar1 || !m_selar2)
 	{
 		if (m_selar1) strus::aligned_free( m_selar1);

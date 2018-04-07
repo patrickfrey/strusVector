@@ -14,6 +14,7 @@
 #include "dependencyGraph.hpp"
 #include "internationalization.hpp"
 #include "strus/base/string_format.hpp"
+#include "strus/base/platform.hpp"
 #include "strus/errorBufferInterface.hpp"
 #include <ctime>
 #include <cmath>
@@ -180,7 +181,7 @@ std::vector<SimHash> GenModel::run(
 	unsigned int maxconcepts = maxconcepts_ ? maxconcepts_ : samplear.size() * FEATURE_MAXNOFCONCEPT_RELATION;
 	if (maxconcepts < (1<<16))
 	{
-		maxconcepts += nofThreads * STRUS_CACHELINE_SIZE + STRUS_CACHELINE_SIZE;
+		maxconcepts += nofThreads * strus::platform::CacheLineSize + strus::platform::CacheLineSize;
 	}
 	GlobalCountAllocator glbcntalloc( maxconcepts);
 	GenGroupParameter genParameter;
