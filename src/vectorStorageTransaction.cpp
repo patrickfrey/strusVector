@@ -29,7 +29,7 @@ VectorStorageTransaction::VectorStorageTransaction(
 {
 	if (!m_transaction.get())
 	{
-		throw strus::runtime_error( "%s", _TXT("failed to create transaction"));
+		throw std::runtime_error( _TXT("failed to create transaction"));
 	}
 }
 

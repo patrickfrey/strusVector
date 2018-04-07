@@ -81,7 +81,7 @@ SimGroupRef SimGroupMap::get( const ConceptIndex& cidx) const
 {
 	if (cidx == 0 || (std::size_t)cidx > m_arsize)
 	{
-		throw strus::runtime_error( "%s", _TXT("array bound read in similarity group map"));
+		throw std::runtime_error( _TXT("array bound read in similarity group map"));
 	}
 	return m_ar[ cidx-1];
 }
@@ -90,7 +90,7 @@ void SimGroupMap::setGroup( const ConceptIndex& cidx, const SimGroupRef& group)
 {
 	if (cidx == 0 || (std::size_t)cidx > m_arsize)
 	{
-		throw strus::runtime_error( "%s", _TXT("array bound write in similarity group map"));
+		throw std::runtime_error( _TXT("array bound write in similarity group map"));
 	}
 	m_ar[ cidx-1] = group;
 }
@@ -99,7 +99,7 @@ void SimGroupMap::resetGroup( const ConceptIndex& cidx)
 {
 	if (cidx == 0 || (std::size_t)cidx > m_arsize)
 	{
-		throw strus::runtime_error( "%s", _TXT("array bound write in similarity group map"));
+		throw std::runtime_error( _TXT("array bound write in similarity group map"));
 	}
 	m_ar[ cidx-1].reset();
 }

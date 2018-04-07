@@ -40,7 +40,7 @@ bool VectorStorageDump::nextChunk( const char*& chunk, std::size_t& chunksize)
 		if (!m_itr.get())
 		{
 			m_itr.reset( m_database.createDumpIterator( m_keyprefix));
-			if (!m_itr.get()) throw strus::runtime_error( "%s", _TXT("failed to create vector storage dump cursor"));
+			if (!m_itr.get()) throw std::runtime_error( _TXT("failed to create vector storage dump cursor"));
 		}
 		while (rowcnt++ <= NofKeyValuePairsPerChunk && m_itr->dumpNext( output)){}
 		m_chunk = output.str();

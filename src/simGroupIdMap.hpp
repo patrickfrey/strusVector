@@ -24,19 +24,19 @@ public:
 
 	ConceptIndex allocate( const ConceptIndex& cid)
 	{
-		if (!cid) throw strus::runtime_error( "%s", _TXT("concept id out of range (null)"));
+		if (!cid) throw std::runtime_error( _TXT("concept id out of range (null)"));
 		while ((std::size_t)cid > m_ar.size()) m_ar.push_back( 0);
-		if (m_ar[ cid-1] != 0) throw strus::runtime_error( "%s", _TXT("duplicate allocation of concept in sim group id map"));
+		if (m_ar[ cid-1] != 0) throw std::runtime_error( _TXT("duplicate allocation of concept in sim group id map"));
 		m_ar[ cid-1] = ++m_cnt;
 		return m_cnt;
 	}
 
 	ConceptIndex operator[]( const ConceptIndex& cid) const
 	{
-		if (cid == 0 || (std::size_t)cid > m_ar.size()) throw strus::runtime_error( "%s", _TXT("array bound read in sim group id map"));
+		if (cid == 0 || (std::size_t)cid > m_ar.size()) throw std::runtime_error( _TXT("array bound read in sim group id map"));
 		if (m_ar[ cid-1] == 0)
 		{
-			throw strus::runtime_error( "%s", _TXT("access unknown concept id"));
+			throw std::runtime_error( _TXT("access unknown concept id"));
 		}
 		return m_ar[ cid-1];
 	}

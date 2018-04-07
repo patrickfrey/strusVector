@@ -145,20 +145,20 @@ void SampleSimGroupMap::Node::check( ConceptIndex maxnodesize) const
 	ConceptIndex ii = 0;
 	if (groupidx[ii++] == 0 || size > maxnodesize)
 	{
-		throw strus::runtime_error( "%s", _TXT("illegal SampleSimGroupMap::Node (order)"));
+		throw std::runtime_error( _TXT("illegal SampleSimGroupMap::Node (order)"));
 	}
 	for (; ii<size; ++ii)
 	{
 		if (groupidx[ii] < groupidx[ii-1])
 		{
-			throw strus::runtime_error( "%s", _TXT("illegal SampleSimGroupMap::Node (order)"));
+			throw std::runtime_error( _TXT("illegal SampleSimGroupMap::Node (order)"));
 		}
 	}
 	for (; ii<(ConceptIndex)maxnodesize; ++ii)
 	{
 		if (groupidx[ii] != 0)
 		{
-			throw strus::runtime_error( "%s", _TXT("illegal SampleSimGroupMap::Node (eof)"));
+			throw std::runtime_error( _TXT("illegal SampleSimGroupMap::Node (eof)"));
 		}
 	}
 }

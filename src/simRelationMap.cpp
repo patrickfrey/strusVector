@@ -104,7 +104,7 @@ void SimRelationMap::addRow( const SampleIndex& index, std::vector<Element>::con
 	if (index >= m_endIndex) m_endIndex = index+1;
 	if (index < m_startIndex) m_startIndex = index;
 	std::size_t aridx = m_ar.size();
-	if (m_rowdescrmap.find( index) != m_rowdescrmap.end()) throw strus::runtime_error( "%s", _TXT("sim relation map row defined twice"));
+	if (m_rowdescrmap.find( index) != m_rowdescrmap.end()) throw std::runtime_error( _TXT("sim relation map row defined twice"));
 	std::size_t asize = ae - ai;
 	m_rowdescrmap[ index] = RowDescr( aridx, asize);
 	m_ar.insert( m_ar.end(), ai, ae);

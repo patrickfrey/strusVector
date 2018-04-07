@@ -101,7 +101,7 @@ SimHash& SimHash::operator=( const SimHash& o)
 	}
 	else if (size() != o.size())
 	{
-		throw strus::runtime_error( "%s", _TXT("assignment of incompatible sim hash"));
+		throw std::runtime_error( _TXT("assignment of incompatible sim hash"));
 	}
 	std::memcpy( m_ar, o.m_ar, SimHash_mallocSize(m_size));
 	return *this;

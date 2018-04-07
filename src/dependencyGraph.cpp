@@ -28,7 +28,7 @@ DependencyGraph strus::buildGroupDependencyGraph( std::size_t nofSamples, const 
 		for (; ni != ne; ++ni)
 		{
 			SimGroupRef group_n = groupMap.get( *ni);
-			if (!group_n.get()) throw strus::runtime_error( "%s", _TXT("internal: inconsistency in group map"));
+			if (!group_n.get()) throw std::runtime_error( _TXT("internal: inconsistency in group map"));
 
 			SampleSimGroupMap::const_node_iterator oi = na, oe = ne;
 			for (; oi != oe; ++oi)
@@ -36,7 +36,7 @@ DependencyGraph strus::buildGroupDependencyGraph( std::size_t nofSamples, const 
 				if (*oi != *ni)
 				{
 					SimGroupRef group_o = groupMap.get( *oi);
-					if (!group_o.get()) throw strus::runtime_error( "%s", _TXT("internal: inconsistency in group map"));
+					if (!group_o.get()) throw std::runtime_error( _TXT("internal: inconsistency in group map"));
 					if (group_n->contains( *group_o))
 					{
 						if ((float)group_o->size() >= (float)group_n->size() * isaf)
