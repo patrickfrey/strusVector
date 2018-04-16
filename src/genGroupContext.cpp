@@ -8,10 +8,10 @@
 /// \brief Structure for thread safe operations on representants of similarity classes with help of genetic algorithms
 #include "genGroupContext.hpp"
 #include "dependencyGraph.hpp"
-#include "random.hpp"
 #include "simGroupIdMap.hpp"
 #include "strus/base/string_format.hpp"
 #include "strus/base/shared_ptr.hpp"
+#include "strus/base/pseudoRandom.hpp"
 #include "strus/errorBufferInterface.hpp"
 #include <iostream>
 #include <sstream>
@@ -25,7 +25,7 @@ using namespace strus;
 #endif
 #undef STRUS_LOWLEVEL_DEBUG
 
-static Random g_random;
+static PseudoRandom g_random;
 
 static unsigned int age_mutations( const SimGroup& group, unsigned int maxage, unsigned int conf_mutations)
 {

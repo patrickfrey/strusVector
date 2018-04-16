@@ -7,7 +7,6 @@
  */
 /// \brief Structure for storing similarity relations
 #include "simRelationMap.hpp"
-#include "random.hpp"
 #include "internationalization.hpp"
 #include <limits>
 #include <algorithm>
@@ -16,6 +15,7 @@
 #include <set>
 #include <algorithm>
 #include "strus/base/hton.hpp"
+#include "strus/base/pseudoRandom.hpp"
 
 #undef STRUS_LOWLEVEL_DEBUG
 
@@ -64,7 +64,7 @@ std::vector<SimRelationMap::Element> SimRelationMap::selectElementSubset( const 
 		std::vector<SimRelationMap::Element> elemlist_copy( elemlist);
 		std::sort( elemlist_copy.begin(), elemlist_copy.end());
 
-		Random rnd( rndseed);
+		PseudoRandom rnd( rndseed);
 		std::vector<SimRelationMap::Element> subset_elemlist;
 
 		// First part of the result are the 'maxsimsam' best elements:

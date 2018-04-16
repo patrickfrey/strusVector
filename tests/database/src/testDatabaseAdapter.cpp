@@ -20,11 +20,11 @@
 #include "strus/base/fileio.hpp"
 #include "strus/base/local_ptr.hpp"
 #include "strus/base/string_format.hpp"
+#include "strus/base/pseudoRandom.hpp"
 #include "vectorStorageConfig.hpp"
 #include "indexListMap.hpp"
 #include "lshModel.hpp"
 #include "genModel.hpp"
-#include "random.hpp"
 #include "sampleSimGroupMap.hpp"
 #include "simGroup.hpp"
 #include "simHash.hpp"
@@ -98,7 +98,7 @@ static std::string getSampleName( unsigned int sidx)
 
 static strus::SimRelationMap getSimRelationMap( unsigned int nofSamples, unsigned short maxsimdist)
 {
-	strus::Random rnd;
+	strus::PseudoRandom rnd;
 	strus::SimRelationMap rt;
 	unsigned int si = 0, se = nofSamples;
 	for (; si != se; ++si)
@@ -118,7 +118,7 @@ static strus::SimRelationMap getSimRelationMap( unsigned int nofSamples, unsigne
 
 strus::SampleConceptIndexMap getSampleConceptIndexMap( unsigned int nofSamples)
 {
-	strus::Random rnd;
+	strus::PseudoRandom rnd;
 	unsigned int nofConcepts = getNofConcepts( nofSamples);
 	strus::IndexListMap<strus::Index,strus::Index> rt;
 	unsigned int si = 0, se = nofSamples;
@@ -140,7 +140,7 @@ strus::SampleConceptIndexMap getSampleConceptIndexMap( unsigned int nofSamples)
 strus::ConceptSampleIndexMap getConceptSampleIndexMap( unsigned int nofSamples)
 {
 	strus::IndexListMap<strus::Index,strus::Index> rt;
-	strus::Random rnd;
+	strus::PseudoRandom rnd;
 	unsigned int nofConcepts = getNofConcepts( nofSamples);
 	unsigned int fi = 1, fe = nofConcepts+1;
 	for (; fi < fe; ++fi)

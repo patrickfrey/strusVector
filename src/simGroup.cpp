@@ -7,14 +7,14 @@
  */
 /// \brief Structure for storing similarity group representants (individuals in the genetic algorithm for breeding similarity group representants)
 #include "simGroup.hpp"
-#include "random.hpp"
+#include "strus/base/pseudoRandom.hpp"
 #include "internationalization.hpp"
 #include "errorUtils.hpp"
 #include <algorithm>
 
 using namespace strus;
 
-static Random g_random;
+static PseudoRandom g_random;
 
 SimGroup::SimGroup( const std::vector<SimHash>& samplear, std::size_t m1, std::size_t m2, const ConceptIndex& id_)
 	:m_id(id_),m_gencode(),m_age(0),m_members(),m_nofmembers(2),m_fitness(0.0),m_fitness_valid(false)

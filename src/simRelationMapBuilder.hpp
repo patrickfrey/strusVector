@@ -12,8 +12,8 @@
 #include "simRelationReader.hpp"
 #include "simHash.hpp"
 #include "lshBench.hpp"
-#include "random.hpp"
 #include "logger.hpp"
+#include "strus/base/pseudoRandom.hpp"
 #include <vector>
 #include <string>
 #include <algorithm>
@@ -39,7 +39,7 @@ private:
 	unsigned int m_threads;
 	unsigned int m_index;
 	std::vector<LshBench> m_benchar;
-	Random m_rnd;
+	PseudoRandom m_rnd;
 	unsigned int m_selectseed;
 	const SimRelationReader* m_simmapreader;
 };
