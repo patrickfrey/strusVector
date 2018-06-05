@@ -43,7 +43,7 @@
 #include <limits>
 
 #undef STRUS_LOWLEVEL_DEBUG
-#define VEC_EPSILON  (1.0E-11)
+#define VEC_EPSILON  (1.0E-6)
 
 static void initRandomNumberGenerator()
 {
@@ -57,10 +57,10 @@ static void initRandomNumberGenerator()
 	std::srand( seed+2);
 }
 
-static std::vector<double> convertVectorStd( const arma::vec& vec)
+static std::vector<float> convertVectorStd( const arma::fvec& vec)
 {
-	std::vector<double> rt;
-	arma::vec::const_iterator vi = vec.begin(), ve = vec.end();
+	std::vector<float> rt;
+	arma::fvec::const_iterator vi = vec.begin(), ve = vec.end();
 	for (; vi != ve; ++vi)
 	{
 		rt.push_back( *vi);
@@ -68,9 +68,9 @@ static std::vector<double> convertVectorStd( const arma::vec& vec)
 	return rt;
 }
 
-std::vector<double> getRandomVector( unsigned int dim)
+std::vector<float> getRandomVector( unsigned int dim)
 {
-	return convertVectorStd( (arma::randu<arma::vec>( dim) - 0.5) * 2.0); // values between -1.0 and 1.0
+	return convertVectorStd( (arma::randu<arma::fvec>( dim) - 0.5) * 2.0); // values between -1.0 and 1.0
 }
 
 bool parseUint( unsigned int& res, const std::string& numstr)
@@ -171,7 +171,7 @@ struct TestDataset
 		unsigned int si = 0, se = nofSamples;
 		for (; si != se; ++si)
 		{
-			std::vector<double> vec = getRandomVector( config.dim);
+			std::vector<float> vec = getRandomVector( config.dim);
 			sampleNames.push_back( getSampleName(si));
 			sampleVectors.push_back( vec);
 			sampleSimHashs.push_back( lshmodel.simHash( vec));
@@ -185,7 +185,7 @@ struct TestDataset
 	strus::SampleConceptIndexMap sfmap;
 	strus::ConceptSampleIndexMap fsmap;
 	std::vector< std::string> sampleNames;
-	std::vector< std::vector<double> > sampleVectors;
+	std::vector< std::vector<float> > sampleVectors;
 	std::vector< strus::SimHash> sampleSimHashs;
 };
 
@@ -224,13 +224,13 @@ static void writeDatabase( const strus::VectorStorageConfig& config, const TestD
 	if (!transaction->commit()) throw strus::runtime_error( "%s", _TXT("vector storage transaction failed"));
 }
 
-static bool compare( const std::vector<double>& v1, const std::vector<double>& v2)
+static bool compare( const std::vector<float>& v1, const std::vector<float>& v2)
 {
-	std::vector<double>::const_iterator vi1 = v1.begin(), ve1 = v1.end();
-	std::vector<double>::const_iterator vi2 = v2.begin(), ve2 = v2.end();
+	std::vector<float>::const_iterator vi1 = v1.begin(), ve1 = v1.end();
+	std::vector<float>::const_iterator vi2 = v2.begin(), ve2 = v2.end();
 	for (unsigned int vidx=0; vi1 != ve1 && vi2 != ve2; ++vi1,++vi2,++vidx)
 	{
-		double diff = (*vi1 > *vi2)?(*vi1 - *vi2):(*vi2 - *vi1);
+		float diff = (*vi1 > *vi2)?(*vi1 - *vi2):(*vi2 - *vi1);
 		if (diff > VEC_EPSILON)
 		{
 			for (unsigned int vv=0; vv != vidx; ++vv)

@@ -331,7 +331,7 @@ DatabaseAdapter::Vector DatabaseAdapter::readSampleVector( const SampleIndex& si
 			throw strus::runtime_error(_TXT("try to to read sample vector (index %d) that does not exist"), sidx);
 		}
 	}
-	return vectorFromSerialization<double>( blob);
+	return vectorFromSerialization<float>( blob);
 }
 
 void DatabaseAdapter::Transaction::writeSampleVector( const SampleIndex& sidx, const Vector& vec)
@@ -339,7 +339,7 @@ void DatabaseAdapter::Transaction::writeSampleVector( const SampleIndex& sidx, c
 	DatabaseKeyBuffer key( KeySampleVector);
 	key[ sidx+1];
 
-	std::string blob( vectorSerialization<double>( vec));
+	std::string blob( vectorSerialization<float>( vec));
 	m_transaction->write( key.c_str(), key.size(), blob.c_str(), blob.size());
 }
 
@@ -1074,8 +1074,8 @@ void DatabaseAdapter::DumpIterator::dumpKeyValue( std::ostream& out, const strus
 			DatabaseKeyScanner scanner( key.ptr()+1, key.size()-1);
 			scanner[ sidx];
 			out << (sidx-1);
-			std::vector<double> vec = vectorFromSerialization<double>( value.ptr(), value.size());
-			std::vector<double>::const_iterator vi = vec.begin(), ve = vec.end();
+			std::vector<float> vec = vectorFromSerialization<float>( value.ptr(), value.size());
+			std::vector<float>::const_iterator vi = vec.begin(), ve = vec.end();
 			for (; vi != ve; ++vi)
 			{
 				out << " " << *vi;

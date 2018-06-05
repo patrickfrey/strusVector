@@ -38,20 +38,20 @@ public:
 	/// \brief Calculate similarity hash of a vector
 	/// \param[in] vec input vector
 	/// \return simhash value acording to this model
-	SimHash simHash( const arma::vec& vec) const;
+	SimHash simHash( const arma::fvec& vec) const;
 
 	bool isequal( const LshModel& o) const;
 
 private:
-	static arma::mat createModelMatrix( std::size_t dim_, std::size_t nofbits_);
-	LshModel( std::size_t dim_, std::size_t nofbits_, std::size_t variations_, const arma::mat& modelMatrix_, const std::vector<arma::mat>& rotations_);
+	static arma::fmat createModelMatrix( std::size_t dim_, std::size_t nofbits_);
+	LshModel( std::size_t dim_, std::size_t nofbits_, std::size_t variations_, const arma::fmat& modelMatrix_, const std::vector<arma::fmat>& rotations_);
 
 private:
 	std::size_t m_dim;
 	std::size_t m_nofbits;
 	std::size_t m_variations;
-	arma::mat m_modelMatrix;
-	std::vector<arma::mat> m_rotations;
+	arma::fmat m_modelMatrix;
+	std::vector<arma::fmat> m_rotations;
 };
 
 }//namespace

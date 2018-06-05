@@ -46,10 +46,10 @@ static void initRandomNumberGenerator()
 	std::srand( seed+2);
 }
 
-static std::vector<double> convertVectorStd( const arma::vec& vec)
+static std::vector<float> convertVectorStd( const arma::fvec& vec)
 {
-	std::vector<double> rt;
-	arma::vec::const_iterator vi = vec.begin(), ve = vec.end();
+	std::vector<float> rt;
+	arma::fvec::const_iterator vi = vec.begin(), ve = vec.end();
 	for (; vi != ve; ++vi)
 	{
 		rt.push_back( *vi);
@@ -57,14 +57,14 @@ static std::vector<double> convertVectorStd( const arma::vec& vec)
 	return rt;
 }
 
-static std::vector<double> createSimilarVector( const std::vector<double>& vec_, double maxCosSim)
+static std::vector<float> createSimilarVector( const std::vector<float>& vec_, double maxCosSim)
 {
-	arma::vec vec( vec_);
-	arma::vec orig( vec);
+	arma::fvec vec( vec_);
+	arma::fvec orig( vec);
 	for (;;)
 	{
 		unsigned int idx = rand() % vec.size();
-		double elem = vec[ idx];
+		float elem = vec[ idx];
 		if ((rand() & 1) == 0)
 		{
 			elem -= elem / 10;
@@ -74,9 +74,9 @@ static std::vector<double> createSimilarVector( const std::vector<double>& vec_,
 		{
 			elem += elem / 10;
 		}
-		double oldelem = vec[ idx];
+		float oldelem = vec[ idx];
 		vec[ idx] = elem;
-		double cosSim = arma::norm_dot( vec, orig);
+		float cosSim = arma::norm_dot( vec, orig);
 		if (maxCosSim > cosSim)
 		{
 			vec[ idx] = oldelem;
@@ -86,9 +86,9 @@ static std::vector<double> createSimilarVector( const std::vector<double>& vec_,
 	return convertVectorStd( vec);
 }
 
-std::vector<double> createRandomVector( unsigned int dim)
+std::vector<float> createRandomVector( unsigned int dim)
 {
-	return convertVectorStd( (arma::randu<arma::vec>( dim) - 0.5) * 2.0); // values between -1.0 and 1.0
+	return convertVectorStd( (arma::randu<arma::fvec>( dim) - 0.5) * 2.0); // values between -1.0 and 1.0
 }
 
 static strus::ErrorBufferInterface* g_errorhnd = 0;
@@ -216,7 +216,7 @@ int main( int argc, const char** argv)
 		if (!instance.get()) throw std::runtime_error( g_errorhnd->fetchError());
 
 		// Build the test vectors:
-		std::vector<std::vector<double> > samplear;
+		std::vector<std::vector<float> > samplear;
 		if (use_model_built)
 		{
 			strus::Index si = 0, se = instance->nofFeatures();
@@ -233,7 +233,7 @@ int main( int argc, const char** argv)
 			std::cerr << "create " << nofFeatures << " sample vectors" << std::endl;
 			for (std::size_t sidx = 0; sidx != nofFeatures; ++sidx)
 			{
-				std::vector<double> vec;
+				std::vector<float> vec;
 				if (!sidx || rand() % 3 < 2)
 				{
 					vec = createRandomVector( dim);
@@ -259,13 +259,13 @@ int main( int argc, const char** argv)
 		std::cerr << "create similarity matrix" << std::endl;
 		unsigned int nofSimilarities = 0;
 		strus::SparseDim2Field<unsigned char> expSimMatrix;
-		strus::SparseDim2Field<double> simMatrix;
+		strus::SparseDim2Field<float> simMatrix;
 		{
-			std::vector<arma::vec> samplevecar;
+			std::vector<arma::fvec> samplevecar;
 
 			for (std::size_t sidx = 0; sidx != nofFeatures; ++sidx)
 			{
-				samplevecar.push_back( arma::vec( samplear[ sidx]));
+				samplevecar.push_back( arma::fvec( samplear[ sidx]));
 
 				for (std::size_t oidx=0; oidx != sidx; ++oidx)
 				{
@@ -308,7 +308,7 @@ int main( int argc, const char** argv)
 		ConceptMatrix conceptInvMatrix;
 		ClassesMap classesmap;
 
-		std::vector<std::vector<double> >::const_iterator si = samplear.begin(), se = samplear.end();
+		std::vector<std::vector<float> >::const_iterator si = samplear.begin(), se = samplear.end();
 		for (std::size_t sidx=0; si != se; ++si,++sidx)
 		{
 			std::vector<strus::Index> ctgar( categorizer->featureConcepts( MAIN_CONCEPTNAME, sidx));

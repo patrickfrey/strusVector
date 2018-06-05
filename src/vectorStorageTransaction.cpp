@@ -33,7 +33,7 @@ VectorStorageTransaction::VectorStorageTransaction(
 	}
 }
 
-void VectorStorageTransaction::addFeature( const std::string& name, const std::vector<double>& vec)
+void VectorStorageTransaction::addFeature( const std::string& name, const std::vector<float>& vec)
 {
 	try
 	{

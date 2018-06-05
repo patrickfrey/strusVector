@@ -39,13 +39,13 @@ public:
 
 	virtual std::vector<Index> featureConcepts( const std::string& conceptClass, const Index& index) const;
 
-	virtual std::vector<double> featureVector( const Index& index) const;
+	virtual std::vector<float> featureVector( const Index& index) const;
 
 	virtual std::string featureName( const Index& index) const;
 
 	virtual Index featureIndex( const std::string& name) const;
 
-	virtual double vectorSimilarity( const std::vector<double>& v1, const std::vector<double>& v2) const;
+	virtual double vectorSimilarity( const std::vector<float>& v1, const std::vector<float>& v2) const;
 	
 	virtual std::vector<Index> conceptFeatures( const std::string& conceptClass, const Index& conceptid) const;
 

@@ -27,7 +27,7 @@ VectorStorageSearch::VectorStorageSearch( const Reference<DatabaseAdapter>& data
 	,m_range_to(range_to_)
 {}
 
-std::vector<VectorQueryResult> VectorStorageSearch::findSimilar( const std::vector<double>& vec, unsigned int maxNofResults) const
+std::vector<VectorQueryResult> VectorStorageSearch::findSimilar( const std::vector<float>& vec, unsigned int maxNofResults) const
 {
 	try
 	{
@@ -36,7 +36,7 @@ std::vector<VectorQueryResult> VectorStorageSearch::findSimilar( const std::vect
 			std::vector<VectorQueryResult> rt;
 			rt.reserve( maxNofResults * 2 + 10);
 
-			arma::vec vv = arma::vec( vec);
+			arma::fvec vv = arma::fvec( vec);
 			SimHash hash( m_lshmodel.simHash( arma::normalise( vv)));
 			if (m_config.gencfg.probdist)
 			{
@@ -49,7 +49,7 @@ std::vector<VectorQueryResult> VectorStorageSearch::findSimilar( const std::vect
 			std::vector<VectorQueryResult>::iterator ri = rt.begin(), re = rt.end();
 			for (; ri != re; ++ri)
 			{
-				arma::vec resvv( m_database->readSampleVector( ri->featidx()));
+				arma::fvec resvv( m_database->readSampleVector( ri->featidx()));
 				ri->setWeight( arma::norm_dot( vv, resvv));
 			}
 			std::sort( rt.begin(), rt.end(), std::greater<VectorQueryResult>());
@@ -58,7 +58,7 @@ std::vector<VectorQueryResult> VectorStorageSearch::findSimilar( const std::vect
 		}
 		else
 		{
-			SimHash hash( m_lshmodel.simHash( arma::normalise( arma::vec( vec))));
+			SimHash hash( m_lshmodel.simHash( arma::normalise( arma::fvec( vec))));
 			if (m_config.gencfg.probdist)
 			{
 				return m_samplear.findSimilar( hash, m_config.maxdist, m_config.maxdist * m_config.gencfg.probdist / m_config.gencfg.simdist, maxNofResults, m_range_from);
@@ -72,12 +72,12 @@ std::vector<VectorQueryResult> VectorStorageSearch::findSimilar( const std::vect
 	CATCH_ERROR_ARG1_MAP_RETURN( _TXT("error in similar vector search of '%s': %s"), MODULENAME, *m_errorhnd, std::vector<VectorQueryResult>());
 }
 
-std::vector<VectorQueryResult> VectorStorageSearch::findSimilarFromSelection( const std::vector<Index>& candidates, const std::vector<double>& vec, unsigned int maxNofResults) const
+std::vector<VectorQueryResult> VectorStorageSearch::findSimilarFromSelection( const std::vector<Index>& candidates, const std::vector<float>& vec, unsigned int maxNofResults) const
 {
 	try
 	{
 		std::vector<VectorQueryResult> rt;
-		arma::vec vv = arma::vec( vec);
+		arma::fvec vv = arma::fvec( vec);
 		SimHash hash( m_lshmodel.simHash( arma::normalise( vv)));
 
 		if (m_config.with_realvecweights && m_database.get())
@@ -95,7 +95,7 @@ std::vector<VectorQueryResult> VectorStorageSearch::findSimilarFromSelection( co
 			std::vector<VectorQueryResult>::iterator ri = rt.begin(), re = rt.end();
 			for (; ri != re; ++ri)
 			{
-				arma::vec resvv( m_database->readSampleVector( ri->featidx()));
+				arma::fvec resvv( m_database->readSampleVector( ri->featidx()));
 				ri->setWeight( arma::norm_dot( vv, resvv));
 			}
 			std::sort( rt.begin(), rt.end(), std::greater<VectorQueryResult>());
