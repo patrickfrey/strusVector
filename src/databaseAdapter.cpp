@@ -73,7 +73,7 @@ struct VectorStorageHdr
 
 	VectorStorageHdr()
 	{
-		std::memcpy( name, "strus standard vector storage\n\0", sizeof(name));
+		std::strncpy( name, "strus standard vector storage\n\0", sizeof(name));
 		_id = FILEID;
 		version_major = STRUS_VECTOR_VERSION_MAJOR;
 		version_minor = STRUS_VECTOR_VERSION_MINOR;
