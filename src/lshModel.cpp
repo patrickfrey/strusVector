@@ -181,6 +181,21 @@ struct DumpStructHeader
 		nofbits = ByteOrder<uint32_t>::ntoh(nofbits);
 		variations = ByteOrder<uint32_t>::ntoh(variations);
 	}
+
+	void printSerialization( std::string& buf)
+	{
+		uint32_t ar[3];
+		ar[0] = ByteOrder<uint32_t>::hton(dim);
+		ar[1] = ByteOrder<uint32_t>::hton(nofbits);
+		ar[2] = ByteOrder<uint32_t>::hton(variations);
+		buf.append( (char*)(void*)ar, 3*sizeof(uint32_t));
+	}
+	void initFromSerialization( const char*& ser)
+	{
+		dim = ByteOrder<uint32_t>::ntoh(*(uint32_t*)(void*)ser); ser += sizeof(uint32_t);
+		nofbits = ByteOrder<uint32_t>::ntoh(*(uint32_t*)(void*)ser); ser += sizeof(uint32_t);
+		variations = ByteOrder<uint32_t>::ntoh(*(uint32_t*)(void*)ser); ser += sizeof(uint32_t);
+	}
 };
 
 struct DumpStruct
@@ -209,13 +224,46 @@ struct DumpStruct
 		ar[ aidx] = rt.u32_;
 	}
 
+	~DumpStruct()
+	{
+		if (ar) std::free( ar);
+	}
+
+	std::size_t contentAllocSize() const
+	{
+		return arsize * sizeof(ar[0]);
+	}
+
 	std::size_t nofValues() const
 	{
 		return arsize;
 	}
 
-	std::size_t contentAllocSize() const
+	void printSerialization( std::string& buf)
 	{
+		DumpStructHeader::printSerialization( buf);
+		uint32_t ai = 0, ae = arsize;
+		for (; ai != ae; ++ai)
+		{
+			uint32_t elem = ByteOrder<uint32_t>::hton( ar[ ai]);
+			buf.append( (char*)&elem, sizeof(uint32_t));
+		}
+	}
+	void initValuesFromSerialization( const char*& ser)
+	{
+		loadValues( ser);
+		ser += sizeof(uint32_t) * arsize;
+	}
+
+private:
+	const void* getValuePtr() const
+	{
+		return (const void*)ar;
+	}
+	std::size_t getValuePtrSize() const
+	{
+		std::size_t nofFloats = (dim * nofbits) + (dim * dim * variations);
+		if (arsize != nofFloats * 2) throw std::runtime_error( _TXT( "LSH model structure is corrupt"));
 		return arsize * sizeof(ar[0]);
 	}
 
@@ -227,11 +275,6 @@ struct DumpStruct
 		{
 			ar[ ai] = ByteOrder<uint32_t>::ntoh( ua[ ai]);
 		}
-	}
-
-	~DumpStruct()
-	{
-		if (ar) std::free( ar);
 	}
 
 	void conv_hton()
@@ -252,17 +295,6 @@ struct DumpStruct
 		{
 			ar[ ai] = ByteOrder<uint32_t>::ntoh( ar[ ai]);
 		}
-	}
-
-	const void* getValuePtr() const
-	{
-		return (const void*)ar;
-	}
-	std::size_t getValuePtrSize() const
-	{
-		std::size_t nofFloats = (dim * nofbits) + (dim * dim * variations);
-		if (arsize != nofFloats) throw std::runtime_error( _TXT( "LSH model structure is corrupt"));
-		return arsize * sizeof(ar[0]);
 	}
 
 private:
@@ -294,10 +326,7 @@ std::string LshModel::serialization() const
 	{
 		st.setValue( aidx++, *mi);
 	}
-	std::size_t valuePtrSize = st.getValuePtrSize();
-	st.conv_hton();
-	rt.append( (const char*)(const void*)&st, sizeof( DumpStructHeader));
-	rt.append( (const char*)(const void*)st.getValuePtr(), valuePtrSize);
+	st.printSerialization( rt);
 	return rt;
 }
 
@@ -306,17 +335,14 @@ LshModel LshModel::fromSerialization( const char* blob, std::size_t blobsize)
 	DumpStructHeader hdr;
 	char const* src = blob;
 	if (blobsize < sizeof( DumpStructHeader)) throw std::runtime_error( _TXT("lsh model dump is corrupt (dump header too small)"));
-	std::memcpy( &hdr, src, sizeof( DumpStructHeader));
-	src += sizeof( DumpStructHeader);
-	hdr.conv_ntoh();
+	hdr.initFromSerialization( src);
 
 	DumpStruct st( hdr.dim, hdr.nofbits, hdr.variations);
 	if (st.contentAllocSize() > (blobsize - (src - blob)))
 	{
 		throw std::runtime_error( _TXT("LSH model dump is corrupt (dump too small)"));
 	}
-	st.loadValues( src);
-	src += st.contentAllocSize();
+	st.initValuesFromSerialization( src);
 	std::size_t ai=0, ae=st.nofValues();
 
 	arma::fmat modelMatrix( hdr.nofbits, hdr.dim);

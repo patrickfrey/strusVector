@@ -31,8 +31,8 @@ using namespace strus;
 
 #undef STRUS_LOWLEVEL_DEBUG
 
-DatabaseAdapter::DatabaseAdapter( const DatabaseInterface* database_, const std::string& config, ErrorBufferInterface* errorhnd_)
-	:m_database(database_->createClient(config)),m_errorhnd(errorhnd_)
+DatabaseAdapter::DatabaseAdapter( const DatabaseInterface* database_, const std::string& config_, ErrorBufferInterface* errorhnd_)
+	:m_database(database_->createClient(config_)),m_errorhnd(errorhnd_)
 {
 	if (!m_database.get()) throw strus::runtime_error( _TXT("failed to create database client for standard vector storage: %s"), m_errorhnd->fetchError());
 }
@@ -73,7 +73,7 @@ struct VectorStorageHdr
 
 	VectorStorageHdr()
 	{
-		std::memcpy( name, "strus standard vector storage\n\0", sizeof(name));
+		std::strncpy( name, "strus standard vector storage\n\0", sizeof(name));
 		_id = FILEID;
 		version_major = STRUS_VECTOR_VERSION_MAJOR;
 		version_minor = STRUS_VECTOR_VERSION_MINOR;
