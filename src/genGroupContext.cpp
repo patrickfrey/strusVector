@@ -8,16 +8,15 @@
 /// \brief Structure for thread safe operations on representants of similarity classes with help of genetic algorithms
 #include "genGroupContext.hpp"
 #include "dependencyGraph.hpp"
-#include "random.hpp"
 #include "simGroupIdMap.hpp"
 #include "strus/base/string_format.hpp"
+#include "strus/base/shared_ptr.hpp"
+#include "strus/base/pseudoRandom.hpp"
 #include "strus/errorBufferInterface.hpp"
-#include <boost/make_shared.hpp>
 #include <iostream>
 #include <sstream>
 
 using namespace strus;
-using namespace strus::utils;
 
 #ifdef __GNUC__
 #ifndef __clang__
@@ -26,7 +25,7 @@ using namespace strus::utils;
 #endif
 #undef STRUS_LOWLEVEL_DEBUG
 
-static Random g_random;
+static PseudoRandom g_random;
 
 static unsigned int age_mutations( const SimGroup& group, unsigned int maxage, unsigned int conf_mutations)
 {
@@ -166,7 +165,7 @@ void GenGroupContext::checkSimGroupStructures()
 				}
 				std::string conceptstr( carbuf.str());
 				if (m_logout) m_logout << string_format( _TXT("missing element group %u relation of feature %u {%s}"), group->id(), *mi, conceptstr.c_str());
-				if (++nofErrors > MaxNofErrors) throw strus::runtime_error( "%s", _TXT("internal: errors in sim group structures"));
+				if (++nofErrors > MaxNofErrors) throw std::runtime_error( _TXT("internal: errors in sim group structures"));
 			}
 		}
 		group->check();
@@ -187,13 +186,13 @@ void GenGroupContext::checkSimGroupStructures()
 			if (!group.get())
 			{
 				if (m_logout) m_logout << string_format( _TXT("entry not found for group %u in group instance map (check structures)"), *ci);
-				if (++nofErrors > MaxNofErrors) throw strus::runtime_error( "%s", _TXT("internal: errors in sim group structures"));
+				if (++nofErrors > MaxNofErrors) throw std::runtime_error( _TXT("internal: errors in sim group structures"));
 			}
 			else if (!group->isMember( si))
 			{
 				std::string members = groupMembersString( *ci);
 				if (m_logout) m_logout << string_format( _TXT("illegal entry %u in sim group map (check structures), expected to be member of group %u {%s}"), si, group->id(), members.c_str());
-				if (++nofErrors > MaxNofErrors) throw strus::runtime_error( "%s", _TXT("internal: errors in sim group structures"));
+				if (++nofErrors > MaxNofErrors) throw std::runtime_error( _TXT("internal: errors in sim group structures"));
 			}
 		}
 	}
@@ -228,7 +227,7 @@ void GenGroupContext::removeGroup( SimGroupIdAllocator& localAllocator, const Co
 		SharedSampleSimGroupMap::Lock SLOCK( &m_sampleSimGroupMap, *mi);
 		if (!m_sampleSimGroupMap.remove( SLOCK, group_id))
 		{
-			throw strus::runtime_error( "%s", _TXT("internal: inconsistency in sim group map (remove group)"));
+			throw std::runtime_error( _TXT("internal: inconsistency in sim group map (remove group)"));
 		}
 	}
 	m_groupMap.resetGroup( group_id);
@@ -250,10 +249,10 @@ bool GenGroupContext::tryAddGroupMember(
 			return false;
 		}
 	}
-	SimGroupRef newgroup = boost::make_shared<SimGroup>( *group);
+	SimGroupRef newgroup( new SimGroup( *group));
 	if (!newgroup->addMember( newmember))
 	{
-		throw strus::runtime_error( "%s", _TXT("internal: inconsistency in group (try add group member)"));
+		throw std::runtime_error( _TXT("internal: inconsistency in group (try add group member)"));
 	}
 	newgroup->doMutation( *m_samplear, descendants, age_mutations( *newgroup, maxage, mutations), age_mutation_votes( *newgroup, maxage, votes), fdf);
 	if (newgroup->fitness( *m_samplear, fdf) > group->fitness( *m_samplear, fdf))
@@ -266,7 +265,7 @@ bool GenGroupContext::tryAddGroupMember(
 		SharedSampleSimGroupMap::Lock SLOCK( &m_sampleSimGroupMap, newmember);
 		if (!m_sampleSimGroupMap.remove( SLOCK, group_id))
 		{
-			throw strus::runtime_error( "%s", _TXT("internal: inconsistency in sim group map (try add group member)"));
+			throw std::runtime_error( _TXT("internal: inconsistency in sim group map (try add group member)"));
 		}
 		return false;
 	}
@@ -336,14 +335,14 @@ void GenGroupContext::tryGroupAssignments(
 			SimGroupRef group = m_groupMap.get( ai->conceptIndex);
 			if (!group.get() || !(*m_samplear)[ai->sampleIndex].near( group->gencode(), parameter.simdist)) continue; 
 
-			SimGroupRef newgroup = boost::make_shared<SimGroup>( *group);
+			SimGroupRef newgroup( new SimGroup( *group));
 			{
 				SharedSampleSimGroupMap::Lock SLOCK( &m_sampleSimGroupMap, ai->sampleIndex);
 				if (!m_sampleSimGroupMap.insert( SLOCK, ai->conceptIndex)) continue;
 			}
 			if (!newgroup->addMember( ai->sampleIndex))
 			{
-				throw strus::runtime_error( "%s", _TXT("internal: inconsistency in group (add member failed)"));
+				throw std::runtime_error( _TXT("internal: inconsistency in group (add member failed)"));
 			}
 			newgroup->doMutation( *m_samplear, parameter.descendants, age_mutations( *newgroup, parameter.maxage, parameter.mutations), age_mutation_votes( *newgroup, parameter.maxage, parameter.votes), parameter.fdf);
 			m_groupMap.setGroup( ai->conceptIndex, newgroup);
@@ -385,7 +384,7 @@ bool GenGroupContext::greedyChaseFreeFeatures(
 			SimGroupRef group = m_groupMap.get( bestmatch_simgroup);
 			if (group.get())
 			{
-				SimGroupRef testgroup = boost::make_shared<SimGroup>( *group);
+				SimGroupRef testgroup( new SimGroup( *group));
 				testgroup->addMember( neighbour.index);
 				testgroup->doMutation( *m_samplear, parameter.descendants, age_mutations( *testgroup, parameter.maxage, parameter.mutations), age_mutation_votes( *testgroup, parameter.maxage, parameter.votes), parameter.fdf);
 				if (testgroup->fitness( *m_samplear, parameter.fdf) > group->fitness( *m_samplear, parameter.fdf))
@@ -398,7 +397,7 @@ bool GenGroupContext::greedyChaseFreeFeatures(
 		}
 		// ...if we did not find a close group, then we found a new one with the two elements as members:
 		ConceptIndex newgroupidx = groupIdAllocator.alloc();
-		SimGroupRef newgroup = boost::make_shared<SimGroup>( *m_samplear, sidx, neighbour.index, newgroupidx);
+		SimGroupRef newgroup( new SimGroup( *m_samplear, sidx, neighbour.index, newgroupidx));
 		(void)newgroup->doMutation( *m_samplear, parameter.descendants, age_mutations( *newgroup, parameter.maxage, parameter.mutations), age_mutation_votes( *newgroup, parameter.maxage, parameter.votes), parameter.fdf);
 		bool success_nb = false;
 		{
@@ -432,7 +431,7 @@ bool GenGroupContext::greedyChaseFreeFeatures(
 				SharedSampleSimGroupMap::Lock SLOCK( &m_sampleSimGroupMap, sidx);
 				if (!m_sampleSimGroupMap.remove( SLOCK, newgroupidx))
 				{
-					throw strus::runtime_error( "%s", _TXT("internal: inconsistency in sim group map (greedy chase features)"));
+					throw std::runtime_error( _TXT("internal: inconsistency in sim group map (greedy chase features)"));
 				}
 			}
 			if (success_nb)
@@ -440,7 +439,7 @@ bool GenGroupContext::greedyChaseFreeFeatures(
 				SharedSampleSimGroupMap::Lock SLOCK( &m_sampleSimGroupMap, neighbour.index);
 				if (!m_sampleSimGroupMap.remove( SLOCK, newgroupidx))
 				{
-					throw strus::runtime_error( "%s", _TXT("internal: inconsistency in sim group map (greedy chase features)"));
+					throw std::runtime_error( _TXT("internal: inconsistency in sim group map (greedy chase features)"));
 				}
 			}
 			groupIdAllocator.free( newgroupidx);
@@ -478,14 +477,14 @@ void GenGroupContext::greedyNeighbourGroupInterchange(
 				if (!group->isMember( *mi))
 				{
 					// Add eqdist member of sim_group to newgroup:
-					SimGroupRef newgroup = boost::make_shared<SimGroup>( *group);
+					SimGroupRef newgroup( new SimGroup( *group));
 					{
 						SharedSampleSimGroupMap::Lock SLOCK( &m_sampleSimGroupMap, *mi);
 						if (!m_sampleSimGroupMap.insert( SLOCK, group_id)) continue;
 					}
 					if (!newgroup->addMember( *mi))
 					{
-						throw strus::runtime_error( "%s", _TXT("internal: inconsistency in group reference not in sim group map, but element part of group"));
+						throw std::runtime_error( _TXT("internal: inconsistency in group reference not in sim group map, but element part of group"));
 					}
 					(void)newgroup->doMutation( *m_samplear, parameter.descendants, age_mutations( *newgroup, parameter.maxage, parameter.mutations), age_mutation_votes( *newgroup, parameter.maxage, parameter.votes), parameter.fdf);
 					m_groupMap.setGroup( group_id, newgroup);
@@ -543,7 +542,7 @@ bool GenGroupContext::improveGroup(
 				SharedSampleSimGroupMap::Lock SLOCK( &m_sampleSimGroupMap, member);
 				if (!m_sampleSimGroupMap.remove( SLOCK, newgroup->id()))
 				{
-					throw strus::runtime_error( "%s", _TXT("internal: inconsistency in group, member not in sim group map (improve group)"));
+					throw std::runtime_error( _TXT("internal: inconsistency in group, member not in sim group map (improve group)"));
 				}
 			}
 			if (newgroup->size() < 2) break;
@@ -673,13 +672,13 @@ bool GenGroupContext::unfittestGroupElimination(
 	bool doRemoveGroup = false;
 	if (doRemoveMember)
 	{
-		SimGroupRef newgroup = boost::make_shared<SimGroup>( *group);
+		SimGroupRef newgroup( new SimGroup( *group));
 		if (newgroup->removeMember( toRemoveMember))
 		{
 			SharedSampleSimGroupMap::Lock SLOCK( &m_sampleSimGroupMap, toRemoveMember);
 			if (!m_sampleSimGroupMap.remove( SLOCK, group_id))
 			{
-				throw strus::runtime_error( "%s", _TXT("internal: inconsistency in group, member not in sim group map (unfittest group elimination)"));
+				throw std::runtime_error( _TXT("internal: inconsistency in group, member not in sim group map (unfittest group elimination)"));
 			}
 			m_groupMap.setGroup( group_id, newgroup);
 			rt = true;

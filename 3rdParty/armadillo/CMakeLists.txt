@@ -336,7 +336,7 @@ if(CMAKE_SYSTEM_NAME MATCHES "FreeBSD")
     set(FREEBSD true)
 endif(CMAKE_SYSTEM_NAME MATCHES "FreeBSD")
 if(FREEBSD)
-  set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -Wl,-rpath=/usr/local/lib/gcc5 -L/usr/local/lib/gcc5 -lgcc_s -lquadmath")
+  set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -Wl,-rpath=/usr/local/lib/gcc6 -L/usr/local/lib/gcc6 -lgcc_s -lquadmath")
 endif()
 
 # add proper link paths o OpenBSD for lapack and BLAS
@@ -367,7 +367,7 @@ target_link_libraries( strus_armadillo ${ARMA_LIBS} )
 set_target_properties(
     strus_armadillo
     PROPERTIES
-    DEBUG_POSTFIX "_d"
+    DEBUG_POSTFIX "${CMAKE_DEBUG_POSTFIX}"
     SOVERSION "${STRUS_MAJOR_VERSION}.${STRUS_MINOR_VERSION}"
     VERSION ${STRUS_VERSION}
 )

@@ -26,7 +26,7 @@ VectorStorageClient::VectorStorageClient( const VectorStorageConfig& config_, co
 {
 	m_database.reset( new DatabaseAdapter( database_,config_.databaseConfig,errorhnd_));
 	m_database->checkVersion();
-	if (m_database->isempty()) throw strus::runtime_error( "%s", _TXT("try to open a vector storage that is empty, need to be built first"));
+	if (m_database->isempty()) throw std::runtime_error( _TXT("try to open a vector storage that is empty, need to be built first"));
 	VectorStorageConfig cfg = m_database->readConfig();
 	m_config = VectorStorageConfig( configstr_, errorhnd_, cfg);
 }
@@ -72,13 +72,13 @@ std::vector<Index> VectorStorageClient::featureConcepts( const std::string& conc
 	CATCH_ERROR_ARG1_MAP_RETURN( _TXT("error in client interface of '%s' retrieving associated concepts by sample index: %s"), MODULENAME, *m_errorhnd, std::vector<Index>());
 }
 
-std::vector<double> VectorStorageClient::featureVector( const Index& index) const
+std::vector<float> VectorStorageClient::featureVector( const Index& index) const
 {
 	try
 	{
 		return m_database->readSampleVector( index);
 	}
-	CATCH_ERROR_ARG1_MAP_RETURN( _TXT("error in client interface of '%s' getting sample vector by index: %s"), MODULENAME, *m_errorhnd, std::vector<double>());
+	CATCH_ERROR_ARG1_MAP_RETURN( _TXT("error in client interface of '%s' getting sample vector by index: %s"), MODULENAME, *m_errorhnd, std::vector<float>());
 }
 
 std::string VectorStorageClient::featureName( const Index& index) const
@@ -99,12 +99,12 @@ Index VectorStorageClient::featureIndex( const std::string& name) const
 	CATCH_ERROR_ARG1_MAP_RETURN( _TXT("error in client interface of '%s' getting index of feature by its name: %s"), MODULENAME, *m_errorhnd, -1);
 }
 
-double VectorStorageClient::vectorSimilarity( const std::vector<double>& v1, const std::vector<double>& v2) const
+double VectorStorageClient::vectorSimilarity( const std::vector<float>& v1, const std::vector<float>& v2) const
 {
 	try
 	{
-		arma::vec vv1 = arma::vec( v1);
-		arma::vec vv2 = arma::vec( v2);
+		arma::fvec vv1 = arma::fvec( v1);
+		arma::fvec vv2 = arma::fvec( v2);
 		return arma::norm_dot( vv1, vv2);
 	}
 	CATCH_ERROR_ARG1_MAP_RETURN( _TXT("error in client interface of '%s' calculating vector similarity: %s"), MODULENAME, *m_errorhnd, -1);

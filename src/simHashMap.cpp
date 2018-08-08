@@ -9,9 +9,10 @@
 #include "simHashMap.hpp"
 #include "simRelationMap.hpp"
 #include "internationalization.hpp"
-#include "cacheLineSize.hpp"
-#include "utils.hpp"
 #include "strus/base/bitOperations.hpp"
+#include "strus/base/malloc.hpp"
+#include "strus/base/thread.hpp"
+#include "strus/base/platform.hpp"
 #include <vector>
 #include <string>
 #include <stdexcept>
@@ -20,8 +21,8 @@ using namespace strus;
 
 SimHashMap::~SimHashMap()
 {
-	if (m_selar1) utils::aligned_free( m_selar1);
-	if (m_selar2) utils::aligned_free( m_selar2);
+	if (m_selar1) strus::aligned_free( m_selar1);
+	if (m_selar2) strus::aligned_free( m_selar2);
 }
 
 void SimHashMap::initBench()
@@ -32,18 +33,18 @@ void SimHashMap::initBench()
 	if (mod > 1) mod -= 1;
 	m_select1 = (m_seed+0) % mod;
 	m_select2 = (m_seed+1) % mod;
-	m_selar1 = (uint64_t*)utils::aligned_malloc( m_ar.size() * sizeof(uint64_t), CacheLineSize);
-	m_selar2 = (uint64_t*)utils::aligned_malloc( m_ar.size() * sizeof(uint64_t), CacheLineSize);
+	m_selar1 = (uint64_t*)strus::aligned_malloc( m_ar.size() * sizeof(uint64_t), strus::platform::CacheLineSize);
+	m_selar2 = (uint64_t*)strus::aligned_malloc( m_ar.size() * sizeof(uint64_t), strus::platform::CacheLineSize);
 	if (!m_selar1 || !m_selar2)
 	{
-		if (m_selar1) utils::aligned_free( m_selar1);
-		if (m_selar2) utils::aligned_free( m_selar2);
+		if (m_selar1) strus::aligned_free( m_selar1);
+		if (m_selar2) strus::aligned_free( m_selar2);
 		throw std::bad_alloc();
 	}
 	std::size_t si = 0, se = m_ar.size();
 	for (; si != se; ++si)
 	{
-		if (m_ar[si].size() != m_vecsize) throw strus::runtime_error( "%s", _TXT("inconsistent dataset passed to sim hash map (sim hash element sizes differ)"));
+		if (m_ar[si].size() != m_vecsize) throw std::runtime_error( _TXT("inconsistent dataset passed to sim hash map (sim hash element sizes differ)"));
 		m_selar1[ si] = m_ar[ si].ar()[ m_select1];
 		m_selar2[ si] = m_ar[ si].ar()[ m_select2];
 	}
@@ -120,15 +121,15 @@ struct RankList
 		++m_nofRanks;
 	}
 
-	std::vector<SearchResultElement> result( unsigned int width, Index indexofs) const
+	std::vector<VectorQueryResult> result( unsigned int width, Index indexofs) const
 	{
-		std::vector<SearchResultElement> rt;
+		std::vector<VectorQueryResult> rt;
 		double width_f = width;
 		std::size_t limit = m_nofRanks > m_maxNofRanks ? m_maxNofRanks:m_nofRanks;
 		for (std::size_t ridx=0; ridx<limit; ++ridx)
 		{
 			double weight = 1.0 - (double)m_brute_ar[ m_brute_index[ ridx]].simdist / width_f;
-			rt.push_back( SearchResultElement( m_brute_ar[ m_brute_index[ ridx]].index + indexofs, weight));
+			rt.push_back( VectorQueryResult( m_brute_ar[ m_brute_index[ ridx]].index + indexofs, weight));
 		}
 		return rt;
 	}
@@ -152,7 +153,7 @@ private:
 	SimRelationMap::Element m_brute_ar[ MaxIndexSize];
 };
 
-std::vector<SearchResultElement> SimHashMap::findSimilar( const SimHash& sh, unsigned short simdist, unsigned short prob_simdist, unsigned int maxNofElements, const Index& indexofs) const
+std::vector<VectorQueryResult> SimHashMap::findSimilar( const SimHash& sh, unsigned short simdist, unsigned short prob_simdist, unsigned int maxNofElements, const Index& indexofs) const
 {
 	RankList ranklist( maxNofElements);
 	unsigned int ranklistSize = 0;
@@ -188,7 +189,7 @@ std::vector<SearchResultElement> SimHashMap::findSimilar( const SimHash& sh, uns
 	return ranklist.result( sh.size(), indexofs);
 }
 
-std::vector<SearchResultElement> SimHashMap::findSimilar( const SimHash& sh, unsigned short simdist, unsigned int maxNofElements, const Index& indexofs) const
+std::vector<VectorQueryResult> SimHashMap::findSimilar( const SimHash& sh, unsigned short simdist, unsigned int maxNofElements, const Index& indexofs) const
 {
 	RankList ranklist( maxNofElements);
 	unsigned int ranklistSize = 0;
@@ -213,7 +214,7 @@ std::vector<SearchResultElement> SimHashMap::findSimilar( const SimHash& sh, uns
 	return ranklist.result( sh.size(), indexofs);
 }
 
-std::vector<SearchResultElement> SimHashMap::findSimilarFromSelection( const std::vector<Index>& selection, const SimHash& sh, unsigned short simdist, unsigned int maxNofElements, const Index& indexofs) const
+std::vector<VectorQueryResult> SimHashMap::findSimilarFromSelection( const std::vector<Index>& selection, const SimHash& sh, unsigned short simdist, unsigned int maxNofElements, const Index& indexofs) const
 {
 	RankList ranklist( maxNofElements);
 	unsigned int ranklistSize = 0;

@@ -30,7 +30,7 @@ public:
 
 	virtual ~VectorStorageTransaction(){}
 
-	virtual void addFeature( const std::string& name, const std::vector<double>& vec);
+	virtual void addFeature( const std::string& name, const std::vector<float>& vec);
 
 	virtual void defineFeatureConceptRelation( const std::string& relationTypeName, const Index& featidx, const Index& conidx);
 
@@ -53,7 +53,7 @@ private:
 	std::vector<Relation> m_conceptFeatureRelationList;
 	std::vector<Relation> m_featureConceptRelationList;
 
-	std::vector<std::vector<double> > m_vecar;
+	std::vector<std::vector<float> > m_vecar;
 	std::vector<std::string> m_namear;
 };
 

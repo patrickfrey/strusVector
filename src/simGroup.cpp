@@ -7,19 +7,19 @@
  */
 /// \brief Structure for storing similarity group representants (individuals in the genetic algorithm for breeding similarity group representants)
 #include "simGroup.hpp"
-#include "random.hpp"
+#include "strus/base/pseudoRandom.hpp"
 #include "internationalization.hpp"
 #include "errorUtils.hpp"
 #include <algorithm>
 
 using namespace strus;
 
-static Random g_random;
+static PseudoRandom g_random;
 
 SimGroup::SimGroup( const std::vector<SimHash>& samplear, std::size_t m1, std::size_t m2, const ConceptIndex& id_)
 	:m_id(id_),m_gencode(),m_age(0),m_members(),m_nofmembers(2),m_fitness(0.0),m_fitness_valid(false)
 {
-	if (m1 == m2) throw strus::runtime_error( "%s", _TXT("illegal group creations (two init members are duplicates)"));
+	if (m1 == m2) throw std::runtime_error( _TXT("illegal group creations (two init members are duplicates)"));
 	if (m1 > m2) std::swap( m1, m2);
 	m_members.insert( m1);
 	m_members.insert( m2);
@@ -329,7 +329,7 @@ void SimGroup::check() const
 {
 	if (m_members.size() != m_nofmembers)
 	{
-		throw strus::runtime_error( "%s", _TXT("illegal SimGroup (member set size)"));
+		throw std::runtime_error( _TXT("illegal SimGroup (member set size)"));
 	}
 }
 

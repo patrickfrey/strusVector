@@ -16,7 +16,7 @@
 
 using namespace strus;
 
-DLL_PUBLIC VectorStorageInterface* strus::createVectorStorage_std( ErrorBufferInterface* errorhnd)
+DLL_PUBLIC VectorStorageInterface* strus::createVectorStorage_std( const std::string& workdir, ErrorBufferInterface* errorhnd)
 {
 	try
 	{
@@ -26,7 +26,7 @@ DLL_PUBLIC VectorStorageInterface* strus::createVectorStorage_std( ErrorBufferIn
 			strus::initMessageTextDomain();
 			intl_initialized = true;
 		}
-		return new VectorStorage( errorhnd);
+		return new VectorStorage( workdir, errorhnd);
 	}
 	CATCH_ERROR_MAP_RETURN( _TXT("error creating standard vector storage: %s"), *errorhnd, 0);
 }

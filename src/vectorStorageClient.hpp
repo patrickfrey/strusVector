@@ -12,6 +12,7 @@
 #include "strus/reference.hpp"
 #include "vectorStorageConfig.hpp"
 #include "databaseAdapter.hpp"
+#include "strus/base/thread.hpp"
 #include <vector>
 #include <string>
 
@@ -38,13 +39,13 @@ public:
 
 	virtual std::vector<Index> featureConcepts( const std::string& conceptClass, const Index& index) const;
 
-	virtual std::vector<double> featureVector( const Index& index) const;
+	virtual std::vector<float> featureVector( const Index& index) const;
 
 	virtual std::string featureName( const Index& index) const;
 
 	virtual Index featureIndex( const std::string& name) const;
 
-	virtual double vectorSimilarity( const std::vector<double>& v1, const std::vector<double>& v2) const;
+	virtual double vectorSimilarity( const std::vector<float>& v1, const std::vector<float>& v2) const;
 	
 	virtual std::vector<Index> conceptFeatures( const std::string& conceptClass, const Index& conceptid) const;
 
@@ -72,14 +73,14 @@ public:/*VectorStorageTransaction*/
 		}
 
 	private:
-		utils::Mutex* m_mutex;
+		strus::mutex* m_mutex;
 	};
 
 private:
 	ErrorBufferInterface* m_errorhnd;
 	Reference<DatabaseAdapter> m_database;
 	VectorStorageConfig m_config;
-	utils::Mutex m_transaction_mutex;	///< mutual exclusion in the critical part of a transaction
+	strus::mutex m_transaction_mutex;	///< mutual exclusion in the critical part of a transaction
 };
 
 }//namespace

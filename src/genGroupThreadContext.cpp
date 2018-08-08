@@ -8,9 +8,8 @@
 /// \brief Multithreading context for the genetic algorithms
 #include "genGroupThreadContext.hpp"
 #include "strus/errorBufferInterface.hpp"
-#include "cacheLineSize.hpp"
-#include "utils.hpp"
-#include <boost/thread.hpp>
+#include "strus/reference.hpp"
+#include "strus/base/platform.hpp"
 #include <algorithm>
 
 using namespace strus;
@@ -24,12 +23,12 @@ GenGroupThreadContext::GenGroupThreadContext( GlobalCountAllocator* glbcnt_, Gen
 
 void GenGroupThreadContext::run( GenGroupProcedure proc, std::size_t startidx, std::size_t endidx)
 {
-	if (m_nofThreads && (endidx - startidx > CacheLineSize))
+	if (m_nofThreads && (endidx - startidx > strus::platform::CacheLineSize))
 	{
-		boost::thread_group tgroup;
 		std::size_t chunksize = (endidx - startidx + m_nofThreads - 1) / m_nofThreads;
-		chunksize = ((chunksize + CacheLineSize -1) / CacheLineSize) * CacheLineSize;
+		chunksize = ((chunksize + strus::platform::CacheLineSize -1) / strus::platform::CacheLineSize) * strus::platform::CacheLineSize;
 
+		std::vector<strus::Reference<strus::thread> > threadGroup;
 		std::size_t startchunkidx = startidx;
 		unsigned int ti=0, te=m_nofThreads;
 		for (ti=0; ti<te && startchunkidx < endidx; ++ti,startchunkidx += chunksize)
@@ -37,9 +36,11 @@ void GenGroupThreadContext::run( GenGroupProcedure proc, std::size_t startidx, s
 			std::size_t endchunkidx = startchunkidx + chunksize;
 			if (endchunkidx > endidx) endchunkidx = endidx;
 
-			tgroup.create_thread( boost::bind( proc, m_parameter, m_glbcnt, m_groupctx, m_simrelreader, startchunkidx, endchunkidx, m_errorhnd));
+			strus::Reference<strus::thread> th( new strus::thread( proc, m_parameter, m_glbcnt, m_groupctx, m_simrelreader, startchunkidx, endchunkidx, m_errorhnd));
+			threadGroup.push_back( th);
 		}
-		tgroup.join_all();
+		std::vector<strus::Reference<strus::thread> >::iterator gi = threadGroup.begin(), ge = threadGroup.end();
+		for (; gi != ge; ++gi) (*gi)->join();
 	}
 	else
 	{
@@ -60,12 +61,12 @@ void GenGroupThreadContext::runGroupAssignments()
 	std::vector<SampleSimGroupAssignment>::const_iterator ai = assignments.begin(), ae = assignments.end();
 	if (m_nofThreads)
 	{
-		boost::thread_group tgroup;
 		std::size_t endidx = m_glbcnt->nofGroupIdsAllocated()+1;
 		std::size_t startidx = 1;
 		std::size_t chunksize = (endidx - startidx + (m_nofThreads - 1)) / m_nofThreads;
-		chunksize = ((chunksize + CacheLineSize -1) / CacheLineSize) * CacheLineSize;
+		chunksize = ((chunksize + strus::platform::CacheLineSize -1) / strus::platform::CacheLineSize) * strus::platform::CacheLineSize;
 
+		std::vector<strus::Reference<strus::thread> > threadGroup;
 		std::size_t startchunkidx = startidx;
 		unsigned int ti=0, te=m_nofThreads;
 		for (ti=0; ti<te && startchunkidx < endidx; ++ti,startchunkidx += chunksize)
@@ -74,9 +75,11 @@ void GenGroupThreadContext::runGroupAssignments()
 			std::vector<SampleSimGroupAssignment>::const_iterator starti = ai;
 			for (; ai < ae && (std::size_t)ai->conceptIndex < endchunkidx; ++ai){}
 
-			tgroup.create_thread( boost::bind( &GenGroupContext::tryGroupAssignments, m_groupctx, starti, ai, *m_parameter));
+			strus::Reference<strus::thread> th( new strus::thread( &GenGroupContext::tryGroupAssignments, m_groupctx, starti, ai, *m_parameter));
+			threadGroup.push_back( th);
 		}
-		tgroup.join_all();
+		std::vector<strus::Reference<strus::thread> >::iterator gi = threadGroup.begin(), ge = threadGroup.end();
+		for (; gi != ge; ++gi) (*gi)->join();
 	}
 	else
 	{

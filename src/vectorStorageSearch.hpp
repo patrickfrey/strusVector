@@ -12,7 +12,6 @@
 #include "vectorStorageConfig.hpp"
 #include "databaseAdapter.hpp"
 #include "simHashMap.hpp"
-#include <boost/shared_ptr.hpp>
 
 
 namespace strus {
@@ -31,8 +30,8 @@ public:
 
 	virtual ~VectorStorageSearch(){}
 
-	virtual std::vector<Result> findSimilar( const std::vector<double>& vec, unsigned int maxNofResults) const;
-	virtual std::vector<Result> findSimilarFromSelection( const std::vector<Index>& candidates, const std::vector<double>& vec, unsigned int maxNofResults) const;
+	virtual std::vector<VectorQueryResult> findSimilar( const std::vector<float>& vec, unsigned int maxNofResults) const;
+	virtual std::vector<VectorQueryResult> findSimilarFromSelection( const std::vector<Index>& candidates, const std::vector<float>& vec, unsigned int maxNofResults) const;
 
 	virtual void close();
 

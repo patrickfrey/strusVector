@@ -38,7 +38,7 @@ public:
 
 	void checkVersion();
 
-	typedef std::vector<double> Vector;
+	typedef std::vector<float> Vector;
 	Vector readSampleVector( const SampleIndex& sidx) const;
 	std::string readSampleName( const SampleIndex& sidx) const;
 	SampleIndex readSampleIndex( const std::string& name) const;

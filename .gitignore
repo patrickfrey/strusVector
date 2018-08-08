@@ -36,9 +36,6 @@ cmake/uninstall.cmake
 DartConfiguration.tcl
 Testing/
 *.cmake.user
-include/strus/versionVector.hpp
-src/utils/internationalization.cpp
-src_pageweight/pageweightdefs.hpp
 dist/obs/deploy_to_obs.sh
 dist/archlinux/PKGBUILD
 dist/obs/strusvector.dsc
@@ -54,9 +51,11 @@ dist/redhat/strusvector.spec
 3rdParty/armadillo/libstrus_armadillo.so.7.400.2
 3rdParty/armadillo/tmp/
 3rdParty/armadillo/include/armadillo_bits/config.hpp
+strusvector-0.*.tar.gz
 
-# Suggested build directory
+# Suggested build directories
 build
+build_clang
 
 # Compiled Programs
 src_pageweight/strusPageWeight
@@ -68,5 +67,8 @@ tests/vectorSpaceModel/src/strusInspectVsm
 tests/pagerank/src/testPageRank
 tests/database/src/testDatabaseAdapter
 tests/vectorSpaceModel/vsmodel/
+
+# deploy to obs tar:
+strusvector-*.tar.gz
 
 

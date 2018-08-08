@@ -9,7 +9,7 @@
 #ifndef _STRUS_VECTOR_SAMPLE_CONCEPT_ASSIGNMENT_QUEUE_HPP_INCLUDED
 #define _STRUS_VECTOR_SAMPLE_CONCEPT_ASSIGNMENT_QUEUE_HPP_INCLUDED
 #include "simGroup.hpp"
-#include "utils.hpp"
+#include "strus/base/thread.hpp"
 #include <vector>
 
 namespace strus {
@@ -42,7 +42,7 @@ public:
 
 private:
 	std::vector<SampleSimGroupAssignment> m_ar;
-	utils::Mutex m_mutex;
+	strus::mutex m_mutex;
 };
 
 }//namespace

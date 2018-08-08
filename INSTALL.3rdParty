@@ -1,9 +1,0 @@
-Library dependencies of strus:
-	- boost (headers and -lboost_system)
-	- Lapack (linear algebra routines 3 - shared libraries with headers)
-
-Ubuntu:
-	sudo apt-get install liboost-all-dev
-	sudo apt-get install liblapacke-dev libblas-dev
-
-

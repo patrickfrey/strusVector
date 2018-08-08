@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 2.8 FATAL_ERROR)
 
 include_directories(
-	"${Boost_INCLUDE_DIRS}"
+	${Boost_INCLUDE_DIRS}
 	"${Intl_INCLUDE_DIRS}"
 	"${MAIN_SOURCE_DIR}"
 	"${PAGEWEIGHT_INCLUDE_DIRS}/src_pageweight"
@@ -11,7 +11,7 @@ include_directories(
 link_directories(
 	"${VECTOR_LIBRARY_DIRS}"
 	"${PAGEWEIGHT_LIBRARY_DIRS}"
-	"${Boost_LIBRARY_DIRS}"
+	${Boost_LIBRARY_DIRS}
 	"${strusbase_LIBRARY_DIRS}"
 )
 

@@ -27,7 +27,7 @@ class LshModel;
 /// \return similarity LSH values
 std::vector<SimHash> getSimhashValues(
 		const LshModel& lshmodel,
-		const std::vector<std::vector<double> >& vecar,
+		const std::vector<std::vector<float> >& vecar,
 		unsigned int threads,
 		ErrorBufferInterface* errorhnd);
 

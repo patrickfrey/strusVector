@@ -101,7 +101,7 @@ SimHash& SimHash::operator=( const SimHash& o)
 	}
 	else if (size() != o.size())
 	{
-		throw strus::runtime_error( "%s", _TXT("assignment of incompatible sim hash"));
+		throw std::runtime_error( _TXT("assignment of incompatible sim hash"));
 	}
 	std::memcpy( m_ar, o.m_ar, SimHash_mallocSize(m_size));
 	return *this;
@@ -231,7 +231,7 @@ unsigned int SimHash::dist( const SimHash& o) const
 	return rt;
 }
 
-bool SimHash::near( const SimHash& o, unsigned int dist) const
+bool SimHash::near( const SimHash& o, unsigned int dist_) const
 {
 	unsigned int cnt = 0;
 	uint64_t const* ai = m_ar;
@@ -241,17 +241,17 @@ bool SimHash::near( const SimHash& o, unsigned int dist) const
 	for (; oi != oe && ai != ae; ++oi,++ai)
 	{
 		cnt += strus::BitOperations::bitCount( *ai ^ *oi);
-		if (cnt > dist) return false;
+		if (cnt > dist_) return false;
 	}
 	for (; oi != oe; ++oi)
 	{
 		cnt += strus::BitOperations::bitCount( *oi);
-		if (cnt > dist) return false;
+		if (cnt > dist_) return false;
 	}
 	for (; ai != ae; ++ai)
 	{
 		cnt += strus::BitOperations::bitCount( *ai);
-		if (cnt > dist) return false;
+		if (cnt > dist_) return false;
 	}
 	return true;
 }

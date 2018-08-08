@@ -25,30 +25,30 @@ int main()
 	try
 	{
 		initRandomNumberGenerator();
+		{
+			arma::mat A = arma::randu<arma::mat>(5,5);
+			arma::mat B = arma::randu<arma::mat>(5,5);
+			arma::mat C = 2.0 * arma::randu<arma::mat>( 5, 5) - arma::mat( 5, 5).ones();
 	
-		arma::mat A = arma::randu<arma::mat>(5,5);
-		arma::mat B = arma::randu<arma::mat>(5,5);
-		arma::mat C = 2.0 * arma::randu<arma::mat>( 5, 5) - arma::mat( 5, 5).ones();
-
-		std::cout << "(A - 0.5) * 2.0:" << std::endl;
-		std::cout << ((A - 0.5) * 2.0) << std::endl;
-		std::cout << "A:" << std::endl;
-		std::cout << A << std::endl;
-		std::cout << "B:" << std::endl;
-		std::cout << B << std::endl;
-		std::cout << "C:" << std::endl;
-		std::cout << C << std::endl;
-
-		std::cout << "A * B transposed:" << std::endl;
-		std::cout << A * B.t() << std::endl;
+			std::cout << "(A - 0.5) * 2.0:" << std::endl;
+			std::cout << ((A - 0.5) * 2.0) << std::endl;
+			std::cout << "A:" << std::endl;
+			std::cout << A << std::endl;
+			std::cout << "B:" << std::endl;
+			std::cout << B << std::endl;
+			std::cout << "C:" << std::endl;
+			std::cout << C << std::endl;
 	
-		unsigned int rank_a = arma::rank( A, std::numeric_limits<float>::epsilon());
-		std::cout << "rank of A:" << rank_a << std::endl;
-		unsigned int rank_b = arma::rank( B, std::numeric_limits<float>::epsilon());
-		std::cout << "rank of B:" << rank_b << std::endl;
-		unsigned int rank_c = arma::rank( C, std::numeric_limits<float>::epsilon());
-		std::cout << "rank of C:" << rank_c << std::endl;
-
+			std::cout << "A * B transposed:" << std::endl;
+			std::cout << A * B.t() << std::endl;
+		
+			unsigned int rank_a = arma::rank( A, std::numeric_limits<float>::epsilon());
+			std::cout << "rank of A:" << rank_a << std::endl;
+			unsigned int rank_b = arma::rank( B, std::numeric_limits<float>::epsilon());
+			std::cout << "rank of B:" << rank_b << std::endl;
+			unsigned int rank_c = arma::rank( C, std::numeric_limits<float>::epsilon());
+			std::cout << "rank of C:" << rank_c << std::endl;
+		}
 		{
 			arma::sp_mat A(5,6);
 			arma::sp_mat B(6,5);

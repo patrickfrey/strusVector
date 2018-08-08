@@ -12,11 +12,12 @@ endfunction()
 CheckHasModule(Intl)
 MESSAGE( STATUS  "CMake module for libintl exists: ${HAS_MODULE_Intl}" )
 if(HAS_MODULE_Intl)
-  find_package(Intl REQUIRED)
+  find_package( Intl )
   if(FOUND_Intl)
     MESSAGE( STATUS  "libintl found." )
-  endif()
-else()
+  endif(FOUND_Intl)
+endif(HAS_MODULE_Intl)
+if (NOT Intl_INCLUDE_DIRS)
   # fallback for old Linux and OSX (Travis) where cmake is simply too old
   # and doesn't provide proper intl probing, we also assume that brew --link
   # was called on gettext
@@ -28,7 +29,7 @@ else()
     set(Intl_INCLUDE_DIRS "/usr/include")
     # libintl is part of glibc
   endif(APPLE)
-endif()
+endif(NOT Intl_INCLUDE_DIRS)
 
 MESSAGE( STATUS "libintl include: ${Intl_INCLUDE_DIRS}" )
 MESSAGE( STATUS "libintl libraries: ${Intl_LIBRARIES}" )

@@ -8,27 +8,27 @@
 /// \brief Function for evaluating similarity relations (incl. multithreaded)
 #include "getSimhashValues.hpp"
 #include "lshModel.hpp"
-#include "utils.hpp"
 #include "strus/base/string_format.hpp"
+#include "strus/base/thread.hpp"
+#include "strus/base/atomic.hpp"
 #include "strus/reference.hpp"
 #include "strus/errorBufferInterface.hpp"
 #include <memory>
 #include <iostream>
-#include <boost/thread.hpp>
 #include "armadillo"
 
 #undef STRUS_LOWLEVEL_DEBUG
 
 using namespace strus;
 
-static std::vector<SimHash> getSimhashValues_singlethread( const LshModel& lshmodel, const std::vector<std::vector<double> >& vecar)
+static std::vector<SimHash> getSimhashValues_singlethread( const LshModel& lshmodel, const std::vector<std::vector<float> >& vecar)
 {
 	std::vector<SimHash> rt;
 	rt.reserve( vecar.size());
-	std::vector<std::vector<double> >::const_iterator si = vecar.begin(), se = vecar.end();
+	std::vector<std::vector<float> >::const_iterator si = vecar.begin(), se = vecar.end();
 	for (; si != se; ++si)
 	{
-		rt.push_back( lshmodel.simHash( arma::normalise( arma::vec(*si))));
+		rt.push_back( lshmodel.simHash( arma::normalise( arma::fvec(*si))));
 	}
 	return rt;
 }
@@ -37,11 +37,11 @@ static std::vector<SimHash> getSimhashValues_singlethread( const LshModel& lshmo
 class SimhashBuilderGlobalContext
 {
 public:
-	SimhashBuilderGlobalContext( SimHash* resar_, const std::vector<double>* vecar_, std::size_t arsize_, std::size_t chunksize_)
+	SimhashBuilderGlobalContext( SimHash* resar_, const std::vector<float>* vecar_, std::size_t arsize_, std::size_t chunksize_)
 		:m_chunkIndex(0),m_resar(resar_),m_vecar(vecar_),m_arsize(arsize_),m_chunksize(chunksize_)
 	{}
 
-	bool fetch( SimHash*& chunk_resar, const std::vector<double>*& chunk_vecar, std::size_t& chunk_arsize)
+	bool fetch( SimHash*& chunk_resar, const std::vector<float>*& chunk_vecar, std::size_t& chunk_arsize)
 	{
 		unsigned int chunk_index = m_chunkIndex.allocIncrement();
 		std::size_t chunk_ofs = chunk_index * m_chunksize;
@@ -65,7 +65,7 @@ public:
 
 	void reportError( const std::string& msg)
 	{
-		utils::ScopedLock lock( m_mutex);
+		strus::scoped_lock lock( m_mutex);
 		m_errormsg.append( msg);
 		m_errormsg.push_back( '\n');
 	}
@@ -81,12 +81,12 @@ public:
 	}
 
 private:
-	utils::AtomicCounter<unsigned int> m_chunkIndex;
+	strus::AtomicCounter<unsigned int> m_chunkIndex;
 	SimHash* m_resar;
-	const std::vector<double>* m_vecar;
+	const std::vector<float>* m_vecar;
 	std::size_t m_arsize;
 	std::size_t m_chunksize;
-	utils::Mutex m_mutex;
+	strus::mutex m_mutex;
 	std::string m_errormsg;
 };
 
@@ -109,7 +109,7 @@ public:
 		try
 		{
 			SimHash* chunk_resar = 0;
-			const std::vector<double>* chunk_vecar = 0;
+			const std::vector<float>* chunk_vecar = 0;
 			std::size_t chunk_arsize = 0;
 
 			while (!m_terminated && m_ctx->fetch( chunk_resar, chunk_vecar, chunk_arsize))
@@ -117,7 +117,7 @@ public:
 				std::size_t ai = 0, ae = chunk_arsize;
 				for (;ai != ae; ++ai)
 				{
-					chunk_resar[ ai] = m_lshModel->simHash( arma::normalise( arma::vec( chunk_vecar[ ai])));
+					chunk_resar[ ai] = m_lshModel->simHash( arma::normalise( arma::fvec( chunk_vecar[ ai])));
 				}
 			}
 		}
@@ -129,9 +129,9 @@ public:
 		{
 			m_ctx->reportError( string_format( _TXT("out of memory in thread %u"), m_threadid));
 		}
-		catch (const boost::thread_interrupted&)
+		catch (...)
 		{
-			m_ctx->reportError( string_format( _TXT("failed to complete calculation: thread %u interrupted"), m_threadid));
+			m_ctx->reportError( string_format( _TXT("failed to complete calculation: uncaught exception in thread %u"), m_threadid));
 		}
 		m_errorhnd->releaseContext();
 	}
@@ -147,7 +147,7 @@ private:
 
 std::vector<SimHash> strus::getSimhashValues(
 		const LshModel& lshmodel,
-		const std::vector<std::vector<double> >& vecar,
+		const std::vector<std::vector<float> >& vecar,
 		unsigned int threads,
 		ErrorBufferInterface* errorhnd)
 {
@@ -174,12 +174,15 @@ std::vector<SimHash> strus::getSimhashValues(
 				new SimhashBuilder( &context, &lshmodel, ti+1, errorhnd));
 		}
 		{
-			boost::thread_group tgroup;
+			std::vector<strus::Reference<strus::thread> > threadGroup;
 			for (unsigned int ti=0; ti<threads; ++ti)
 			{
-				tgroup.create_thread( boost::bind( &SimhashBuilder::run, processorList[ti].get()));
+				SimhashBuilder* ctx = processorList[ti].get();
+				strus::Reference<strus::thread> th( new strus::thread( &SimhashBuilder::run, ctx));
+				threadGroup.push_back( th);
 			}
-			tgroup.join_all();
+			std::vector<strus::Reference<strus::thread> >::iterator gi = threadGroup.begin(), ge = threadGroup.end();
+			for (; gi != ge; ++gi) (*gi)->join();
 		}
 		if (context.hasError())
 		{

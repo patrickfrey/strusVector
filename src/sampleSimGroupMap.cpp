@@ -8,9 +8,9 @@
 /// \brief Structure for a map of sample indices to similarity groups they are members of
 #include "sampleSimGroupMap.hpp"
 #include "internationalization.hpp"
-#include "cacheLineSize.hpp"
 #include "errorUtils.hpp"
-#include "utils.hpp"
+#include "strus/base/malloc.hpp"
+#include "strus/base/platform.hpp"
 #include <cstring>
 
 using namespace strus;
@@ -22,12 +22,12 @@ void SampleSimGroupMap::init()
 	{
 		throw std::bad_alloc();
 	}
-	m_nodear = (Node*)utils::aligned_malloc( m_nodearsize * sizeof(Node), CacheLineSize);
-	m_refs = (ConceptIndex*)utils::aligned_malloc( m_nodearsize * m_maxnodesize * sizeof(ConceptIndex), CacheLineSize);
+	m_nodear = (Node*)strus::aligned_malloc( m_nodearsize * sizeof(Node), strus::platform::CacheLineSize);
+	m_refs = (ConceptIndex*)strus::aligned_malloc( m_nodearsize * m_maxnodesize * sizeof(ConceptIndex), strus::platform::CacheLineSize);
 	if (!m_nodear || !m_refs)
 	{
-		if (m_nodear) utils::aligned_free(m_nodear);
-		if (m_refs) utils::aligned_free(m_refs);
+		if (m_nodear) strus::aligned_free(m_nodear);
+		if (m_refs) strus::aligned_free(m_refs);
 		throw std::bad_alloc();
 	}
 	std::memset( m_refs, 0, m_nodearsize * m_maxnodesize * sizeof(ConceptIndex));
@@ -54,8 +54,8 @@ SampleSimGroupMap::SampleSimGroupMap( const SampleSimGroupMap& o)
 
 SampleSimGroupMap::~SampleSimGroupMap()
 {
-	if (m_nodear) utils::aligned_free( m_nodear);
-	if (m_refs) utils::aligned_free( m_refs);
+	if (m_nodear) strus::aligned_free( m_nodear);
+	if (m_refs) strus::aligned_free( m_refs);
 }
 
 bool SampleSimGroupMap::shares( const std::size_t& ndidx, const ConceptIndex* car, std::size_t carsize) const
@@ -145,20 +145,20 @@ void SampleSimGroupMap::Node::check( ConceptIndex maxnodesize) const
 	ConceptIndex ii = 0;
 	if (groupidx[ii++] == 0 || size > maxnodesize)
 	{
-		throw strus::runtime_error( "%s", _TXT("illegal SampleSimGroupMap::Node (order)"));
+		throw std::runtime_error( _TXT("illegal SampleSimGroupMap::Node (order)"));
 	}
 	for (; ii<size; ++ii)
 	{
 		if (groupidx[ii] < groupidx[ii-1])
 		{
-			throw strus::runtime_error( "%s", _TXT("illegal SampleSimGroupMap::Node (order)"));
+			throw std::runtime_error( _TXT("illegal SampleSimGroupMap::Node (order)"));
 		}
 	}
 	for (; ii<(ConceptIndex)maxnodesize; ++ii)
 	{
 		if (groupidx[ii] != 0)
 		{
-			throw strus::runtime_error( "%s", _TXT("illegal SampleSimGroupMap::Node (eof)"));
+			throw std::runtime_error( _TXT("illegal SampleSimGroupMap::Node (eof)"));
 		}
 	}
 }

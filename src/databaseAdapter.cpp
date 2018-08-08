@@ -11,6 +11,7 @@
 #include "strus/base/utf8.hpp"
 #include "strus/base/string_format.hpp"
 #include "strus/base/stdint.h"
+#include "strus/base/local_ptr.hpp"
 #include "strus/versionVector.hpp"
 #include "strus/databaseOptions.hpp"
 #include "strus/databaseCursorInterface.hpp"
@@ -30,8 +31,8 @@ using namespace strus;
 
 #undef STRUS_LOWLEVEL_DEBUG
 
-DatabaseAdapter::DatabaseAdapter( const DatabaseInterface* database_, const std::string& config, ErrorBufferInterface* errorhnd_)
-	:m_database(database_->createClient(config)),m_errorhnd(errorhnd_)
+DatabaseAdapter::DatabaseAdapter( const DatabaseInterface* database_, const std::string& config_, ErrorBufferInterface* errorhnd_)
+	:m_database(database_->createClient(config_)),m_errorhnd(errorhnd_)
 {
 	if (!m_database.get()) throw strus::runtime_error( _TXT("failed to create database client for standard vector storage: %s"), m_errorhnd->fetchError());
 }
@@ -72,7 +73,7 @@ struct VectorStorageHdr
 
 	VectorStorageHdr()
 	{
-		std::memcpy( name, "strus standard vector storage\n\0", sizeof(name));
+		std::strncpy( name, "strus standard vector storage\n\0", sizeof(name));
 		_id = FILEID;
 		version_major = STRUS_VECTOR_VERSION_MAJOR;
 		version_minor = STRUS_VECTOR_VERSION_MINOR;
@@ -80,7 +81,7 @@ struct VectorStorageHdr
 
 	void check()
 	{
-		if (_id != FILEID) throw strus::runtime_error( "%s", _TXT("unknown file type, expected strus standard vector storage binary file"));
+		if (_id != FILEID) throw std::runtime_error( _TXT("unknown file type, expected strus standard vector storage binary file"));
 		if (version_major != STRUS_VECTOR_VERSION_MAJOR) throw strus::runtime_error(_TXT("major version (%u) of loaded strus standard vector storage binary file does not match"), version_major);
 		if (version_minor > STRUS_VECTOR_VERSION_MINOR) throw strus::runtime_error(_TXT("minor version (%u) of loaded strus standard vector storage binary file does not match (newer than your version of strus)"), version_minor);
 	}
@@ -113,11 +114,11 @@ void DatabaseAdapter::checkVersion()
 		}
 		else
 		{
-			throw strus::runtime_error( "%s", _TXT( "failed to read non exising version from database"));
+			throw std::runtime_error( _TXT( "failed to read non exising version from database"));
 		}
 	}
 	VectorStorageHdr hdr;
-	if (content.size() < sizeof(hdr)) throw strus::runtime_error( "%s", _TXT("unknown version format"));
+	if (content.size() < sizeof(hdr)) throw std::runtime_error( _TXT("unknown version format"));
 	std::memcpy( &hdr, content.c_str(), sizeof(hdr));
 	hdr.ntoh();
 	hdr.check();
@@ -172,7 +173,7 @@ unsigned int DatabaseAdapter::readVariable( const std::string& name) const
 std::vector<std::pair<std::string,uint64_t> > DatabaseAdapter::readVariables() const
 {
 	std::vector<std::pair<std::string,uint64_t> > rt;
-	std::unique_ptr<DatabaseCursorInterface> cursor( m_database->createCursor( DatabaseOptions()));
+	strus::local_ptr<DatabaseCursorInterface> cursor( m_database->createCursor( DatabaseOptions()));
 	if (!cursor.get()) throw strus::runtime_error(_TXT("failed to create cursor to read variables: %s"), m_errorhnd->fetchError());
 
 	DatabaseKeyBuffer key( KeyVariable);
@@ -240,7 +241,7 @@ static std::vector<ScalarType> vectorFromSerialization( const char* blob, std::s
 	rt.reserve( blobsize / sizeof(NetScalarType));
 	if (blobsize % sizeof(NetScalarType) != 0)
 	{
-		throw strus::runtime_error( "%s", _TXT("corrupt data in vector serialization"));
+		throw std::runtime_error( _TXT("corrupt data in vector serialization"));
 	}
 	NetScalarType const* ri = (const NetScalarType*)blob;
 	const NetScalarType* re = ri + blobsize / sizeof(NetScalarType);
@@ -330,7 +331,7 @@ DatabaseAdapter::Vector DatabaseAdapter::readSampleVector( const SampleIndex& si
 			throw strus::runtime_error(_TXT("try to to read sample vector (index %d) that does not exist"), sidx);
 		}
 	}
-	return vectorFromSerialization<double>( blob);
+	return vectorFromSerialization<float>( blob);
 }
 
 void DatabaseAdapter::Transaction::writeSampleVector( const SampleIndex& sidx, const Vector& vec)
@@ -338,7 +339,7 @@ void DatabaseAdapter::Transaction::writeSampleVector( const SampleIndex& sidx, c
 	DatabaseKeyBuffer key( KeySampleVector);
 	key[ sidx+1];
 
-	std::string blob( vectorSerialization<double>( vec));
+	std::string blob( vectorSerialization<float>( vec));
 	m_transaction->write( key.c_str(), key.size(), blob.c_str(), blob.size());
 }
 
@@ -460,7 +461,7 @@ SimHash DatabaseAdapter::readSimhash( const KeyPrefix& prefix, const SampleIndex
 		}
 		else
 		{
-			throw strus::runtime_error( "%s", _TXT("accessing sim hash value of undefined feature"));
+			throw std::runtime_error( _TXT("accessing sim hash value of undefined feature"));
 		}
 	}
 	return SimHash::fromSerialization( content);
@@ -469,7 +470,7 @@ SimHash DatabaseAdapter::readSimhash( const KeyPrefix& prefix, const SampleIndex
 std::vector<SimHash> DatabaseAdapter::readSimhashVector( const KeyPrefix& prefix, const SampleIndex& range_from, const SampleIndex& range_to) const
 {
 	std::vector<SimHash> rt;
-	std::unique_ptr<DatabaseCursorInterface> cursor( m_database->createCursor( DatabaseOptions()));
+	strus::local_ptr<DatabaseCursorInterface> cursor( m_database->createCursor( DatabaseOptions()));
 	if (!cursor.get()) throw strus::runtime_error(_TXT("failed to create cursor to read sim hash vector: %s"), m_errorhnd->fetchError());
 
 	DatabaseKeyBuffer key( prefix);
@@ -533,7 +534,7 @@ VectorStorageConfig DatabaseAdapter::readConfig() const
 		}
 		else
 		{
-			throw strus::runtime_error( "%s", _TXT( "failed to read non existing configuration from database"));
+			throw std::runtime_error( _TXT( "failed to read non existing configuration from database"));
 		}
 	}
 	return VectorStorageConfig( content, m_errorhnd);
@@ -584,7 +585,7 @@ LshModel DatabaseAdapter::readLshModel() const
 		}
 		else
 		{
-			throw strus::runtime_error( "%s", _TXT( "failed to read non existing LSH model from database"));
+			throw std::runtime_error( _TXT( "failed to read non existing LSH model from database"));
 		}
 	}
 	return LshModel::fromSerialization( content);
@@ -603,7 +604,7 @@ SimRelationMap DatabaseAdapter::readSimRelationMap() const
 	SimRelationMap rt;
 	DatabaseKeyBuffer key( KeySimRelationMap);
 
-	std::unique_ptr<DatabaseCursorInterface> cursor( m_database->createCursor( DatabaseOptions()));
+	strus::local_ptr<DatabaseCursorInterface> cursor( m_database->createCursor( DatabaseOptions()));
 	if (!cursor.get()) throw strus::runtime_error(_TXT("failed to create cursor to read similarity relation map: %s"), m_errorhnd->fetchError());
 
 	DatabaseCursorInterface::Slice slice = cursor->seekFirst( key.c_str(), key.size());
@@ -634,7 +635,7 @@ SampleIndex DatabaseAdapter::readLastSimRelationIndex() const
 {
 	DatabaseKeyBuffer key( KeySimRelationMap);
 
-	std::unique_ptr<DatabaseCursorInterface> cursor( m_database->createCursor( DatabaseOptions()));
+	strus::local_ptr<DatabaseCursorInterface> cursor( m_database->createCursor( DatabaseOptions()));
 	if (!cursor.get()) throw strus::runtime_error(_TXT("failed to create cursor to read similarity relation map: %s"), m_errorhnd->fetchError());
 
 	DatabaseCursorInterface::Slice slice = cursor->seekLast( key.c_str(), key.size());
@@ -714,7 +715,7 @@ std::vector<SampleIndex> DatabaseAdapter::readSimSingletons() const
 	std::vector<SampleIndex> rt;
 	DatabaseKeyBuffer key( KeySimRelationMap);
 
-	std::unique_ptr<DatabaseCursorInterface> cursor( m_database->createCursor( DatabaseOptions()));
+	strus::local_ptr<DatabaseCursorInterface> cursor( m_database->createCursor( DatabaseOptions()));
 	if (!cursor.get()) throw strus::runtime_error(_TXT("failed to create cursor to read similarity relation map: %s"), m_errorhnd->fetchError());
 
 	SampleIndex prev_sidx = 0;
@@ -801,7 +802,7 @@ std::vector<SampleIndex> DatabaseAdapter::readConceptSampleIndices( const std::s
 {
 	if (cidx == 0)
 	{
-		throw strus::runtime_error( "%s", _TXT("illegal key (null) for concept"));
+		throw std::runtime_error( _TXT("illegal key (null) for concept"));
 	}
 	DatabaseKeyBuffer key( KeyConceptSampleIndexMap);
 	key(clname)[ cidx];
@@ -867,7 +868,7 @@ IndexListMap<strus::Index,strus::Index> DatabaseAdapter::readIndexListMap( const
 	DatabaseKeyBuffer key( prefix);
 	key(clname);
 
-	std::unique_ptr<DatabaseCursorInterface> cursor( m_database->createCursor( DatabaseOptions()));
+	strus::local_ptr<DatabaseCursorInterface> cursor( m_database->createCursor( DatabaseOptions()));
 	if (!cursor.get()) throw strus::runtime_error(_TXT("failed to create cursor to read index map: %s"), m_errorhnd->fetchError());
 
 	DatabaseCursorInterface::Slice slice = cursor->seekFirst( key.c_str(), key.size());
@@ -885,7 +886,7 @@ IndexListMap<strus::Index,strus::Index> DatabaseAdapter::readIndexListMap( const
 		const char* ce = ci + content.size();
 		if ((ce - ci) % (sizeof(strus::Index)) != 0)
 		{
-			throw strus::runtime_error( "%s", _TXT("corrupt row of index list map"));
+			throw std::runtime_error( _TXT("corrupt row of index list map"));
 		}
 		std::vector<strus::Index> elems;
 		for (; ci < ce; ci += sizeof(strus::Index))
@@ -907,7 +908,7 @@ std::vector<SampleIndex> DatabaseAdapter::readConceptSingletons( const std::stri
 	DatabaseKeyBuffer key( KeySampleConceptIndexMap);
 	key(clname);
 
-	std::unique_ptr<DatabaseCursorInterface> cursor( m_database->createCursor( DatabaseOptions()));
+	strus::local_ptr<DatabaseCursorInterface> cursor( m_database->createCursor( DatabaseOptions()));
 	if (!cursor.get()) throw strus::runtime_error(_TXT("failed to create cursor to read similarity relation map: %s"), m_errorhnd->fetchError());
 
 	SampleIndex prev_sidx = 0;
@@ -1042,7 +1043,7 @@ void DatabaseAdapter::DumpIterator::dumpKeyValue( std::ostream& out, const strus
 		case DatabaseAdapter::KeyVersion:
 		{
 			VectorStorageHdr hdr;
-			if (value.size() < sizeof(hdr)) throw strus::runtime_error( "%s", _TXT("unknown version format"));
+			if (value.size() < sizeof(hdr)) throw std::runtime_error( _TXT("unknown version format"));
 			std::memcpy( &hdr, value.ptr(), sizeof(hdr));
 			hdr.ntoh();
 			out << hdr.name << " " << hdr.version_major << "." << hdr.version_minor << std::endl;
@@ -1073,8 +1074,8 @@ void DatabaseAdapter::DumpIterator::dumpKeyValue( std::ostream& out, const strus
 			DatabaseKeyScanner scanner( key.ptr()+1, key.size()-1);
 			scanner[ sidx];
 			out << (sidx-1);
-			std::vector<double> vec = vectorFromSerialization<double>( value.ptr(), value.size());
-			std::vector<double>::const_iterator vi = vec.begin(), ve = vec.end();
+			std::vector<float> vec = vectorFromSerialization<float>( value.ptr(), value.size());
+			std::vector<float>::const_iterator vi = vec.begin(), ve = vec.end();
 			for (; vi != ve; ++vi)
 			{
 				out << " " << *vi;
@@ -1183,7 +1184,7 @@ void DatabaseAdapter::DumpIterator::dumpKeyValue( std::ostream& out, const strus
 DatabaseAdapter::DumpIterator::DumpIterator( const DatabaseClientInterface* database, const std::string& cursorkey_, ErrorBufferInterface* errorhnd_)
 	:m_errorhnd(errorhnd_),m_cursor(database->createCursor( DatabaseOptions())),m_cursorkey(cursorkey_),m_first(true)
 {
-	if (!m_cursor.get()) throw strus::runtime_error( "%s", _TXT("error creating database cursor"));
+	if (!m_cursor.get()) throw std::runtime_error( _TXT("error creating database cursor"));
 }
 
 bool DatabaseAdapter::DumpIterator::dumpNext( std::ostream& out)

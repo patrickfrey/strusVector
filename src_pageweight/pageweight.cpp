@@ -194,9 +194,10 @@ std::vector<double> PageWeight::calculate() const
 
 void PageWeight::printRedirectsToFile( const std::string& filename) const
 {
-	unsigned int ec = writeFile( filename, std::string());
-	if (ec) throw std::runtime_error( string_format( "failed to write redirects to file: %s", ::strerror(ec)));
-
+	{
+		unsigned int ec = writeFile( filename, std::string());
+		if (ec) throw std::runtime_error( string_format( "failed to write redirects to file: %s", ::strerror(ec)));
+	}
 	enum {NofLinesPerChunk=100000};
 	std::string outbuf;
 	RedirectMap::const_iterator ri = m_redirectMap.begin(), re = m_redirectMap.end();

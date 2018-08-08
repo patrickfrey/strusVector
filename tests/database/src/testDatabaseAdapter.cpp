@@ -18,12 +18,13 @@
 #include "strus/base/configParser.hpp"
 #include "strus/base/stdint.h"
 #include "strus/base/fileio.hpp"
+#include "strus/base/local_ptr.hpp"
 #include "strus/base/string_format.hpp"
+#include "strus/base/pseudoRandom.hpp"
 #include "vectorStorageConfig.hpp"
 #include "indexListMap.hpp"
 #include "lshModel.hpp"
 #include "genModel.hpp"
-#include "random.hpp"
 #include "sampleSimGroupMap.hpp"
 #include "simGroup.hpp"
 #include "simHash.hpp"
@@ -42,7 +43,7 @@
 #include <limits>
 
 #undef STRUS_LOWLEVEL_DEBUG
-#define VEC_EPSILON  (1.0E-11)
+#define VEC_EPSILON  (1.0E-6)
 
 static void initRandomNumberGenerator()
 {
@@ -56,10 +57,10 @@ static void initRandomNumberGenerator()
 	std::srand( seed+2);
 }
 
-static std::vector<double> convertVectorStd( const arma::vec& vec)
+static std::vector<float> convertVectorStd( const arma::fvec& vec)
 {
-	std::vector<double> rt;
-	arma::vec::const_iterator vi = vec.begin(), ve = vec.end();
+	std::vector<float> rt;
+	arma::fvec::const_iterator vi = vec.begin(), ve = vec.end();
 	for (; vi != ve; ++vi)
 	{
 		rt.push_back( *vi);
@@ -67,9 +68,9 @@ static std::vector<double> convertVectorStd( const arma::vec& vec)
 	return rt;
 }
 
-std::vector<double> getRandomVector( unsigned int dim)
+std::vector<float> getRandomVector( unsigned int dim)
 {
-	return convertVectorStd( (arma::randu<arma::vec>( dim) - 0.5) * 2.0); // values between -1.0 and 1.0
+	return convertVectorStd( (arma::randu<arma::fvec>( dim) - 0.5) * 2.0); // values between -1.0 and 1.0
 }
 
 bool parseUint( unsigned int& res, const std::string& numstr)
@@ -97,7 +98,7 @@ static std::string getSampleName( unsigned int sidx)
 
 static strus::SimRelationMap getSimRelationMap( unsigned int nofSamples, unsigned short maxsimdist)
 {
-	strus::Random rnd;
+	strus::PseudoRandom rnd;
 	strus::SimRelationMap rt;
 	unsigned int si = 0, se = nofSamples;
 	for (; si != se; ++si)
@@ -117,7 +118,7 @@ static strus::SimRelationMap getSimRelationMap( unsigned int nofSamples, unsigne
 
 strus::SampleConceptIndexMap getSampleConceptIndexMap( unsigned int nofSamples)
 {
-	strus::Random rnd;
+	strus::PseudoRandom rnd;
 	unsigned int nofConcepts = getNofConcepts( nofSamples);
 	strus::IndexListMap<strus::Index,strus::Index> rt;
 	unsigned int si = 0, se = nofSamples;
@@ -139,7 +140,7 @@ strus::SampleConceptIndexMap getSampleConceptIndexMap( unsigned int nofSamples)
 strus::ConceptSampleIndexMap getConceptSampleIndexMap( unsigned int nofSamples)
 {
 	strus::IndexListMap<strus::Index,strus::Index> rt;
-	strus::Random rnd;
+	strus::PseudoRandom rnd;
 	unsigned int nofConcepts = getNofConcepts( nofSamples);
 	unsigned int fi = 1, fe = nofConcepts+1;
 	for (; fi < fe; ++fi)
@@ -170,7 +171,7 @@ struct TestDataset
 		unsigned int si = 0, se = nofSamples;
 		for (; si != se; ++si)
 		{
-			std::vector<double> vec = getRandomVector( config.dim);
+			std::vector<float> vec = getRandomVector( config.dim);
 			sampleNames.push_back( getSampleName(si));
 			sampleVectors.push_back( vec);
 			sampleSimHashs.push_back( lshmodel.simHash( vec));
@@ -184,7 +185,7 @@ struct TestDataset
 	strus::SampleConceptIndexMap sfmap;
 	strus::ConceptSampleIndexMap fsmap;
 	std::vector< std::string> sampleNames;
-	std::vector< std::vector<double> > sampleVectors;
+	std::vector< std::vector<float> > sampleVectors;
 	std::vector< strus::SimHash> sampleSimHashs;
 };
 
@@ -192,7 +193,7 @@ struct TestDataset
 
 static void writeDatabase( const strus::VectorStorageConfig& config, const TestDataset& dataset)
 {
-	std::unique_ptr<strus::DatabaseInterface> dbi( strus::createDatabaseType_leveldb( g_errorhnd));
+	strus::local_ptr<strus::DatabaseInterface> dbi( strus::createDatabaseType_leveldb( "", g_errorhnd));
 	if (dbi->exists( config.databaseConfig))
 	{
 		if (!dbi->destroyDatabase( config.databaseConfig))
@@ -223,20 +224,20 @@ static void writeDatabase( const strus::VectorStorageConfig& config, const TestD
 	if (!transaction->commit()) throw strus::runtime_error( "%s", _TXT("vector storage transaction failed"));
 }
 
-static bool compare( const std::vector<double>& v1, const std::vector<double>& v2)
+static bool compare( const std::vector<float>& v1, const std::vector<float>& v2)
 {
-	std::vector<double>::const_iterator vi1 = v1.begin(), ve1 = v1.end();
-	std::vector<double>::const_iterator vi2 = v2.begin(), ve2 = v2.end();
+	std::vector<float>::const_iterator vi1 = v1.begin(), ve1 = v1.end();
+	std::vector<float>::const_iterator vi2 = v2.begin(), ve2 = v2.end();
 	for (unsigned int vidx=0; vi1 != ve1 && vi2 != ve2; ++vi1,++vi2,++vidx)
 	{
-		double diff = (*vi1 > *vi2)?(*vi1 - *vi2):(*vi2 - *vi1);
+		float diff = (*vi1 > *vi2)?(*vi1 - *vi2):(*vi2 - *vi1);
 		if (diff > VEC_EPSILON)
 		{
 			for (unsigned int vv=0; vv != vidx; ++vv)
 			{
-				std::cerr << strus::string_format("%u: %lf == %lf", vv, v1[vv], v2[vv]) << std::endl;
+				std::cerr << strus::string_format("%u: %f == %f", vv, v1[vv], v2[vv]) << std::endl;
 			}
-			std::cerr << strus::string_format("diff of %u: %lf and %lf is bigger than %lf", vidx, *vi1, *vi2, VEC_EPSILON) << std::endl;
+			std::cerr << strus::string_format("diff of %u: %f and %f is bigger than %f", vidx, *vi1, *vi2, VEC_EPSILON) << std::endl;
 			return false;
 		}
 	}
@@ -309,7 +310,7 @@ static bool compare( const strus::LshModel& m1, const strus::LshModel& m2)
 
 static void readAndCheckDatabase( const strus::VectorStorageConfig& config, const TestDataset& dataset)
 {
-	std::unique_ptr<strus::DatabaseInterface> dbi( strus::createDatabaseType_leveldb( g_errorhnd));
+	strus::local_ptr<strus::DatabaseInterface> dbi( strus::createDatabaseType_leveldb( "", g_errorhnd));
 	strus::DatabaseAdapter database( dbi.get(), config.databaseConfig, g_errorhnd);
 
 	database.checkVersion();
@@ -365,7 +366,7 @@ int main( int argc, const char** argv)
 	try
 	{
 		int rt = 0;
-		g_errorhnd = strus::createErrorBuffer_standard( 0, 0);
+		g_errorhnd = strus::createErrorBuffer_standard( 0, 0, NULL/*debug trace interface*/);
 		if (!g_errorhnd) throw std::runtime_error("failed to create error buffer structure");
 
 		initRandomNumberGenerator();
@@ -432,7 +433,7 @@ int main( int argc, const char** argv)
 		writeDatabase( config, dataset);
 		readAndCheckDatabase( config, dataset);
 
-		std::unique_ptr<strus::DatabaseInterface> dbi( strus::createDatabaseType_leveldb( g_errorhnd));
+		strus::local_ptr<strus::DatabaseInterface> dbi( strus::createDatabaseType_leveldb( "", g_errorhnd));
 		if (dbi.get())
 		{
 			(void)dbi->destroyDatabase( config.databaseConfig);
