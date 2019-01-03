@@ -11,7 +11,9 @@
 #include "strus/vectorStorageTransactionInterface.hpp"
 #include "strus/databaseTransactionInterface.hpp"
 #include "strus/reference.hpp"
+#include "strus/base/symbolTable.hpp"
 #include "databaseAdapter.hpp"
+#include "vectorDef.hpp"
 #include <map>
 #include <set>
 
@@ -26,35 +28,55 @@ class VectorStorageTransaction
 		:public VectorStorageTransactionInterface
 {
 public:
-	VectorStorageTransaction( VectorStorageClient* storage_, Reference<DatabaseAdapter>& database_, const VectorStorageConfig& config_, ErrorBufferInterface* errorhnd_);
+	VectorStorageTransaction( VectorStorageClient* storage_, Reference<DatabaseAdapter>& database_, ErrorBufferInterface* errorhnd_);
 
 	virtual ~VectorStorageTransaction(){}
 
-	virtual void addFeature( const std::string& name, const std::vector<float>& vec);
+	virtual void defineVector( const std::string& type, const std::string& name, const WordVector& vec);
 
-	virtual void defineFeatureConceptRelation( const std::string& relationTypeName, const Index& featidx, const Index& conidx);
+	virtual void defineFeature( const std::string& type, const std::string& name);
+
+	virtual void defineScalar( const std::string& name, double value);
+
+	virtual void clear();
 
 	virtual bool commit();
 
 	virtual void rollback();
 
 private:
+	void defineElement( const std::string& type, const std::string& name, const WordVector& vec);
+	void reset();
+
+private:
 	ErrorBufferInterface* m_errorhnd;
 	VectorStorageClient* m_storage;
-	VectorStorageConfig m_config;
-
-	typedef std::map<std::string,unsigned int> ConceptTypeMap;
-	typedef std::pair<Index,Index> RelationDef;
-	typedef std::set<RelationDef> Relation;
 
 	Reference<DatabaseAdapter> m_database;
 	Reference<DatabaseAdapter::Transaction> m_transaction;
-	ConceptTypeMap m_conceptTypeMap;
-	std::vector<Relation> m_conceptFeatureRelationList;
-	std::vector<Relation> m_featureConceptRelationList;
 
-	std::vector<std::vector<float> > m_vecar;
-	std::vector<std::string> m_namear;
+	std::vector<std::vector<VectorDef> > m_vecar;
+	SymbolTable m_typetab;
+	SymbolTable m_nametab;
+
+	struct FeatureTypeRelation
+	{
+		int featno;
+		int typeno;
+
+		FeatureTypeRelation( int featno_, int typeno_)		:featno(featno_),typeno(typeno_){}
+		FeatureTypeRelation( const FeatureTypeRelation& o)	:featno(o.featno),typeno(o.typeno){}
+		FeatureTypeRelation()					:featno(0),typeno(0){}
+
+		bool operator < (const FeatureTypeRelation& o) const
+		{
+			return (featno == o.featno) ? (typeno < o.typeno):(featno < o.featno);
+		}
+	};
+
+	std::set<FeatureTypeRelation> m_featTypeRelations;
+	int m_simdist;
+	int m_probsimdist;
 };
 
 }//namespace

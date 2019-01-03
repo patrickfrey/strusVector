@@ -8,8 +8,6 @@
 #include "strus/lib/vector_std.hpp"
 #include "strus/errorBufferInterface.hpp"
 #include "vectorStorage.hpp"
-#include "vectorStorageConfig.hpp"
-#include "vectorStorageBuilder.hpp"
 #include "strus/base/dll_tags.hpp"
 #include "internationalization.hpp"
 #include "errorUtils.hpp"
@@ -28,6 +26,6 @@ DLL_PUBLIC VectorStorageInterface* strus::createVectorStorage_std( const std::st
 		}
 		return new VectorStorage( workdir, errorhnd);
 	}
-	CATCH_ERROR_MAP_RETURN( _TXT("error creating standard vector storage: %s"), *errorhnd, 0);
+	CATCH_ERROR_MAP_RETURN( _TXT("error creating vector storage: %s"), *errorhnd, 0);
 }
 

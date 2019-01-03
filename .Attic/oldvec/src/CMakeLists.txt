@@ -8,15 +8,27 @@ set( source_files
 	${CMAKE_CURRENT_BINARY_DIR}/internationalization.cpp
 	simHash.cpp
 	simHashMap.cpp
+	simGroup.cpp
+	simGroupMap.cpp
+	dependencyGraph.cpp
+	sampleSimGroupMap.cpp
+	sampleSimGroupAssignmentQueue.cpp
+	simRelationMap.cpp
+	simRelationMapBuilder.cpp
 	getSimhashValues.cpp
 	lshModel.cpp
 	lshBench.cpp
+	genGroupContext.cpp
+	genGroupThreadContext.cpp
+	genModel.cpp
 	databaseAdapter.cpp
-	vectorStorage.cpp
-	vectorStorageClient.cpp
+	vectorStorageConfig.cpp
 	vectorStorageDump.cpp
 	vectorStorageSearch.cpp
+	vectorStorageClient.cpp
 	vectorStorageTransaction.cpp
+	vectorStorageBuilder.cpp
+	vectorStorage.cpp
 )
 
 include_directories(

@@ -9,7 +9,6 @@
 #ifndef _STRUS_VECTOR_STORAGE_SEARCH_IMPLEMENTATION_HPP_INCLUDED
 #define _STRUS_VECTOR_STORAGE_SEARCH_IMPLEMENTATION_HPP_INCLUDED
 #include "strus/vectorStorageSearchInterface.hpp"
-#include "vectorStorageConfig.hpp"
 #include "databaseAdapter.hpp"
 #include "simHashMap.hpp"
 
@@ -26,23 +25,21 @@ class VectorStorageSearch
 	:public VectorStorageSearchInterface
 {
 public:
-	VectorStorageSearch( const Reference<DatabaseAdapter>& database, const VectorStorageConfig& config_, const Index& range_from_, const Index& range_to_, ErrorBufferInterface* errorhnd_);
+	VectorStorageSearch( const Reference<DatabaseAdapter>& database, const LshModel& model_, const std::string& type, int indexPart, int nofParts, bool realVecWeights, ErrorBufferInterface* errorhnd_);
 
-	virtual ~VectorStorageSearch(){}
+	virtual ~VectorStorageSearch();
 
-	virtual std::vector<VectorQueryResult> findSimilar( const std::vector<float>& vec, unsigned int maxNofResults) const;
-	virtual std::vector<VectorQueryResult> findSimilarFromSelection( const std::vector<Index>& candidates, const std::vector<float>& vec, unsigned int maxNofResults) const;
+	virtual std::vector<VectorQueryResult> findSimilar( const WordVector& vec, int maxNofResults, double minSimilarity) const;
 
 	virtual void close();
 
 private:
 	ErrorBufferInterface* m_errorhnd;
-	VectorStorageConfig m_config;
 	LshModel m_lshmodel;
-	SimHashMap m_samplear;
+	SimHashMap m_simhashar;
+	Index m_typeno;
+	bool m_realVecWeights;
 	Reference<DatabaseAdapter> m_database;
-	Index m_range_from;
-	Index m_range_to;
 };
 
 }//namespace

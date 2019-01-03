@@ -15,56 +15,109 @@
 #include "strus/base/string_conv.hpp"
 #include <algorithm>
 
-#define MODULENAME   "standard vector storage"
+#define MODULENAME   "vector storage"
 
 using namespace strus;
 
 VectorStorageTransaction::VectorStorageTransaction(
 		VectorStorageClient* storage_,
 		Reference<DatabaseAdapter>& database_,
-		const VectorStorageConfig& config_,
 		ErrorBufferInterface* errorhnd_)
-	:m_errorhnd(errorhnd_),m_storage(storage_),m_config(config_)
+	:m_errorhnd(errorhnd_),m_storage(storage_)
 	,m_database(database_),m_transaction(database_->createTransaction())
+	,m_vecar(),m_typetab(errorhnd_),m_nametab(errorhnd_),m_featTypeRelations()
+	,m_simdist(-1),m_probsimdist(-1)
 {
-	if (!m_transaction.get())
+	if (errorhnd_->hasError())
 	{
-		throw std::runtime_error( _TXT("failed to create transaction"));
+		throw strus::runtime_error( _TXT("failed to create transaction: %s"), errorhnd_->fetchError());
 	}
 }
 
-void VectorStorageTransaction::addFeature( const std::string& name, const std::vector<float>& vec)
+void VectorStorageTransaction::defineElement( const std::string& type, const std::string& name, const WordVector& vec)
 {
-	try
+	StringConvError err = StringConvOk;
+	int tid = m_typetab.getOrCreate(strus::utf8clean( type, err));
+	if (err != StringConvOk) throw strus::stringconv_exception( err);
+	if (tid <= 0) throw strus::runtime_error( _TXT("failed to get or create type identifier: %s"), m_errorhnd->fetchError());
+	int tidx = tid-1;
+	if (tidx > (int)m_vecar.size()) throw strus::runtime_error( _TXT("failed to get or create type identifier: %s"), _TXT("data corruption"));
+	if (tidx == (int)m_vecar.size())
 	{
-		m_vecar.push_back( vec);
-		StringConvError err = StringConvOk;
-		m_namear.push_back( strus::utf8clean( name, err));
-		if (err != StringConvOk) throw strus::stringconv_exception( err);
+		m_vecar.push_back( std::vector<VectorDef>());
 	}
-	CATCH_ERROR_ARG1_MAP( _TXT("error adding feature to '%s': %s"), MODULENAME, *m_errorhnd);
+	int fid = m_nametab.getOrCreate(strus::utf8clean( name, err));
+	if (err != StringConvOk) throw strus::stringconv_exception( err);
+	if (fid <= 0) throw strus::runtime_error( _TXT("failed to get or create feature identifier: %s"), m_errorhnd->fetchError());
+	if (vec.empty())
+	{
+		m_vecar[ tidx].push_back( VectorDef( fid));
+	}
+	else
+	{
+		m_vecar[ tidx].push_back( VectorDef( vec, m_storage->model().simHash( vec, fid), fid));
+	}
+	m_featTypeRelations.insert( FeatureTypeRelation( fid, tid));
+	if (m_errorhnd->hasError()) throw std::runtime_error( m_errorhnd->fetchError());
 }
 
-void VectorStorageTransaction::defineFeatureConceptRelation( const std::string& relationTypeName, const Index& featidx, const Index& conidx)
+void VectorStorageTransaction::defineFeature( const std::string& type, const std::string& name)
 {
 	try
 	{
-		ConceptTypeMap::const_iterator ci = m_conceptTypeMap.find( relationTypeName);
-		unsigned int cidx;
-		if (ci == m_conceptTypeMap.end())
+		defineElement( type, name, WordVector());
+	}
+	CATCH_ERROR_ARG1_MAP( _TXT("error defining feature in '%s': %s"), MODULENAME, *m_errorhnd);
+}
+
+void VectorStorageTransaction::defineVector( const std::string& type, const std::string& name, const WordVector& vec)
+{
+	try
+	{
+		defineElement( type, name, vec);
+	}
+	CATCH_ERROR_ARG1_MAP( _TXT("error defining feature vector in '%s': %s"), MODULENAME, *m_errorhnd);
+}
+
+void VectorStorageTransaction::defineScalar( const std::string& name, double value)
+{
+	try
+	{
+		if (strus::caseInsensitiveEquals( name, "simdist"))
 		{
-			m_conceptTypeMap[ relationTypeName] = cidx = m_conceptFeatureRelationList.size();
-			m_conceptFeatureRelationList.push_back( Relation());
-			m_featureConceptRelationList.push_back( Relation());
+			if (value < 0.0) throw strus::runtime_error(_TXT("integer equal or bigger than 0 expected for %s"), "simdist");
+			m_simdist = value;
+		}
+		else if (strus::caseInsensitiveEquals( name, "probsimdist"))
+		{
+			if (value < 0.0) throw strus::runtime_error(_TXT("integer equal or bigger than 0 expected for %s"), "probsimdist");
+			m_probsimdist = value;
 		}
 		else
 		{
-			cidx = ci->second;
+			throw strus::runtime_error(_TXT("unknown name of scalar %s"), name.c_str());
 		}
-		m_conceptFeatureRelationList[ cidx].insert( RelationDef( conidx, featidx));
-		m_featureConceptRelationList[ cidx].insert( RelationDef( featidx, conidx));
 	}
-	CATCH_ERROR_ARG1_MAP( _TXT("error defining feature concept relation in '%s': %s"), MODULENAME, *m_errorhnd);
+	CATCH_ERROR_ARG1_MAP( _TXT("error defining scalar configuration parameter '%s': %s"), MODULENAME, *m_errorhnd);
+}
+
+void VectorStorageTransaction::clear()
+{
+	try
+	{
+		m_transaction->clear();
+	}
+	CATCH_ERROR_ARG1_MAP( _TXT("error clearing data to '%s': %s"), MODULENAME, *m_errorhnd);
+}
+
+void VectorStorageTransaction::reset()
+{
+	m_vecar.clear();
+	m_nametab.clear();
+	m_typetab.clear();
+	m_featTypeRelations.clear();
+	m_simdist = -1;
+	m_probsimdist = -1;
 }
 
 bool VectorStorageTransaction::commit()
@@ -74,81 +127,97 @@ bool VectorStorageTransaction::commit()
 		VectorStorageClient::TransactionLock lock( m_storage);
 		//... we need a lock because transactions need to be sequentialized
 
-		unsigned int lastSampleIdx = m_database->readNofSamples();
-		if (!m_vecar.empty())
+		Index noftypeno = m_database->readNofTypeno();
+		Index noffeatno = m_database->readNofFeatno();
+		std::set<Index> newtypes;
+		std::vector<int> types;
 		{
-			LshModel lshmodel( m_database->readLshModel());
-			std::vector<SimHash> samplear = strus::getSimhashValues( lshmodel, m_vecar, m_config.threads, m_errorhnd);
-			std::size_t si = 0, se = m_vecar.size();
-			for (; si != se; ++si)
+			int ti=1, te=m_typetab.size();
+			for (; ti <= te; ++ti)
 			{
-				m_transaction->writeSample( lastSampleIdx + si, m_namear[si], m_vecar[si], samplear[si]);
-			}
-			m_transaction->writeNofSamples( lastSampleIdx + si);
-		}
-		std::vector<std::string> clnames = m_database->readConceptClassNames();
-		std::set<std::string> clset( clnames.begin(), clnames.end());
-		bool conceptClassesUpdated = false;
-		ConceptTypeMap::const_iterator ti = m_conceptTypeMap.begin(), te = m_conceptTypeMap.end();
-		for (; ti != te; ++ti)
-		{
-			if (clset.find( ti->first) == clset.end())
-			{
-				clset.insert( ti->first);
-				conceptClassesUpdated = true;
-			}
-		}
-		if (conceptClassesUpdated)
-		{
-			m_transaction->writeConceptClassNames( std::vector<std::string>( clset.begin(), clset.end()));
-		}
-		ti = m_conceptTypeMap.begin();
-		for (; ti != te; ++ti)
-		{
-			{
-				const std::string& clname = ti->first;
-				const Relation& insertset = m_conceptFeatureRelationList[ ti->second];
-				Relation::const_iterator ri = insertset.begin(), re = insertset.end();
-				while (ri != re)
+				const char* typestr = m_typetab.key( ti);
+				Index typeno = m_database->readTypeno( typestr);
+				if (!typeno)
 				{
-					std::vector<SampleIndex> new_sar;
-					Relation::const_iterator rf = ri;
-					for (; ri != re && rf->first == ri->first; ++ri)
+					typeno = ++noftypeno;
+					m_transaction->writeType( typestr, typeno);
+					newtypes.insert( typeno);
+				}
+				types.push_back( typeno);
+			}
+		}
+		if (types.size() != m_vecar.size()) throw std::runtime_error(_TXT("logic error in vector transaction: array sizes do not match"));
+
+		std::vector<int> features;
+		{
+			int ni=1, ne=m_nametab.size();
+			for (; ni <= ne; ++ni)
+			{
+				const char* featstr = m_nametab.key( ni);
+				Index featno = m_database->readFeatno( featstr);
+				if (!featno)
+				{
+					featno = ++noffeatno;
+					m_transaction->writeFeature( featstr, featno);
+				}
+				features.push_back( featno);
+			}
+		}
+		m_transaction->writeNofTypeno( noftypeno);
+		m_transaction->writeNofFeatno( noffeatno);
+
+		std::vector<int>::const_iterator ti = types.begin(), te = types.end();
+		std::vector<std::vector<VectorDef> >::iterator vvi = m_vecar.begin(), vve = m_vecar.end();
+		for (; ti != te && vvi != vve; ++vvi,++ti)
+		{
+			const Index typeno = *ti;
+			Index nofvec = newtypes.find( typeno) == newtypes.end() ? m_database->readNofVectors( typeno) : 0;
+			std::set<Index> featset;
+			std::vector<VectorDef>& var = *vvi;
+			std::vector<VectorDef>::iterator vi = var.begin(), ve = var.end();
+			for (; vi != ve; ++vi)
+			{
+				Index featno = features[ vi->id()-1];
+				vi->setId( featno);
+				if (!vi->vec().empty())
+				{
+					if (m_database->readVector( typeno, featno).empty())
 					{
-						new_sar.push_back( ri->second);
+						// ... is new vector
+						featset.insert( featno);
 					}
-					std::vector<SampleIndex> old_sar = m_database->readConceptSampleIndices( clname, rf->first);
-					std::vector<SampleIndex> join_sar;
-					std::merge( new_sar.begin(), new_sar.end(), old_sar.begin(), old_sar.end(),  std::back_inserter( join_sar));
-					m_transaction->writeConceptSampleIndices( clname, rf->first, join_sar);
+					m_transaction->writeVector( typeno, featno, vi->vec());
+					m_transaction->writeSimHash( typeno, featno, vi->lsh());
 				}
 			}
+			m_transaction->writeNofVectors( typeno, nofvec + featset.size());
+		}
+		if (m_simdist >= 0 || m_probsimdist >= 0)
+		{
+			LshModel model = m_database->readLshModel();
+			if (m_simdist >= 0) model.set_simdist( m_simdist);
+			if (m_probsimdist >= 0) model.set_probsimdist( m_probsimdist);
+			m_transaction->writeLshModel( model);
+		}
+		std::set<FeatureTypeRelation>::const_iterator ri = m_featTypeRelations.begin(), re = m_featTypeRelations.end();
+		while (ri != re)
+		{
+			Index featnoidx = ri->featno;
+			Index featno = features[ featnoidx-1];
+			std::vector<Index> typenoar = m_database->readFeatureTypeRelations( featno);
+			for (; ri != re && ri->featno == featnoidx; ++ri)
 			{
-				const std::string& clname = ti->first;
-				const Relation& insertset = m_featureConceptRelationList[ti->second];
-				Relation::const_iterator ri = insertset.begin(), re = insertset.end();
-				while (ri != re)
+				Index typeno = types[ ri->typeno-1];
+				if (std::find( typenoar.begin(), typenoar.end(), typeno) == typenoar.end())
 				{
-					std::vector<SampleIndex> new_sar;
-					Relation::const_iterator rf = ri;
-					for (; ri != re && rf->first == ri->first; ++ri)
-					{
-						new_sar.push_back( ri->second);
-					}
-					std::vector<SampleIndex> old_sar = m_database->readSampleConceptIndices( clname, rf->first);
-					std::vector<SampleIndex> join_sar;
-					std::merge( new_sar.begin(), new_sar.end(), old_sar.begin(), old_sar.end(),  std::back_inserter(join_sar));
-					m_transaction->writeSampleConceptIndices( clname, rf->first, join_sar);
+					typenoar.push_back( typeno);
 				}
 			}
+			m_transaction->writeFeatureTypeRelations( featno, typenoar);
 		}
 		if (m_transaction->commit())
 		{
-			m_conceptTypeMap.clear();
-			m_conceptFeatureRelationList.clear();
-			m_featureConceptRelationList.clear();
-			m_vecar.clear();
-			m_namear.clear();
+			reset();
 			return true;
 		}
 		else
@@ -164,11 +233,7 @@ void VectorStorageTransaction::rollback()
 	try
 	{
 		m_transaction->rollback();
-		m_conceptTypeMap.clear();
-		m_conceptFeatureRelationList.clear();
-		m_featureConceptRelationList.clear();
-		m_vecar.clear();
-		m_namear.clear();
+		reset();
 	}
 	CATCH_ERROR_ARG1_MAP( _TXT("error in rollback of '%s' transaction: %s"), MODULENAME, *m_errorhnd);
 }

@@ -12,103 +12,101 @@
 #include "errorUtils.hpp"
 #include "internationalization.hpp"
 
-#define MODULENAME   "standard vector storage"
+#define MODULENAME   "vector storage"
 #undef STRUS_LOWLEVEL_DEBUG
 
 using namespace strus;
 
-VectorStorageSearch::VectorStorageSearch( const Reference<DatabaseAdapter>& database, const VectorStorageConfig& config_, const Index& range_from_, const Index& range_to_, ErrorBufferInterface* errorhnd_)
+VectorStorageSearch::VectorStorageSearch( const Reference<DatabaseAdapter>& database_, const LshModel& model_, const std::string& type, int indexPart, int nofParts, bool realVecWeights_, ErrorBufferInterface* errorhnd_)
 	:m_errorhnd(errorhnd_)
-	,m_config(config_)
-	,m_lshmodel(database->readLshModel())
-	,m_samplear(database->readSampleSimhashVector(range_from_,range_to_),1/*prob select random seed*/)
-	,m_database(m_config.with_realvecweights?database:Reference<DatabaseAdapter>())
-	,m_range_from(range_from_)
-	,m_range_to(range_to_)
-{}
-
-std::vector<VectorQueryResult> VectorStorageSearch::findSimilar( const std::vector<float>& vec, unsigned int maxNofResults) const
+	,m_lshmodel(model_)
+	,m_simhashar()
+	,m_typeno(database_->readTypeno( type))
+	,m_realVecWeights(realVecWeights_)
+	,m_database(database_)
 {
-	try
+	if (m_typeno)
 	{
-		if (m_config.with_realvecweights && m_database.get())
+		if (indexPart == 0 && nofParts == 0)
 		{
-			std::vector<VectorQueryResult> rt;
-			rt.reserve( maxNofResults * 2 + 10);
-
-			arma::fvec vv = arma::fvec( vec);
-			SimHash hash( m_lshmodel.simHash( arma::normalise( vv)));
-			if (m_config.gencfg.probdist)
-			{
-				rt = m_samplear.findSimilar( hash, m_config.maxdist, m_config.maxdist * m_config.gencfg.probdist / m_config.gencfg.simdist, maxNofResults * 2 + 10, m_range_from);
-			}
-			else
-			{
-				rt = m_samplear.findSimilar( hash, m_config.maxdist, maxNofResults * 2 + 10, m_range_from);
-			}
-			std::vector<VectorQueryResult>::iterator ri = rt.begin(), re = rt.end();
-			for (; ri != re; ++ri)
-			{
-				arma::fvec resvv( m_database->readSampleVector( ri->featidx()));
-				ri->setWeight( arma::norm_dot( vv, resvv));
-			}
-			std::sort( rt.begin(), rt.end(), std::greater<VectorQueryResult>());
-			rt.resize( maxNofResults);
-			return rt;
+			m_simhashar = SimHashMap( database_->readSimHashVector( m_typeno));
+		}
+		else if (indexPart >= nofParts || nofParts <= 0)
+		{
+			throw std::runtime_error(_TXT("logic error: incorrect arguments for index part in vector storage search constructor"));
 		}
 		else
 		{
-			SimHash hash( m_lshmodel.simHash( arma::normalise( arma::fvec( vec))));
-			if (m_config.gencfg.probdist)
-			{
-				return m_samplear.findSimilar( hash, m_config.maxdist, m_config.maxdist * m_config.gencfg.probdist / m_config.gencfg.simdist, maxNofResults, m_range_from);
-			}
-			else
-			{
-				return m_samplear.findSimilar( hash, m_config.maxdist, maxNofResults, m_range_from);
-			}
+			int nofVectors = database_->readNofVectors( m_typeno);
+			int maxPartSize = (nofVectors + nofParts - 1) / nofParts;
+			Index featnoStart = database_->readFeatnoStart( m_typeno, indexPart * maxPartSize);
+			m_simhashar = SimHashMap( database_->readSimHashVector( m_typeno, featnoStart, maxPartSize));
 		}
 	}
-	CATCH_ERROR_ARG1_MAP_RETURN( _TXT("error in similar vector search of '%s': %s"), MODULENAME, *m_errorhnd, std::vector<VectorQueryResult>());
 }
 
-std::vector<VectorQueryResult> VectorStorageSearch::findSimilarFromSelection( const std::vector<Index>& candidates, const std::vector<float>& vec, unsigned int maxNofResults) const
+VectorStorageSearch::~VectorStorageSearch()
+{}
+
+std::vector<VectorQueryResult> VectorStorageSearch::findSimilar( const WordVector& vec, int maxNofResults, double minSimilarity) const
 {
 	try
 	{
 		std::vector<VectorQueryResult> rt;
-		arma::fvec vv = arma::fvec( vec);
-		SimHash hash( m_lshmodel.simHash( arma::normalise( vv)));
+		rt.reserve( maxNofResults);
+		std::vector<SimHashMap::QueryResult> res;
 
-		if (m_config.with_realvecweights && m_database.get())
+		if (m_realVecWeights)
 		{
-			rt.reserve( maxNofResults * 2 + 10);
-			rt = m_samplear.findSimilarFromSelection( candidates, hash, m_config.maxdist, maxNofResults * 2 + 10, m_range_from);
+			res.reserve( maxNofResults * 2 + 10);
+
+			arma::fvec vv = arma::fvec( vec);
+			SimHash hash( m_lshmodel.simHash( arma::normalise( vv), 0));
+			if (m_lshmodel.probsimdist())
+			{
+				res = m_simhashar.findSimilar( hash, m_lshmodel.simdist(), m_lshmodel.probsimdist(), maxNofResults * 2 + 10);
+			}
+			else
+			{
+				res = m_simhashar.findSimilar( hash, m_lshmodel.simdist(), maxNofResults * 2 + 10);
+			}
+			std::vector<SimHashMap::QueryResult>::iterator ri = res.begin(), re = res.end();
+			for (; ri != re; ++ri)
+			{
+				arma::fvec resvv( m_database->readVector( m_typeno, ri->featno()));
+				ri->setWeight( arma::norm_dot( vv, resvv));
+			}
+			std::sort( res.begin(), res.end(), std::greater<SimHashMap::QueryResult>());
 		}
 		else
 		{
-			rt.reserve( maxNofResults);
-			rt = m_samplear.findSimilarFromSelection( candidates, hash, m_config.maxdist, maxNofResults, m_range_from);
-		}
-		if (m_config.with_realvecweights && m_database.get())
-		{
-			std::vector<VectorQueryResult>::iterator ri = rt.begin(), re = rt.end();
-			for (; ri != re; ++ri)
+			SimHash hash( m_lshmodel.simHash( arma::normalise( arma::fvec( vec)), 0));
+			if (m_lshmodel.probsimdist())
 			{
-				arma::fvec resvv( m_database->readSampleVector( ri->featidx()));
-				ri->setWeight( arma::norm_dot( vv, resvv));
+				res = m_simhashar.findSimilar( hash, m_lshmodel.simdist(), m_lshmodel.probsimdist(), maxNofResults);
 			}
-			std::sort( rt.begin(), rt.end(), std::greater<VectorQueryResult>());
-			rt.resize( maxNofResults);
+			else
+			{
+				res = m_simhashar.findSimilar( hash, m_lshmodel.simdist(), maxNofResults);
+			}
+		}
+		std::vector<SimHashMap::QueryResult>::const_iterator ri = res.begin(), re = res.end();
+		for (int ridx=0; ri != re && ridx < maxNofResults; ++ri,++ridx)
+		{
+			rt.push_back( VectorQueryResult( m_database->readFeatName( ri->featno()), ri->weight()));
+		}
+		if (m_errorhnd->hasError())
+		{
+			throw strus::runtime_error(_TXT("vector search failed: %s"), m_errorhnd->fetchError());
 		}
 		return rt;
 	}
-	CATCH_ERROR_ARG1_MAP_RETURN( _TXT("error in similar vector search from selection of '%s': %s"), MODULENAME, *m_errorhnd, std::vector<VectorQueryResult>());
+	CATCH_ERROR_ARG1_MAP_RETURN( _TXT("error in similar vector search of '%s': %s"), MODULENAME, *m_errorhnd, std::vector<VectorQueryResult>());
 }
 
 void VectorStorageSearch::close()
 {
-	m_database.reset();
+	m_database->close();
 }
 
 

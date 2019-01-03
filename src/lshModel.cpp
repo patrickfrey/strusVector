@@ -18,24 +18,24 @@ using namespace strus;
 
 
 LshModel::LshModel()
-	:m_dim(0),m_nofbits(0),m_variations(0)
+	:m_vecdim(0),m_bits(0),m_variations(0),m_simdist(0),m_probsimdist(0)
 	,m_modelMatrix(),m_rotations()
 {}
 
 LshModel::LshModel( const LshModel& o)
-	:m_dim(o.m_dim),m_nofbits(o.m_nofbits),m_variations(o.m_variations)
+	:m_vecdim(o.m_vecdim),m_bits(o.m_bits),m_variations(o.m_variations),m_simdist(o.m_simdist),m_probsimdist(o.m_probsimdist)
 	,m_modelMatrix(o.m_modelMatrix),m_rotations(o.m_rotations)
 {}
 
-LshModel::LshModel( std::size_t dim_, std::size_t nofbits_, std::size_t variations_)
-	:m_dim(dim_),m_nofbits(nofbits_),m_variations(variations_)
-	,m_modelMatrix( createModelMatrix( dim_, nofbits_)),m_rotations()
+LshModel::LshModel( int vecdim_, int bits_, int variations_, int simdist_, int probsimdist_)
+	:m_vecdim(vecdim_),m_bits(bits_),m_variations(variations_),m_simdist(simdist_),m_probsimdist(probsimdist_)
+	,m_modelMatrix( createModelMatrix( vecdim_, bits_)),m_rotations()
 {
-	std::size_t wi=0, we=variations_;
+	int wi=0, we=variations_;
 	for (; wi != we; ++wi)
 	{
-		arma::fmat rot( (arma::randu<arma::fmat>( m_dim, m_dim) -0.5) * 2.0);
-		if (arma::rank( rot, std::numeric_limits<float>::epsilon()) < m_dim)
+		arma::fmat rot( (arma::randu<arma::fmat>( m_vecdim, m_vecdim) -0.5) * 2.0);
+		if ((int)arma::rank( rot, std::numeric_limits<float>::epsilon()) < m_vecdim)
 		{
 			--wi;
 			continue;
@@ -44,14 +44,14 @@ LshModel::LshModel( std::size_t dim_, std::size_t nofbits_, std::size_t variatio
 	}
 }
 
-LshModel::LshModel( std::size_t dim_, std::size_t nofbits_, std::size_t variations_, const arma::fmat& modelMatrix_, const std::vector<arma::fmat>& rotations_)
-	:m_dim(dim_),m_nofbits(nofbits_),m_variations(variations_)
+LshModel::LshModel( int vecdim_, int bits_, int variations_, int simdist_, int probsimdist_, const arma::fmat& modelMatrix_, const std::vector<arma::fmat>& rotations_)
+	:m_vecdim(vecdim_),m_bits(bits_),m_variations(variations_),m_simdist(simdist_),m_probsimdist(probsimdist_)
 	,m_modelMatrix(modelMatrix_),m_rotations(rotations_)
 {
 	std::vector<arma::fmat>::const_iterator ri=m_rotations.begin(), re=m_rotations.end();
 	for (; ri != re; ++ri)
 	{
-		if (arma::rank( *ri, std::numeric_limits<float>::epsilon()) < m_dim)
+		if ((int)arma::rank( *ri, std::numeric_limits<float>::epsilon()) < m_vecdim)
 		{
 			throw std::runtime_error( _TXT( "illegal rotation matrix in model"));
 		}
@@ -73,8 +73,8 @@ static bool mat_isequal( const arma::fmat& m1, const arma::fmat& m2)
 
 bool LshModel::isequal( const LshModel& o) const
 {
-	if (m_dim != o.m_dim) return false;
-	if (m_nofbits != o.m_nofbits) return false;
+	if (m_vecdim != o.m_vecdim) return false;
+	if (m_bits != o.m_bits) return false;
 	if (m_variations != o.m_variations) return false;
 	if (!mat_isequal( m_modelMatrix, o.m_modelMatrix)) return false;
 	std::vector<arma::fmat>::const_iterator
@@ -87,26 +87,26 @@ bool LshModel::isequal( const LshModel& o) const
 	return ri == re && roi == roe;
 }
 
-arma::fmat LshModel::createModelMatrix( std::size_t dim_, std::size_t nofbits_)
+arma::fmat LshModel::createModelMatrix( int vecdim_, int bits_)
 {
-	if (dim_ <= 0 || nofbits_ <= 0)
+	if (vecdim_ <= 0 || bits_ <= 0)
 	{
-		throw std::runtime_error( "illegal dimension or nofbits");
+		throw std::runtime_error( "illegal dimension or number of bits");
 	}
-	if (dim_ < nofbits_)
+	if (vecdim_ < bits_)
 	{
-		throw std::runtime_error( "dimension must be at least two times bigger than nofbits");
+		throw std::runtime_error( "dimension must be at least two times bigger than bits");
 	}
-	double step = (float) dim_ / (float) nofbits_;
-	arma::fmat rt = arma::fmat( nofbits_, dim_);
-	std::size_t ri = 0, re = nofbits_;
+	double step = (float) vecdim_ / (float) bits_;
+	arma::fmat rt = arma::fmat( bits_, vecdim_);
+	int ri = 0, re = bits_;
 	for (; ri != re; ++ri)
 	{
-		unsigned int ci = (unsigned int)(ri * step);
-		unsigned int ce = (unsigned int)((ri+1) * step);
-		if (ce > dim_) ce = dim_;
-		if ((ri+1) == re) ce = dim_;
-		rt.row( ri).fill( -1.0 / (dim_ - (ce - ci)));
+		int ci = (unsigned int)(ri * step);
+		int ce = (unsigned int)((ri+1) * step);
+		if (ce > vecdim_) ce = vecdim_;
+		if ((ri+1) == re) ce = vecdim_;
+		rt.row( ri).fill( -1.0 / (vecdim_ - (ce - ci)));
 		double val = 1.0 / (ce - ci);
 		for (; ci < ce; ++ci)
 		{
@@ -119,7 +119,7 @@ arma::fmat LshModel::createModelMatrix( std::size_t dim_, std::size_t nofbits_)
 std::string LshModel::tostring() const
 {
 	std::ostringstream rt;
-	rt << "d=" << m_dim << ", n=" << m_nofbits << ", v=" << m_variations << std::endl;
+	rt << "d=" << m_vecdim << ", n=" << m_bits << ", v=" << m_variations << ", s=" << m_simdist  << ", p=" << m_probsimdist << std::endl;
 	std::vector<arma::fmat>::const_iterator roti = m_rotations.begin(), rote = m_rotations.end();
 	for (; roti != rote; ++roti)
 	{
@@ -129,12 +129,12 @@ std::string LshModel::tostring() const
 	return rt.str();
 }
 
-SimHash LshModel::simHash( const arma::fvec& vec) const
+SimHash LshModel::simHash( const arma::fvec& vec, const Index& id_) const
 {
 	std::vector<bool> rt;
-	if (m_dim != vec.size())
+	if (m_vecdim != (int)vec.size())
 	{
-		throw strus::runtime_error( _TXT("vector must have dimension of model: dim=%u != vector=%u"), (unsigned int)m_dim, (unsigned int)vec.size());
+		throw strus::runtime_error( _TXT("vector must have dimension of model: dim=%u != vector=%u"), (unsigned int)m_vecdim, (unsigned int)vec.size());
 	}
 	std::vector<arma::fmat>::const_iterator roti = m_rotations.begin(), rote = m_rotations.end();
 	for (; roti != rote; ++roti)
@@ -146,7 +146,7 @@ SimHash LshModel::simHash( const arma::fvec& vec) const
 			rt.push_back( *resi >= 0.0);
 		}
 	}
-	return SimHash( rt);
+	return SimHash( rt, id_);
 }
 
 union PackedFloat
@@ -158,53 +158,63 @@ union PackedFloat
 struct DumpStructHeader
 {
 	DumpStructHeader()
-		:dim(0),nofbits(0),variations(0){}
-	DumpStructHeader( std::size_t dim_, std::size_t nofbits_, std::size_t variations_)
-		:dim(dim_),nofbits(nofbits_),variations(variations_){}
+		:vecdim(0),bits(0),variations(0),simdist(0),probsimdist(0){}
+	DumpStructHeader( int vecdim_, int bits_, int variations_, int simdist_, int probsimdist_)
+		:vecdim(vecdim_),bits(bits_),variations(variations_),simdist(simdist_),probsimdist(probsimdist_){}
 	DumpStructHeader( const DumpStructHeader& o)
-		:dim(o.dim),nofbits(o.nofbits),variations(o.variations){}
+		:vecdim(o.vecdim),bits(o.bits),variations(o.variations),simdist(o.simdist),probsimdist(o.probsimdist){}
 
-	uint32_t dim;
-	uint32_t nofbits;
+	uint32_t vecdim;
+	uint32_t bits;
 	uint32_t variations;
+	uint32_t simdist;
+	uint32_t probsimdist;
 
 	void conv_hton()
 	{
-		dim = ByteOrder<uint32_t>::hton(dim);
-		nofbits = ByteOrder<uint32_t>::hton(nofbits);
+		vecdim = ByteOrder<uint32_t>::hton(vecdim);
+		bits = ByteOrder<uint32_t>::hton(bits);
 		variations = ByteOrder<uint32_t>::hton(variations);
+		simdist = ByteOrder<uint32_t>::hton(simdist);
+		probsimdist = ByteOrder<uint32_t>::hton(probsimdist);
 	}
 
 	void conv_ntoh()
 	{
-		dim = ByteOrder<uint32_t>::ntoh(dim);
-		nofbits = ByteOrder<uint32_t>::ntoh(nofbits);
+		vecdim = ByteOrder<uint32_t>::ntoh(vecdim);
+		bits = ByteOrder<uint32_t>::ntoh(bits);
 		variations = ByteOrder<uint32_t>::ntoh(variations);
+		simdist = ByteOrder<uint32_t>::ntoh(simdist);
+		probsimdist = ByteOrder<uint32_t>::ntoh(probsimdist);
 	}
 
 	void printSerialization( std::string& buf)
 	{
-		uint32_t ar[3];
-		ar[0] = ByteOrder<uint32_t>::hton(dim);
-		ar[1] = ByteOrder<uint32_t>::hton(nofbits);
+		uint32_t ar[5];
+		ar[0] = ByteOrder<uint32_t>::hton(vecdim);
+		ar[1] = ByteOrder<uint32_t>::hton(bits);
 		ar[2] = ByteOrder<uint32_t>::hton(variations);
-		buf.append( (char*)(void*)ar, 3*sizeof(uint32_t));
+		ar[3] = ByteOrder<uint32_t>::hton(simdist);
+		ar[4] = ByteOrder<uint32_t>::hton(probsimdist);
+		buf.append( (char*)(void*)ar, 5*sizeof(uint32_t));
 	}
 	void initFromSerialization( const char*& ser)
 	{
-		dim = ByteOrder<uint32_t>::ntoh(*(uint32_t*)(void*)ser); ser += sizeof(uint32_t);
-		nofbits = ByteOrder<uint32_t>::ntoh(*(uint32_t*)(void*)ser); ser += sizeof(uint32_t);
+		vecdim = ByteOrder<uint32_t>::ntoh(*(uint32_t*)(void*)ser); ser += sizeof(uint32_t);
+		bits = ByteOrder<uint32_t>::ntoh(*(uint32_t*)(void*)ser); ser += sizeof(uint32_t);
 		variations = ByteOrder<uint32_t>::ntoh(*(uint32_t*)(void*)ser); ser += sizeof(uint32_t);
+		simdist = ByteOrder<uint32_t>::ntoh(*(uint32_t*)(void*)ser); ser += sizeof(uint32_t);
+		probsimdist = ByteOrder<uint32_t>::ntoh(*(uint32_t*)(void*)ser); ser += sizeof(uint32_t);
 	}
 };
 
 struct DumpStruct
 	:public DumpStructHeader
 {
-	DumpStruct( std::size_t dim_, std::size_t nofbits_, std::size_t variations_)
-		:DumpStructHeader(dim_,nofbits_,variations_),ar(0),arsize(0)
+	DumpStruct( int vecdim_, int bits_, int variations_, int simdist_, int probsimdist_)
+		:DumpStructHeader(vecdim_,bits_,variations_,simdist_,probsimdist_),ar(0),arsize(0)
 	{
-		std::size_t nofFloats = (dim * nofbits) + (dim * dim * variations);
+		std::size_t nofFloats = (vecdim * bits) + (vecdim * vecdim * variations);
 		arsize = nofFloats;
 		ar = (uint32_t*)std::malloc( arsize * sizeof(ar[0]));
 		if (!ar) throw std::bad_alloc();
@@ -262,7 +272,7 @@ private:
 	}
 	std::size_t getValuePtrSize() const
 	{
-		std::size_t nofFloats = (dim * nofbits) + (dim * dim * variations);
+		std::size_t nofFloats = (vecdim * bits) + (vecdim * vecdim * variations);
 		if (arsize != nofFloats * 2) throw std::runtime_error( _TXT( "LSH model structure is corrupt"));
 		return arsize * sizeof(ar[0]);
 	}
@@ -309,7 +319,7 @@ private:
 std::string LshModel::serialization() const
 {
 	std::string rt;
-	DumpStruct st( m_dim, m_nofbits, m_variations);
+	DumpStruct st( m_vecdim, m_bits, m_variations, m_simdist, m_probsimdist);
 
 	std::size_t aidx = 0;
 	std::vector<arma::fmat>::const_iterator roti = m_rotations.begin(), rote = m_rotations.end();
@@ -337,7 +347,7 @@ LshModel LshModel::fromSerialization( const char* blob, std::size_t blobsize)
 	if (blobsize < sizeof( DumpStructHeader)) throw std::runtime_error( _TXT("lsh model dump is corrupt (dump header too small)"));
 	hdr.initFromSerialization( src);
 
-	DumpStruct st( hdr.dim, hdr.nofbits, hdr.variations);
+	DumpStruct st( hdr.vecdim, hdr.bits, hdr.variations, hdr.simdist, hdr.probsimdist);
 	if (st.contentAllocSize() > (blobsize - (src - blob)))
 	{
 		throw std::runtime_error( _TXT("LSH model dump is corrupt (dump too small)"));
@@ -345,13 +355,13 @@ LshModel LshModel::fromSerialization( const char* blob, std::size_t blobsize)
 	st.initValuesFromSerialization( src);
 	std::size_t ai=0, ae=st.nofValues();
 
-	arma::fmat modelMatrix( hdr.nofbits, hdr.dim);
+	arma::fmat modelMatrix( hdr.bits, hdr.vecdim);
 	std::vector<arma::fmat> rotations;
 
 	std::size_t ri=0, re=hdr.variations;
 	for (; ri != re; ++ri)
 	{
-		arma::fmat rot( hdr.dim, hdr.dim);
+		arma::fmat rot( hdr.vecdim, hdr.vecdim);
 		arma::fmat::iterator mi = rot.begin(), me=rot.end();
 		for (; mi != me; ++mi,++ai)
 		{
@@ -369,7 +379,7 @@ LshModel LshModel::fromSerialization( const char* blob, std::size_t blobsize)
 	{
 		throw std::runtime_error( _TXT( "lsh model dump is corrupt"));
 	}
-	return LshModel( hdr.dim, hdr.nofbits, hdr.variations, modelMatrix, rotations);
+	return LshModel( hdr.vecdim, hdr.bits, hdr.variations, hdr.simdist, hdr.probsimdist, modelMatrix, rotations);
 }
 
 LshModel LshModel::fromSerialization( const std::string& dump)

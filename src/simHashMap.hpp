@@ -20,15 +20,59 @@ namespace strus {
 class SimHashMap
 {
 public:
+	class QueryResult
+	{
+	public:
+		/// \brief Default constructor
+		QueryResult()
+			:m_featno(0),m_weight(0.0){}
+		/// \brief Copy constructor
+		QueryResult( const QueryResult& o)
+			:m_featno(o.m_featno),m_weight(o.m_weight){}
+		/// \brief Constructor
+		QueryResult( const Index& featno_, double weight_)
+			:m_featno(featno_),m_weight(weight_){}
+	
+		Index featno() const			{return m_featno;}
+		double weight() const			{return m_weight;}
+	
+		void setWeight( double weight_)		{m_weight = weight_;}
+	
+		bool operator < ( const QueryResult& o) const
+		{
+			if (m_weight + std::numeric_limits<double>::epsilon() < o.m_weight) return true;
+			if (m_weight - std::numeric_limits<double>::epsilon() > o.m_weight) return false;
+			return m_featno < o.m_featno;
+		}
+		bool operator > ( const QueryResult& o) const
+		{
+			if (m_weight + std::numeric_limits<double>::epsilon() < o.m_weight) return false;
+			if (m_weight - std::numeric_limits<double>::epsilon() > o.m_weight) return true;
+			return m_featno > o.m_featno;
+		}
+	
+	private:
+		Index m_featno;
+		double m_weight;
+	};
+
+	SimHashMap()
+		:m_ar(),m_selar1(0),m_selar2(0),m_select1(0),m_select2(0),m_vecsize(0),m_seed(0){}
 	SimHashMap( const SimHashMap& o)
-		:m_ar(o.m_ar),m_selar1(0),m_selar2(0),m_select1(0),m_select2(0),m_vecsize(0),m_seed(o.m_seed){initBench();}
-	SimHashMap( const std::vector<SimHash>& ar_, unsigned int seed_)
+		:m_ar(o.m_ar),m_selar1(0),m_selar2(0),m_select1(0),m_select2(0),m_vecsize(o.m_vecsize),m_seed(o.m_seed){initBench();}
+	explicit SimHashMap( const std::vector<SimHash>& ar_, int seed_=0)
 		:m_ar(ar_),m_selar1(0),m_selar2(0),m_select1(0),m_select2(0),m_vecsize(0),m_seed(seed_){initBench();}
 	~SimHashMap();
 
-	std::vector<VectorQueryResult> findSimilar( const SimHash& sh, unsigned short simdist, unsigned short prob_simdist, unsigned int maxNofElements, const Index& indexofs) const;
-	std::vector<VectorQueryResult> findSimilar( const SimHash& sh, unsigned short simdist, unsigned int maxNofElements, const Index& indexofs) const;
-	std::vector<VectorQueryResult> findSimilarFromSelection( const std::vector<Index>& selection, const SimHash& sh, unsigned short simdist, unsigned int maxNofElements, const Index& indexofs) const;
+	SimHashMap& operator=( const SimHashMap& o)
+	{
+		m_ar = o.m_ar; m_selar1 = 0; m_selar2 = 0; m_select1 = 0; m_select2 = 0; m_vecsize = o.m_vecsize; m_seed = o.m_seed;
+		initBench();
+		return *this;
+	}
+
+	std::vector<QueryResult> findSimilar( const SimHash& sh, unsigned short simdist, unsigned short prob_simdist, int maxNofElements) const;
+	std::vector<QueryResult> findSimilar( const SimHash& sh, unsigned short simdist, int maxNofElements) const;
 
 	const SimHash& operator[]( std::size_t idx) const	{return m_ar[idx];}
 
@@ -45,10 +89,10 @@ private:
 	std::vector<SimHash> m_ar;
 	uint64_t* m_selar1;
 	uint64_t* m_selar2;
-	unsigned int m_select1;
-	unsigned int m_select2;
-	unsigned int m_vecsize;
-	unsigned int m_seed;
+	int m_select1;
+	int m_select2;
+	int m_vecsize;
+	int m_seed;
 };
 
 }//namespace
