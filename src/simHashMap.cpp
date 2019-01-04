@@ -15,6 +15,8 @@
 #include <vector>
 #include <string>
 #include <stdexcept>
+#include <iostream>
+#include <sstream>
 
 using namespace strus;
 
