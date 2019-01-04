@@ -25,11 +25,11 @@ class VectorStorageSearch
 	:public VectorStorageSearchInterface
 {
 public:
-	VectorStorageSearch( const Reference<DatabaseAdapter>& database, const LshModel& model_, const std::string& type, int indexPart, int nofParts, bool realVecWeights, ErrorBufferInterface* errorhnd_);
+	VectorStorageSearch( const Reference<DatabaseAdapter>& database, const LshModel& model_, const std::string& type, int indexPart, int nofParts, ErrorBufferInterface* errorhnd_);
 
 	virtual ~VectorStorageSearch();
 
-	virtual std::vector<VectorQueryResult> findSimilar( const WordVector& vec, int maxNofResults, double minSimilarity) const;
+	virtual std::vector<VectorQueryResult> findSimilar( const WordVector& vec, int maxNofResults, double minSimilarity, bool realVecWeights) const;
 
 	virtual void close();
 
@@ -38,7 +38,6 @@ private:
 	LshModel m_lshmodel;
 	SimHashMap m_simhashar;
 	Index m_typeno;
-	bool m_realVecWeights;
 	Reference<DatabaseAdapter> m_database;
 };
 

@@ -17,12 +17,11 @@
 
 using namespace strus;
 
-VectorStorageSearch::VectorStorageSearch( const Reference<DatabaseAdapter>& database_, const LshModel& model_, const std::string& type, int indexPart, int nofParts, bool realVecWeights_, ErrorBufferInterface* errorhnd_)
+VectorStorageSearch::VectorStorageSearch( const Reference<DatabaseAdapter>& database_, const LshModel& model_, const std::string& type, int indexPart, int nofParts, ErrorBufferInterface* errorhnd_)
 	:m_errorhnd(errorhnd_)
 	,m_lshmodel(model_)
 	,m_simhashar()
 	,m_typeno(database_->readTypeno( type))
-	,m_realVecWeights(realVecWeights_)
 	,m_database(database_)
 {
 	if (m_typeno)
@@ -48,7 +47,7 @@ VectorStorageSearch::VectorStorageSearch( const Reference<DatabaseAdapter>& data
 VectorStorageSearch::~VectorStorageSearch()
 {}
 
-std::vector<VectorQueryResult> VectorStorageSearch::findSimilar( const WordVector& vec, int maxNofResults, double minSimilarity) const
+std::vector<VectorQueryResult> VectorStorageSearch::findSimilar( const WordVector& vec, int maxNofResults, double minSimilarity, bool realVecWeights) const
 {
 	try
 	{
@@ -56,7 +55,7 @@ std::vector<VectorQueryResult> VectorStorageSearch::findSimilar( const WordVecto
 		rt.reserve( maxNofResults);
 		std::vector<SimHashMap::QueryResult> res;
 
-		if (m_realVecWeights)
+		if (realVecWeights)
 		{
 			res.reserve( maxNofResults * 2 + 10);
 

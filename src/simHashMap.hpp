@@ -13,6 +13,7 @@
 #include "strus/vectorStorageSearchInterface.hpp"
 #include "simHash.hpp"
 #include <vector>
+#include <memory>
 
 namespace strus {
 
@@ -60,6 +61,10 @@ public:
 		:m_ar(),m_selar1(0),m_selar2(0),m_select1(0),m_select2(0),m_vecsize(0),m_seed(0){}
 	SimHashMap( const SimHashMap& o)
 		:m_ar(o.m_ar),m_selar1(0),m_selar2(0),m_select1(0),m_select2(0),m_vecsize(o.m_vecsize),m_seed(o.m_seed){initBench();}
+#if __cplusplus >= 201103L
+	explicit SimHashMap( std::vector<SimHash>&& ar_, int seed_=0)
+		:m_ar(std::move(ar_)),m_selar1(0),m_selar2(0),m_select1(0),m_select2(0),m_vecsize(0),m_seed(seed_){initBench();}
+#endif
 	explicit SimHashMap( const std::vector<SimHash>& ar_, int seed_=0)
 		:m_ar(ar_),m_selar1(0),m_selar2(0),m_select1(0),m_select2(0),m_vecsize(0),m_seed(seed_){initBench();}
 	~SimHashMap();

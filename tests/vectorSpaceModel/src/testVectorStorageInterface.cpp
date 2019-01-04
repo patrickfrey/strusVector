@@ -574,7 +574,7 @@ int main( int argc, const char** argv)
 					bool useRealWeights = (std::rand() % 2 == 1);
 
 					if (g_verbose) std::cerr << "create searcher for type '" << type << "' " << (useRealWeights?"with real weights":"with approximative weights only") << std::endl;
-					strus::local_ptr<strus::VectorStorageSearchInterface> searcher( storage->createSearcher( type, 0, 1, useRealWeights));
+					strus::local_ptr<strus::VectorStorageSearchInterface> searcher( storage->createSearcher( type, 0, 1));
 					if (!searcher.get())
 					{
 						throw std::runtime_error("failed to create searcher");
@@ -589,7 +589,7 @@ int main( int argc, const char** argv)
 						if (!di->vec.empty() && di->type == type)
 						{
 							if (g_verbose) std::cerr << "find similar of '" << di->feat << "'" << std::endl;
-							std::vector<strus::VectorQueryResult> simar = searcher->findSimilar( di->vec, 20/*maxNofResults*/, 0.9);
+							std::vector<strus::VectorQueryResult> simar = searcher->findSimilar( di->vec, 20/*maxNofResults*/, 0.9, useRealWeights);
 							std::vector<strus::VectorQueryResult> expect;
 							SimRel qry( di->feat, "");
 							std::map<SimRel,float>::const_iterator mi = simMatrix.upper_bound( qry);

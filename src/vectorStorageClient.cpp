@@ -28,11 +28,11 @@ VectorStorageClient::VectorStorageClient( const DatabaseInterface* database_, co
 	m_model = m_database->readLshModel();
 }
 
-VectorStorageSearchInterface* VectorStorageClient::createSearcher( const std::string& type, int indexPart, int nofParts, bool realVecWeights) const
+VectorStorageSearchInterface* VectorStorageClient::createSearcher( const std::string& type, int indexPart, int nofParts) const
 {
 	try
 	{
-		return new VectorStorageSearch( m_database, m_model, type, indexPart, nofParts, realVecWeights, m_errorhnd);
+		return new VectorStorageSearch( m_database, m_model, type, indexPart, nofParts, m_errorhnd);
 	}
 	CATCH_ERROR_ARG1_MAP_RETURN( _TXT("error in client interface of '%s' creating searcher: %s"), MODULENAME, *m_errorhnd, 0);
 }

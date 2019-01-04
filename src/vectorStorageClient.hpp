@@ -32,7 +32,7 @@ public:
 
 	virtual ~VectorStorageClient(){}
 
-	virtual VectorStorageSearchInterface* createSearcher( const std::string& type, int indexPart, int nofParts, bool realVecWeights) const;
+	virtual VectorStorageSearchInterface* createSearcher( const std::string& type, int indexPart, int nofParts) const;
 
 	virtual VectorStorageTransactionInterface* createTransaction();
 
