@@ -46,7 +46,7 @@ VectorStorageTransactionInterface* VectorStorageClient::createTransaction()
 	CATCH_ERROR_ARG1_MAP_RETURN( _TXT("error in client interface of '%s' creating transaction: %s"), MODULENAME, *m_errorhnd, 0);
 }
 
-std::vector<std::string> VectorStorageClient::getTypes() const
+std::vector<std::string> VectorStorageClient::types() const
 {
 	try
 	{
@@ -142,7 +142,7 @@ ValueIteratorInterface* VectorStorageClient::createFeatureValueIterator() const
 	CATCH_ERROR_ARG1_MAP_RETURN( _TXT("error in client interface of '%s' creating a feature value iterator: %s"), MODULENAME, *m_errorhnd, NULL);
 }
 
-std::vector<std::string> VectorStorageClient::getFeatureTypes( const std::string& featureValue) const
+std::vector<std::string> VectorStorageClient::featureTypes( const std::string& featureValue) const
 {
 	try
 	{

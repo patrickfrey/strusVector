@@ -506,7 +506,7 @@ int main( int argc, const char** argv)
 				}
 			}{
 				if (g_verbose) std::cerr << "test reading of types  ..." << std::endl;
-				std::vector<std::string> ftar = storage->getTypes();
+				std::vector<std::string> ftar = storage->types();
 				if ((int)ftar.size() != nofTypes)
 				{
 					throw std::runtime_error("stored number of feature types does not match");
@@ -526,7 +526,7 @@ int main( int argc, const char** argv)
 				for (; ni <= ne; ++ni)
 				{
 					std::string feat = getFeatureName( ni);
-					std::vector<std::string> types = storage->getFeatureTypes( feat);
+					std::vector<std::string> types = storage->featureTypes( feat);
 					std::map<strus::Index,std::vector<strus::Index> >::const_iterator fi = featureTypeRelMap.find( ni);
 					if (fi == featureTypeRelMap.end())
 					{

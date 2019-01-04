@@ -36,11 +36,11 @@ public:
 
 	virtual VectorStorageTransactionInterface* createTransaction();
 
-	virtual std::vector<std::string> getTypes() const;
+	virtual std::vector<std::string> types() const;
 
 	virtual ValueIteratorInterface* createFeatureValueIterator() const;
 
-	virtual std::vector<std::string> getFeatureTypes( const std::string& featureValue) const;
+	virtual std::vector<std::string> featureTypes( const std::string& featureValue) const;
 
 	virtual int nofVectors( const std::string& type) const;
 
