@@ -102,8 +102,8 @@ arma::fmat LshModel::createModelMatrix( int vecdim_, int bits_)
 	int ri = 0, re = bits_;
 	for (; ri != re; ++ri)
 	{
-		int ci = (unsigned int)(ri * step);
-		int ce = (unsigned int)((ri+1) * step);
+		int ci = (ri * step);
+		int ce = ((ri+1) * step);
 		if (ce > vecdim_) ce = vecdim_;
 		if ((ri+1) == re) ce = vecdim_;
 		rt.row( ri).fill( -1.0 / (vecdim_ - (ce - ci)));
@@ -134,7 +134,7 @@ SimHash LshModel::simHash( const arma::fvec& vec, const Index& id_) const
 	std::vector<bool> rt;
 	if (m_vecdim != (int)vec.size())
 	{
-		throw strus::runtime_error( _TXT("vector must have dimension of model: dim=%u != vector=%u"), (unsigned int)m_vecdim, (unsigned int)vec.size());
+		throw strus::runtime_error( _TXT("vector must have dimension of model: dim=%d != vector=%d"), m_vecdim, (int)vec.size());
 	}
 	std::vector<arma::fmat>::const_iterator roti = m_rotations.begin(), rote = m_rotations.end();
 	for (; roti != rote; ++roti)
@@ -323,7 +323,7 @@ std::string LshModel::serialization() const
 
 	std::size_t aidx = 0;
 	std::vector<arma::fmat>::const_iterator roti = m_rotations.begin(), rote = m_rotations.end();
-	for (unsigned int ridx=0; roti != rote; ++roti,++ridx)
+	for (; roti != rote; ++roti)
 	{
 		arma::fmat::const_iterator ri = roti->begin(), re = roti->end();
 		for (; ri != re; ++ri)
