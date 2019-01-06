@@ -522,6 +522,7 @@ void DatabaseAdapter::Transaction::writeSimHash( const Index& typeno, const Inde
 
 void DatabaseAdapter::close()
 {
+	m_database->compactDatabase();
 	m_database->close();
 }
 

@@ -323,7 +323,7 @@ int main( int argc, const char** argv)
 		{
 			(void)g_errorhnd->fetchError();
 		}
-		// Creating repository for vector space model:
+		// Creating the vector storage:
 		if (!sti->createStorage( configstr, dbi.get()))
 		{
 			throw std::runtime_error( g_errorhnd->fetchError());
