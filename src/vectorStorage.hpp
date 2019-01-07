@@ -51,7 +51,41 @@ public:
 		Config()
 			:vecdim(DefaultDim),bits(DefaultBits),variations(DefaultVariations),simdist(DefaultSim),probsimdist(DefaultProbSim){}
 		explicit Config( int vecdim_)
-			:vecdim(vecdim_),bits(DefaultBits),variations((vecdim_ * 10) / 93),simdist(vecdim_ + vecdim_/9),probsimdist(2 * vecdim_ + vecdim_/9){}
+			:vecdim(vecdim_)
+			,bits(bitsFromVecdim(vecdim_))
+			,variations(variationsFromVecdim(vecdim_))
+			,simdist(simdistFromVecdim(vecdim_))
+			,probsimdist(probsimdistFromVecdim(vecdim_/9))
+		{
+			while (vecdim/2 < bits && bits > 1)
+			{
+				bits /= 2;
+				variations *= 2;
+			}
+		}
+
+		static int bitsFromVecdim( int vecdim_)
+		{
+			int rt = 64;
+			while (vecdim_/2 < rt && rt > 1)
+			{
+				rt /= 2;
+			}
+			return rt;
+		}
+		static int variationsFromVecdim( int vecdim_)
+		{
+			int bits_ = bitsFromVecdim( vecdim_);
+			return (vecdim_ * 640) / (93 * bits_);
+		}
+		static int simdistFromVecdim( int vecdim_)
+		{
+			return (vecdim_ + vecdim_/9);
+		}
+		static int probsimdistFromVecdim( int vecdim_)
+		{
+			return (2 * vecdim_ + vecdim_/9);
+		}
 	};
 
 	VectorStorage( const std::string& workdir_, ErrorBufferInterface* errorhnd_);

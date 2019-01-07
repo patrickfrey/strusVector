@@ -95,7 +95,7 @@ arma::fmat LshModel::createModelMatrix( int vecdim_, int bits_)
 	}
 	if (vecdim_ < bits_)
 	{
-		throw std::runtime_error( "dimension must be at least two times bigger than bits");
+		throw std::runtime_error( "dimension must be at least two times bigger than the number of bits");
 	}
 	double step = (float) vecdim_ / (float) bits_;
 	arma::fmat rt = arma::fmat( bits_, vecdim_);
