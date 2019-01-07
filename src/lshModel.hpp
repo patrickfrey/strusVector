@@ -42,6 +42,18 @@ public:
 
 	bool isequal( const LshModel& o) const;
 
+	int vecdim() const
+	{
+		return m_vecdim;
+	}
+	int bits() const
+	{
+		return m_bits;
+	}
+	int variations() const
+	{
+		return m_variations;
+	}
 	int simdist() const
 	{
 		return m_simdist;

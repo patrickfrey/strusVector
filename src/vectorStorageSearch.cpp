@@ -28,7 +28,7 @@ VectorStorageSearch::VectorStorageSearch( const Reference<DatabaseAdapter>& data
 	{
 		if (indexPart == 0 && nofParts == 0)
 		{
-			m_simhashar = SimHashMap( database_->readSimHashVector( m_typeno));
+			m_simhashar = SimHashMap( database_->readSimHashVector( m_typeno), m_lshmodel.vecdim());
 		}
 		else if (indexPart >= nofParts || nofParts <= 0)
 		{
@@ -39,7 +39,7 @@ VectorStorageSearch::VectorStorageSearch( const Reference<DatabaseAdapter>& data
 			int nofVectors = database_->readNofVectors( m_typeno);
 			int maxPartSize = (nofVectors + nofParts - 1) / nofParts;
 			Index featnoStart = database_->readFeatnoStart( m_typeno, indexPart * maxPartSize);
-			m_simhashar = SimHashMap( database_->readSimHashVector( m_typeno, featnoStart, maxPartSize));
+			m_simhashar = SimHashMap( database_->readSimHashVector( m_typeno, featnoStart, maxPartSize), m_lshmodel.vecdim());
 		}
 	}
 }

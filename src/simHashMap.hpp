@@ -58,24 +58,36 @@ public:
 	};
 
 	SimHashMap()
-		:m_ar(),m_selar1(0),m_selar2(0),m_select1(0),m_select2(0),m_vecsize(0),m_seed(0){}
+		:m_ar(),m_selar1(0),m_selar2(0),m_select1(0),m_select2(0),m_vecdim(0),m_seed(0){}
 	SimHashMap( const SimHashMap& o)
-		:m_ar(o.m_ar),m_selar1(0),m_selar2(0),m_select1(0),m_select2(0),m_vecsize(o.m_vecsize),m_seed(o.m_seed){initBench();}
+		:m_ar(o.m_ar),m_selar1(0),m_selar2(0),m_select1(0),m_select2(0),m_vecdim(o.m_vecdim),m_seed(o.m_seed){initBench();}
 #if __cplusplus >= 201103L
-	explicit SimHashMap( std::vector<SimHash>&& ar_, int seed_=0)
-		:m_ar(std::move(ar_)),m_selar1(0),m_selar2(0),m_select1(0),m_select2(0),m_vecsize(0),m_seed(seed_){initBench();}
+	explicit SimHashMap( std::vector<SimHash>&& ar_, int vecdim_, int seed_=0)
+		:m_ar(std::move(ar_)),m_selar1(0),m_selar2(0),m_select1(0),m_select2(0),m_vecdim(vecdim_),m_seed(seed_){initBench();}
 #endif
-	explicit SimHashMap( const std::vector<SimHash>& ar_, int seed_=0)
-		:m_ar(ar_),m_selar1(0),m_selar2(0),m_select1(0),m_select2(0),m_vecsize(0),m_seed(seed_){initBench();}
+	explicit SimHashMap( const std::vector<SimHash>& ar_, int vecdim_, int seed_=0)
+		:m_ar(ar_),m_selar1(0),m_selar2(0),m_select1(0),m_select2(0),m_vecdim(vecdim_),m_seed(seed_){initBench();}
 	~SimHashMap();
 
 	SimHashMap& operator=( const SimHashMap& o)
 	{
-		m_ar = o.m_ar; m_selar1 = 0; m_selar2 = 0; m_select1 = 0; m_select2 = 0; m_vecsize = o.m_vecsize; m_seed = o.m_seed;
+		m_ar = o.m_ar; m_selar1 = 0; m_selar2 = 0; m_select1 = 0; m_select2 = 0; m_vecdim = o.m_vecdim; m_seed = o.m_seed;
 		initBench();
 		return *this;
 	}
-
+#if __cplusplus >= 201103L
+	SimHashMap& operator=( SimHashMap&& o)
+	{
+		m_ar = std::move(o.m_ar);
+		m_selar1 = o.m_selar1; o.m_selar1 = 0;
+		m_selar2 = o.m_selar2; o.m_selar2 = 0;
+		m_select1 = o.m_select1;
+		m_select2 = o.m_select2;
+		m_vecdim = o.m_vecdim;
+		m_seed = o.m_seed;
+		return *this;
+	}
+#endif
 	std::vector<QueryResult> findSimilar( const SimHash& sh, unsigned short simdist, unsigned short prob_simdist, int maxNofElements) const;
 	std::vector<QueryResult> findSimilar( const SimHash& sh, unsigned short simdist, int maxNofElements) const;
 
@@ -96,7 +108,7 @@ private:
 	uint64_t* m_selar2;
 	int m_select1;
 	int m_select2;
-	int m_vecsize;
+	int m_vecdim;
 	int m_seed;
 };
 

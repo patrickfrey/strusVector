@@ -29,7 +29,7 @@ SimHashMap::~SimHashMap()
 void SimHashMap::initBench()
 {
 	if (m_ar.empty()) return;
-	m_vecsize = m_ar[0].size();
+	int ar_size = m_ar[0].size();
 	int mod = m_ar[0].arsize();
 	if (mod > 1) mod -= 1;
 	m_select1 = (m_seed+0) % mod;
@@ -47,7 +47,7 @@ void SimHashMap::initBench()
 	int si = 0, se = m_ar.size();
 	for (; si != se; ++si)
 	{
-		if (m_ar[si].size() != m_vecsize) throw std::runtime_error( _TXT("inconsistent dataset passed to sim hash map (sim hash element sizes differ)"));
+		if (m_ar[si].size() != ar_size) throw std::runtime_error( _TXT("inconsistent dataset passed to sim hash map (sim hash element sizes differ)"));
 		m_selar1[ si] = m_ar[ si].ar()[ m_select1];
 		m_selar2[ si] = m_ar[ si].ar()[ m_select2];
 	}
@@ -210,7 +210,7 @@ std::vector<SimHashMap::QueryResult> SimHashMap::findSimilar( const SimHash& sh,
 	RankList ranklist( maxNofElements);
 	int ranklistSize = 0;
 	double prob_simdist_factor = (double)prob_simdist / (double)simdist;
-	int shdiff = ((int)prob_simdist * 64U) / m_vecsize;
+	int shdiff = ((int)prob_simdist * 64U) / m_vecdim;
 	uint64_t needle1 = sh.ar()[ m_select1];
 	uint64_t needle2 = sh.ar()[ m_select2];
 	int si = 0, se = m_ar.size();
@@ -231,7 +231,7 @@ std::vector<SimHashMap::QueryResult> SimHashMap::findSimilar( const SimHash& sh,
 						if (lastdist < dist)
 						{
 							simdist = lastdist;
-							shdiff = (int)(prob_simdist_factor * simdist * 64U) / m_vecsize;
+							shdiff = (int)(prob_simdist_factor * simdist * 64U) / m_vecdim;
 						}
 					}
 				}
