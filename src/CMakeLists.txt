@@ -5,6 +5,7 @@ cmake_minimum_required(VERSION 2.8 FATAL_ERROR)
 # --------------------------------------
 set( source_files
 	logger.cpp
+	armautils.cpp
 	${CMAKE_CURRENT_BINARY_DIR}/internationalization.cpp
 	simHash.cpp
 	simHashMap.cpp

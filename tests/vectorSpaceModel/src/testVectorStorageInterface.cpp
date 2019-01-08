@@ -51,6 +51,24 @@ static void initRandomNumberGenerator()
 	std::srand( seed+2);
 }
 
+static arma::fvec normalizeVector( const arma::fvec& vec)
+{
+	arma::fvec res = vec;
+	arma::fvec::const_iterator vi = vec.begin(), ve = vec.end();
+	double sqlen = 0.0;
+	for (; vi != ve; ++vi)
+	{
+		sqlen += *vi * *vi;
+	}
+	float normdiv = std::sqrt( sqlen);
+	arma::fvec::iterator ri = res.begin(), re = res.end();
+	for (; ri != re; ++ri)
+	{
+		*ri = *ri / normdiv;
+	}
+	return res;
+}
+
 static strus::WordVector convertVectorStd( const arma::fvec& vec)
 {
 	strus::WordVector rt;
@@ -113,14 +131,14 @@ static strus::WordVector createSimilarVector( const strus::WordVector& vec_, dou
 			}
 			break;
 		}
-		vec = arma::normalise( vec);
+		vec = normalizeVector( vec);
 	}
 	return convertVectorStd( vec);
 }
 
 strus::WordVector createRandomVector( unsigned int dim)
 {
-	return convertVectorStd( arma::normalise( arma::randu<arma::fvec>( dim))); // vector values between 0.0 and 1.0, with normalized vector length 1.0
+	return convertVectorStd( normalizeVector( arma::randu<arma::fvec>( dim))); // vector values between 0.0 and 1.0, with normalized vector length 1.0
 }
 
 static bool compareVector( const strus::WordVector& v1, const strus::WordVector& v2)
@@ -223,6 +241,23 @@ int main( int argc, const char** argv)
 {
 	try
 	{
+		{
+			// TEMPORARY INSERTED TEST 
+			arma::mat A = arma::randu<arma::mat>(4,5);
+			arma::mat B = arma::randu<arma::mat>(4,5);
+			arma::fvec F = arma::randu<arma::fvec>(300);
+			arma::fvec G = arma::randu<arma::fvec>(300);
+			std::cout << A*B.t() << std::endl;
+			std::cout << F << std::endl;
+			strus::WordVector Gar( convertVectorStd( normalizeVector( G)));
+			strus::WordVector::const_iterator wi = Gar.begin(), we = Gar.end();
+			for (; wi != we; ++wi)
+			{
+				std::cout << *wi << " ";
+			}
+			std::cout << std::endl;
+		}
+
 		int rt = 0;
 		g_errorhnd = strus::createErrorBuffer_standard( 0, 1, NULL/*debug trace interface*/);
 		if (!g_errorhnd) throw std::runtime_error("failed to create error buffer structure");
