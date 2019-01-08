@@ -11,6 +11,7 @@
 #include "strus/databaseInterface.hpp"
 #include "errorUtils.hpp"
 #include "internationalization.hpp"
+#include "armautils.hpp"
 
 #define MODULENAME   "vector storage"
 #undef STRUS_LOWLEVEL_DEBUG
@@ -60,7 +61,7 @@ std::vector<VectorQueryResult> VectorStorageSearch::findSimilar( const WordVecto
 			res.reserve( maxNofResults * 2 + 10);
 
 			arma::fvec vv = arma::fvec( vec);
-			SimHash hash( m_lshmodel.simHash( arma::normalise( vv), 0));
+			SimHash hash( m_lshmodel.simHash( strus::normalizeVector( vec), 0));
 			if (m_lshmodel.probsimdist())
 			{
 				res = m_simhashar.findSimilar( hash, m_lshmodel.simdist(), m_lshmodel.probsimdist(), maxNofResults * 2 + 10);
@@ -79,7 +80,7 @@ std::vector<VectorQueryResult> VectorStorageSearch::findSimilar( const WordVecto
 		}
 		else
 		{
-			SimHash hash( m_lshmodel.simHash( arma::normalise( arma::fvec( vec)), 0));
+			SimHash hash( m_lshmodel.simHash( strus::normalizeVector( vec), 0));
 			if (m_lshmodel.probsimdist())
 			{
 				res = m_simhashar.findSimilar( hash, m_lshmodel.simdist(), m_lshmodel.probsimdist(), maxNofResults);

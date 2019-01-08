@@ -12,6 +12,7 @@
 #include "strus/errorBufferInterface.hpp"
 #include "strus/databaseInterface.hpp"
 #include "strus/valueIteratorInterface.hpp"
+#include "armautils.hpp"
 #include "errorUtils.hpp"
 #include "internationalization.hpp"
 
@@ -223,7 +224,7 @@ WordVector VectorStorageClient::normalize( const WordVector& vec) const
 	{
 		WordVector rt;
 		rt.reserve( vec.size());
-		arma::fvec vv = arma::normalise( arma::fvec( vec));
+		arma::fvec vv = strus::normalizeVector( vec);
 		arma::fvec::const_iterator vi = vv.begin(), ve = vv.end();
 		for (; vi != ve; ++vi)
 		{

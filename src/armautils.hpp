@@ -9,10 +9,12 @@
 #ifndef _STRUS_VECTOR_ARMADILLO_UTILS_HPP_INCLUDED
 #define _STRUS_VECTOR_ARMADILLO_UTILS_HPP_INCLUDED
 #include "armadillo"
+#include "strus/wordVector.hpp"
 
 namespace strus {
 
 arma::fvec normalizeVector( const arma::fvec& vec);
+arma::fvec normalizeVector( const strus::WordVector& vec);
 
 }
 #endif

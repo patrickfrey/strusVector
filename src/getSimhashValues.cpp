@@ -16,6 +16,7 @@
 #include <memory>
 #include <iostream>
 #include "armadillo"
+#include "armautils.hpp"
 
 #undef STRUS_LOWLEVEL_DEBUG
 
@@ -28,7 +29,7 @@ static std::vector<SimHash> getSimhashValues_singlethread( const LshModel& lshmo
 	std::vector<VectorDef>::const_iterator si = vecar.begin(), se = vecar.end();
 	for (; si != se; ++si)
 	{
-		rt.push_back( lshmodel.simHash( arma::normalise( arma::fvec(si->vec())), si->id()));
+		rt.push_back( lshmodel.simHash( strus::normalizeVector( si->vec()), si->id()));
 	}
 	return rt;
 }
@@ -117,7 +118,7 @@ public:
 				std::size_t ai = 0, ae = chunk_arsize;
 				for (;ai != ae; ++ai)
 				{
-					chunk_resar[ ai] = m_lshModel->simHash( arma::normalise( arma::fvec( chunk_vecar[ ai].vec())), chunk_vecar[ ai].id());
+					chunk_resar[ ai] = m_lshModel->simHash( strus::normalizeVector( chunk_vecar[ ai].vec()), chunk_vecar[ ai].id());
 				}
 			}
 		}

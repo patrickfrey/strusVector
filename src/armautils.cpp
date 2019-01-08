@@ -10,9 +10,28 @@
 
 using namespace strus;
 
+
+arma::fvec strus::normalizeVector( const strus::WordVector& vec)
+{
+	arma::fvec res( vec);
+	WordVector::const_iterator vi = vec.begin(), ve = vec.end();
+	double sqlen = 0.0;
+	for (; vi != ve; ++vi)
+	{
+		sqlen += *vi * *vi;
+	}
+	float normdiv = std::sqrt( sqlen);
+	arma::fvec::iterator ri = res.begin(), re = res.end();
+	for (; ri != re; ++ri)
+	{
+		*ri = *ri / normdiv;
+	}
+	return res;
+}
+
 arma::fvec strus::normalizeVector( const arma::fvec& vec)
 {
-	arma::fvec res = vec;
+	arma::fvec res( vec);
 	arma::fvec::const_iterator vi = vec.begin(), ve = vec.end();
 	double sqlen = 0.0;
 	for (; vi != ve; ++vi)
