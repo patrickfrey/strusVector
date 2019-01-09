@@ -23,6 +23,7 @@
 #include "strus/base/local_ptr.hpp"
 #include "strus/base/string_format.hpp"
 #include "strus/base/numstring.hpp"
+#include "strus/base/pseudoRandom.hpp"
 #include "armadillo"
 #include <iostream>
 #include <sstream>
@@ -37,19 +38,8 @@
 #include <algorithm>
 
 #define VEC_EPSILON 1e-6
-bool g_verbose = false;
-
-static void initRandomNumberGenerator()
-{
-	time_t nowtime;
-	struct tm* now;
-
-	::time( &nowtime);
-	now = ::localtime( &nowtime);
-
-	unsigned int seed = (now->tm_year+10000) + (now->tm_mon+100) + (now->tm_mday+1);
-	std::srand( seed+2);
-}
+static bool g_verbose = false;
+static strus::PseudoRandom g_random;
 
 static arma::fvec normalizeVector( const arma::fvec& vec)
 {
@@ -67,6 +57,18 @@ static arma::fvec normalizeVector( const arma::fvec& vec)
 		*ri = *ri / normdiv;
 	}
 	return res;
+}
+
+static arma::fvec randomVector( int dim)
+{
+	strus::WordVector res;
+	int di = 0, de = dim;
+	for (; di != de; ++di)
+	{
+		float val = (1.0 * (float)g_random.get( 0, 10000)) / 10000.0;
+		res.push_back( val);
+	}
+	return arma::fvec( res);
 }
 
 static strus::WordVector convertVectorStd( const arma::fvec& vec)
@@ -107,9 +109,9 @@ static strus::WordVector createSimilarVector( const strus::WordVector& vec_, dou
 
 		for (ci=0; ci < NofChanges; ++ci)
 		{
-			int idx = rand() % vec.size();
+			int idx = g_random.get( 0, vec.size());
 			float elem = vec[ idx];
-			if ((rand() & 1) == 0)
+			if (g_random.get( 0, 2) == 0)
 			{
 				elem -= elem / 10;
 				if (elem < 0.0) continue;
@@ -138,7 +140,7 @@ static strus::WordVector createSimilarVector( const strus::WordVector& vec_, dou
 
 strus::WordVector createRandomVector( unsigned int dim)
 {
-	return convertVectorStd( normalizeVector( arma::randu<arma::fvec>( dim))); // vector values between 0.0 and 1.0, with normalized vector length 1.0
+	return convertVectorStd( normalizeVector( randomVector( dim))); // vector values between 0.0 and 1.0, with normalized vector length 1.0
 }
 
 static bool compareVector( const strus::WordVector& v1, const strus::WordVector& v2)
@@ -241,28 +243,9 @@ int main( int argc, const char** argv)
 {
 	try
 	{
-		{
-			// TEMPORARY INSERTED TEST 
-			arma::mat A = arma::randu<arma::mat>(4,5);
-			arma::mat B = arma::randu<arma::mat>(4,5);
-			arma::fvec F = arma::randu<arma::fvec>(300);
-			arma::fvec G = arma::randu<arma::fvec>(300);
-			std::cout << A*B.t() << std::endl;
-			std::cout << F << std::endl;
-			strus::WordVector Gar( convertVectorStd( normalizeVector( G)));
-			strus::WordVector::const_iterator wi = Gar.begin(), we = Gar.end();
-			for (; wi != we; ++wi)
-			{
-				std::cout << *wi << " ";
-			}
-			std::cout << std::endl;
-		}
-
 		int rt = 0;
 		g_errorhnd = strus::createErrorBuffer_standard( 0, 1, NULL/*debug trace interface*/);
 		if (!g_errorhnd) throw std::runtime_error("failed to create error buffer structure");
-
-		initRandomNumberGenerator();
 
 		std::string configstr( DEFAULT_CONFIG);
 		strus::Index nofTypes = 2;
@@ -382,16 +365,16 @@ int main( int argc, const char** argv)
 				strus::Index ni = 1, ne = nofFeatures;
 				for (; ni <= ne; ++ni)
 				{
-					if (std::rand() % 2 == 1)
+					if (g_random.get( 0, 2) == 1)
 					{
 						featureTypeRelMap[ ni].push_back( ti);
 						const char* gentype = "empty";
 
-						if (std::rand() % 2 == 1)
+						if (g_random.get( 0, 2) == 1)
 						{
-							if (std::rand() % modsim == 1 and !vec.empty())
+							if (g_random.get( 0, modsim) == 1 && !vec.empty())
 							{
-								float ff = (float)(std::rand() % 1000 + 1) / 1000.0;
+								float ff = (float)(g_random.get( 1, 1001)) / 1000.0;
 								float randsim = sim_cos + (1.0 - sim_cos) * ff;
 								vec = createSimilarVector( vec, randsim);
 								gentype = "similar";
@@ -441,7 +424,7 @@ int main( int argc, const char** argv)
 				{
 					transaction->defineVector( di->type, di->feat, di->vec);
 				}
-				if (std::rand() % 1000 == 1)
+				if (g_random.get( 0, 1000 == 1))
 				{
 					if (!transaction->commit())
 					{
@@ -606,7 +589,7 @@ int main( int argc, const char** argv)
 				for (; ti <= te; ++ti)
 				{
 					std::string type = getTypeName( ti);
-					bool useRealWeights = (std::rand() % 2 == 1);
+					bool useRealWeights = (g_random.get(0,2) == 1);
 
 					if (g_verbose) std::cerr << "create searcher for type '" << type << "' " << (useRealWeights?"with real weights":"with approximative weights only") << std::endl;
 					strus::local_ptr<strus::VectorStorageSearchInterface> searcher( storage->createSearcher( type, 0, 1));
