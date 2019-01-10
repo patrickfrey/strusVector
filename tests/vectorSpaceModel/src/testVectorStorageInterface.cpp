@@ -474,8 +474,11 @@ int main( int argc, const char** argv)
 							double sim = arma::norm_dot( arma::fvec(di->vec), arma::fvec(oi->vec));
 							if (di->feat == oi->feat && sim < 1.000 - VEC_EPSILON)
 							{
-								std::cerr << "vector 1: (" << wordVectorToString( di->vec, ", ", 10) << " ...)" << std::endl;
-								std::cerr << "vector 2: (" << wordVectorToString( oi->vec, ", ", 10) << " ...)" << std::endl;
+								std::cerr << "vector 1: (" << wordVectorToString( di->vec, ", ", 20) << " ...)" << std::endl;
+								std::cerr << "vector 2: (" << wordVectorToString( oi->vec, ", ", 20) << " ...)" << std::endl;
+								char sbuf[ 32];
+								std::snprintf( sbuf, sizeof(sbuf), "%.5f", (float)sim);
+								std::cerr << "similarity: " << sbuf << std::endl;
 								throw std::runtime_error("similarity to itself is not equal to 1");
 							}
 							if (sim > sim_cos)
