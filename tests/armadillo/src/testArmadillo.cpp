@@ -46,7 +46,7 @@ int main()
 					std::cerr << "vector: (";
 					for (int vi=0; vi<Dim; ++vi)
 					{
-						if (ii) std::cerr << ", ";
+						if (vi) std::cerr << ", ";
 						std::cerr << floatToString( vec[vi]);
 					}
 					std::cerr << ")" << std::endl;
