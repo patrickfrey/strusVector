@@ -10,7 +10,7 @@ pkgdesc='Library implementing the storage of a text search engine.'
 license=('MPL2')
 arch=('i686' 'x86_64')
 url="http://project-strus.net"
-depends=('boost>=1.57' 'boost-libs>=1.57' "strusbase>=${_deppkgver}" "strus>=${_deppkgver}" "strusanalyzer>=${_deppkgver}" "strustrace>=${_deppkgver}" "strusmodule>=${_deppkgver}" "blas" "lapack")
+depends=('boost>=1.57' 'boost-libs>=1.57' "strusbase>=${_deppkgver}" "strus>=${_deppkgver}" "strusanalyzer>=${_deppkgver}" "strustrace>=${_deppkgver}" "strusmodule>=${_deppkgver}" "blas" "lapack" "armadillo")
 makedepends=('cmake')
 source=("${pkgname}-${_mainpkgver}.tar.gz")
 

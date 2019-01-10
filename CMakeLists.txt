@@ -20,6 +20,7 @@ include( cmake/build_rules.cmake )
 include( cmake/boost.cmake )
 include( cmake/find_strus_package.cmake )
 include( cmake/find_leveldb.cmake )
+include( cmake/find_armadillo.cmake )
 include( cmake/link_rules.cmake )
 include( cmake/intl.cmake )
 include( cmake/libdl.cmake )
@@ -51,8 +52,6 @@ configure_file( "${PROJECT_SOURCE_DIR}/src_pageweight/pageweightdefs.hpp.in"  "$
 enable_testing()
 
 # Path declarations:
-set( ARMADILLO_INCLUDE_DIRS        "${CMAKE_CURRENT_BINARY_DIR}/3rdParty/armadillo/include"  "${PROJECT_SOURCE_DIR}/3rdParty/armadillo/include" )
-set( ARMADILLO_LIBRARY_DIRS        "${CMAKE_CURRENT_BINARY_DIR}/3rdParty/armadillo" )
 set( VECTOR_INCLUDE_DIRS             "${CMAKE_CURRENT_BINARY_DIR}/include"  "${PROJECT_SOURCE_DIR}/include" )
 set( VECTOR_LIBRARY_DIRS             "${CMAKE_CURRENT_BINARY_DIR}/src" )
 set( PAGEWEIGHT_INCLUDE_DIRS    "${CMAKE_CURRENT_BINARY_DIR}/src_pageweight" )

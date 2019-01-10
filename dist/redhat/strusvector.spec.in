@@ -272,15 +272,19 @@ BuildRequires: libboost_regex1_66_0-devel >= 1.66.0
 %if %{rhel} || %{centos} || %{scilin} || %{fedora}
 BuildRequires: blas-devel
 BuildRequires: lapack-devel
+BuildRequires: armadillo-devel
 Requires: blas
 Requires: lapack
+Requires: armadillo
 %endif
 %if %{suse}
 %if %{sles12} || %{osuleap423} || %{osutumbleweed}
 BuildRequires: blas-devel
 BuildRequires: lapack-devel
+BuildRequires: armadillo-devel
 Requires: blas
 Requires: lapack
+Requires: armadillo
 %endif
 %endif
 

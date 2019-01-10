@@ -7,7 +7,7 @@ Install Homebrew from http://brew.sh/:
 
 Install required packages:
 
-brew install cmake boost snappy leveldb lapack openblas
+brew install cmake boost snappy leveldb lapack openblas armadillo
 
 Install gettext with brew, draw necessary links:
 

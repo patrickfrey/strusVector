@@ -12,7 +12,8 @@ case $OS in
 			libleveldb-dev \
 			libatlas-dev \
 			liblapack-dev \
-			libblas-dev
+			libblas-dev \
+			libarmadillo-dev
 		sudo add-apt-repository -y ppa:kojoley/boost
 		sudo apt-get -q update
 		sudo apt-get install libboost-atomic1.58-dev libboost-thread1.58-dev libboost-system1.58-dev libboost-filesystem1.58-dev libboost-regex1.58-dev
@@ -32,6 +33,7 @@ case $OS in
 			leveldb \
 			lapack \
 			openblas \
+			armadillo \
 			|| true
 		# make sure cmake finds the brew version of gettext
 		brew link --force gettext || true

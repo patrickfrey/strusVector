@@ -11,7 +11,7 @@ Install packages with 'apt-get'/aptitude.
 ## Required packages
 	boost-all >= 1.57
 	snappy-dev leveldb-dev libuv-dev
-	libatlas-base-dev liblapack-dev libblas-dev
+	libatlas-base-dev liblapack-dev libblas-dev libarmadillo-dev
 
 # Strus prerequisite packages to install before
 	strusBase strus strusAnalyzer strusTrace strusModule
