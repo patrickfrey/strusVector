@@ -42,6 +42,7 @@ int main()
 				float sim = arma::norm_dot( vec, vec);
 				if (sim < 1.0 - VEC_EPSILON)
 				{
+					std::cerr << "arma::norm_dot failed for vector " << ii << std::endl;
 					throw std::runtime_error( std::string("similarity to itself not close enough to 1.0 as expected: ") + floatToString( sim));
 				}
 			}
