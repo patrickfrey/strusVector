@@ -38,10 +38,18 @@ int main()
 		{
 			for (int ii=0; ii<1000; ++ii)
 			{
+				enum {Dim=300};
 				arma::fvec vec = arma::randu<arma::fvec>( 300);
 				float sim = arma::norm_dot( vec, vec);
 				if (sim < 1.0 - VEC_EPSILON)
 				{
+					std::cerr << "vector: (";
+					for (int vi=0; vi<Dim; ++vi)
+					{
+						if (ii) std::cerr << ", ";
+						std::cerr << floatToString( vec[vi]);
+					}
+					std::cerr << ")" << std::endl;
 					std::cerr << "arma::norm_dot failed for vector " << ii << std::endl;
 					throw std::runtime_error( std::string("similarity to itself not close enough to 1.0 as expected: ") + floatToString( sim));
 				}
