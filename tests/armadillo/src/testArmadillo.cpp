@@ -9,7 +9,7 @@
 #include <cmath>
 #include <limits>
 
-#define VEC_EPSILON 1e-6
+#define VEC_EPSILON 1e-5
 
 static void initRandomNumberGenerator()
 {
