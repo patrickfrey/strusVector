@@ -95,6 +95,14 @@ if(APPLE)
   
   set(ARMA_USE_LAPACK true)
   set(ARMA_USE_BLAS   true)
+
+  include(ARMA_FindMKL)
+  include(ARMA_FindACMLMP)
+  include(ARMA_FindACML)
+  include( ARMA_FindOpenBLAS ) 
+  include( ARMA_FindATLAS )
+  include( ARMA_FindBLAS )
+  include( ARMA_FindLAPACK )
   
   set(ARMA_LIBS ${ARMA_LIBS} "-framework Accelerate")  # or "-framework accelerate" ?
   message(STATUS "MacOS X detected. Added '-framework Accelerate' to compiler flags")
