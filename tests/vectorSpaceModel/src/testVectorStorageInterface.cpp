@@ -393,16 +393,17 @@ int main( int argc, const char** argv)
 						defs.push_back( FeatureDef( getTypeName(ti), getFeatureName(ni), vec));
 						if (vec.empty())
 						{
-							if (g_verbose) std::cerr << "add feature (" << defs.back().type << "," << defs.back().feat << ") no vector" << std::endl;
+							if (g_verbose) std::cerr << strus::string_format( "add feature %s '%s' no vector", defs.back().type.c_str(),defs.back().feat.c_str()) << std::endl;
 						}
 						else
 						{
-							if (g_verbose) std::cerr << "add feature (" << defs.back().type << "," << defs.back().feat << ") vector " << gentype << " (" << wordVectorToString( defs.back().vec, ", ", 5) << ", ...)" << std::endl;
+							std::string vecstr = wordVectorToString( defs.back().vec, ", ", 6);
+							if (g_verbose) std::cerr << strus::string_format( "add feature %s '%s' vector %s (%s ...)", defs.back().type.c_str(),defs.back().feat.c_str(), gentype, vecstr.c_str()) << std::endl;
 						}
 					}
 				}
 			}
-			if (g_verbose) std::cerr << "build " << nofTypes << " types, " << nofFeatures << " features and " << nofVectors << " vectors." << std::endl;
+			if (g_verbose) std::cerr << strus::string_format( "build %d types, %d features and %d vectors.", nofTypes, nofFeatures, nofVectors) << std::endl;
 		}{
 			if (g_verbose) std::cerr << "insert test vectors ..." << std::endl;
 			strus::local_ptr<strus::VectorStorageTransactionInterface> transaction( storage->createTransaction());
@@ -440,13 +441,15 @@ int main( int argc, const char** argv)
 				throw std::runtime_error( "building example vector set failed");
 			}
 			++nofCommits;
-			if (g_verbose) std::cerr << "inserted " << nofVectors << " vectors, " << nofFeatures << " features, " << nofTypes << " types, in " << nofCommits << " commits." << std::endl;
+			if (g_verbose) std::cerr << strus::string_format( "inserted %d vectors, %d features, %d types, in %d commits.", nofVectors, nofFeatures, nofTypes, nofCommits) << std::endl;
 		}
-		typedef std::pair<std::string,std::string> SimRel;
-		typedef std::map<SimRel,float> SimMatrix;
+		typedef strus::VectorQueryResult SimFeat;
+		typedef std::vector<strus::VectorQueryResult> SimFeatList;
+		typedef std::map<std::string,SimFeatList> SimMatrix;
 		typedef std::map<std::string,SimMatrix> SimMatrixMap;
 		SimMatrixMap simMatrixMap;
 		int nofSimilarities = 0;
+		int nofSimilaritiesItself = 0;
 		{
 			// Create the real similarity matrix based on cosine distance of the sample vectors to verify the results:
 			if (g_verbose) std::cerr << "create similarity matrix ..." << std::endl;
@@ -476,9 +479,15 @@ int main( int argc, const char** argv)
 									++nofSimilarities;
 									char simstrbuf[ 32];
 									std::snprintf( simstrbuf, sizeof(simstrbuf), "%.5f", sim);
-									if (g_verbose) std::cerr << "type " << di->type << " insert similar vector of '" << di->feat << "': '" << oi->feat << "' similarity " << simstrbuf << std::endl;
+									if (g_verbose) std::cerr << strus::string_format( "type %s insert similar vector of '%s ': '%s' similarity %s", di->type.c_str(), di->feat.c_str(), oi->feat.c_str(), simstrbuf) << std::endl;
 								}
-								simMatrix.insert( SimMatrix::value_type( SimRel( di->feat, oi->feat), sim));
+								else
+								{
+									++nofSimilaritiesItself;
+									if (di->feat != oi->feat) throw std::runtime_error( "impossible state in sim matrix build");
+									if (g_verbose) std::cerr << strus::string_format( "type %s insert similarity to itself '%s'", di->type.c_str(), di->feat.c_str()) << std::endl; 
+								}
+								simMatrix[ di->feat].push_back( SimFeat( oi->feat, sim));
 							}
 							double vv = storage->vectorSimilarity( di->vec, oi->vec) - sim;
 							if (std::fabs(vv) > VEC_EPSILON)
@@ -489,7 +498,7 @@ int main( int argc, const char** argv)
 					}
 				}
 			}
-			if (g_verbose) std::cerr << "got " << (nofSimilarities/2) << "*2 (reflexive) similarities without similarities to itself counted" << std::endl;
+			if (g_verbose) std::cerr << strus::string_format( "got %d * 2 (reflexive) similarities without similarities to itself (%d) counted", (nofSimilarities/2), nofSimilaritiesItself) << std::endl;
 		}{
 			std::map<std::string,int> vectorcnt;
 			{
@@ -554,13 +563,13 @@ int main( int argc, const char** argv)
 						}
 						else
 						{
-							if (g_verbose) std::cerr << "number of types " << 0 << " does not match expected " << types.size() << std::endl;
+							if (g_verbose) std::cerr << strus::string_format( "number of types %d does not match expected %d", 0, (int)types.size()) << std::endl;
 							throw std::runtime_error("stored feature type relations do not match");
 						}
 					}
 					if (types.size() != fi->second.size())
 					{
-						if (g_verbose) std::cerr << "number of types " << fi->second.size() << " does not match expected " << types.size() << std::endl;
+						if (g_verbose) std::cerr << strus::string_format( "number of types %d does not match expected %d", (int)fi->second.size(), (int)types.size()) << std::endl;
 						throw std::runtime_error("stored feature type relations do not match");
 					}
 					nofRelations += types.size();
@@ -571,12 +580,14 @@ int main( int argc, const char** argv)
 						{
 							std::ostringstream typesbuf;
 							printArray( typesbuf, types, ", ");
-							if (g_verbose) std::cerr << "type " << getTypeName( *ri) << " not in relations {" << typesbuf.str() << "}" << std::endl;
+							std::string type = getTypeName( *ri);
+							std::string typeliststr = typesbuf.str();
+							if (g_verbose) std::cerr << strus::string_format( "type %s not in relations {%s}", type.c_str(), typeliststr.c_str()) << std::endl;
 							throw std::runtime_error("stored feature type relations do not match");
 						}
 					}
 				}
-				if (g_verbose) std::cerr << "checked " << nofFeatures << " with total " << nofRelations << " relations" << std::endl;
+				if (g_verbose) std::cerr << strus::string_format( "checked %d with total %d relations", nofFeatures, nofRelations) << std::endl;
 				if (g_errorhnd->hasError())
 				{
 					throw std::runtime_error( "error in test reading feature type relations");
@@ -591,7 +602,7 @@ int main( int argc, const char** argv)
 					std::string type = getTypeName( ti);
 					bool useRealWeights = (g_random.get(0,2) == 1);
 
-					if (g_verbose) std::cerr << "create searcher for type '" << type << "' " << (useRealWeights?"with real weights":"with approximative weights only") << std::endl;
+					if (g_verbose) std::cerr << strus::string_format( "create searcher for type '%s' %s", type.c_str(), useRealWeights?"with real weights":"with approximative weights only") << std::endl;
 					strus::local_ptr<strus::VectorStorageSearchInterface> searcher( storage->createSearcher( type, 0, 1));
 					if (!searcher.get())
 					{
@@ -606,14 +617,18 @@ int main( int argc, const char** argv)
 					{
 						if (!di->vec.empty() && di->type == type)
 						{
-							if (g_verbose) std::cerr << "find similar of '" << di->feat << "'" << std::endl;
+							if (g_verbose) std::cerr << strus::string_format( "find similar of '%s'",di->feat.c_str()) << std::endl;
 							std::vector<strus::VectorQueryResult> simar = searcher->findSimilar( di->vec, 20/*maxNofResults*/, 0.9, useRealWeights);
 							std::vector<strus::VectorQueryResult> expect;
-							SimRel qry( di->feat, "");
-							std::map<SimRel,float>::const_iterator mi = simMatrix.upper_bound( qry);
-							for (; mi != simMatrix.end() && mi->first.first == qry.first; ++mi)
+
+							SimMatrix::const_iterator mi = simMatrix.find( di->feat);
+							if (mi != simMatrix.end())
 							{
-								expect.push_back( strus::VectorQueryResult( mi->first.second, mi->second));
+								expect = mi->second;
+							}
+							else
+							{
+								throw std::runtime_error( strus::string_format( "expected vector query result is empty for %s '%s'", di->type.c_str(), di->feat.c_str()));
 							}
 							if (!compareResult( simar, expect, result_sim_cos)
 							||  !compareResult( expect, simar, result_sim_cos))
@@ -656,7 +671,7 @@ int main( int argc, const char** argv)
 				{
 					throw std::runtime_error( "error in test similarity search");
 				}
-				if (g_verbose) std::cerr << "performed " << nofSearchesWithRealWeights << " searches with real weights and " << nofSearchesWithApproxWeights << " searches with LSH approximation only." << std::endl;
+				if (g_verbose) std::cerr << strus::string_format( "performed %d searches with real weights and %d searches with LSH approximation only.", nofSearchesWithRealWeights, nofSearchesWithApproxWeights) << std::endl;
 			}
 		}
 		if (g_errorhnd->hasError())
