@@ -37,7 +37,7 @@
 #include <limits>
 #include <algorithm>
 
-#define VEC_EPSILON 1e-6
+#define VEC_EPSILON 1e-5
 static bool g_verbose = false;
 static strus::PseudoRandom g_random;
 
