@@ -13,6 +13,7 @@
 #include "internationalization.hpp"
 #include <vector>
 #include <string>
+#include <utility>
 
 namespace strus {
 
@@ -24,6 +25,11 @@ struct Functor_INV {static uint64_t call( uint64_t aa)			{return ~aa;}};
 /// \brief Structure for the similarity fingerprint used
 class SimHash
 {
+private:
+	enum {NofElementBits=64};
+	uint64_t* m_ar;
+	int m_size;
+	Index m_id;
 public:
 	SimHash()
 		:m_ar(0),m_size(0),m_id(0){}
@@ -31,7 +37,10 @@ public:
 	SimHash( const std::vector<bool>& bv, const Index& id_);
 	SimHash( int size_, bool initval, const Index& id_);
 	~SimHash();
-
+#if __cplusplus >= 201103L
+	SimHash( SimHash&& o) :m_ar(o.m_ar),m_size(o.m_size),m_id(o.m_id) {o.m_ar=0;o.m_size=0;}
+	//SimHash& operator=( SimHash&& o) {if (m_ar) std::free(m_ar); m_ar=std::move(o.m_ar); m_size=o.m_size; m_id=o.m_id; return *this;}
+#endif
 	/// \brief Get element value by index
 	bool operator[]( int idx) const;
 	/// \brief Get next 0 value index after idx
@@ -133,11 +142,6 @@ public:
 	/// \brief Get the size of the array used to represent the sim hash value
 	static int arsize( int size_)		{return (size_+NofElementBits-1)/NofElementBits;}
 
-private:
-	enum {NofElementBits=64};
-	uint64_t* m_ar;
-	int m_size;
-	Index m_id;
 };
 
 }//namespace

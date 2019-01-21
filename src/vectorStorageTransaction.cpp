@@ -130,6 +130,7 @@ bool VectorStorageTransaction::commit()
 		Index noftypeno = m_database->readNofTypeno();
 		Index noffeatno = m_database->readNofFeatno();
 		std::set<Index> newtypes;
+		std::vector<std::string> typestrings;
 		std::vector<int> types;
 		{
 			int ti=1, te=m_typetab.size();
@@ -144,6 +145,7 @@ bool VectorStorageTransaction::commit()
 					newtypes.insert( typeno);
 				}
 				types.push_back( typeno);
+				typestrings.push_back( typestr);
 			}
 		}
 		if (types.size() != m_vecar.size()) throw std::runtime_error(_TXT("logic error in vector transaction: array sizes do not match"));
@@ -215,6 +217,7 @@ bool VectorStorageTransaction::commit()
 			}
 			m_transaction->writeFeatureTypeRelations( featno, typenoar);
 		}
+		m_storage->resetSimHashMapTypes( typestrings);
 		if (m_transaction->commit())
 		{
 			reset();

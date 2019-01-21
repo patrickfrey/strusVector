@@ -13,6 +13,7 @@
 #include "strus/reference.hpp"
 #include "databaseAdapter.hpp"
 #include "lshModel.hpp"
+#include "simHashMap.hpp"
 #include "strus/base/thread.hpp"
 #include <vector>
 #include <string>
@@ -32,7 +33,9 @@ public:
 
 	virtual ~VectorStorageClient(){}
 
-	virtual VectorStorageSearchInterface* createSearcher( const std::string& type, int indexPart, int nofParts) const;
+	virtual void prepareSearch( const std::string& type);
+
+	virtual std::vector<VectorQueryResult> findSimilar( const std::string& type, const WordVector& vec, int maxNofResults, double minSimilarity, bool realVecWeights) const;
 
 	virtual VectorStorageTransactionInterface* createTransaction();
 
@@ -77,11 +80,20 @@ public:/*VectorStorageTransaction*/
 		return m_model;
 	}
 
+	void resetSimHashMapTypes( const std::vector<std::string>& types_);
+
+private:
+	strus::Reference<SimHashMap> getOrCreateTypeSimHashMap( const std::string& type) const;
+	strus::Reference<SimHashMap> getSimHashMap( const std::string& type) const;
+
 private:
 	ErrorBufferInterface* m_errorhnd;
 	Reference<DatabaseAdapter> m_database;
 	LshModel m_model;
-	bool m_with_realVecWeights;
+	typedef strus::Reference<SimHashMap> SimHashMapRef;
+	typedef std::map<std::string,SimHashMapRef> SimHashMapMap;
+	typedef strus::Reference<SimHashMapMap> SimHashMapMapRef;
+	mutable strus::Reference<SimHashMapMap> m_simHashMapMap;
 	strus::mutex m_transaction_mutex;	///< mutual exclusion in the critical part of a transaction
 };
 

@@ -8,6 +8,9 @@ set( source_files
 	armautils.cpp
 	${CMAKE_CURRENT_BINARY_DIR}/internationalization.cpp
 	simHash.cpp
+	simHashReader.cpp
+	simHashBench.cpp
+	simHashFilter.cpp
 	simHashMap.cpp
 	getSimhashValues.cpp
 	lshModel.cpp
@@ -16,7 +19,6 @@ set( source_files
 	vectorStorage.cpp
 	vectorStorageClient.cpp
 	vectorStorageDump.cpp
-	vectorStorageSearch.cpp
 	vectorStorageTransaction.cpp
 )
 

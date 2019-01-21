@@ -11,7 +11,6 @@
 #include "strus/lib/error.hpp"
 #include "strus/vectorStorageInterface.hpp"
 #include "strus/vectorStorageClientInterface.hpp"
-#include "strus/vectorStorageSearchInterface.hpp"
 #include "strus/vectorStorageTransactionInterface.hpp"
 #include "strus/databaseInterface.hpp"
 #include "strus/errorBufferInterface.hpp"
@@ -612,11 +611,6 @@ int main( int argc, const char** argv)
 					bool useRealWeights = (g_random.get(0,2) == 1);
 
 					if (g_verbose) std::cerr << strus::string_format( "create searcher for type '%s' %s", type.c_str(), useRealWeights?"with real weights":"with approximative weights only") << std::endl;
-					strus::local_ptr<strus::VectorStorageSearchInterface> searcher( storage->createSearcher( type, 0, 1));
-					if (!searcher.get())
-					{
-						throw std::runtime_error("failed to create searcher");
-					}
 					SimMatrixMap::const_iterator si = simMatrixMap.find( type);
 					if (si == simMatrixMap.end()) throw std::runtime_error( "logic error: sim matrix not defined");
 					const SimMatrix& simMatrix = si->second;
@@ -627,7 +621,11 @@ int main( int argc, const char** argv)
 						if (!di->vec.empty() && di->type == type)
 						{
 							if (g_verbose) std::cerr << strus::string_format( "find similar of '%s'",di->feat.c_str()) << std::endl;
-							std::vector<strus::VectorQueryResult> simar = searcher->findSimilar( di->vec, 20/*maxNofResults*/, 0.9, useRealWeights);
+							if (g_random.get(0,2) == 1)
+							{
+								storage->prepareSearch( type);
+							}
+							std::vector<strus::VectorQueryResult> simar = storage->findSimilar( type, di->vec, 20/*maxNofResults*/, 0.9, useRealWeights);
 							std::vector<strus::VectorQueryResult> expect;
 
 							SimMatrix::const_iterator mi = simMatrix.find( di->feat);
@@ -646,7 +644,7 @@ int main( int argc, const char** argv)
 								printResult( std::cerr, simar);
 								std::cerr << "expected:" << std::endl;
 								printResult( std::cerr, expect);
-								throw std::runtime_error("searcher result does not match");
+								throw std::runtime_error("search result does not match");
 							}
 							else if (simar.empty() || simar[0].weight() < 1.0 - VEC_EPSILON*10)
 							{

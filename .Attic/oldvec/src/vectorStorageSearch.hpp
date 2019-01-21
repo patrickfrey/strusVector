@@ -12,6 +12,7 @@
 #include "databaseAdapter.hpp"
 #include "simHashMap.hpp"
 
+#error DEPRECATED
 
 namespace strus {
 

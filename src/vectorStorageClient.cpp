@@ -7,11 +7,13 @@
  */
 /// \brief Implementation of the vector storage client interface
 #include "vectorStorageClient.hpp"
-#include "vectorStorageSearch.hpp"
 #include "vectorStorageTransaction.hpp"
 #include "strus/errorBufferInterface.hpp"
 #include "strus/databaseInterface.hpp"
 #include "strus/valueIteratorInterface.hpp"
+#include "simHashReader.hpp"
+#include "simHashQueryResult.hpp"
+#include "simHashRankList.hpp"
 #include "armautils.hpp"
 #include "errorUtils.hpp"
 #include "internationalization.hpp"
@@ -22,20 +24,71 @@
 using namespace strus;
 
 VectorStorageClient::VectorStorageClient( const DatabaseInterface* database_, const std::string& configstring_, ErrorBufferInterface* errorhnd_)
-	:m_errorhnd(errorhnd_),m_database(),m_model(),m_transaction_mutex()
+	:m_errorhnd(errorhnd_),m_database(),m_model(),m_simHashMapMap(),m_transaction_mutex()
 {
 	m_database.reset( new DatabaseAdapter( database_,configstring_,m_errorhnd));
 	m_database->checkVersion();
 	m_model = m_database->readLshModel();
 }
 
-VectorStorageSearchInterface* VectorStorageClient::createSearcher( const std::string& type, int indexPart, int nofParts) const
+void VectorStorageClient::prepareSearch( const std::string& type)
 {
 	try
 	{
-		return new VectorStorageSearch( m_database, m_model, type, indexPart, nofParts, m_errorhnd);
+		(void)getOrCreateTypeSimHashMap( type);
 	}
-	CATCH_ERROR_ARG1_MAP_RETURN( _TXT("error in client interface of '%s' creating searcher: %s"), MODULENAME, *m_errorhnd, 0);
+	CATCH_ERROR_ARG1_MAP( _TXT("error in client interface of '%s' preparing data structures for the vector search: %s"), MODULENAME, *m_errorhnd);
+}
+
+std::vector<VectorQueryResult> VectorStorageClient::findSimilar( const std::string& type, const WordVector& vec, int maxNofResults, double minSimilarity, bool realVecWeights) const
+{
+	try
+	{
+		std::vector<SimHashQueryResult> res;
+		strus::Reference<SimHashMap> simHashMap = getOrCreateTypeSimHashMap( type);
+		if (realVecWeights)
+		{
+			int maxNofSimResults = maxNofResults * 2 + 10;
+			if (maxNofSimResults > SimHashRankList::MaxSize)
+			{
+				if (maxNofResults > SimHashRankList::MaxSize)
+				{
+					throw strus::runtime_error( "%s",  _TXT( "maximum number of ranks is out of range"));
+				}
+				maxNofSimResults = SimHashRankList::MaxSize;
+			}
+			res.reserve( maxNofSimResults);
+
+			arma::fvec vv = arma::fvec( vec);
+			SimHash needle( m_model.simHash( strus::normalizeVector( vec), 0));
+			res = simHashMap->findSimilar( needle, m_model.simdist(), m_model.probsimdist(), maxNofSimResults);
+			std::vector<SimHashQueryResult>::iterator ri = res.begin(), re = res.end();
+			for (; ri != re; ++ri)
+			{
+				arma::fvec resvv( m_database->readVector( simHashMap->typeno(), ri->featno()));
+				ri->setWeight( arma::norm_dot( vv, resvv));
+			}
+			std::sort( res.begin(), res.end(), std::greater<SimHashQueryResult>());
+		}
+		else
+		{
+			SimHash needle( m_model.simHash( strus::normalizeVector( vec), 0));
+			res = simHashMap->findSimilar( needle, m_model.simdist(), m_model.probsimdist(), maxNofResults);
+		}
+
+		std::vector<VectorQueryResult> rt;
+		std::vector<SimHashQueryResult>::const_iterator ri = res.begin(), re = res.end();
+		for (int ridx=0; ri != re && ridx < maxNofResults && ri->weight() > minSimilarity; ++ri,++ridx)
+		{
+			rt.push_back( VectorQueryResult( m_database->readFeatName( ri->featno()), ri->weight()));
+		}
+		if (m_errorhnd->hasError())
+		{
+			throw strus::runtime_error(_TXT("vector search failed: %s"), m_errorhnd->fetchError());
+		}
+		return rt;
+	}
+	CATCH_ERROR_ARG1_MAP_RETURN( _TXT("error in client interface of '%s' in find similar: %s"), MODULENAME, *m_errorhnd, std::vector<VectorQueryResult>());
 }
 
 VectorStorageTransactionInterface* VectorStorageClient::createTransaction()
@@ -253,6 +306,71 @@ void VectorStorageClient::close()
 	CATCH_ERROR_ARG1_MAP( _TXT("error in client interface of '%s' closing this storage client: %s"), MODULENAME, *m_errorhnd);
 }
 
+void VectorStorageClient::resetSimHashMapTypes( const std::vector<std::string>& types_)
+{
+	if (!m_simHashMapMap.get()) return;
+
+	SimHashMapMapRef simHashMapMapRef = m_simHashMapMap;
+	std::vector<std::string>::const_iterator ti = types_.begin(), te = types_.end();
+	for (; ti != te; ++ti)
+	{
+		SimHashMapMap::const_iterator mi = simHashMapMapRef->find( *ti);
+		if (mi != simHashMapMapRef->end()) break;
+	}
+	if (ti != te)
+	{
+		SimHashMapMapRef simHashMapMapCopy( new SimHashMapMap( *simHashMapMapRef));
+		for (ti = types_.begin(); ti != te; ++ti)
+		{
+			simHashMapMapCopy->erase( *ti);
+		}
+		m_simHashMapMap = simHashMapMapCopy;
+	}
+}
+
+strus::Reference<SimHashMap> VectorStorageClient::getSimHashMap( const std::string& type) const
+{
+	if (!m_simHashMapMap.get()) return strus::Reference<SimHashMap>();
+
+	SimHashMapMapRef simHashMapMapRef = m_simHashMapMap;
+	SimHashMapMap::const_iterator mi = simHashMapMapRef->find( type);
+
+	if (mi == simHashMapMapRef->end())
+	{
+		return strus::Reference<SimHashMap>();
+	}
+	else
+	{
+		return mi->second;
+	}
+}
+
+strus::Reference<SimHashMap> VectorStorageClient::getOrCreateTypeSimHashMap( const std::string& type) const
+{
+	strus::Reference<SimHashMap> rt = getSimHashMap( type);
+	if (rt.get()) return rt;
+	strus::Index typeno = m_database->readTypeno( type);
+	if (!typeno) throw strus::runtime_error(_TXT("queried type is not defined: %s"), type.c_str());
+
+	strus::Reference<SimHashReaderInterface> reader( new SimHashReaderDatabase( m_database.get(), type));
+	strus::Reference<SimHashMap> simHashMapRef( new SimHashMap( reader, typeno));
+	simHashMapRef->load();
+
+	if (!m_simHashMapMap.get())
+	{
+		SimHashMapMapRef simHashMapMapCopy( new SimHashMapMap());
+		simHashMapMapCopy->insert( SimHashMapMap::value_type( type, simHashMapRef));
+		m_simHashMapMap = simHashMapMapCopy;
+	}
+	else
+	{
+		SimHashMapMapRef simHashMapMapRef = m_simHashMapMap;
+		SimHashMapMapRef simHashMapMapCopy( new SimHashMapMap( *simHashMapMapRef));
+		simHashMapMapCopy->insert( SimHashMapMap::value_type( type, simHashMapRef));
+		m_simHashMapMap = simHashMapMapCopy;
+	}
+	return simHashMapRef;
+}
 
 
 

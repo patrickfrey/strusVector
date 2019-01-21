@@ -12,7 +12,6 @@
 #include "strus/errorBufferInterface.hpp"
 #include "strus/vectorStorageClientInterface.hpp"
 #include "strus/vectorStorageTransactionInterface.hpp"
-#include "strus/vectorStorageSearchInterface.hpp"
 #include "strus/databaseInterface.hpp"
 #include "strus/base/utf8.hpp"
 #include "strus/base/fileio.hpp"

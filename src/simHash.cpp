@@ -96,16 +96,24 @@ SimHash::SimHash( const std::vector<bool>& bv, const Index& id_)
 
 SimHash& SimHash::operator=( const SimHash& o)
 {
-	if (m_size == 0)
+	m_id = o.m_id;
+	if (o.m_size == 0)
 	{
-		m_ar = (uint64_t*)std::malloc( SimHash_mallocSize(o.m_size));
-		m_size = o.m_size;
+		std::free( m_ar);
+		m_ar = 0;
+		m_size = 0;
+		return *this;
 	}
-	else if (size() != o.size())
+	if (m_size != 0 && m_size != o.m_size)
 	{
 		throw std::runtime_error( _TXT("assignment of incompatible sim hash"));
 	}
+	uint64_t* newar = (uint64_t*)std::malloc( SimHash_mallocSize(o.m_size));
+	if (!newar) throw std::bad_alloc();
+	std::free( m_ar);
+	m_ar = newar;
 	std::memcpy( m_ar, o.m_ar, SimHash_mallocSize(m_size));
+	m_size = o.m_size;
 	return *this;
 }
 

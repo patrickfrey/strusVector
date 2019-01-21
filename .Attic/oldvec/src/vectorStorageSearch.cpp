@@ -16,6 +16,8 @@
 #define MODULENAME   "vector storage"
 #undef STRUS_LOWLEVEL_DEBUG
 
+#error DEPRECATED
+
 using namespace strus;
 
 VectorStorageSearch::VectorStorageSearch( const Reference<DatabaseAdapter>& database_, const LshModel& model_, const std::string& type, int indexPart, int nofParts, ErrorBufferInterface* errorhnd_)
