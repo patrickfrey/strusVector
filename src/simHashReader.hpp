@@ -19,6 +19,7 @@ namespace strus {
 class SimHashReaderInterface
 {
 public:
+	virtual ~SimHashReaderInterface(){}
 	virtual const SimHash* loadFirst()=0;
 	virtual const SimHash* loadNext()=0;
 	virtual SimHash load( const Index& id) const=0;
@@ -30,6 +31,7 @@ class SimHashReaderDatabase
 {
 public:
 	SimHashReaderDatabase( const DatabaseAdapter* database_, const std::string& type_);
+	virtual ~SimHashReaderDatabase(){}
 
 	virtual const SimHash* loadFirst();
 	virtual const SimHash* loadNext();

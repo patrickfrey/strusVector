@@ -13,6 +13,7 @@
 #include "simHashFilter.hpp"
 #include "simHashReader.hpp"
 #include "simHashQueryResult.hpp"
+#include "simHashReader.hpp"
 #include <utility>
 #include <vector>
 
