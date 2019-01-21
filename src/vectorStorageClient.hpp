@@ -17,6 +17,7 @@
 #include "strus/base/thread.hpp"
 #include <vector>
 #include <string>
+#include <map>
 
 namespace strus {
 
