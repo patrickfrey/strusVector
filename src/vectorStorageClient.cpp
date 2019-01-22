@@ -48,6 +48,10 @@ std::vector<VectorQueryResult> VectorStorageClient::findSimilar( const std::stri
 		strus::Reference<SimHashMap> simHashMap = getOrCreateTypeSimHashMap( type);
 		if (realVecWeights)
 		{
+			if (minSimilarity < 0.0 || minSimilarity > 1.0)
+			{
+				throw std::runtime_error( _TXT( "min similarity parameter out of range"));
+			}
 			int maxNofSimResults = maxNofResults * 2 + 10;
 			if (maxNofSimResults > SimHashRankList::MaxSize)
 			{
@@ -61,7 +65,9 @@ std::vector<VectorQueryResult> VectorStorageClient::findSimilar( const std::stri
 
 			arma::fvec vv = arma::fvec( vec);
 			SimHash needle( m_model.simHash( strus::normalizeVector( vec), 0));
-			res = simHashMap->findSimilar( needle, m_model.simdist(), m_model.probsimdist(), maxNofSimResults);
+			int simdist = SimHashRankList::lshSimDistFromWeight( needle.size(), minSimilarity);
+			int probsimdist = ((double)m_model.probsimdist() / (double)m_model.simdist()) * simdist;
+			res = simHashMap->findSimilar( needle, simdist, probsimdist, maxNofSimResults);
 			std::vector<SimHashQueryResult>::iterator ri = res.begin(), re = res.end();
 			for (; ri != re; ++ri)
 			{

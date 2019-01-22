@@ -134,10 +134,22 @@ public:
 		return true;
 	}
 
-	std::vector<SimHashQueryResult> result( int width) const
+	static double weightFromLshSimDist( int nofLshBits, int simDist)
+	{
+		double width_f = ((double)nofLshBits / 4) * 5;
+		return 1.0 - (double)simDist / width_f;
+	}
+
+	static int lshSimDistFromWeight( int nofLshBits, double weight)
+	{
+		double width_f = ((double)nofLshBits / 4) * 5;
+		return (1.0 - weight) * width_f;
+	}
+
+	std::vector<SimHashQueryResult> result( int nofLshBits) const
 	{
 		std::vector<SimHashQueryResult> rt;
-		double width_f = ((double)width / 4) * 5;
+		double width_f = ((double)nofLshBits / 4) * 5;
 		int limit = m_nofRanks > m_maxNofRanks ? m_maxNofRanks:m_nofRanks;
 		for (int ridx=0; ridx<limit; ++ridx)
 		{
