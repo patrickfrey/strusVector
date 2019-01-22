@@ -36,7 +36,6 @@ void SimHashFilter::search( std::vector<SimHashSelect>& resbuf, const SimHash& n
 {
 	if (!m_nofBenches) return;
 	resbuf.reserve( SimHashBench::Size);
-	std::size_t residx = resbuf.size();
 
 	if (maxProbSimDist < maxSimDist)
 	{
@@ -49,21 +48,16 @@ void SimHashFilter::search( std::vector<SimHashSelect>& resbuf, const SimHash& n
 	double relProbSimDist = maxProbSimDist / m_elementArSize;
 	double probSimDistSumLimitDecr = (double)(maxProbSimDist - maxSimDist) / (double)(m_elementArSize * 2);
 
-	int simHashIdx = 0;
+	std::size_t si = 0, se = m_benchar[ 0].size();
+	for (; si != se; ++si)
 	{
-		SimHashBenchArray::const_iterator si = m_benchar[ simHashIdx].begin(), se = m_benchar[ simHashIdx].end();
-		for (; si != se; ++si)
+		std::size_t residx = resbuf.size();
+		std::size_t bi = 0, be = m_nofBenches;
+		m_benchar[ bi][ si].search( resbuf, needle.ar()[ bi], relProbSimDist);
+		for (++bi; bi != be; ++bi)
 		{
-			si->search( resbuf, needle.ar()[ simHashIdx], relProbSimDist);
-		}
-	}
-	for (++simHashIdx; simHashIdx < m_nofBenches; ++simHashIdx)
-	{
-		int relSumSimDist = (simHashIdx+1) * relProbSimDist - simHashIdx * probSimDistSumLimitDecr;
-		SimHashBenchArray::const_iterator si = m_benchar[ simHashIdx].begin(), se = m_benchar[ simHashIdx].end();
-		for (; si != se; ++si)
-		{
-			si->filter( resbuf, residx, needle.ar()[ simHashIdx], relProbSimDist, relSumSimDist);
+			int relSumSimDist = (bi+1) * relProbSimDist - bi * probSimDistSumLimitDecr;
+			m_benchar[ bi][ si].filter( resbuf, residx, needle.ar()[ bi], relProbSimDist, relSumSimDist);
 		}
 	}
 }

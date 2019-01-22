@@ -101,8 +101,10 @@ void SimHashBench::filter( std::vector<SimHashSelect>& resbuf, std::size_t resid
 		SimHashSelect& sel = resbuf[ srcidx];
 		std::size_t aridx = (std::size_t)sel.idx - m_startIdx;
 
-		if (sel.idx < m_startIdx || aridx >= m_arsize) throw std::runtime_error(_TXT("array bound read in SimHashBench::filter"));
-
+		if (sel.idx < m_startIdx || aridx >= m_arsize)
+		{
+			throw strus::runtime_error(_TXT("array bound read in %s"), "SimHashBench::filter");
+		}
 		int simDist = strus::BitOperations::bitCount( m_ar[ aridx] ^ needle);
 		int sumSimDist = simDist + sel.shdiff;
 

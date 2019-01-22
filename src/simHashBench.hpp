@@ -101,6 +101,15 @@ public:
 	const_iterator begin() const		{return m_ar.begin();}
 	const_iterator end() const		{return m_ar.end();}
 
+	std::size_t size() const
+	{
+		return m_ar.size();
+	}
+	const SimHashBench& operator[]( std::size_t idx) const
+	{
+		return m_ar[ idx];
+	}
+
 private:
 	std::vector<SimHashBench> m_ar;
 };
