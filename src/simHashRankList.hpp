@@ -137,7 +137,7 @@ public:
 	std::vector<SimHashQueryResult> result( int width) const
 	{
 		std::vector<SimHashQueryResult> rt;
-		double width_f = width;
+		double width_f = ((double)width / 4) * 5;
 		int limit = m_nofRanks > m_maxNofRanks ? m_maxNofRanks:m_nofRanks;
 		for (int ridx=0; ridx<limit; ++ridx)
 		{

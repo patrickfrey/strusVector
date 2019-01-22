@@ -482,7 +482,7 @@ int main( int argc, const char** argv)
 							}
 							if (sim > sim_cos)
 							{
-								if (di->type != oi->type || di->feat != oi->feat)
+								if (di->feat != oi->feat)
 								{
 									++nofSimilarities;
 									char simstrbuf[ 32];
@@ -609,8 +609,11 @@ int main( int argc, const char** argv)
 				{
 					std::string type = getTypeName( ti);
 					bool useRealWeights = (g_random.get(0,2) == 1);
-
-					if (g_verbose) std::cerr << strus::string_format( "create searcher for type '%s' %s", type.c_str(), useRealWeights?"with real weights":"with approximative weights only") << std::endl;
+					if (g_random.get(0,2) == 1)
+					{
+						storage->prepareSearch( type);
+					}
+					if (g_verbose) std::cerr << strus::string_format( "search for type '%s' %s", type.c_str(), useRealWeights?"with real weights":"with approximative weights only") << std::endl;
 					SimMatrixMap::const_iterator si = simMatrixMap.find( type);
 					if (si == simMatrixMap.end()) throw std::runtime_error( "logic error: sim matrix not defined");
 					const SimMatrix& simMatrix = si->second;
@@ -621,10 +624,6 @@ int main( int argc, const char** argv)
 						if (!di->vec.empty() && di->type == type)
 						{
 							if (g_verbose) std::cerr << strus::string_format( "find similar of '%s'",di->feat.c_str()) << std::endl;
-							if (g_random.get(0,2) == 1)
-							{
-								storage->prepareSearch( type);
-							}
 							std::vector<strus::VectorQueryResult> simar = storage->findSimilar( type, di->vec, 20/*maxNofResults*/, 0.9, useRealWeights);
 							std::vector<strus::VectorQueryResult> expect;
 

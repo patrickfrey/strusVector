@@ -27,6 +27,11 @@ struct SimHashSelect
 		:idx(idx_),shdiff(shdiff_){}
 	SimHashSelect( const SimHashSelect& o)
 		:idx(o.idx),shdiff(o.shdiff){}
+
+	bool operator < ( const SimHashSelect& o) const
+	{
+		return shdiff == o.shdiff ? idx < o.idx : shdiff < o.shdiff;
+	}
 };
 
 
@@ -52,10 +57,10 @@ public:
 	void append( const SimHash* sar, std::size_t sarsize, int simHashIdx);
 
 	/// \param[out] resbuf buffer where to append result to
-	void search( std::vector<SimHashSelect>& resbuf, uint64_t needle, int simHashIdx, int maxSimDist) const;
+	void search( std::vector<SimHashSelect>& resbuf, uint64_t needle, int maxSimDist) const;
 
 	/// \param[in,out] resbuf buffer with result to filter
-	void filter( std::vector<SimHashSelect>& resbuf, std::size_t residx, uint64_t needle, int simHashIdx, int maxSimDist, int maxSumSimDist) const;
+	void filter( std::vector<SimHashSelect>& resbuf, std::size_t residx, uint64_t needle, int maxSimDist, int maxSumSimDist) const;
 
 	std::size_t size() const
 	{

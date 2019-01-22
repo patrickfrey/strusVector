@@ -46,15 +46,15 @@ void SimHashFilter::search( std::vector<SimHashSelect>& resbuf, const SimHash& n
 	{
 		throw strus::runtime_error(_TXT("search of LSH value with different size than stored in similarity hash filter: %d != %d"), m_elementArSize, (int)needle.arsize());
 	}
-	int relProbSimDist = maxProbSimDist / m_nofBenches;
-	int probSimDistSumLimitDecr = (maxProbSimDist - maxSimDist) / m_elementArSize;
+	double relProbSimDist = maxProbSimDist / m_elementArSize;
+	double probSimDistSumLimitDecr = (double)(maxProbSimDist - maxSimDist) / (double)(m_elementArSize * 2);
 
 	int simHashIdx = 0;
 	{
 		SimHashBenchArray::const_iterator si = m_benchar[ simHashIdx].begin(), se = m_benchar[ simHashIdx].end();
 		for (; si != se; ++si)
 		{
-			si->search( resbuf, needle.ar()[ simHashIdx], simHashIdx, relProbSimDist);
+			si->search( resbuf, needle.ar()[ simHashIdx], relProbSimDist);
 		}
 	}
 	for (++simHashIdx; simHashIdx < m_nofBenches; ++simHashIdx)
@@ -63,15 +63,15 @@ void SimHashFilter::search( std::vector<SimHashSelect>& resbuf, const SimHash& n
 		SimHashBenchArray::const_iterator si = m_benchar[ simHashIdx].begin(), se = m_benchar[ simHashIdx].end();
 		for (; si != se; ++si)
 		{
-			si->filter( resbuf, residx, needle.ar()[ simHashIdx], simHashIdx, relProbSimDist, relSumSimDist);
+			si->filter( resbuf, residx, needle.ar()[ simHashIdx], relProbSimDist, relSumSimDist);
 		}
 	}
 }
 
 int SimHashFilter::maxProbSumDist( int maxSimDist, int maxProbSimDist) const
 {
-	int relProbSimDist = maxProbSimDist / m_nofBenches;
-	int probSimDistSumLimitDecr = (maxProbSimDist - maxSimDist) / m_elementArSize;
+	double relProbSimDist = (double)maxProbSimDist / (double)m_elementArSize;
+	double probSimDistSumLimitDecr = (double)(maxProbSimDist - maxSimDist) / (double)(m_elementArSize * 2);
 	return (m_nofBenches) * relProbSimDist - (m_nofBenches-1) * probSimDistSumLimitDecr;
 }
 

@@ -54,12 +54,8 @@ void SimHashBench::append( const SimHash* sar, std::size_t sarSize, int simHashI
 	int simHashSize = sar[ 0].arsize();
 	if (simHashIdx >= simHashSize) throw strus::runtime_error(_TXT("simhash index out of range: %d >= %d"), simHashIdx, simHashSize);
 
-	std::size_t ai = 0, ae = Size;
-	if (m_arsize + sarSize < Size)
-	{
-		ae = sarSize;
-	}
-	else if (m_arsize + sarSize > Size)
+	std::size_t ai = 0, ae = sarSize;
+	if (m_arsize + sarSize > Size)
 	{
 		throw strus::runtime_error( _TXT("number of elements %d written exceeds size of structure %d"), (int)(m_arsize + sarSize), (int)Size);
 	}
@@ -83,12 +79,12 @@ void SimHashBench::fill( const SimHash* sar, std::size_t sarSize, int simHashIdx
 }
 
 
-void SimHashBench::search( std::vector<SimHashSelect>& resbuf, uint64_t needle, int simHashIdx, int maxSimDist) const
+void SimHashBench::search( std::vector<SimHashSelect>& resbuf, uint64_t needle, int maxSimDist) const
 {
 	std::size_t ai = 0, ae = m_arsize;
 	for (; ai != ae; ++ai)
 	{
-		int simDist = strus::BitOperations::bitCount( m_ar[ simHashIdx] ^ needle);
+		int simDist = strus::BitOperations::bitCount( m_ar[ ai] ^ needle);
 		if (simDist <= maxSimDist)
 		{
 			resbuf.push_back( SimHashSelect( m_startIdx + ai, simDist));
@@ -96,7 +92,7 @@ void SimHashBench::search( std::vector<SimHashSelect>& resbuf, uint64_t needle, 
 	}
 }
 
-void SimHashBench::filter( std::vector<SimHashSelect>& resbuf, std::size_t residx, uint64_t needle, int simHashIdx, int maxSimDist, int maxSumSimDist) const
+void SimHashBench::filter( std::vector<SimHashSelect>& resbuf, std::size_t residx, uint64_t needle, int maxSimDist, int maxSumSimDist) const
 {
 	std::size_t destidx = residx;
 	std::size_t srcidx = residx;
@@ -107,7 +103,7 @@ void SimHashBench::filter( std::vector<SimHashSelect>& resbuf, std::size_t resid
 
 		if (sel.idx < m_startIdx || aridx >= m_arsize) throw std::runtime_error(_TXT("array bound read in SimHashBench::filter"));
 
-		int simDist = strus::BitOperations::bitCount( m_ar[ simHashIdx] ^ needle);
+		int simDist = strus::BitOperations::bitCount( m_ar[ aridx] ^ needle);
 		int sumSimDist = simDist + sel.shdiff;
 
 		if (simDist <= maxSimDist && sumSimDist <= maxSumSimDist)
