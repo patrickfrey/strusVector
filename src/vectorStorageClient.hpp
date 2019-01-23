@@ -100,6 +100,7 @@ private:
 	typedef std::map<std::string,SimHashMapRef> SimHashMapMap;
 	typedef strus::Reference<SimHashMapMap> SimHashMapMapRef;
 	mutable strus::Reference<SimHashMapMap> m_simHashMapMap;
+	std::vector<std::string> m_inMemoryTypes;
 	strus::mutex m_transaction_mutex;	///< mutual exclusion in the critical part of a transaction
 };
 

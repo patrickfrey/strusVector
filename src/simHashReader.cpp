@@ -44,4 +44,36 @@ SimHash SimHashReaderDatabase::load( const Index& featno) const
 }
 
 
+SimHashReaderMemory::SimHashReaderMemory( const DatabaseAdapter* database_, const std::string& type_)
+	:m_database(database_),m_type(type_),m_typeno(database_->readTypeno( type_)),m_aridx(0),m_ar()
+{
+	if (!m_typeno) throw strus::runtime_error( _TXT("error instantiating similarity hash reader: unknown type %s"), m_type.c_str());
+	m_ar = m_database->readSimHashVector( m_typeno);
+	std::vector<SimHash>::const_iterator ai = m_ar.begin(), ae = m_ar.end();
+	for (std::size_t aidx=0; ai != ae; ++ai,++aidx)
+	{
+		m_indexmap[ ai->id()] = aidx;
+	}
+}
+
+const SimHash* SimHashReaderMemory::loadFirst()
+{
+	m_aridx = 0;
+	if (m_aridx >= m_ar.size()) return NULL;
+	return &m_ar[ m_aridx++];
+}
+
+const SimHash* SimHashReaderMemory::loadNext()
+{
+	if (m_aridx >= m_ar.size()) return NULL;
+	return &m_ar[ m_aridx++];
+}
+
+SimHash SimHashReaderMemory::load( const Index& featno) const
+{
+	std::map<Index,std::size_t>::const_iterator fi = m_indexmap.find( featno);
+	if (fi == m_indexmap.end()) return SimHash();
+	return m_ar[ fi->second];
+}
+
 

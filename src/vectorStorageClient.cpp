@@ -14,12 +14,14 @@
 #include "strus/valueIteratorInterface.hpp"
 #include "strus/base/configParser.hpp"
 #include "strus/base/string_format.hpp"
+#include "strus/base/string_conv.hpp"
 #include "simHashReader.hpp"
 #include "simHashRankList.hpp"
 #include "armautils.hpp"
 #include "errorUtils.hpp"
 #include "internationalization.hpp"
-
+#include <cstring>
+#include <algorithm>
 #define MODULENAME   "vector storage"
 #define MAIN_CONCEPT_CLASSNAME ""
 #define STRUS_DBGTRACE_COMPONENT_NAME "vector"
@@ -27,10 +29,11 @@
 using namespace strus;
 
 VectorStorageClient::VectorStorageClient( const DatabaseInterface* database_, const std::string& configstring_, ErrorBufferInterface* errorhnd_)
-	:m_errorhnd(errorhnd_),m_debugtrace(0),m_database(),m_model(),m_simHashMapMap(),m_transaction_mutex()
+	:m_errorhnd(errorhnd_),m_debugtrace(0),m_database(),m_model(),m_simHashMapMap(),m_inMemoryTypes(),m_transaction_mutex()
 {
 	std::string configstring = configstring_;
 	unsigned int value;
+	std::string stringvalue;
 	int simdist = -1;
 	int probsimdist = -1;
 	if (strus::extractUIntFromConfigString( value, configstring, "simdist", m_errorhnd))
@@ -42,6 +45,14 @@ VectorStorageClient::VectorStorageClient( const DatabaseInterface* database_, co
 	{
 		if (m_debugtrace) m_debugtrace->event( "param", "probsimdist %d", value);
 		probsimdist = value;
+	}
+	if (strus::extractStringArrayFromConfigString( m_inMemoryTypes, configstring, "memtypes", ',', m_errorhnd))
+	{
+		if (m_debugtrace)
+		{
+			std::vector<std::string>::const_iterator mi = m_inMemoryTypes.begin(), me = m_inMemoryTypes.end();
+			for (; mi != me; ++mi) m_debugtrace->event( "param", "in memory lsh for feature %s", mi->c_str());
+		}
 	}
 	m_database.reset( new DatabaseAdapter( database_,configstring,m_errorhnd));
 	m_database->checkVersion();
@@ -437,7 +448,17 @@ strus::Reference<SimHashMap> VectorStorageClient::getOrCreateTypeSimHashMap( con
 	strus::Index typeno = m_database->readTypeno( type);
 	if (!typeno) throw strus::runtime_error(_TXT("queried type is not defined: %s"), type.c_str());
 
-	strus::Reference<SimHashReaderInterface> reader( new SimHashReaderDatabase( m_database.get(), type));
+	strus::Reference<SimHashReaderInterface> reader;
+	const char* readerClass = "database";
+	if (std::find( m_inMemoryTypes.begin(), m_inMemoryTypes.end(), type) != m_inMemoryTypes.end())
+	{
+		readerClass = "in memory";
+		reader.reset( new SimHashReaderDatabase( m_database.get(), type));
+	}
+	else
+	{
+		reader.reset( new SimHashReaderMemory( m_database.get(), type));
+	}
 	strus::Reference<SimHashMap> simHashMapRef( new SimHashMap( reader, typeno));
 	simHashMapRef->load();
 
@@ -454,7 +475,7 @@ strus::Reference<SimHashMap> VectorStorageClient::getOrCreateTypeSimHashMap( con
 		simHashMapMapCopy->insert( SimHashMapMap::value_type( type, simHashMapRef));
 		m_simHashMapMap = simHashMapMapCopy;
 	}
-	if (m_debugtrace) m_debugtrace->event( "simhash", _TXT("created cache for type %s"), type.c_str());
+	if (m_debugtrace) m_debugtrace->event( "simhash", _TXT("created searcher (%s) for vectors of the feature type %s"), readerClass, type.c_str());
 	return simHashMapRef;
 }
 
