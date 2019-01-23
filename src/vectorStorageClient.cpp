@@ -67,6 +67,7 @@ std::vector<VectorQueryResult> VectorStorageClient::findSimilar( const std::stri
 	{
 		std::vector<SimHashQueryResult> res;
 		strus::Reference<SimHashMap> simHashMap = getOrCreateTypeSimHashMap( type);
+		SimHashMap::Stats stats;
 
 		int simdist = SimHashRankList::lshSimDistFromWeight( m_model.vectorBits(), minSimilarity);
 		if (simdist > m_model.vectorBits()) simdist = m_model.vectorBits();
@@ -94,27 +95,7 @@ std::vector<VectorQueryResult> VectorStorageClient::findSimilar( const std::stri
 			SimHash needle( m_model.simHash( strus::normalizeVector( vec), 0));
 			if (m_debugtrace)
 			{
-				SimHashMap::Stats stats;
 				res = simHashMap->findSimilarWithStats( stats, needle, simdist, probsimdist, maxNofSimResults);
-
-				m_debugtrace->open( "search");
-				m_debugtrace->event( "param", _TXT("LSH simdist %d"), simdist);
-				m_debugtrace->event( "param", _TXT("LSH prob simdist %d"), probsimdist);
-				m_debugtrace->event( "param", _TXT("feature type %s"), type.c_str());
-				m_debugtrace->event( "param", _TXT("max results %d"), maxNofResults);
-				m_debugtrace->event( "param", _TXT("min similarity %.5f"), minSimilarity);
-				m_debugtrace->event( "param", _TXT("use real weights %s"), realVecWeights ? "yes":"no");
-
-				m_debugtrace->event( "stats", "benches %d", stats.nofBenches);
-				m_debugtrace->event( "stats", "values %d", stats.nofValues);
-				m_debugtrace->event( "stats", "database reads %d", stats.nofDatabaseReads);
-				m_debugtrace->event( "stats", "min prob sum %d", stats.minProbSum);
-				m_debugtrace->event( "stats", "results %d", stats.nofResults);
-				for (int bi=0; bi<stats.nofBenches; ++bi)
-				{
-					m_debugtrace->event( "stats", "candidates[%d] %d", bi, stats.nofCandidates[bi]);
-				}
-				m_debugtrace->close();
 			}
 			else
 			{
@@ -133,32 +114,38 @@ std::vector<VectorQueryResult> VectorStorageClient::findSimilar( const std::stri
 			SimHash needle( m_model.simHash( strus::normalizeVector( vec), 0));
 			if (m_debugtrace)
 			{
-				SimHashMap::Stats stats;
 				res = simHashMap->findSimilarWithStats( stats, needle, simdist, probsimdist, maxNofResults);
-
-				m_debugtrace->open( "search");
-				m_debugtrace->event( "param", _TXT("LSH simdist %d"), simdist);
-				m_debugtrace->event( "param", _TXT("LSH prob simdist %d"), probsimdist);
-				m_debugtrace->event( "param", _TXT("feature type %s"), type.c_str());
-				m_debugtrace->event( "param", _TXT("max results %d"), maxNofResults);
-				m_debugtrace->event( "param", _TXT("min similarity %.5f"), minSimilarity);
-				m_debugtrace->event( "param", _TXT("use real weights %s"), realVecWeights ? "yes":"no");
-
-				m_debugtrace->event( "stats", "benches %d", stats.nofBenches);
-				m_debugtrace->event( "stats", "values %d", stats.nofValues);
-				m_debugtrace->event( "stats", "database reads %d", stats.nofDatabaseReads);
-				m_debugtrace->event( "stats", "min prob sum %d", stats.minProbSum);
-				m_debugtrace->event( "stats", "results %d", stats.nofResults);
-				for (int bi=0; bi<stats.nofBenches; ++bi)
-				{
-					m_debugtrace->event( "stats", "candidates[%d] %d", bi, stats.nofCandidates[bi]);
-				}
-				m_debugtrace->close();
 			}
 			else
 			{
 				res = simHashMap->findSimilar( needle, simdist, probsimdist, maxNofResults);
 			}
+		}
+		if (m_debugtrace)
+		{
+			m_debugtrace->open( "search");
+			m_debugtrace->event( "param", _TXT("LSH simdist %d"), simdist);
+			m_debugtrace->event( "param", _TXT("LSH prob simdist %d"), probsimdist);
+			m_debugtrace->event( "param", _TXT("feature type %s"), type.c_str());
+			m_debugtrace->event( "param", _TXT("max results %d"), maxNofResults);
+			m_debugtrace->event( "param", _TXT("min similarity %.5f"), minSimilarity);
+			m_debugtrace->event( "param", _TXT("use real weights %s"), realVecWeights ? "yes":"no");
+
+			m_debugtrace->event( "stats", _TXT("benches %d"), stats.nofBenches);
+			m_debugtrace->event( "stats", _TXT("values %d"), stats.nofValues);
+			m_debugtrace->event( "stats", _TXT("database reads %d"), stats.nofDatabaseReads);
+			m_debugtrace->event( "stats", _TXT("min prob sum %d"), stats.minProbSum);
+			m_debugtrace->event( "stats", _TXT("results %d"), stats.nofResults);
+			for (int bi=0; bi<stats.nofBenches; ++bi)
+			{
+				m_debugtrace->event( "stats", "candidates[%d] %d", bi, stats.nofCandidates[bi]);
+			}
+			std::vector<SimHashQueryResult>::const_iterator ri = res.begin(), re = res.end();
+			for (; ri != re; ++ri)
+			{
+				m_debugtrace->event( "result", _TXT("featno %d, simdist %d, weight %.5f"), ri->featno(), ri->simdist(), ri->weight());
+			}
+			m_debugtrace->close();
 		}
 		std::vector<VectorQueryResult> rt = simHashToVectorQueryResults( res, maxNofResults, minSimilarity);
 

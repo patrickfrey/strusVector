@@ -17,15 +17,16 @@ class SimHashQueryResult
 public:
 	/// \brief Default constructor
 	SimHashQueryResult()
-		:m_featno(0),m_weight(0.0){}
+		:m_featno(0),m_simdist(0),m_weight(0.0){}
 	/// \brief Copy constructor
 	SimHashQueryResult( const SimHashQueryResult& o)
-		:m_featno(o.m_featno),m_weight(o.m_weight){}
+		:m_featno(o.m_featno),m_simdist(o.m_simdist),m_weight(o.m_weight){}
 	/// \brief Constructor
-	SimHashQueryResult( const Index& featno_, double weight_)
-		:m_featno(featno_),m_weight(weight_){}
+	SimHashQueryResult( const Index& featno_, int simdist_, double weight_)
+		:m_featno(featno_),m_simdist(simdist_),m_weight(weight_){}
 
 	Index featno() const			{return m_featno;}
+	int simdist() const			{return m_simdist;}
 	double weight() const			{return m_weight;}
 
 	void setWeight( double weight_)		{m_weight = weight_;}
@@ -45,6 +46,7 @@ public:
 
 private:
 	Index m_featno;
+	int m_simdist;
 	double m_weight;
 };
 

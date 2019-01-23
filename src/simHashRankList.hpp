@@ -153,8 +153,9 @@ public:
 		int limit = m_nofRanks > m_maxNofRanks ? m_maxNofRanks:m_nofRanks;
 		for (int ridx=0; ridx<limit; ++ridx)
 		{
-			double weight = 1.0 - (double)m_brute_ar[ m_brute_index[ ridx]].simdist / width_f;
-			rt.push_back( SimHashQueryResult( m_brute_ar[ m_brute_index[ ridx]].index, weight));
+			const Element& elem = m_brute_ar[ m_brute_index[ ridx]];
+			double weight = 1.0 - (double)elem.simdist / width_f;
+			rt.push_back( SimHashQueryResult( elem.index, elem.simdist, weight));
 		}
 		return rt;
 	}

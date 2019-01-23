@@ -138,7 +138,7 @@ std::vector<SimHashQueryResult> SimHashMap::findSimilarWithStats( Stats& stats, 
 	int probSum = probSumFactor * maxSimDist;
 
 	std::vector<SimHashSelect> candidates;
-	m_filter.search( candidates, needle, maxSimDist, maxProbSimDist);
+	m_filter.searchWithStats( stats, candidates, needle, maxSimDist, maxProbSimDist);
 #ifdef STRUS_LOWLEVEL_DEBUG
 	std::sort( candidates.begin(), candidates.end());
 #endif
