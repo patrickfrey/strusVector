@@ -89,9 +89,9 @@ void SimHashMap::load()
 #endif
 }
 
-int SimHashMap::getMaxSimDistFromBestFilterSamples( const std::vector<SimHashSelect>& candidates, const SimHash& needle, int maxNofElements) const
+int SimHashMap::getMaxSimDistFromBestFilterSamples( const std::vector<SimHashSelect>& candidates, const SimHash& needle, int nofSampleReads) const
 {
-	RankList<SimHashSelect> selectRanklist( maxNofElements);
+	RankList<SimHashSelect> selectRanklist( nofSampleReads);
 	std::vector<SimHashSelect>::const_iterator ci = candidates.begin(), ce = candidates.end();
 	for (; ci != ce; ++ci)
 	{
@@ -124,7 +124,10 @@ std::vector<SimHashQueryResult> SimHashMap::findSimilar( const SimHash& needle, 
 	std::vector<SimHashSelect> candidates;
 	m_filter.search( candidates, needle, maxSimDist, maxProbSimDist);
 
-	int lastdist = getMaxSimDistFromBestFilterSamples( candidates, needle, maxNofElements);
+	int nofSampleReads = maxNofElements*2 + 10;
+	if (nofSampleReads > RankList<SimHashSelect>::MaxSize) nofSampleReads = RankList<SimHashSelect>::MaxSize;
+
+	int lastdist = getMaxSimDistFromBestFilterSamples( candidates, needle, nofSampleReads);
 	int probSum = m_filter.maxProbSumDist( maxSimDist, lastdist * ((float)maxProbSimDist / (float)maxSimDist) + 1);
 
 	std::vector<SimHashSelect>::const_iterator ci = candidates.begin(), ce = candidates.end();
@@ -157,10 +160,13 @@ std::vector<SimHashQueryResult> SimHashMap::findSimilarWithStats( Stats& stats, 
 	std::vector<SimHashSelect> candidates;
 	m_filter.searchWithStats( stats, candidates, needle, maxSimDist, maxProbSimDist);
 
-	int lastdist = getMaxSimDistFromBestFilterSamples( candidates, needle, maxNofElements);
+	int nofSampleReads = maxNofElements*2 + 10;
+	if (nofSampleReads > RankList<SimHashSelect>::MaxSize) nofSampleReads = RankList<SimHashSelect>::MaxSize;
+
+	int lastdist = getMaxSimDistFromBestFilterSamples( candidates, needle, nofSampleReads);
 	int probSum = m_filter.maxProbSumDist( maxSimDist, lastdist * ((float)maxProbSimDist / (float)maxSimDist) + 1);
 
-	stats.nofDatabaseReads += (int)candidates.size() < maxNofElements ? (int)candidates.size() : maxNofElements;
+	stats.nofDatabaseReads += nofSampleReads;
 	stats.probSum = probSum;
 	stats.samplesMaxDist = lastdist;
 
