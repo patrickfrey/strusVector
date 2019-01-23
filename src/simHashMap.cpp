@@ -162,6 +162,7 @@ std::vector<SimHashQueryResult> SimHashMap::findSimilarWithStats( Stats& stats, 
 
 	stats.nofDatabaseReads += (int)candidates.size() < maxNofElements ? (int)candidates.size() : (int)candidates.size();
 	stats.probSum = probSum;
+	stats.samplesMaxDist = lastdist;
 
 	std::vector<SimHashSelect>::const_iterator ci = candidates.begin(), ce = candidates.end();
 	for (; ci != ce; ++ci)

@@ -31,11 +31,12 @@ public:
 		int nofDatabaseReads;
 		int probSum;
 		int nofResults;
+		int samplesMaxDist;
 
 		Stats()
-			:SimHashFilter::Stats(),nofValues(0),nofDatabaseReads(0),probSum(0),nofResults(0) {}
+			:SimHashFilter::Stats(),nofValues(0),nofDatabaseReads(0),probSum(0),nofResults(0),samplesMaxDist(0) {}
 		Stats( const Stats& o)
-			:SimHashFilter::Stats(o),nofDatabaseReads(o.nofDatabaseReads),probSum(o.probSum),nofResults(o.nofResults) {}
+			:SimHashFilter::Stats(o),nofValues(o.nofValues),nofDatabaseReads(o.nofDatabaseReads),probSum(o.probSum),nofResults(o.nofResults),samplesMaxDist(o.samplesMaxDist) {}
 	};
 
 	SimHashMap( const strus::Reference<SimHashReaderInterface>& reader_, const strus::Index& typeno_)

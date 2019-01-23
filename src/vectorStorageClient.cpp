@@ -12,6 +12,7 @@
 #include "strus/debugTraceInterface.hpp"
 #include "strus/databaseInterface.hpp"
 #include "strus/valueIteratorInterface.hpp"
+#include "strus/base/configParser.hpp"
 #include "strus/base/string_format.hpp"
 #include "simHashReader.hpp"
 #include "simHashRankList.hpp"
@@ -28,9 +29,25 @@ using namespace strus;
 VectorStorageClient::VectorStorageClient( const DatabaseInterface* database_, const std::string& configstring_, ErrorBufferInterface* errorhnd_)
 	:m_errorhnd(errorhnd_),m_debugtrace(0),m_database(),m_model(),m_simHashMapMap(),m_transaction_mutex()
 {
-	m_database.reset( new DatabaseAdapter( database_,configstring_,m_errorhnd));
+	std::string configstring = configstring_;
+	unsigned int value;
+	int simdist = -1;
+	int probsimdist = -1;
+	if (strus::extractUIntFromConfigString( value, configstring, "simdist", m_errorhnd))
+	{
+		if (m_debugtrace) m_debugtrace->event( "param", "simdist %d", value);
+		simdist = value;
+	}
+	if (strus::extractUIntFromConfigString( value, configstring, "probsimdist", m_errorhnd))
+	{
+		if (m_debugtrace) m_debugtrace->event( "param", "probsimdist %d", value);
+		probsimdist = value;
+	}
+	m_database.reset( new DatabaseAdapter( database_,configstring,m_errorhnd));
 	m_database->checkVersion();
 	m_model = m_database->readLshModel();
+	if (simdist >= 0) m_model.set_simdist( simdist);
+	if (probsimdist >= 0) m_model.set_probsimdist( probsimdist);
 
 	DebugTraceInterface* dbgi = m_errorhnd->debugTrace();
 	if (dbgi) m_debugtrace = dbgi->createTraceContext( STRUS_DBGTRACE_COMPONENT_NAME);
@@ -135,6 +152,7 @@ std::vector<VectorQueryResult> VectorStorageClient::findSimilar( const std::stri
 			m_debugtrace->event( "stats", _TXT("values %d"), stats.nofValues);
 			m_debugtrace->event( "stats", _TXT("database reads %d"), stats.nofDatabaseReads);
 			m_debugtrace->event( "stats", _TXT("partial prob sum %d"), stats.probSum);
+			m_debugtrace->event( "stats", _TXT("best filter samples max dist %d"), stats.samplesMaxDist);
 			m_debugtrace->event( "stats", _TXT("results %d"), stats.nofResults);
 			for (int bi=0; bi<stats.nofBenches; ++bi)
 			{
