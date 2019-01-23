@@ -160,7 +160,7 @@ std::vector<SimHashQueryResult> SimHashMap::findSimilarWithStats( Stats& stats, 
 	int lastdist = getMaxSimDistFromBestFilterSamples( candidates, needle, maxNofElements);
 	int probSum = m_filter.maxProbSumDist( maxSimDist, lastdist * ((float)maxProbSimDist / (float)maxSimDist) + 1);
 
-	stats.nofDatabaseReads += (int)candidates.size() < maxNofElements ? (int)candidates.size() : (int)candidates.size();
+	stats.nofDatabaseReads += (int)candidates.size() < maxNofElements ? (int)candidates.size() : maxNofElements;
 	stats.probSum = probSum;
 	stats.samplesMaxDist = lastdist;
 
