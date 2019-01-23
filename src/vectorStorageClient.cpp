@@ -9,6 +9,7 @@
 #include "vectorStorageClient.hpp"
 #include "vectorStorageTransaction.hpp"
 #include "strus/errorBufferInterface.hpp"
+#include "strus/debugTraceInterface.hpp"
 #include "strus/databaseInterface.hpp"
 #include "strus/valueIteratorInterface.hpp"
 #include "strus/base/string_format.hpp"
@@ -20,15 +21,24 @@
 
 #define MODULENAME   "vector storage"
 #define MAIN_CONCEPT_CLASSNAME ""
+#define STRUS_DBGTRACE_COMPONENT_NAME "vector"
 
 using namespace strus;
 
 VectorStorageClient::VectorStorageClient( const DatabaseInterface* database_, const std::string& configstring_, ErrorBufferInterface* errorhnd_)
-	:m_errorhnd(errorhnd_),m_database(),m_model(),m_simHashMapMap(),m_transaction_mutex()
+	:m_errorhnd(errorhnd_),m_debugtrace(0),m_database(),m_model(),m_simHashMapMap(),m_transaction_mutex()
 {
 	m_database.reset( new DatabaseAdapter( database_,configstring_,m_errorhnd));
 	m_database->checkVersion();
 	m_model = m_database->readLshModel();
+
+	DebugTraceInterface* dbgi = m_errorhnd->debugTrace();
+	if (dbgi) m_debugtrace = dbgi->createTraceContext( STRUS_DBGTRACE_COMPONENT_NAME);
+}
+
+VectorStorageClient::~VectorStorageClient()
+{
+	if (m_debugtrace) delete m_debugtrace;
 }
 
 void VectorStorageClient::prepareSearch( const std::string& type)
@@ -49,44 +59,6 @@ std::vector<VectorQueryResult> VectorStorageClient::simHashToVectorQueryResults(
 		rt.push_back( VectorQueryResult( m_database->readFeatName( ri->featno()), ri->weight()));
 	}
 	return rt;
-}
-
-VectorSearchStatistics VectorStorageClient::findSimilarWithStats( const std::string& type, const WordVector& vec, int maxNofResults, double minSimilarity) const
-{
-	try
-	{
-		std::vector<SimHashQueryResult> res;
-		strus::Reference<SimHashMap> simHashMap = getOrCreateTypeSimHashMap( type);
-
-		int simdist = SimHashRankList::lshSimDistFromWeight( m_model.vectorBits(), minSimilarity);
-		if (simdist > m_model.vectorBits()) simdist = m_model.vectorBits();
-		int probsimdist = ((double)m_model.probsimdist() / (double)m_model.simdist()) * simdist;
-		if (probsimdist > m_model.vectorBits()) probsimdist = m_model.vectorBits();
-
-		SimHash needle( m_model.simHash( strus::normalizeVector( vec), 0));
-		
-		SimHashMap::Stats stats;
-		res = simHashMap->findSimilarWithStats( stats, needle, simdist, probsimdist, maxNofResults);
-		VectorSearchStatistics rt;
-		rt
-			( "nofBenches", (int64_t)stats.nofBenches)
-			( "nofValues", (int64_t)stats.nofValues)
-			( "nofDatabaseReads", (int64_t)stats.nofDatabaseReads)
-			( "minProbSum", (int64_t)stats.minProbSum)
-			( "nofResults", (int64_t)stats.nofResults);
-		for (int bi=0; bi<stats.nofBenches; ++bi)
-		{
-			rt( strus::string_format( "nofCandidates[%d]", bi), (int64_t)stats.nofCandidates[0]);
-		}
-		rt.setResults( simHashToVectorQueryResults( res, maxNofResults, minSimilarity));
-
-		if (m_errorhnd->hasError())
-		{
-			throw strus::runtime_error(_TXT("vector search failed: %s"), m_errorhnd->fetchError());
-		}
-		return rt;
-	}
-	CATCH_ERROR_ARG1_MAP_RETURN( _TXT("error in client interface of '%s' in find similar with statistics: %s"), MODULENAME, *m_errorhnd, VectorSearchStatistics());
 }
 
 std::vector<VectorQueryResult> VectorStorageClient::findSimilar( const std::string& type, const WordVector& vec, int maxNofResults, double minSimilarity, bool realVecWeights) const
@@ -120,7 +92,34 @@ std::vector<VectorQueryResult> VectorStorageClient::findSimilar( const std::stri
 
 			arma::fvec vv = arma::fvec( vec);
 			SimHash needle( m_model.simHash( strus::normalizeVector( vec), 0));
-			res = simHashMap->findSimilar( needle, simdist, probsimdist, maxNofSimResults);
+			if (m_debugtrace)
+			{
+				SimHashMap::Stats stats;
+				res = simHashMap->findSimilarWithStats( stats, needle, simdist, probsimdist, maxNofResults);
+
+				m_debugtrace->open( "search");
+				m_debugtrace->event( "param", _TXT("LSH simdist %d"), simdist);
+				m_debugtrace->event( "param", _TXT("LSH prob simdist %d"), probsimdist);
+				m_debugtrace->event( "param", _TXT("feature type %s"), type.c_str());
+				m_debugtrace->event( "param", _TXT("max results %d"), maxNofResults);
+				m_debugtrace->event( "param", _TXT("min similarity %.5f"), minSimilarity);
+				m_debugtrace->event( "param", _TXT("use real weights %s"), realVecWeights ? "yes":"no");
+
+				m_debugtrace->event( "stats", "benches %d", stats.nofBenches);
+				m_debugtrace->event( "stats", "values %d", stats.nofValues);
+				m_debugtrace->event( "stats", "database reads %d", stats.nofDatabaseReads);
+				m_debugtrace->event( "stats", "min prob sum %d", stats.minProbSum);
+				m_debugtrace->event( "stats", "results %d", stats.nofResults);
+				for (int bi=0; bi<stats.nofBenches; ++bi)
+				{
+					m_debugtrace->event( "stats", "candidates[%d] %d", bi, stats.nofCandidates[bi]);
+				}
+				m_debugtrace->close();
+			}
+			else
+			{
+				res = simHashMap->findSimilar( needle, simdist, probsimdist, maxNofSimResults);
+			}
 			std::vector<SimHashQueryResult>::iterator ri = res.begin(), re = res.end();
 			for (; ri != re; ++ri)
 			{
@@ -423,6 +422,7 @@ strus::Reference<SimHashMap> VectorStorageClient::getOrCreateTypeSimHashMap( con
 		simHashMapMapCopy->insert( SimHashMapMap::value_type( type, simHashMapRef));
 		m_simHashMapMap = simHashMapMapCopy;
 	}
+	if (m_debugtrace) m_debugtrace->event( "simhash", _TXT("created cache for type %s"), type.c_str());
 	return simHashMapRef;
 }
 

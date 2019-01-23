@@ -25,6 +25,8 @@ namespace strus {
 /// \brief Forward declaration
 class ErrorBufferInterface;
 /// \brief Forward declaration
+class DebugTraceContextInterface;
+/// \brief Forward declaration
 class DatabaseInterface;
 
 class VectorStorageClient
@@ -33,13 +35,11 @@ class VectorStorageClient
 public:
 	VectorStorageClient( const DatabaseInterface* database_, const std::string& configstring_, ErrorBufferInterface* errorhnd_);
 
-	virtual ~VectorStorageClient(){}
+	virtual ~VectorStorageClient();
 
 	virtual void prepareSearch( const std::string& type);
 
 	virtual std::vector<VectorQueryResult> findSimilar( const std::string& type, const WordVector& vec, int maxNofResults, double minSimilarity, bool realVecWeights) const;
-
-	virtual VectorSearchStatistics findSimilarWithStats( const std::string& type, const WordVector& vec, int maxNofResults, double minSimilarity) const;
 
 	virtual VectorStorageTransactionInterface* createTransaction();
 
@@ -93,6 +93,7 @@ private:
 
 private:
 	ErrorBufferInterface* m_errorhnd;
+	DebugTraceContextInterface* m_debugtrace;
 	Reference<DatabaseAdapter> m_database;
 	LshModel m_model;
 	typedef strus::Reference<SimHashMap> SimHashMapRef;
