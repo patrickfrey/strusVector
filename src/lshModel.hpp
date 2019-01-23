@@ -70,6 +70,10 @@ public:
 	{
 		m_probsimdist = value;
 	}
+	int vectorBits() const
+	{
+		return m_bits * m_variations;
+	}
 
 private:
 	static arma::fmat createModelMatrix( int vecdim_, int bits_);

@@ -46,6 +46,10 @@ std::vector<VectorQueryResult> VectorStorageClient::findSimilar( const std::stri
 	{
 		std::vector<SimHashQueryResult> res;
 		strus::Reference<SimHashMap> simHashMap = getOrCreateTypeSimHashMap( type);
+
+		int simdist = SimHashRankList::lshSimDistFromWeight( m_model.vectorBits(), minSimilarity);
+		int probsimdist = ((double)m_model.probsimdist() / (double)m_model.simdist()) * simdist;
+
 		if (realVecWeights)
 		{
 			if (minSimilarity < 0.0 || minSimilarity > 1.0)
@@ -65,8 +69,6 @@ std::vector<VectorQueryResult> VectorStorageClient::findSimilar( const std::stri
 
 			arma::fvec vv = arma::fvec( vec);
 			SimHash needle( m_model.simHash( strus::normalizeVector( vec), 0));
-			int simdist = SimHashRankList::lshSimDistFromWeight( needle.size(), minSimilarity);
-			int probsimdist = ((double)m_model.probsimdist() / (double)m_model.simdist()) * simdist;
 			res = simHashMap->findSimilar( needle, simdist, probsimdist, maxNofSimResults);
 			std::vector<SimHashQueryResult>::iterator ri = res.begin(), re = res.end();
 			for (; ri != re; ++ri)
@@ -79,7 +81,7 @@ std::vector<VectorQueryResult> VectorStorageClient::findSimilar( const std::stri
 		else
 		{
 			SimHash needle( m_model.simHash( strus::normalizeVector( vec), 0));
-			res = simHashMap->findSimilar( needle, m_model.simdist(), m_model.probsimdist(), maxNofResults);
+			res = simHashMap->findSimilar( needle, simdist, probsimdist, maxNofResults);
 		}
 
 		std::vector<VectorQueryResult> rt;
