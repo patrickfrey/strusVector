@@ -11,8 +11,8 @@
 #include "strus/errorBufferInterface.hpp"
 #include "strus/databaseInterface.hpp"
 #include "strus/valueIteratorInterface.hpp"
+#include "strus/base/string_format.hpp"
 #include "simHashReader.hpp"
-#include "simHashQueryResult.hpp"
 #include "simHashRankList.hpp"
 #include "armautils.hpp"
 #include "errorUtils.hpp"
@@ -40,6 +40,55 @@ void VectorStorageClient::prepareSearch( const std::string& type)
 	CATCH_ERROR_ARG1_MAP( _TXT("error in client interface of '%s' preparing data structures for the vector search: %s"), MODULENAME, *m_errorhnd);
 }
 
+std::vector<VectorQueryResult> VectorStorageClient::simHashToVectorQueryResults( const std::vector<SimHashQueryResult>& res, int maxNofResults, double minSimilarity) const
+{
+	std::vector<VectorQueryResult> rt;
+	std::vector<SimHashQueryResult>::const_iterator ri = res.begin(), re = res.end();
+	for (int ridx=0; ri != re && ridx < maxNofResults && ri->weight() > minSimilarity; ++ri,++ridx)
+	{
+		rt.push_back( VectorQueryResult( m_database->readFeatName( ri->featno()), ri->weight()));
+	}
+	return rt;
+}
+
+VectorSearchStatistics VectorStorageClient::findSimilarWithStats( const std::string& type, const WordVector& vec, int maxNofResults, double minSimilarity) const
+{
+	try
+	{
+		std::vector<SimHashQueryResult> res;
+		strus::Reference<SimHashMap> simHashMap = getOrCreateTypeSimHashMap( type);
+
+		int simdist = SimHashRankList::lshSimDistFromWeight( m_model.vectorBits(), minSimilarity);
+		if (simdist > m_model.vectorBits()) simdist = m_model.vectorBits();
+		int probsimdist = ((double)m_model.probsimdist() / (double)m_model.simdist()) * simdist;
+		if (probsimdist > m_model.vectorBits()) probsimdist = m_model.vectorBits();
+
+		SimHash needle( m_model.simHash( strus::normalizeVector( vec), 0));
+		
+		SimHashMap::Stats stats;
+		res = simHashMap->findSimilarWithStats( stats, needle, simdist, probsimdist, maxNofResults);
+		VectorSearchStatistics rt;
+		rt
+			( "nofBenches", (int64_t)stats.nofBenches)
+			( "nofValues", (int64_t)stats.nofValues)
+			( "nofDatabaseReads", (int64_t)stats.nofDatabaseReads)
+			( "minProbSum", (int64_t)stats.minProbSum)
+			( "nofResults", (int64_t)stats.nofResults);
+		for (int bi=0; bi<stats.nofBenches; ++bi)
+		{
+			rt( strus::string_format( "nofCandidates[%d]", bi), (int64_t)stats.nofCandidates[0]);
+		}
+		rt.setResults( simHashToVectorQueryResults( res, maxNofResults, minSimilarity));
+
+		if (m_errorhnd->hasError())
+		{
+			throw strus::runtime_error(_TXT("vector search failed: %s"), m_errorhnd->fetchError());
+		}
+		return rt;
+	}
+	CATCH_ERROR_ARG1_MAP_RETURN( _TXT("error in client interface of '%s' in find similar with statistics: %s"), MODULENAME, *m_errorhnd, VectorSearchStatistics());
+}
+
 std::vector<VectorQueryResult> VectorStorageClient::findSimilar( const std::string& type, const WordVector& vec, int maxNofResults, double minSimilarity, bool realVecWeights) const
 {
 	try
@@ -48,7 +97,9 @@ std::vector<VectorQueryResult> VectorStorageClient::findSimilar( const std::stri
 		strus::Reference<SimHashMap> simHashMap = getOrCreateTypeSimHashMap( type);
 
 		int simdist = SimHashRankList::lshSimDistFromWeight( m_model.vectorBits(), minSimilarity);
+		if (simdist > m_model.vectorBits()) simdist = m_model.vectorBits();
 		int probsimdist = ((double)m_model.probsimdist() / (double)m_model.simdist()) * simdist;
+		if (probsimdist > m_model.vectorBits()) probsimdist = m_model.vectorBits();
 
 		if (realVecWeights)
 		{
@@ -83,13 +134,8 @@ std::vector<VectorQueryResult> VectorStorageClient::findSimilar( const std::stri
 			SimHash needle( m_model.simHash( strus::normalizeVector( vec), 0));
 			res = simHashMap->findSimilar( needle, simdist, probsimdist, maxNofResults);
 		}
+		std::vector<VectorQueryResult> rt = simHashToVectorQueryResults( res, maxNofResults, minSimilarity);
 
-		std::vector<VectorQueryResult> rt;
-		std::vector<SimHashQueryResult>::const_iterator ri = res.begin(), re = res.end();
-		for (int ridx=0; ri != re && ridx < maxNofResults && ri->weight() > minSimilarity; ++ri,++ridx)
-		{
-			rt.push_back( VectorQueryResult( m_database->readFeatName( ri->featno()), ri->weight()));
-		}
 		if (m_errorhnd->hasError())
 		{
 			throw strus::runtime_error(_TXT("vector search failed: %s"), m_errorhnd->fetchError());

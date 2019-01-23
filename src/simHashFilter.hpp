@@ -10,6 +10,7 @@
 #define _STRUS_VECTOR_SIMHASH_FILTER_HPP_INCLUDED
 #include "simHashBench.hpp"
 #include <utility>
+#include <cstring>
 #include <vector>
 
 namespace strus {
@@ -18,6 +19,17 @@ class SimHashFilter
 {
 public:
 	enum {MaxNofBenches=4};
+	struct Stats
+	{
+		int nofBenches;
+		int nofValues;
+		int nofCandidates[ MaxNofBenches];
+
+		Stats()
+			:nofBenches(0),nofValues(0) {std::memset( nofCandidates, 0, sizeof(nofCandidates));}
+		Stats( const Stats& o)
+			:nofBenches(o.nofBenches),nofValues(o.nofValues) {std::memcpy( nofCandidates, o.nofCandidates, sizeof(nofCandidates));}
+	};
 
 public:
 	SimHashFilter()
@@ -38,6 +50,8 @@ public:
 
 	/// \param[out] resbuf buffer where to append result to
 	void search( std::vector<SimHashSelect>& resbuf, const SimHash& needle, int maxSimDist, int maxProbSimDist) const;
+
+	void searchWithStats( Stats& stats, std::vector<SimHashSelect>& resbuf, const SimHash& needle, int maxSimDist, int maxProbSimDist) const;
 
 	double maxProbSumDistFactor( int maxSimDist, int maxProbSimDist) const
 	{

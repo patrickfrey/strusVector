@@ -12,6 +12,7 @@
 #include "strus/wordVector.hpp"
 #include "strus/reference.hpp"
 #include "databaseAdapter.hpp"
+#include "simHashQueryResult.hpp"
 #include "lshModel.hpp"
 #include "simHashMap.hpp"
 #include "strus/base/thread.hpp"
@@ -37,6 +38,8 @@ public:
 	virtual void prepareSearch( const std::string& type);
 
 	virtual std::vector<VectorQueryResult> findSimilar( const std::string& type, const WordVector& vec, int maxNofResults, double minSimilarity, bool realVecWeights) const;
+
+	virtual VectorSearchStatistics findSimilarWithStats( const std::string& type, const WordVector& vec, int maxNofResults, double minSimilarity) const;
 
 	virtual VectorStorageTransactionInterface* createTransaction();
 
@@ -86,6 +89,7 @@ public:/*VectorStorageTransaction*/
 private:
 	strus::Reference<SimHashMap> getOrCreateTypeSimHashMap( const std::string& type) const;
 	strus::Reference<SimHashMap> getSimHashMap( const std::string& type) const;
+	std::vector<VectorQueryResult> simHashToVectorQueryResults( const std::vector<SimHashQueryResult>& res, int maxNofResults, double minSimilarity) const;
 
 private:
 	ErrorBufferInterface* m_errorhnd;

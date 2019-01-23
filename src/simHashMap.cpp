@@ -129,5 +129,47 @@ std::vector<SimHashQueryResult> SimHashMap::findSimilar( const SimHash& needle, 
 	return ranklist.result( needle.size());
 }
 
+std::vector<SimHashQueryResult> SimHashMap::findSimilarWithStats( Stats& stats, const SimHash& needle, int maxSimDist, int maxProbSimDist, int maxNofElements) const
+{
+	if (m_idar.empty()) return std::vector<SimHashQueryResult>();
+
+	SimHashRankList ranklist( maxNofElements);
+	float probSumFactor = m_filter.maxProbSumDistFactor( maxSimDist, maxProbSimDist);
+	int probSum = probSumFactor * maxSimDist;
+
+	std::vector<SimHashSelect> candidates;
+	m_filter.search( candidates, needle, maxSimDist, maxProbSimDist);
+#ifdef STRUS_LOWLEVEL_DEBUG
+	std::sort( candidates.begin(), candidates.end());
+#endif
+	std::vector<SimHashSelect>::const_iterator ci = candidates.begin(), ce = candidates.end();
+	for (; ci != ce; ++ci)
+	{
+		Index elemid = m_idar[ ci->idx];
+		if (ci->shdiff < probSum)
+		{
+			++stats.nofDatabaseReads;
+			SimHash val = m_reader->load( elemid);
+			if (val.defined())
+			{
+				if (val.near( needle, maxSimDist))
+				{
+					++stats.nofResults;
+					int dist = val.dist( needle);
+					if (ranklist.insert( SimHashRankList::Element( elemid, dist)))
+					{
+						if (ranklist.complete())
+						{
+							int lastdist = ranklist.lastdist();
+							probSum = probSumFactor * lastdist;
+						}
+					}
+				}
+			}
+		}
+	}
+	stats.minProbSum = probSum;
+	return ranklist.result( needle.size());
+}
 
 

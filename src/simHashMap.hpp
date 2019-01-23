@@ -23,6 +23,20 @@ namespace strus {
 class SimHashMap
 {
 public:
+	enum {MaxNofBenches=4};
+	struct Stats
+		:public SimHashFilter::Stats
+	{
+		int nofDatabaseReads;
+		int minProbSum;
+		int nofResults;
+
+		Stats()
+			:SimHashFilter::Stats(),nofDatabaseReads(0),minProbSum(0) {}
+		Stats( const Stats& o)
+			:SimHashFilter::Stats(o),nofDatabaseReads(o.nofDatabaseReads),minProbSum(o.minProbSum) {}
+	};
+
 	SimHashMap( const strus::Reference<SimHashReaderInterface>& reader_, const strus::Index& typeno_)
 		:m_filter(),m_idar(),m_reader(reader_),m_typeno(typeno_){}
 	SimHashMap( const SimHashMap& o)
@@ -40,6 +54,8 @@ public:
 	void load();
 
 	std::vector<SimHashQueryResult> findSimilar( const SimHash& needle, int maxSimDist, int maxProbSimDist, int maxNofElements) const;
+	std::vector<SimHashQueryResult> findSimilarWithStats( Stats& stats,const SimHash& needle, int maxSimDist, int maxProbSimDist, int maxNofElements) const;
+
 	const strus::Index& typeno() const
 	{
 		return m_typeno;

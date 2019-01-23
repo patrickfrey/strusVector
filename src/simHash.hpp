@@ -39,7 +39,7 @@ public:
 	~SimHash();
 #if __cplusplus >= 201103L
 	SimHash( SimHash&& o) :m_ar(o.m_ar),m_size(o.m_size),m_id(o.m_id) {o.m_ar=0;o.m_size=0;}
-	//SimHash& operator=( SimHash&& o) {if (m_ar) std::free(m_ar); m_ar=std::move(o.m_ar); m_size=o.m_size; m_id=o.m_id; return *this;}
+	SimHash& operator=( SimHash&& o) {if (m_ar) std::free(m_ar); m_ar=o.m_ar; m_size=o.m_size; m_id=o.m_id; o.m_ar=0; o.m_size=0; return *this;}
 #endif
 	/// \brief Get element value by index
 	bool operator[]( int idx) const;
