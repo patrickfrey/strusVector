@@ -64,7 +64,7 @@ public:
 	}
 
 private:
-	int getMaxSimDistFromBestFilterSamples( const std::vector<SimHashSelect>& candidates, const SimHash& needle, int maxNofElements) const;
+	int getMaxSimDistFromBestFilterSamples( const std::vector<SimHashSelect>& candidates, const SimHash& needle, int maxNofElements, int nofSampleReads) const;
 
 private:
 	SimHashFilter m_filter;

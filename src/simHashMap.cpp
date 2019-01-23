@@ -89,7 +89,7 @@ void SimHashMap::load()
 #endif
 }
 
-int SimHashMap::getMaxSimDistFromBestFilterSamples( const std::vector<SimHashSelect>& candidates, const SimHash& needle, int nofSampleReads) const
+int SimHashMap::getMaxSimDistFromBestFilterSamples( const std::vector<SimHashSelect>& candidates, const SimHash& needle, int maxNofElements, int nofSampleReads) const
 {
 	RankList<SimHashSelect> selectRanklist( nofSampleReads);
 	std::vector<SimHashSelect>::const_iterator ci = candidates.begin(), ce = candidates.end();
@@ -98,6 +98,9 @@ int SimHashMap::getMaxSimDistFromBestFilterSamples( const std::vector<SimHashSel
 		selectRanklist.insert( *ci);
 	}
 	int lastdist = 0;
+	int sampleDistAr[ RankList<SimHashSelect>::MaxSize];
+	int sampleDistArSize = 0;
+
 	RankList<SimHashSelect>::const_iterator si = selectRanklist.begin(), se = selectRanklist.end();
 	for (; si != se; ++si)
 	{
@@ -105,14 +108,12 @@ int SimHashMap::getMaxSimDistFromBestFilterSamples( const std::vector<SimHashSel
 		SimHash val = m_reader->load( elemid);
 		if (val.defined())
 		{
-			int dist = val.dist( needle);
-			if (dist > lastdist)
-			{
-				lastdist = dist;
-			}
+			sampleDistAr[ sampleDistArSize++] = val.dist( needle);
 		}
 	}
-	return lastdist;
+	if (sampleDistArSize == 0) return 0;
+	std::sort( sampleDistAr, sampleDistAr + sampleDistArSize);
+	return maxNofElements >= sampleDistArSize ? 0 : sampleDistAr[ maxNofElements];
 }
 
 std::vector<SimHashQueryResult> SimHashMap::findSimilar( const SimHash& needle, int maxSimDist, int maxProbSimDist, int maxNofElements) const
@@ -127,7 +128,8 @@ std::vector<SimHashQueryResult> SimHashMap::findSimilar( const SimHash& needle, 
 	int nofSampleReads = maxNofElements*2 + 10;
 	if (nofSampleReads > RankList<SimHashSelect>::MaxSize) nofSampleReads = RankList<SimHashSelect>::MaxSize;
 
-	int lastdist = getMaxSimDistFromBestFilterSamples( candidates, needle, nofSampleReads);
+	int lastdist = getMaxSimDistFromBestFilterSamples( candidates, needle, maxNofElements, nofSampleReads);
+	if (lastdist == 0) lastdist = maxSimDist;
 	int probSum = m_filter.maxProbSumDist( maxSimDist, lastdist * ((float)maxProbSimDist / (float)maxSimDist) + 1);
 
 	std::vector<SimHashSelect>::const_iterator ci = candidates.begin(), ce = candidates.end();
@@ -163,7 +165,8 @@ std::vector<SimHashQueryResult> SimHashMap::findSimilarWithStats( Stats& stats, 
 	int nofSampleReads = maxNofElements*2 + 10;
 	if (nofSampleReads > RankList<SimHashSelect>::MaxSize) nofSampleReads = RankList<SimHashSelect>::MaxSize;
 
-	int lastdist = getMaxSimDistFromBestFilterSamples( candidates, needle, nofSampleReads);
+	int lastdist = getMaxSimDistFromBestFilterSamples( candidates, needle, maxNofElements, nofSampleReads);
+	if (lastdist == 0) lastdist = maxSimDist;
 	int probSum = m_filter.maxProbSumDist( maxSimDist, lastdist * ((float)maxProbSimDist / (float)maxSimDist) + 1);
 
 	stats.nofDatabaseReads += nofSampleReads;
