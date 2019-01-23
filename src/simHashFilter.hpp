@@ -18,7 +18,7 @@ namespace strus {
 class SimHashFilter
 {
 public:
-	enum {MaxNofBenches=2};
+	enum {MaxNofBenches=4};
 	struct Stats
 	{
 		int nofBenches;
