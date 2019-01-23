@@ -113,23 +113,15 @@ static std::string extractConfigParamsOpenStorage( const std::string& configsour
 	std::string value;
 	if (strus::extractStringFromConfigString( value, configstring, "vecdim", errorhnd))
 	{
-		if (debugtrace) debugtrace->event( "warning", "param '%s' has no effect", "vecdim");
-	}
-	if (strus::extractStringFromConfigString( value, configstring, "simdist", errorhnd))
-	{
-		if (debugtrace) debugtrace->event( "warning", "param '%s' has no effect", "simdist");
-	}
-	if (strus::extractStringFromConfigString( value, configstring, "probsimdist", errorhnd))
-	{
-		if (debugtrace) debugtrace->event( "warning", "param '%s' has no effect", "probsimdist");
+		if (debugtrace) debugtrace->event( "warning", "param '%s' only allowed on storage creation and has no effect", "vecdim");
 	}
 	if (strus::extractStringFromConfigString( value, configstring, "bits", errorhnd))
 	{
-		if (debugtrace) debugtrace->event( "warning", "param '%s' has no effect", "bits");
+		if (debugtrace) debugtrace->event( "warning", "param '%s' only allowed on storage creation and has no effect", "bits");
 	}
 	if (strus::extractStringFromConfigString( value, configstring, "variations", errorhnd))
 	{
-		if (debugtrace) debugtrace->event( "warning", "param '%s' has no effect", "variations");
+		if (debugtrace) debugtrace->event( "warning", "param '%s' only allowed on storage creation and has no effect", "variations");
 	}
 	if (debugtrace) debugtrace->close();
 	if (errorhnd->hasError())
