@@ -22,13 +22,12 @@ public:
 	struct Stats
 	{
 		int nofBenches;
-		int nofValues;
 		int nofCandidates[ MaxNofBenches];
 
 		Stats()
-			:nofBenches(0),nofValues(0) {std::memset( nofCandidates, 0, sizeof(nofCandidates));}
+			:nofBenches(0) {std::memset( nofCandidates, 0, sizeof(nofCandidates));}
 		Stats( const Stats& o)
-			:nofBenches(o.nofBenches),nofValues(o.nofValues) {std::memcpy( nofCandidates, o.nofCandidates, sizeof(nofCandidates));}
+			:nofBenches(o.nofBenches) {std::memcpy( nofCandidates, o.nofCandidates, sizeof(nofCandidates));}
 	};
 
 public:
@@ -53,12 +52,6 @@ public:
 
 	void searchWithStats( Stats& stats, std::vector<SimHashSelect>& resbuf, const SimHash& needle, int maxSimDist, int maxProbSimDist) const;
 
-	double maxProbSumDistFactor( int maxSimDist, int maxProbSimDist) const
-	{
-		return (double)maxProbSumDist( maxSimDist, maxProbSimDist) / (double)maxSimDist;
-	}
-
-private:
 	int maxProbSumDist( int maxSimDist, int maxProbSimDist) const;
 
 private:

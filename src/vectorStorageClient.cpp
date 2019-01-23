@@ -134,7 +134,7 @@ std::vector<VectorQueryResult> VectorStorageClient::findSimilar( const std::stri
 			m_debugtrace->event( "stats", _TXT("benches %d"), stats.nofBenches);
 			m_debugtrace->event( "stats", _TXT("values %d"), stats.nofValues);
 			m_debugtrace->event( "stats", _TXT("database reads %d"), stats.nofDatabaseReads);
-			m_debugtrace->event( "stats", _TXT("min prob sum %d"), stats.minProbSum);
+			m_debugtrace->event( "stats", _TXT("partial prob sum %d"), stats.probSum);
 			m_debugtrace->event( "stats", _TXT("results %d"), stats.nofResults);
 			for (int bi=0; bi<stats.nofBenches; ++bi)
 			{

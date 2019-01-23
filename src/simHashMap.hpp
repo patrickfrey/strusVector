@@ -27,14 +27,15 @@ public:
 	struct Stats
 		:public SimHashFilter::Stats
 	{
+		int nofValues;
 		int nofDatabaseReads;
-		int minProbSum;
+		int probSum;
 		int nofResults;
 
 		Stats()
-			:SimHashFilter::Stats(),nofDatabaseReads(0),minProbSum(0) {}
+			:SimHashFilter::Stats(),nofValues(0),nofDatabaseReads(0),probSum(0),nofResults(0) {}
 		Stats( const Stats& o)
-			:SimHashFilter::Stats(o),nofDatabaseReads(o.nofDatabaseReads),minProbSum(o.minProbSum) {}
+			:SimHashFilter::Stats(o),nofDatabaseReads(o.nofDatabaseReads),probSum(o.probSum),nofResults(o.nofResults) {}
 	};
 
 	SimHashMap( const strus::Reference<SimHashReaderInterface>& reader_, const strus::Index& typeno_)
@@ -60,6 +61,9 @@ public:
 	{
 		return m_typeno;
 	}
+
+private:
+	int getMaxSimDistFromBestFilterSamples( const std::vector<SimHashSelect>& candidates, const SimHash& needle, int maxNofElements) const;
 
 private:
 	SimHashFilter m_filter;

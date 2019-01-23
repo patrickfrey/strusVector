@@ -65,11 +65,9 @@ void SimHashFilter::search( std::vector<SimHashSelect>& resbuf, const SimHash& n
 void SimHashFilter::searchWithStats( Stats& stats, std::vector<SimHashSelect>& resbuf, const SimHash& needle, int maxSimDist, int maxProbSimDist) const
 {
 	stats.nofBenches = m_nofBenches;
-	stats.nofValues = 0;
 
 	if (!m_nofBenches) return;
 	resbuf.reserve( SimHashBench::Size * 2);
-	stats.nofValues = m_benchar[ 0].size();
 
 	if (maxProbSimDist < maxSimDist)
 	{
@@ -101,7 +99,7 @@ void SimHashFilter::searchWithStats( Stats& stats, std::vector<SimHashSelect>& r
 int SimHashFilter::maxProbSumDist( int maxSimDist, int maxProbSimDist) const
 {
 	double relProbSimDist = (double)maxProbSimDist / (double)m_elementArSize;
-	double probSimDistSumLimitDecr = (double)(maxProbSimDist - maxSimDist) / (double)(m_elementArSize * 2);
+	double probSimDistSumLimitDecr = (double)(maxProbSimDist - maxSimDist) / (double)(m_elementArSize);
 	return (m_nofBenches) * relProbSimDist - (m_nofBenches-1) * probSimDistSumLimitDecr;
 }
 

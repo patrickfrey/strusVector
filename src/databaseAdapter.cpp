@@ -332,7 +332,7 @@ std::vector<Index> DatabaseAdapter::readFeatureTypeRelations( const Index& featn
 	key[ featno];
 
 	std::string blob;
-	if (!m_database->readValue( key.c_str(), key.size(), blob, DatabaseOptions()))
+	if (!m_database->readValue( key.c_str(), key.size(), blob, DatabaseOptions().useCache()))
 	{
 		if (m_errorhnd->hasError())
 		{
