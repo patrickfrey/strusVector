@@ -95,7 +95,7 @@ std::vector<VectorQueryResult> VectorStorageClient::findSimilar( const std::stri
 			if (m_debugtrace)
 			{
 				SimHashMap::Stats stats;
-				res = simHashMap->findSimilarWithStats( stats, needle, simdist, probsimdist, maxNofResults);
+				res = simHashMap->findSimilarWithStats( stats, needle, simdist, probsimdist, maxNofSimResults);
 
 				m_debugtrace->open( "search");
 				m_debugtrace->event( "param", _TXT("LSH simdist %d"), simdist);
@@ -131,7 +131,34 @@ std::vector<VectorQueryResult> VectorStorageClient::findSimilar( const std::stri
 		else
 		{
 			SimHash needle( m_model.simHash( strus::normalizeVector( vec), 0));
-			res = simHashMap->findSimilar( needle, simdist, probsimdist, maxNofResults);
+			if (m_debugtrace)
+			{
+				SimHashMap::Stats stats;
+				res = simHashMap->findSimilarWithStats( stats, needle, simdist, probsimdist, maxNofResults);
+
+				m_debugtrace->open( "search");
+				m_debugtrace->event( "param", _TXT("LSH simdist %d"), simdist);
+				m_debugtrace->event( "param", _TXT("LSH prob simdist %d"), probsimdist);
+				m_debugtrace->event( "param", _TXT("feature type %s"), type.c_str());
+				m_debugtrace->event( "param", _TXT("max results %d"), maxNofResults);
+				m_debugtrace->event( "param", _TXT("min similarity %.5f"), minSimilarity);
+				m_debugtrace->event( "param", _TXT("use real weights %s"), realVecWeights ? "yes":"no");
+
+				m_debugtrace->event( "stats", "benches %d", stats.nofBenches);
+				m_debugtrace->event( "stats", "values %d", stats.nofValues);
+				m_debugtrace->event( "stats", "database reads %d", stats.nofDatabaseReads);
+				m_debugtrace->event( "stats", "min prob sum %d", stats.minProbSum);
+				m_debugtrace->event( "stats", "results %d", stats.nofResults);
+				for (int bi=0; bi<stats.nofBenches; ++bi)
+				{
+					m_debugtrace->event( "stats", "candidates[%d] %d", bi, stats.nofCandidates[bi]);
+				}
+				m_debugtrace->close();
+			}
+			else
+			{
+				res = simHashMap->findSimilar( needle, simdist, probsimdist, maxNofResults);
+			}
 		}
 		std::vector<VectorQueryResult> rt = simHashToVectorQueryResults( res, maxNofResults, minSimilarity);
 
