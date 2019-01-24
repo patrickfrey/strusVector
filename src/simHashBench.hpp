@@ -12,6 +12,7 @@
 #include "simHash.hpp"
 #include <utility>
 #include <vector>
+#include <cstdlib>
 
 namespace strus {
 

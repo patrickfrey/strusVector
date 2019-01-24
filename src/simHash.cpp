@@ -12,6 +12,7 @@
 #include "strus/base/hton.hpp"
 #include <string>
 #include <cstring>
+#include <cstdlib>
 #include <iostream>
 #include <sstream>
 #include <limits>
