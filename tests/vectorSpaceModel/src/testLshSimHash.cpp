@@ -34,7 +34,7 @@ static void initRandomNumberGenerator()
 
 static strus::SimHash createDivBitSet( unsigned int size, unsigned int div)
 {
-	strus::SimHash rt( size, false);
+	strus::SimHash rt( size, false, 0/*id*/);
 	unsigned int ki=2, ke=size/2;
 	for (; ki<=ke; ++ki)
 	{
@@ -58,7 +58,7 @@ static bool isPrimeNumber( unsigned int num)
 
 static strus::SimHash createPrimBitSet( unsigned int size)
 {
-	strus::SimHash rt( size, false);
+	strus::SimHash rt( size, false, 0/*id*/);
 	unsigned int ii=2;
 	for (; ii<=size; ++ii)
 	{
@@ -107,9 +107,9 @@ int main( int argc, const char** argv)
 		for (ti=0; ti != te; ++ti)
 		{
 			{
-				std::string expected;
+				std::string expected( "0 ");
 				std::cerr << "test RANDOM SET " << (ti+1) << " size " << sizear[ti] << std::endl;
-				strus::SimHash res( sizear[ti], false);
+				strus::SimHash res( sizear[ti], false, 0/*id*/);
 				std::vector<unsigned int> elems;
 				for (unsigned int ii=0; ii<10; ++ii)
 				{
@@ -184,7 +184,7 @@ int main( int argc, const char** argv)
 #ifdef STRUS_LOWLEVEL_DEBUG
 			std::cout << "result   " << res.tostring() << std::endl;
 #endif
-			strus::SimHash zerofill( sizear[ti], false);
+			strus::SimHash zerofill( sizear[ti], false, 0/*id*/);
 			doMatch( " primes inverse divisible", res, expected);
 			doMatch( " result AND expected equals OR", res & expected, res | expected);
 			doMatch( " result XOR expected equals reset", res ^ expected, zerofill);
@@ -198,8 +198,8 @@ int main( int argc, const char** argv)
 		for (ti=0; ti != te; ++ti)
 		{
 			std::cerr << "test INV OF AND equals OR of INVs " << (ti+1) << " size " << sizear[ti] << std::endl;
-			strus::SimHash aa = strus::SimHash::randomHash( sizear[ti], ti*987+1);
-			strus::SimHash bb = strus::SimHash::randomHash( sizear[ti], ti*123+1);
+			strus::SimHash aa = strus::SimHash::randomHash( sizear[ti], ti*987+1, 0/*id*/);
+			strus::SimHash bb = strus::SimHash::randomHash( sizear[ti], ti*123+1, 0/*id*/);
 			doMatch( " INV OF AND equals OR of INVs", ~(aa & bb), ~aa | ~bb);
 		}
 		return 0;

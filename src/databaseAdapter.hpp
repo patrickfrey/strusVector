@@ -12,12 +12,11 @@
 #include "strus/databaseClientInterface.hpp"
 #include "strus/databaseTransactionInterface.hpp"
 #include "strus/databaseCursorInterface.hpp"
+#include "strus/wordVector.hpp"
 #include "strus/reference.hpp"
+#include "strus/index.hpp"
 #include "strus/base/stdint.h"
-#include "vectorStorageConfig.hpp"
 #include "simHash.hpp"
-#include "simRelationMap.hpp"
-#include "genModel.hpp"
 #include "lshModel.hpp"
 #include "stringList.hpp"
 #include <vector>
@@ -38,51 +37,66 @@ public:
 
 	void checkVersion();
 
-	typedef std::vector<float> Vector;
-	Vector readSampleVector( const SampleIndex& sidx) const;
-	std::string readSampleName( const SampleIndex& sidx) const;
-	SampleIndex readSampleIndex( const std::string& name) const;
-	SampleIndex readNofSamples() const;
-	SimHash readSampleSimhash( const SampleIndex& sidx) const;
-	std::vector<SimHash> readSampleSimhashVector( const SampleIndex& range_from, const SampleIndex& range_to) const;
+	typedef std::pair<std::string,std::string> VariableDef;
+	std::vector<VariableDef> readVariables() const;
+	std::string readVariable( const std::string& name) const;
 
-	ConceptIndex readNofConcepts( const std::string& clname) const;
-	std::vector<std::pair<std::string,uint64_t> > readVariables() const;
+	std::vector<std::string> readTypes() const;
 
-	std::vector<std::string> readConceptClassNames() const;
+	Index readNofTypeno() const;
+	Index readNofFeatno() const;
+	Index readTypeno( const std::string& type) const;
+	Index readFeatno( const std::string& feature) const;
+	std::string readTypeName( const Index& typeno) const;
+	std::string readFeatName( const Index& featno) const;
 
-	SampleIndex readNofSimRelations() const;
-	SampleIndex readLastSimRelationIndex() const;
-	std::vector<SimRelationMap::Element> readSimRelations( const SampleIndex& sidx) const;
-	SimRelationMap readSimRelationMap() const;
-	std::vector<SampleIndex> readSimSingletons() const;
+	class FeatureCursor
+	{
+	public:
+		explicit FeatureCursor( const DatabaseClientInterface* database_);
 
-	std::vector<SampleIndex> readConceptSampleIndices( const std::string& clname, const ConceptIndex& cidx) const;
-	ConceptSampleIndexMap readConceptSampleIndexMap( const std::string& clname) const;
-	std::vector<ConceptIndex> readSampleConceptIndices( const std::string& clname, const SampleIndex& sidx) const;
-	SampleConceptIndexMap readSampleConceptIndexMap( const std::string& clname) const;
-	std::vector<SampleIndex> readConceptSingletons( const std::string& clname) const;
+		bool skip( const std::string& key, std::string& keyfound);
+		bool skipPrefix( const std::string& key, std::string& keyfound);
+		bool loadFirst( std::string& key);
+		bool loadNext( std::string& key);
+		bool loadNextPrefix( const std::string& keyprefix, std::string& key);
 
-	VectorStorageConfig readConfig() const;
+	private:
+		Reference<DatabaseCursorInterface> m_cursor;
+	};
+
+	std::vector<Index> readFeatureTypeRelations( const Index& featno) const;
+	int readNofVectors( const Index& typeno) const;
+	Index readFeatnoStart( const Index& typeno, int idx) const;
+
+	WordVector readVector( const Index& typeno, const Index& featno) const;
+	SimHash readSimHash( const Index& typeno, const Index& featno) const;
+	std::vector<SimHash> readSimHashVector( const Index& typeno, const Index& featnostart, int numberOfResults) const;
+	std::vector<SimHash> readSimHashVector( const Index& typeno) const;
+
 	LshModel readLshModel() const;
-	bool isempty();
+
 	void close();
+
+private:
+	Index readIndexValue( const char* keystr, std::size_t keysize, bool errorIfNotFound) const;
+	std::string readStringValue( const char* keystr, std::size_t keysize, bool errorIfNotFound) const;
 
 public:
 	enum KeyPrefix
 	{
-		KeyVersion = 'V',
-		KeyVariable = '*',
-		KeyConceptClassNames = 'K',
-		KeySampleVector = '$',
-		KeySampleName = '@',
-		KeySampleNameInv = '#',
-		KeySampleSimHash = 'S',
-		KeyConfig = 'C',
-		KeyLshModel = 'L',
-		KeySimRelationMap = 'M',
-		KeySampleConceptIndexMap = 'f',
-		KeyConceptSampleIndexMap = 's'
+		KeyVariable = 'A',			///< [variable string]         ->  [value string]
+		KeyFeatureTypePrefix='T',		///< [type string]             ->  [typeno]
+		KeyFeatureValuePrefix='I',		///< [feature string]          ->  [featno]
+		KeyFeatureTypeInvPrefix='t',		///< [typeno]                  ->  [type string]
+		KeyFeatureValueInvPrefix='i',		///< [featno]                  ->  [feature string]
+		KeyFeatureVector='V',			///< [typeno,featno]           ->  [float...]
+		KeyFeatureSimHash='H',			///< [typeno,featno]           ->  [SimHash]
+		KeyNofVectors='N',			///< [typeno]                  ->  [nof]
+		KeyNofTypeno='Y',			///< []                        ->  [nof]
+		KeyNofFeatno='Z',			///< []                        ->  [nof]
+		KeyLshModel = 'L',			///< []                        ->  [dim,bits,variations,matrix...]
+		KeyFeatureTypeRelations = 'R' 		///< [featno]                  ->  [typeno...]
 	};
 
 	class Transaction
@@ -91,50 +105,27 @@ public:
 		Transaction( DatabaseClientInterface* database, ErrorBufferInterface* errorhnd_);
 
 		void writeVersion();
-		void writeNofSamples( const SampleIndex& nofSamples);
-		void writeSample( const SampleIndex& sidx, const std::string& name, const Vector& vec, const SimHash& simHash);
+		void writeVariable( const std::string& name, const std::string& value);
 
-		void writeNofConcepts( const std::string& clname, const ConceptIndex& nofConcepts);
-		void writeConceptClassNames( const std::vector<std::string>& clnames);
+		void writeType( const std::string& type, const Index& typeno);
+		void writeFeature( const std::string& feature, const Index& featno);
+		void writeFeatureTypeRelations( const Index& featno, const std::vector<Index>& typenolist);
 
-		void writeNofSimRelations( const SampleIndex& nofSamples);
-		void writeSimRelationMap( const SimRelationMap& simrelmap);
-		void writeSimRelationRow( const SampleIndex& sidx, const SimRelationMap::Row& row);
+		void writeNofTypeno( const Index& typeno);
+		void writeNofFeatno( const Index& featno);
+		void writeNofVectors( const Index& typeno, const Index& nofVectors);
 
-		void writeSampleConceptIndexMap( const std::string& clname, const SampleConceptIndexMap& sfmap);
-		void writeConceptSampleIndexMap( const std::string& clname, const ConceptSampleIndexMap& fsmap);
-		void writeSampleConceptIndices( const std::string& clname, const SampleIndex& sidx, const std::vector<ConceptIndex>& ar);
-		void writeConceptSampleIndices( const std::string& clname, const ConceptIndex& cidx, const std::vector<SampleIndex>& ar);
+		void writeVector( const Index& typeno, const Index& featno, const WordVector& vec);
+		void writeSimHash( const Index& typeno, const Index& featno, const SimHash& hash);
 
-		void writeConfig( const VectorStorageConfig& config);
 		void writeLshModel( const LshModel& model);
-	
-		void deleteData();
-	
-		void deleteConfig();
-		void deleteVariables();
-		void deleteConceptClassNames();
 
-		void deleteSamples();
-		void deleteSampleSimhashVectors();
-
-		void deleteSimRelationMap();
-		void deleteSampleConceptIndexMaps();
-		void deleteConceptSampleIndexMaps();
-
-		void deleteLshModel();
+		void clear();
 
 		bool commit();
 		void rollback();
 
 	private:
-		void writeSimhash( const KeyPrefix& prefix, const SampleIndex& sidx, const SimHash& simHash);
-		void writeSimhashVector( const KeyPrefix& prefix, const std::vector<SimHash>& ar);
-		void writeSampleIndex( const SampleIndex& sidx, const std::string& name);
-		void writeSampleName( const SampleIndex& sidx, const std::string& name);
-		void writeSampleVector( const SampleIndex& sidx, const Vector& vec);
-		void writeVariable( const std::string& name, unsigned int value);
-	
 		void deleteSubTree( const KeyPrefix& prefix);
 
 	private:
@@ -146,12 +137,11 @@ public:
 	{
 		return new Transaction( m_database.get(), m_errorhnd);
 	}
-	std::string config() const		{return m_database->config();}
 
 	class DumpIterator
 	{
 	public:
-		DumpIterator( const DatabaseClientInterface* database, const std::string& cursorkey_, ErrorBufferInterface* errorhnd_);
+		DumpIterator( const DatabaseClientInterface* database, ErrorBufferInterface* errorhnd_);
 
 		bool dumpNext( std::ostream& out);
 
@@ -161,20 +151,18 @@ public:
 	private:
 		ErrorBufferInterface* m_errorhnd;
 		Reference<DatabaseCursorInterface> m_cursor;
-		std::string m_cursorkey;
+		int m_keyidx;
 		bool m_first;
 	};
 
-	DumpIterator* createDumpIterator( const std::string& cursorkey_) const
+	DumpIterator* createDumpIterator() const
 	{
-		return new DumpIterator( m_database.get(), cursorkey_, m_errorhnd);
+		return new DumpIterator( m_database.get(), m_errorhnd);
 	}
-
-private:
-	SimHash readSimhash( const KeyPrefix& prefix, const SampleIndex& sidx) const;
-	std::vector<SimHash> readSimhashVector( const KeyPrefix& prefix, const SampleIndex& range_from, const SampleIndex& range_to) const;
-	unsigned int readVariable( const std::string& name) const;
-	IndexListMap<strus::Index,strus::Index> readIndexListMap( const KeyPrefix& prefix, const std::string& clname) const;
+	const DatabaseClientInterface* database() const
+	{
+		return m_database.get();
+	}
 
 private:
 	Reference<DatabaseClientInterface> m_database;

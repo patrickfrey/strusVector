@@ -2,7 +2,7 @@ FreeBSD 10.3 on x86_64, i686
 ----------------------------
 
 Install packages with 'pkg install':
-- cmake, boost-libs, gettext, snappy, leveldb, lapack, blas, opeblas
+- cmake, boost-libs, gettext, snappy, leveldb, lapack, blas, opeblas, armadillo
 
 Build using the clang/clang++ toolchain:
 

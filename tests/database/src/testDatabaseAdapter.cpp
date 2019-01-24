@@ -10,6 +10,7 @@
 #include "strus/lib/database_leveldb.hpp"
 #include "strus/lib/error.hpp"
 #include "strus/index.hpp"
+#include "strus/wordVector.hpp"
 #include "strus/vectorStorageInterface.hpp"
 #include "strus/vectorStorageClientInterface.hpp"
 #include "strus/vectorStorageTransactionInterface.hpp"
@@ -20,30 +21,25 @@
 #include "strus/base/fileio.hpp"
 #include "strus/base/local_ptr.hpp"
 #include "strus/base/string_format.hpp"
+#include "strus/base/numstring.hpp"
 #include "strus/base/pseudoRandom.hpp"
-#include "vectorStorageConfig.hpp"
-#include "indexListMap.hpp"
+#include "vectorStorage.hpp"
 #include "lshModel.hpp"
-#include "genModel.hpp"
-#include "sampleSimGroupMap.hpp"
-#include "simGroup.hpp"
 #include "simHash.hpp"
-#include "simRelationMap.hpp"
-#include "sparseDim2Field.hpp"
 #include "databaseAdapter.hpp"
 #include "armadillo"
 #include <iostream>
 #include <sstream>
 #include <vector>
 #include <string>
+#include <map>
 #include <memory>
 #include <iomanip>
 #include <cstdlib>
 #include <cmath>
 #include <limits>
 
-#undef STRUS_LOWLEVEL_DEBUG
-#define VEC_EPSILON  (1.0E-6)
+#define VEC_EPSILON  (1.0E-8)
 
 static void initRandomNumberGenerator()
 {
@@ -57,9 +53,9 @@ static void initRandomNumberGenerator()
 	std::srand( seed+2);
 }
 
-static std::vector<float> convertVectorStd( const arma::fvec& vec)
+static strus::WordVector convertVectorStd( const arma::fvec& vec)
 {
-	std::vector<float> rt;
+	strus::WordVector rt;
 	arma::fvec::const_iterator vi = vec.begin(), ve = vec.end();
 	for (; vi != ve; ++vi)
 	{
@@ -68,166 +64,210 @@ static std::vector<float> convertVectorStd( const arma::fvec& vec)
 	return rt;
 }
 
-std::vector<float> getRandomVector( unsigned int dim)
+static strus::WordVector getRandomVector( unsigned int dim)
 {
 	return convertVectorStd( (arma::randu<arma::fvec>( dim) - 0.5) * 2.0); // values between -1.0 and 1.0
 }
 
-bool parseUint( unsigned int& res, const std::string& numstr)
-{
-	res = 0;
-	std::string::const_iterator ni = numstr.begin(), ne = numstr.end();
-	for (; ni != ne; ++ni)
-	{
-		if (*ni >= '0' && *ni <= '9') res = res * 10 + (*ni - '0'); else break;
-	}
-	return (ni != ne);
-}
-
 static strus::ErrorBufferInterface* g_errorhnd = 0;
 
-static unsigned int getNofConcepts( unsigned int nofSamples)
+static std::string getFeatureName( unsigned int idx)
 {
-	return nofSamples / 3 + nofSamples / 2;
+	return strus::string_format( "F%u", idx);
 }
 
-static std::string getSampleName( unsigned int sidx)
+static std::string getTypeName( unsigned int idx)
 {
-	return strus::string_format( "S%u", sidx);
+	return strus::string_format( "T%u", idx);
 }
 
-static strus::SimRelationMap getSimRelationMap( unsigned int nofSamples, unsigned short maxsimdist)
+template <typename Element>
+static void printArray( std::ostream& out, const std::vector<Element>& ar)
 {
-	strus::PseudoRandom rnd;
-	strus::SimRelationMap rt;
-	unsigned int si = 0, se = nofSamples;
-	for (; si != se; ++si)
+	typename std::vector<Element>::const_iterator ai = ar.begin(), ae = ar.end();
+	for (int aidx=0; ai != ae; ++ai,++aidx)
 	{
-		if (rnd.get( 1, 3) < 2) continue; 
-		std::vector<strus::SimRelationMap::Element> elems;
-		unsigned int oi = 0, oe = nofSamples, step = rnd.get( 1, nofSamples/2); 
-		for (; oi < oe; oi += step)
-		{
-			unsigned short simdist = rnd.get( 1, maxsimdist);
-			elems.push_back( strus::SimRelationMap::Element( oi, simdist));
-		}
-		rt.addRow( si, elems);
+		if (aidx) out << " ";
+		out << *ai;
 	}
-	return rt;
-}
-
-strus::SampleConceptIndexMap getSampleConceptIndexMap( unsigned int nofSamples)
-{
-	strus::PseudoRandom rnd;
-	unsigned int nofConcepts = getNofConcepts( nofSamples);
-	strus::IndexListMap<strus::Index,strus::Index> rt;
-	unsigned int si = 0, se = nofSamples;
-	for (; si != se; ++si)
-	{
-		if (rnd.get( 1, 3) < 2) continue;
-		std::vector<strus::Index> elems;
-		unsigned int fi = 1, fe = nofConcepts+1, step = 1+rnd.get( 0, nofConcepts/2); 
-		for (; fi < fe; fi += step)
-		{
-			if (rnd.get( 0, 4) == 0) continue;
-			elems.push_back( fi);
-		}
-		rt.add( si, elems);
-	}
-	return rt;
-}
-
-strus::ConceptSampleIndexMap getConceptSampleIndexMap( unsigned int nofSamples)
-{
-	strus::IndexListMap<strus::Index,strus::Index> rt;
-	strus::PseudoRandom rnd;
-	unsigned int nofConcepts = getNofConcepts( nofSamples);
-	unsigned int fi = 1, fe = nofConcepts+1;
-	for (; fi < fe; ++fi)
-	{
-		if (rnd.get( 1, 3) < 2) continue;
-		std::vector<strus::Index> elems;
-		unsigned int si = 0, se = nofSamples, step = 1+rnd.get( 0, nofSamples/2); 
-		for (; si < se; si += step)
-		{
-			elems.push_back( si);
-		}
-		rt.add( fi, elems);
-	}
-	return rt;
 }
 
 struct TestDataset
 {
-	TestDataset( const strus::VectorStorageConfig& config, unsigned int nofSamples_)
-		:nofConcepts(getNofConcepts( nofSamples_))
-		,nofSamples(nofSamples_)
-		,lshmodel( config.dim, config.bits, config.variations)
-		,simrelmap(getSimRelationMap( nofSamples, config.gencfg.simdist))
-		,sfmap(getSampleConceptIndexMap( nofSamples))
-		,fsmap(getConceptSampleIndexMap( nofSamples))
-		,sampleNames(),sampleVectors(),sampleSimHashs()
+public:
+	TestDataset( unsigned int nofTypes_, unsigned int nofFeatures_, const std::string& configstr)
+		:m_nofTypes(nofTypes_)
+		,m_nofFeatures(nofFeatures_)
+		,m_config()
+		,m_vectors()
+		,m_nullvec()
+		,m_featmap()
 	{
-		unsigned int si = 0, se = nofSamples;
-		for (; si != se; ++si)
+		std::string configstrcopy( configstr);
+		unsigned int vecsize = 0;
+		if (strus::extractUIntFromConfigString( vecsize, configstrcopy, "vecdim", g_errorhnd))
 		{
-			std::vector<float> vec = getRandomVector( config.dim);
-			sampleNames.push_back( getSampleName(si));
-			sampleVectors.push_back( vec);
-			sampleSimHashs.push_back( lshmodel.simHash( vec));
+			m_config = strus::VectorStorage::Config( vecsize);
+		}
+		unsigned int ti = 1, te = m_nofTypes;
+		for (; ti <= te; ++ti)
+		{
+			unsigned int ni = 1, ne = m_nofFeatures;
+			for (; ni <= ne; ++ni)
+			{
+				if (std::rand() % 2 == 1)
+				{
+					int vecidx = 0;
+					if (std::rand() % 2 == 1)
+					{
+						strus::WordVector vec = getRandomVector( vecsize);
+						m_vectors.push_back( vec);
+						vecidx = m_vectors.size();
+					}
+					m_featmap.insert( std::pair<FeatDef,int>( FeatDef( ti, ni), vecidx));
+				}
+			}
 		}
 	}
 
-	strus::Index nofConcepts;
-	strus::Index nofSamples;
-	strus::LshModel lshmodel;
-	strus::SimRelationMap simrelmap;
-	strus::SampleConceptIndexMap sfmap;
-	strus::ConceptSampleIndexMap fsmap;
-	std::vector< std::string> sampleNames;
-	std::vector< std::vector<float> > sampleVectors;
-	std::vector< strus::SimHash> sampleSimHashs;
+	struct FeatDef
+	{
+		strus::Index typeno;
+		strus::Index featno;
+
+		FeatDef()
+			:typeno(0),featno(0){}
+		FeatDef( strus::Index typeno_, strus::Index featno_)
+			:typeno(typeno_),featno(featno_){}
+		FeatDef( const FeatDef& o)
+			:typeno(o.typeno),featno(o.featno){}
+
+		bool operator < (const FeatDef& o) const
+		{
+			return typeno == o.typeno ? (featno < o.featno) : (typeno < o.typeno);
+		}
+	};
+
+	const strus::Index& nofTypes() const			{return m_nofTypes;}
+	const strus::Index& nofFeatures() const			{return m_nofFeatures;}
+	const strus::VectorStorage::Config& config() const	{return m_config;}
+	const std::vector<strus::WordVector>& vectors() const	{return m_vectors;}
+	const std::map<FeatDef,int>& featmap() const		{return m_featmap;}
+
+	const strus::WordVector& vector( int typeno, int featno) const
+	{
+		std::map<FeatDef,int>::const_iterator fi = m_featmap.find( FeatDef( typeno, featno));
+		if (fi == m_featmap.end() || fi->second == 0) return m_nullvec;
+		else return m_vectors[ fi->second-1];
+	}
+	int nofVectors( int typeno) const
+	{
+		int rt = 0;
+		std::map<FeatDef,int>::const_iterator fi = m_featmap.begin(), fe = m_featmap.end();
+		for (; fi != fe; ++fi)
+		{
+			if (fi->first.typeno == typeno && fi->second != 0) ++rt;
+		}
+		return rt;
+	}
+
+private:
+	strus::Index m_nofTypes;
+	strus::Index m_nofFeatures;
+	strus::VectorStorage::Config m_config;
+	std::vector<strus::WordVector> m_vectors;
+	strus::WordVector m_nullvec;
+	std::map<FeatDef,int> m_featmap;
 };
 
-#define MAIN_CONCEPTNAME "x"
-
-static void writeDatabase( const strus::VectorStorageConfig& config, const TestDataset& dataset)
+struct VariableDef
 {
-	strus::local_ptr<strus::DatabaseInterface> dbi( strus::createDatabaseType_leveldb( "", g_errorhnd));
-	if (dbi->exists( config.databaseConfig))
+	const char* type;
+	const char* value;
+};
+
+static const VariableDef g_variables[] = {{"Variable1", "Value1"},{"Variable2", "Value2"},{0,0}};
+
+static void writeDatabase( const std::string& testdir, const std::string& configstr, const TestDataset& dataset, const strus::LshModel& model)
+{
+	strus::local_ptr<strus::DatabaseInterface> dbi( strus::createDatabaseType_leveldb( testdir, g_errorhnd));
+	if (dbi->exists( configstr))
 	{
-		if (!dbi->destroyDatabase( config.databaseConfig))
+		if (!dbi->destroyDatabase( configstr))
 		{
 			throw std::runtime_error("could not destroy old test database");
 		}
 	}
-	if (!dbi->createDatabase( config.databaseConfig))
+	if (!dbi->createDatabase( configstr))
 	{
 		throw std::runtime_error("could not create new test database");
 	}
-	strus::DatabaseAdapter database( dbi.get(), config.databaseConfig, g_errorhnd);
+	strus::DatabaseAdapter database( dbi.get(), configstr, g_errorhnd);
 	strus::Reference<strus::DatabaseAdapter::Transaction> transaction( database.createTransaction());
 
 	transaction->writeVersion();
-	transaction->writeNofSamples( dataset.nofSamples);
-	transaction->writeNofConcepts( MAIN_CONCEPTNAME, dataset.nofConcepts);
-	strus::Index si = 0, se = dataset.nofSamples;
-	for (; si != se; ++si)
+	const VariableDef* vi = g_variables;
+	for (; vi->type; ++vi)
 	{
-		transaction->writeSample( si, dataset.sampleNames[si], dataset.sampleVectors[si], dataset.sampleSimHashs[si]);
+		transaction->writeVariable( vi->type, vi->value);
 	}
-	transaction->writeSimRelationMap( dataset.simrelmap);
-	transaction->writeSampleConceptIndexMap( MAIN_CONCEPTNAME, dataset.sfmap);
-	transaction->writeConceptSampleIndexMap( MAIN_CONCEPTNAME, dataset.fsmap);
-	transaction->writeConfig( config);
-	transaction->writeLshModel( dataset.lshmodel);
+	int ti = 1, te = dataset.nofTypes();
+	for (; ti <= te; ++ti)
+	{
+		transaction->writeType( getTypeName( ti), ti);
+	}
+	transaction->writeNofTypeno( dataset.nofTypes());
+
+	int ni = 1, ne = dataset.nofFeatures();
+	for (; ni <= ne; ++ni)
+	{
+		transaction->writeFeature( getFeatureName( ni), ni);
+	}
+	transaction->writeNofFeatno( dataset.nofFeatures());
+
+	std::map<strus::Index,std::vector<strus::Index> > featureTypeRelations;
+	std::map<TestDataset::FeatDef,int>::const_iterator mi = dataset.featmap().begin(), me = dataset.featmap().end();
+	for (; mi != me; ++mi)
+	{
+		std::map<strus::Index,std::vector<strus::Index> >::iterator ri = featureTypeRelations.find( mi->first.featno);
+		if (ri == featureTypeRelations.end())
+		{
+			std::vector<strus::Index> elems;
+			elems.push_back( mi->first.typeno);
+			featureTypeRelations.insert( std::pair<strus::Index,std::vector<strus::Index> >( mi->first.featno, elems) );
+		}
+		else
+		{
+			ri->second.push_back( mi->first.typeno);
+		}
+	}
+	std::map<strus::Index,std::vector<strus::Index> >::iterator ri = featureTypeRelations.begin(), re = featureTypeRelations.end();
+	for (; ri != re; ++ri)
+	{
+		transaction->writeFeatureTypeRelations( ri->first, ri->second);
+	}
+	transaction->writeLshModel( model);
+	for (ti=1; ti <= te; ++ti)
+	{
+		transaction->writeNofVectors( ti, dataset.nofVectors( ti));
+		for (ni = 1; ni <= ne; ++ni)
+		{
+			strus::WordVector vec = dataset.vector( ti, ni);
+			if (!vec.empty())
+			{
+				strus::SimHash lsh = model.simHash( vec, ni);
+				transaction->writeSimHash( ti, ni, lsh);
+				transaction->writeVector( ti, ni, vec);
+			}
+		}
+	}
 	if (!transaction->commit()) throw strus::runtime_error( "%s", _TXT("vector storage transaction failed"));
 }
 
-static bool compare( const std::vector<float>& v1, const std::vector<float>& v2)
+static bool compare( const strus::WordVector& v1, const strus::WordVector& v2)
 {
-	std::vector<float>::const_iterator vi1 = v1.begin(), ve1 = v1.end();
-	std::vector<float>::const_iterator vi2 = v2.begin(), ve2 = v2.end();
+	strus::WordVector::const_iterator vi1 = v1.begin(), ve1 = v1.end();
+	strus::WordVector::const_iterator vi2 = v2.begin(), ve2 = v2.end();
 	for (unsigned int vidx=0; vi1 != ve1 && vi2 != ve2; ++vi1,++vi2,++vidx)
 	{
 		float diff = (*vi1 > *vi2)?(*vi1 - *vi2):(*vi2 - *vi1);
@@ -258,49 +298,20 @@ static bool compare( const std::vector<strus::SimHash>& v1, const std::vector<st
 	std::vector<strus::SimHash>::const_iterator vi2 = v2.begin(), ve2 = v2.end();
 	for (; vi1 != ve1 && vi2 != ve2; ++vi1,++vi2)
 	{
-		if (*vi1 != *vi2) return false;
+		if (*vi1 != *vi2 || vi1->id() != vi2->id()) return false;
 	}
 	return vi1 == ve1 && vi2 == ve2;
 }
 
-static bool compare( const strus::SimRelationMap& m1, const strus::SimRelationMap& m2)
+static bool compare( const std::vector<strus::Index>& v1, const std::vector<strus::Index>& v2)
 {
-	if (m1.endIndex() != m2.endIndex()) return false;
-	if (m1.startIndex() != m2.startIndex()) return false;
-	strus::Index si = m1.startIndex(), se = m1.endIndex();
-	for (; si != se; ++si)
+	std::vector<strus::Index>::const_iterator vi1 = v1.begin(), ve1 = v1.end();
+	std::vector<strus::Index>::const_iterator vi2 = v2.begin(), ve2 = v2.end();
+	for (; vi1 != ve1 && vi2 != ve2; ++vi1,++vi2)
 	{
-		strus::SimRelationMap::Row r1 = m1.row( si);
-		strus::SimRelationMap::Row r2 = m2.row( si);
-		strus::SimRelationMap::Row::const_iterator
-				ri1 = r1.begin(), re1 = r1.end(), 
-				ri2 = r2.begin(), re2 = r2.end();
-		for (; ri1 != ri2 && ri2 != re2; ++ri1,++ri2)
-		{
-			if (ri1->index != ri2->index || ri1->simdist != ri2->simdist) return false;
-		}
-		if (ri1 != re1 || ri2 != re2) return false;
+		if (*vi1 != *vi2) return false;
 	}
-	return true;
-}
-
-static bool compare( const strus::IndexListMap<strus::Index,strus::Index>& m1, const strus::IndexListMap<strus::Index,strus::Index>& m2)
-{
-	strus::Index si = 0, se = std::max( m1.maxkey(), m2.maxkey()) + 1;
-	for (; si != se; ++si)
-	{
-		std::vector<strus::Index> v1 = m1.getValues( si);
-		std::vector<strus::Index> v2 = m2.getValues( si);
-		std::vector<strus::Index>::const_iterator
-				vi1 = v1.begin(), ve1 = v1.end(), 
-				vi2 = v2.begin(), ve2 = v2.end();
-		for (; vi1 != vi2 && vi2 != ve2; ++vi1,++vi2)
-		{
-			if (*vi1 != *vi2) return false;
-		}
-		if (vi1 != ve1 || vi2 != ve2) return false;
-	}
-	return true;
+	return vi1 == ve1 && vi2 == ve2;
 }
 
 static bool compare( const strus::LshModel& m1, const strus::LshModel& m2)
@@ -308,58 +319,193 @@ static bool compare( const strus::LshModel& m1, const strus::LshModel& m2)
 	return m1.isequal( m2);
 }
 
-static void readAndCheckDatabase( const strus::VectorStorageConfig& config, const TestDataset& dataset)
+static void readAndCheckDatabase( const std::string& testdir, const std::string& configstr, const TestDataset& dataset, const strus::LshModel& model)
 {
-	strus::local_ptr<strus::DatabaseInterface> dbi( strus::createDatabaseType_leveldb( "", g_errorhnd));
-	strus::DatabaseAdapter database( dbi.get(), config.databaseConfig, g_errorhnd);
+	strus::local_ptr<strus::DatabaseInterface> dbi( strus::createDatabaseType_leveldb( testdir, g_errorhnd));
+	strus::DatabaseAdapter database( dbi.get(), configstr, g_errorhnd);
 
+	std::size_t nofVariables = 0;
 	database.checkVersion();
-	if (dataset.nofSamples != database.readNofSamples()) throw std::runtime_error("number of samples does not match");
-	if (dataset.nofConcepts != database.readNofConcepts( MAIN_CONCEPTNAME)) throw std::runtime_error("number of concepts does not match");
-
-	strus::Index si = 0, se = dataset.nofSamples;
-	for (; si != se; ++si)
 	{
-		if (!compare( database.readSampleVector( si), dataset.sampleVectors[ si])) throw std::runtime_error("sample vectors do not match");
-		if (database.readSampleName( si) != dataset.sampleNames[si]) throw std::runtime_error("sample names do not match");
-		if (database.readSampleIndex( dataset.sampleNames[si]) != si) throw std::runtime_error("sample indices got by name do not match");
-	}
-	if (!compare( dataset.sampleSimHashs, database.readSampleSimhashVector(0,std::numeric_limits<strus::Index>::max()))) throw std::runtime_error("sample sim hash values do not match");
+		std::cerr << "checking read/write of variables ..." << std::endl;
+		const VariableDef* vi = g_variables;
+		for (; vi->type; ++vi)
+		{
+			std::string value = database.readVariable( vi->type);
+			if (value != vi->value) throw std::runtime_error("a variable value does not match");
+			++nofVariables;
+		}
+	}{
+		std::vector<std::pair<std::string,std::string> > variables = database.readVariables();
+		std::vector<std::pair<std::string,std::string> >::const_iterator di = variables.begin(), de = variables.end();
+		for (; di != de; ++di)
+		{
+			if (0==std::strcmp( di->first.c_str(), "version")) continue;
+			if (0==std::strcmp( di->first.c_str(), "config")) continue;
 
-	if (!compare( dataset.simrelmap, database.readSimRelationMap())) throw std::runtime_error("concept sim relation map does not match");
-	if (!compare( dataset.sfmap, database.readSampleConceptIndexMap( MAIN_CONCEPTNAME))) throw std::runtime_error("sample concept index map does not match");
-	if (!compare( dataset.fsmap, database.readConceptSampleIndexMap( MAIN_CONCEPTNAME))) throw std::runtime_error("concept sample index map does not match");
-	if (config.tostring() != database.readConfig().tostring()) throw std::runtime_error("configuration does not match");
-	if (!compare( dataset.lshmodel, database.readLshModel())) throw std::runtime_error("LSH model does not match");
+			const VariableDef* vi = g_variables;
+			for (; vi->type; ++vi)
+			{
+				if (0==std::strcmp( di->first.c_str(), vi->type)) break;
+			}
+			if (!vi->type) throw strus::runtime_error("a variable value of '%s' is undefined", di->first.c_str());
+			if (di->second != vi->value) throw std::runtime_error("a variable value does not match");
+		}
+	}{
+		std::cerr << "checking read/write of feature types ..." << std::endl;
+		int ti = 1, te = dataset.nofTypes();
+		for (; ti <= te; ++ti)
+		{
+			std::string typestr = getTypeName( ti);
+			if (ti != database.readTypeno( typestr) || typestr != database.readTypeName( ti))
+			{
+				throw std::runtime_error("stored type definitions do not match");
+			}
+		}
+		if (database.readNofTypeno() != dataset.nofTypes())
+		{
+			throw std::runtime_error("stored number of types does not match");
+		}
+	}{
+		std::cerr << "checking read/write of feature names ..." << std::endl;
+		int ni = 1, ne = dataset.nofFeatures();
+		for (; ni <= ne; ++ni)
+		{
+			std::string featstr = getFeatureName( ni);
+			if (ni != database.readFeatno( featstr) || featstr != database.readFeatName( ni))
+			{
+				throw std::runtime_error("stored feature definitions do not match");
+			}
+		}
+		if (database.readNofFeatno() != dataset.nofFeatures())
+		{
+			throw std::runtime_error("stored number of features does not match");
+		}
+	}{
+		std::cerr << "checking read/write of feature type relations ..." << std::endl;
+		std::map<strus::Index,std::vector<strus::Index> > featureTypeRelations;
+		{
+			std::map<TestDataset::FeatDef,int>::const_iterator mi = dataset.featmap().begin(), me = dataset.featmap().end();
+			for (; mi != me; ++mi)
+			{
+				std::map<strus::Index,std::vector<strus::Index> >::iterator ri = featureTypeRelations.find( mi->first.featno);
+				if (ri == featureTypeRelations.end())
+				{
+					std::vector<strus::Index> elems;
+					elems.push_back( mi->first.typeno);
+					featureTypeRelations.insert( std::pair<strus::Index,std::vector<strus::Index> >( mi->first.featno, elems) );
+				}
+				else
+				{
+					ri->second.push_back( mi->first.typeno);
+				}
+			}
+		}
+		int nofRelations = 0;
+		strus::Index ti = 1, te = dataset.nofTypes();
+		for (ti=1; ti <= te; ++ti)
+		{
+			strus::Index ni = 1, ne = dataset.nofFeatures();
+			for (; ni <= ne; ++ni)
+			{
+				std::vector<strus::Index> elems1;
+				std::map<strus::Index,std::vector<strus::Index> >::iterator ri = featureTypeRelations.find( ni);
+				if (ri != featureTypeRelations.end())
+				{
+					elems1 = ri->second;
+				}
+				nofRelations += elems1.size();
+				std::vector<strus::Index> elems2 = database.readFeatureTypeRelations( ni);
+				if (!compare( elems1, elems2))
+				{
+					std::cerr << "expected feature type relations for " << ni << ": ";
+					printArray( std::cerr, elems1);
+					std::cerr << std::endl;
+					std::cerr << "got feature type relations for " << ni << ": ";
+					printArray( std::cerr, elems2);
+					std::cerr << std::endl;
+					throw std::runtime_error("stored feature relations do not match");
+				}
+			}
+		}
+		std::cerr << "number of features " << dataset.nofFeatures() << ", number of types " << dataset.nofTypes() << ", number of relations " << nofRelations << std::endl;
+	}{
+		strus::LshModel stored_model = database.readLshModel();
+		if (!compare( model, stored_model))
+		{
+			throw std::runtime_error("stored LSH model does not match");
+		}
+	}{
+		std::cerr << "checking read/write of vectors ..." << std::endl;
+		strus::Index ti = 1, te = dataset.nofTypes();
+		for (ti=1; ti <= te; ++ti)
+		{
+			if (dataset.nofVectors( ti) != database.readNofVectors( ti))
+			{
+				std::cerr << "expected number of vectors for " << ti << " are " << dataset.nofVectors( ti) << ", got " << database.readNofVectors( ti) << std::endl;
+				throw std::runtime_error("number of vectors does not match");
+			}
+			strus::Index ni = 1, ne = dataset.nofFeatures();
+			int nofVectors = 0;
+			for (; ni <= ne; ++ni)
+			{
+				strus::WordVector vec1 = dataset.vector( ti, ni);
+				strus::WordVector vec2 = database.readVector( ti, ni);
+				if (!compare( vec1, vec2))
+				{
+					std::cerr << "expected vector for " << ti << "/" << ni << ":" << std::endl;
+					printArray( std::cerr, vec1);
+					std::cerr << "read vector for " << ti << "/" << ni << ":" << std::endl;
+					printArray( std::cerr, vec2);
+					throw std::runtime_error("stored vectors do not match");
+				}
+				if (!vec1.empty())
+				{
+					nofVectors += 1;
+					strus::SimHash lsh = database.readSimHash( ti, ni);
+					if (lsh != model.simHash( vec1, ni))
+					{
+						std::cerr << "expected LSH for " << ti << "/" << ni << ": " << model.simHash( vec1, ni).tostring() << std::endl;
+						std::cerr << "read LSH for " << ti << "/" << ni << ": " << lsh.tostring() << std::endl;
+						throw std::runtime_error("stored LSH values do not match");
+					}
+				}
+			}
+			std::cerr << "number of features " << ne << ", number of vectors " << nofVectors << std::endl;
+		}
+	}{
+		std::cerr << "checking read of LSH blob ..." << std::endl;
+		strus::Index ti = 1, te = dataset.nofTypes();
+		for (ti=1; ti <= te; ++ti)
+		{
+			std::vector<strus::SimHash> ar1 = database.readSimHashVector( ti);
+			std::vector<strus::SimHash> ar2;
+			strus::Index ni = 1, ne = dataset.nofFeatures();
+			for (; ni <= ne; ++ni)
+			{
+				strus::WordVector vec = database.readVector( ti, ni);
+				if (!vec.empty())
+				{
+					ar2.push_back( model.simHash( vec, ni));
+				}
+			}
+			std::cerr << "number of elements: " << ar1.size() << std::endl;
+			if (!compare( ar1, ar2))
+			{
+				throw std::runtime_error("stored LSH value arrays do not match");
+			}
+		}
+	}
 }
 
 
 #define DEFAULT_CONFIG \
 	"path=vsmodel;"\
-	"logfile=-;"\
-	"commit=717;"\
-	"dim=121;"\
-	"bit=7;"\
-	"var=13;"\
-	"maxdist=23;"\
-	"simdist=13;"\
-	"raddist=7;"\
-	"eqdist=3;"\
-	"mutations=21;"\
-	"votes=5;"\
-	"descendants=3;"\
-	"maxage=21;"\
-	"iterations=23;"\
-	"assignments=7;"\
-	"isaf=0.5;"\
-	"eqdiff=0.25;"\
-	"maxsimsam=44;"\
-	"rndsimsam=55;"\
-	"maxfeatures=301;"\
-	"maxconcepts=1001;"\
-	"singletons=no;"\
-	"probsim=yes;"\
-	"forcesim=no"
+	"vecdim=121;"\
+	"bits=7;"\
+	"variations=13;"\
+	"simdist=13;" \
+	"probsimdist=23;"
 
 int main( int argc, const char** argv)
 {
@@ -371,7 +517,9 @@ int main( int argc, const char** argv)
 
 		initRandomNumberGenerator();
 		std::string configstr( DEFAULT_CONFIG);
-		strus::Index nofSamples = 1211;
+		strus::Index nofTypes = 2;
+		strus::Index nofFeatures = 1000;
+		std::string workdir = "./";
 		bool printUsageAndExit = false;
 
 		// Parse parameters:
@@ -398,51 +546,54 @@ int main( int argc, const char** argv)
 			}
 			++argidx;
 		}
-		if (argc > argidx + 1)
+		if (argc > argidx)
 		{
-			std::cerr << "too many arguments (maximum 1 expected)" << std::endl;
+			workdir = argv[ argidx++];
+		}
+		if (argc > argidx)
+		{
+			nofFeatures = strus::numstring_conv::touint( argv[ argidx++], std::numeric_limits<int>::max());
+		}
+		if (argc > argidx)
+		{
+			nofTypes = strus::numstring_conv::touint( argv[ argidx++], std::numeric_limits<int>::max());
+		}
+		if (argc > argidx)
+		{
+			std::cerr << "too many arguments (maximum 3 expected)" << std::endl;
 			rt = 1;
 			printUsageAndExit = true;
 		}
-		else if (argc > argidx)
-		{
-			unsigned int numarg;
-			if (parseUint( numarg, argv[ argidx]))
-			{
-				nofSamples = (strus::Index)numarg;
-			}
-			else
-			{
-				std::cerr << "non negative number (number of examples) expected as first argument" << std::endl;
-				rt = 1;
-				printUsageAndExit = true;
-			}
-		}
 		if (printUsageAndExit)
 		{
-			std::cerr << "Usage: " << argv[0] << " [<options>] [<number of examples>]" << std::endl;
+			std::cerr << "Usage: " << argv[0] << " [<options>] [<workdir>] [<number of features>] [<number of types>]" << std::endl;
 			std::cerr << "options:" << std::endl;
 			std::cerr << "-h           : print this usage" << std::endl;
-			std::cerr << "-s <CONFIG>  : specify test configuration string as <CONFIG>" << std::endl;
+			std::cerr << "-s <CONFIG>            :specify test configuration string as <CONFIG>" << std::endl;
+			std::cerr << "<workdir>              :working directory, default './'" << std::endl;
+			std::cerr << "<number of features>   :number of features, default 1000" << std::endl;
+			std::cerr << "<number of types>      :number of types, default 1" << std::endl;
 			return rt;
 		}
-		strus::VectorStorageConfig config( configstr, g_errorhnd);
 		if (g_errorhnd->hasError()) throw std::runtime_error("error in test configuration");
 
-		TestDataset dataset( config, nofSamples);
-		writeDatabase( config, dataset);
-		readAndCheckDatabase( config, dataset);
+		TestDataset dataset( nofTypes, nofFeatures, configstr);
+		strus::LshModel model( dataset.config().vecdim, dataset.config().bits, dataset.config().variations, dataset.config().simdist, dataset.config().probsimdist);
 
-		strus::local_ptr<strus::DatabaseInterface> dbi( strus::createDatabaseType_leveldb( "", g_errorhnd));
+		writeDatabase( workdir, configstr, dataset, model);
+		readAndCheckDatabase( workdir, configstr, dataset, model);
+
+		strus::local_ptr<strus::DatabaseInterface> dbi( strus::createDatabaseType_leveldb( workdir, g_errorhnd));
 		if (dbi.get())
 		{
-			(void)dbi->destroyDatabase( config.databaseConfig);
+			(void)dbi->destroyDatabase( configstr);
 		}
 		if (g_errorhnd->hasError())
 		{
 			throw std::runtime_error( "uncaught exception");
 		}
 		std::cerr << "done" << std::endl;
+		delete g_errorhnd;
 		return 0;
 	}
 	catch (const std::runtime_error& err)
@@ -455,11 +606,13 @@ int main( int argc, const char** argv)
 			msg.append( ")");
 		}
 		std::cerr << "error: " << err.what() << msg << std::endl;
+		delete g_errorhnd;
 		return -1;
 	}
 	catch (const std::bad_alloc& )
 	{
 		std::cerr << "out of memory" << std::endl;
+		delete g_errorhnd;
 		return -2;
 	}
 	catch (const std::logic_error& err)
@@ -472,6 +625,7 @@ int main( int argc, const char** argv)
 			msg.append( ")");
 		}
 		std::cerr << "error: " << err.what() << msg << std::endl;
+		delete g_errorhnd;
 		return -3;
 	}
 }

@@ -16,19 +16,20 @@
 #include <memory>
 #include <iostream>
 #include "armadillo"
+#include "armautils.hpp"
 
 #undef STRUS_LOWLEVEL_DEBUG
 
 using namespace strus;
 
-static std::vector<SimHash> getSimhashValues_singlethread( const LshModel& lshmodel, const std::vector<std::vector<float> >& vecar)
+static std::vector<SimHash> getSimhashValues_singlethread( const LshModel& lshmodel, const std::vector<VectorDef>& vecar)
 {
 	std::vector<SimHash> rt;
 	rt.reserve( vecar.size());
-	std::vector<std::vector<float> >::const_iterator si = vecar.begin(), se = vecar.end();
+	std::vector<VectorDef>::const_iterator si = vecar.begin(), se = vecar.end();
 	for (; si != se; ++si)
 	{
-		rt.push_back( lshmodel.simHash( arma::normalise( arma::fvec(*si))));
+		rt.push_back( lshmodel.simHash( strus::normalizeVector( si->vec()), si->id()));
 	}
 	return rt;
 }
@@ -37,11 +38,11 @@ static std::vector<SimHash> getSimhashValues_singlethread( const LshModel& lshmo
 class SimhashBuilderGlobalContext
 {
 public:
-	SimhashBuilderGlobalContext( SimHash* resar_, const std::vector<float>* vecar_, std::size_t arsize_, std::size_t chunksize_)
+	SimhashBuilderGlobalContext( SimHash* resar_, const VectorDef* vecar_, std::size_t arsize_, std::size_t chunksize_)
 		:m_chunkIndex(0),m_resar(resar_),m_vecar(vecar_),m_arsize(arsize_),m_chunksize(chunksize_)
 	{}
 
-	bool fetch( SimHash*& chunk_resar, const std::vector<float>*& chunk_vecar, std::size_t& chunk_arsize)
+	bool fetch( SimHash*& chunk_resar, const VectorDef*& chunk_vecar, std::size_t& chunk_arsize)
 	{
 		unsigned int chunk_index = m_chunkIndex.allocIncrement();
 		std::size_t chunk_ofs = chunk_index * m_chunksize;
@@ -83,7 +84,7 @@ public:
 private:
 	strus::AtomicCounter<unsigned int> m_chunkIndex;
 	SimHash* m_resar;
-	const std::vector<float>* m_vecar;
+	const VectorDef* m_vecar;
 	std::size_t m_arsize;
 	std::size_t m_chunksize;
 	strus::mutex m_mutex;
@@ -109,7 +110,7 @@ public:
 		try
 		{
 			SimHash* chunk_resar = 0;
-			const std::vector<float>* chunk_vecar = 0;
+			const VectorDef* chunk_vecar = 0;
 			std::size_t chunk_arsize = 0;
 
 			while (!m_terminated && m_ctx->fetch( chunk_resar, chunk_vecar, chunk_arsize))
@@ -117,7 +118,7 @@ public:
 				std::size_t ai = 0, ae = chunk_arsize;
 				for (;ai != ae; ++ai)
 				{
-					chunk_resar[ ai] = m_lshModel->simHash( arma::normalise( arma::fvec( chunk_vecar[ ai])));
+					chunk_resar[ ai] = m_lshModel->simHash( strus::normalizeVector( chunk_vecar[ ai].vec()), chunk_vecar[ ai].id());
 				}
 			}
 		}
@@ -147,7 +148,7 @@ private:
 
 std::vector<SimHash> strus::getSimhashValues(
 		const LshModel& lshmodel,
-		const std::vector<std::vector<float> >& vecar,
+		const std::vector<VectorDef>& vecar,
 		unsigned int threads,
 		ErrorBufferInterface* errorhnd)
 {

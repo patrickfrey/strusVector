@@ -6,7 +6,7 @@ include_directories(
 	"${VECTOR_INCLUDE_DIRS}"
 )
 link_directories(
-	"${ARMADILLO_LIBRARY_DIRS}"
+	${ARMADILLO_LIBRARY_DIRS}
 )
 
 # some hacks to make FreeBSD work
@@ -18,6 +18,6 @@ if(FREEBSD)
 endif()
 
 add_executable( testArmadillo testArmadillo.cpp)
-target_link_libraries( testArmadillo ${Intl_LIBRARIES} strus_armadillo )
+target_link_libraries( testArmadillo ${Intl_LIBRARIES} ${ARMADILLO_LIBRARIES} )
 
 

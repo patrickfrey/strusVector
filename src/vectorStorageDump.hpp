@@ -5,7 +5,7 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
-/// \brief Implementation of the contents dump of a standard vector storage
+/// \brief Implementation of the contents dump of a vector storage
 /// \file vectorStorageDump.hpp
 #ifndef _STRUS_VECTOR_STORAGE_DUMP_IMPLEMENTATION_HPP_INCLUDED
 #define _STRUS_VECTOR_STORAGE_DUMP_IMPLEMENTATION_HPP_INCLUDED
@@ -27,7 +27,7 @@ class VectorStorageDump
 	:public VectorStorageDumpInterface
 {
 public:
-	VectorStorageDump( const DatabaseInterface* database_, const std::string& configsrc, const std::string& keyprefix_, ErrorBufferInterface* errorhnd_);
+	VectorStorageDump( const DatabaseInterface* database_, const std::string& configsrc, ErrorBufferInterface* errorhnd_);
 	virtual ~VectorStorageDump(){}
 
 	virtual bool nextChunk( const char*& chunk, std::size_t& chunksize);
@@ -39,7 +39,6 @@ private:
 	DatabaseAdapter m_database;
 	Reference<DatabaseAdapter::DumpIterator> m_itr;
 	std::string m_chunk;
-	std::string m_keyprefix;
 	ErrorBufferInterface* m_errorhnd;			///< error buffer for exception free interface
 };
 

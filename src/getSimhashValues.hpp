@@ -8,6 +8,7 @@
 /// \brief Function for evaluating similarity relations (incl. multithreaded)
 #ifndef _STRUS_VECTOR_GET_SIMHASH_VALUES_HPP_INCLUDED
 #define _STRUS_VECTOR_GET_SIMHASH_VALUES_HPP_INCLUDED
+#include "vectorDef.hpp"
 #include "simHash.hpp"
 #include <vector>
 
@@ -27,7 +28,7 @@ class LshModel;
 /// \return similarity LSH values
 std::vector<SimHash> getSimhashValues(
 		const LshModel& lshmodel,
-		const std::vector<std::vector<float> >& vecar,
+		const std::vector<VectorDef>& vecar,
 		unsigned int threads,
 		ErrorBufferInterface* errorhnd);
 

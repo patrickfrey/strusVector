@@ -11,7 +11,7 @@ include_directories(
 )
 link_directories(
 	"${VECTOR_LIBRARY_DIRS}"
-	"${ARMADILLO_LIBRARY_DIRS}"
+	${ARMADILLO_LIBRARY_DIRS}
 	${Boost_LIBRARY_DIRS}
 	"${strusbase_LIBRARY_DIRS}"
 	"${strus_LIBRARY_DIRS}"
@@ -26,7 +26,7 @@ if(FREEBSD)
 endif()
 
 add_executable( testDatabaseAdapter testDatabaseAdapter.cpp)
-target_link_libraries( testDatabaseAdapter strus_vector_static  strus_database_leveldb strus_error strus_armadillo ${Boost_LIBRARIES} ${Intl_LIBRARIES} )
+target_link_libraries( testDatabaseAdapter strus_vector_static  strus_database_leveldb strus_error  ${ARMADILLO_LIBRARIES} ${Boost_LIBRARIES} ${Intl_LIBRARIES} )
 
 
 

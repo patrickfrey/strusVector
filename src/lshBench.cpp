@@ -18,7 +18,7 @@ uint64_t LshBench::selmask( const SimHash& sh) const
 	return sh.ar()[ m_seed % sh.arsize()];
 }
 
-LshBench::LshBench( const SimHash* base_, const strus::Index& basesize_, unsigned int seed_, unsigned int seeksimdist)
+LshBench::LshBench( const SimHash* base_, const strus::Index& basesize_, int seed_, int seeksimdist)
 	:m_base(base_),m_basesize(basesize_),m_ofs(0),m_size(0),m_shsize(0),m_seed(seed_),m_maxdiff(0)
 {
 	std::memset( m_ar, 0, sizeof(*m_ar)*Width);
@@ -64,7 +64,7 @@ void LshBench::findSimCandidates( std::vector<Candidate>& res, const LshBench& o
 		strus::Index oi = 0, oe = o.m_size;
 		for (; oi != oe; ++oi)
 		{
-			if (strus::BitOperations::bitCount( o.m_ar[ oi] ^ ndsel) <= m_maxdiff)
+			if ((int)strus::BitOperations::bitCount( o.m_ar[ oi] ^ ndsel) <= m_maxdiff)
 			{
 				if (m_ofs+ai != o.m_ofs+oi)
 				{

@@ -5,7 +5,7 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
-/// \brief Exported functions of the strus standard vector space model library
+/// \brief Exported functions of the strus standard vector storage interface library
 /// \file vector_std.hpp
 #ifndef _STRUS_VECTOR_STORAGE_STD_LIB_HPP_INCLUDED
 #define _STRUS_VECTOR_STORAGE_STD_LIB_HPP_INCLUDED
@@ -21,7 +21,7 @@ class VectorStorageInterface;
 /// \brief Forward declaration
 class DatabaseInterface;
 
-/// \brief Create standard vector space model
+/// \brief Create standard vector storage interface
 /// \param[in] errorhnd error handler to use
 VectorStorageInterface* createVectorStorage_std( const std::string& wordir, ErrorBufferInterface* errorhnd);
 

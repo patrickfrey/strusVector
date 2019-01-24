@@ -22,7 +22,7 @@ class LshModel
 public:
 	/// \brief Constructor
 	LshModel();
-	LshModel( std::size_t dim_, std::size_t nofbits_, std::size_t variations_);
+	LshModel( int vecdim_, int bits_, int variations_, int simdist_, int probsimdist_);
 	LshModel( const LshModel& o);
 
 	/// \brief map contents to string in readable form
@@ -38,18 +38,53 @@ public:
 	/// \brief Calculate similarity hash of a vector
 	/// \param[in] vec input vector
 	/// \return simhash value acording to this model
-	SimHash simHash( const arma::fvec& vec) const;
+	SimHash simHash( const arma::fvec& vec, const Index& id_) const;
 
 	bool isequal( const LshModel& o) const;
 
-private:
-	static arma::fmat createModelMatrix( std::size_t dim_, std::size_t nofbits_);
-	LshModel( std::size_t dim_, std::size_t nofbits_, std::size_t variations_, const arma::fmat& modelMatrix_, const std::vector<arma::fmat>& rotations_);
+	int vecdim() const
+	{
+		return m_vecdim;
+	}
+	int bits() const
+	{
+		return m_bits;
+	}
+	int variations() const
+	{
+		return m_variations;
+	}
+	int simdist() const
+	{
+		return m_simdist;
+	}
+	int probsimdist() const
+	{
+		return m_probsimdist;
+	}
+	void set_simdist( int value)
+	{
+		m_simdist = value;
+	}
+	void set_probsimdist( int value)
+	{
+		m_probsimdist = value;
+	}
+	int vectorBits() const
+	{
+		return m_bits * m_variations;
+	}
 
 private:
-	std::size_t m_dim;
-	std::size_t m_nofbits;
-	std::size_t m_variations;
+	static arma::fmat createModelMatrix( int vecdim_, int bits_);
+	LshModel( int vecdim_, int bits_, int variations_, int simdist_, int probsimdist_, const arma::fmat& modelMatrix_, const std::vector<arma::fmat>& rotations_);
+
+private:
+	int m_vecdim;
+	int m_bits;
+	int m_variations;
+	int m_simdist;
+	int m_probsimdist;
 	arma::fmat m_modelMatrix;
 	std::vector<arma::fmat> m_rotations;
 };

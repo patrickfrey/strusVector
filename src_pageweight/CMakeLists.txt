@@ -13,7 +13,7 @@ include_directories(
 link_directories(
 	${Boost_LIBRARY_DIRS}
 	"${VECTOR_LIBRARY_DIRS}"
-	"${ARMADILLO_LIBRARY_DIRS}"
+	${ARMADILLO_LIBRARY_DIRS}
 	"${strusbase_LIBRARY_DIRS}"
 )
 
@@ -25,7 +25,7 @@ target_link_libraries( strus_pageweight_static strus_base ${Boost_LIBRARIES} ${I
 set_property( TARGET strus_pageweight_static PROPERTY POSITION_INDEPENDENT_CODE TRUE )
 
 add_executable( strusPageWeight  strusPageWeight.cpp )
-target_link_libraries( strusPageWeight strus_base strus_error strus_pageweight_static ${Boost_LIBRARIES} ${Intl_LIBRARIES} )
+target_link_libraries( strusPageWeight strus_base strus_error strus_pageweight_static  ${ARMADILLO_LIBRARIES} ${Boost_LIBRARIES} ${Intl_LIBRARIES} )
 
 
 # ------------------------------

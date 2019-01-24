@@ -5,21 +5,30 @@ cmake_minimum_required(VERSION 2.8 FATAL_ERROR)
 # --------------------------------------
 set( source_files
 	logger.cpp
-	armautils.cpp
 	${CMAKE_CURRENT_BINARY_DIR}/internationalization.cpp
 	simHash.cpp
-	simHashReader.cpp
-	simHashBench.cpp
-	simHashFilter.cpp
 	simHashMap.cpp
+	simGroup.cpp
+	simGroupMap.cpp
+	dependencyGraph.cpp
+	sampleSimGroupMap.cpp
+	sampleSimGroupAssignmentQueue.cpp
+	simRelationMap.cpp
+	simRelationMapBuilder.cpp
 	getSimhashValues.cpp
 	lshModel.cpp
 	lshBench.cpp
+	genGroupContext.cpp
+	genGroupThreadContext.cpp
+	genModel.cpp
 	databaseAdapter.cpp
-	vectorStorage.cpp
-	vectorStorageClient.cpp
+	vectorStorageConfig.cpp
 	vectorStorageDump.cpp
+	vectorStorageSearch.cpp
+	vectorStorageClient.cpp
 	vectorStorageTransaction.cpp
+	vectorStorageBuilder.cpp
+	vectorStorage.cpp
 )
 
 include_directories(
@@ -34,7 +43,7 @@ include_directories(
 )
 link_directories(
 	${Boost_LIBRARY_DIRS}
-	${ARMADILLO_LIBRARY_DIRS}
+	"${ARMADILLO_LIBRARY_DIRS}"
 	"${strusbase_LIBRARY_DIRS}"
 )
 
@@ -44,11 +53,11 @@ link_directories(
 add_cppcheck( strus_vector ${source_files} libstrus_vector_std.cpp modstrus_storage_vector_std.cpp )
 
 add_library( strus_vector_static STATIC ${source_files} )
-target_link_libraries( strus_vector_static strus_base ${ARMADILLO_LIBRARIES} ${Intl_LIBRARIES} )
+target_link_libraries( strus_vector_static strus_base strus_armadillo ${Intl_LIBRARIES} )
 set_property( TARGET strus_vector_static PROPERTY POSITION_INDEPENDENT_CODE TRUE )
 
 add_library( strus_vector_std SHARED libstrus_vector_std.cpp )
-target_link_libraries( strus_vector_std strus_vector_static strus_base ${ARMADILLO_LIBRARIES} ${Intl_LIBRARIES} ${Boost_LIBRARIES} )
+target_link_libraries( strus_vector_std strus_vector_static strus_base strus_armadillo ${Intl_LIBRARIES} ${Boost_LIBRARIES} )
 set_target_properties(
     strus_vector_std
     PROPERTIES

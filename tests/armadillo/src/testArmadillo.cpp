@@ -5,8 +5,11 @@
 #include <string>
 #include <iomanip>
 #include <cstdlib>
+#include <cstdio>
 #include <cmath>
 #include <limits>
+
+#define VEC_EPSILON 1e-5
 
 static void initRandomNumberGenerator()
 {
@@ -20,11 +23,38 @@ static void initRandomNumberGenerator()
 	std::srand( seed+2);
 }
 
+static std::string floatToString( float num)
+{
+	char fbuf[ 64];
+	std::snprintf( fbuf, sizeof( fbuf), "%.6f", num);
+	return std::string(fbuf);
+}
+
 int main()
 {
 	try
 	{
 		initRandomNumberGenerator();
+		{
+			for (int ii=0; ii<1000; ++ii)
+			{
+				enum {Dim=300};
+				arma::fvec vec = arma::randu<arma::fvec>( 300);
+				float sim = arma::norm_dot( vec, vec);
+				if (sim < 1.0 - VEC_EPSILON)
+				{
+					std::cerr << "vector: (";
+					for (int vi=0; vi<Dim; ++vi)
+					{
+						if (vi) std::cerr << ", ";
+						std::cerr << floatToString( vec[vi]);
+					}
+					std::cerr << ")" << std::endl;
+					std::cerr << "arma::norm_dot failed for vector " << ii << std::endl;
+					throw std::runtime_error( std::string("similarity to itself not close enough to 1.0 as expected: ") + floatToString( sim));
+				}
+			}
+		}
 		{
 			arma::mat A = arma::randu<arma::mat>(5,5);
 			arma::mat B = arma::randu<arma::mat>(5,5);

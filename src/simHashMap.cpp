@@ -1,244 +1,197 @@
 /*
- * Copyright (c) 2016 Patrick P. Frey
+ * Copyright (c) 2018 Patrick P. Frey
  *
  * This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
-/// \brief Map for fast scan for similar SimHashes 
+/// \brief Structure for retrieval of the most similar LSH values
 #include "simHashMap.hpp"
-#include "simRelationMap.hpp"
-#include "internationalization.hpp"
-#include "strus/base/bitOperations.hpp"
-#include "strus/base/malloc.hpp"
-#include "strus/base/thread.hpp"
-#include "strus/base/platform.hpp"
-#include <vector>
-#include <string>
-#include <stdexcept>
+#include "simHashRankList.hpp"
+#include <algorithm>
 
 using namespace strus;
 
-SimHashMap::~SimHashMap()
+#undef STRUS_LOWLEVEL_DEBUG
+
+void SimHashMap::load()
 {
-	if (m_selar1) strus::aligned_free( m_selar1);
-	if (m_selar2) strus::aligned_free( m_selar2);
+#ifdef STRUS_LOWLEVEL_DEBUG
+	struct CheckRank
+	{
+		Index id;
+		int simdist;
+
+		CheckRank() :id(0),simdist(0){}
+		CheckRank( Index id_, int simdist_) :id(id_),simdist(simdist_){}
+		CheckRank( const CheckRank& o) :id(o.id),simdist(o.simdist){}
+
+		bool operator<( const CheckRank& o) const
+		{
+			return simdist == o.simdist ? id < o.id : simdist < o.simdist;
+		}
+	};
+	std::vector<SimHash> lshar;
+#endif
+	const SimHash* val = m_reader->loadFirst();
+	for (; val; val=m_reader->loadNext())
+	{
+		m_filter.append( val, 1);
+		m_idar.push_back( val->id());
+#ifdef STRUS_LOWLEVEL_DEBUG
+		lshar.push_back( *val);
+#endif
+	}
+#ifdef STRUS_LOWLEVEL_DEBUG
+	std::vector<SimHash>::const_iterator li = lshar.begin(), le = lshar.end();
+	for (; li != le; ++li)
+	{
+		std::vector<CheckRank> chkar;
+		std::vector<SimHash>::const_iterator oi = lshar.begin(), oe = lshar.end();
+		for (; oi != oe; ++oi)
+		{
+			chkar.push_back( CheckRank( oi->id(), li->dist( *oi)));
+		}
+		std::sort( chkar.begin(), chkar.end());
+		std::vector<CheckRank>::const_iterator ci = chkar.begin(), ce = chkar.end();
+		std::size_t cidx = 0;
+		for (++cidx; ci != ce && ci->simdist < 300; ++ci,++cidx){}
+		
+		chkar.resize( cidx);
+		std::vector<SimHashQueryResult> cres = findSimilar( *li, 340/*maxSimDist*/, 640/*maxProbSimDist*/, 20);
+		std::vector<SimHashQueryResult>::const_iterator ri = cres.begin(), re = cres.end();
+		for (; ri != re; ++ri)
+		{
+			if (ri->weight() > 0.95)
+			{
+				ci = chkar.begin(), ce = chkar.end();
+				for (; ci != ce && ci->id != ri->featno(); ++ci){}
+				if (ci == ce)
+				{
+					std::cout << "FEATURE DOES NOT MATCH" << std::endl;
+				}
+			}
+		}
+		ci = chkar.begin(), ce = chkar.end();
+		for (; ci != ce; ++ci)
+		{
+			if (ci->simdist < 200)
+			{
+				ri = cres.begin(), re = cres.end();
+				for (; ri != re && ci->id != ri->featno(); ++ri){}
+				if (ri == re)
+				{
+					std::cout << "FEATURE NOT FOUND" << std::endl;
+				}
+			}
+		}
+	}
+#endif
 }
 
-void SimHashMap::initBench()
+int SimHashMap::getMaxSimDistFromBestFilterSamples( const std::vector<SimHashSelect>& candidates, const SimHash& needle, int maxNofElements, int nofSampleReads) const
 {
-	if (m_ar.empty()) return;
-	m_vecsize = m_ar[0].size();
-	unsigned int mod = m_ar[0].arsize();
-	if (mod > 1) mod -= 1;
-	m_select1 = (m_seed+0) % mod;
-	m_select2 = (m_seed+1) % mod;
-	m_selar1 = (uint64_t*)strus::aligned_malloc( m_ar.size() * sizeof(uint64_t), strus::platform::CacheLineSize);
-	m_selar2 = (uint64_t*)strus::aligned_malloc( m_ar.size() * sizeof(uint64_t), strus::platform::CacheLineSize);
-	if (!m_selar1 || !m_selar2)
+	RankList<SimHashSelect> selectRanklist( nofSampleReads);
+	std::vector<SimHashSelect>::const_iterator ci = candidates.begin(), ce = candidates.end();
+	for (; ci != ce; ++ci)
 	{
-		if (m_selar1) strus::aligned_free( m_selar1);
-		if (m_selar2) strus::aligned_free( m_selar2);
-		throw std::bad_alloc();
+		selectRanklist.insert( *ci);
 	}
-	std::size_t si = 0, se = m_ar.size();
+	int sampleDistAr[ RankList<SimHashSelect>::MaxSize];
+	int sampleDistArSize = 0;
+
+	RankList<SimHashSelect>::const_iterator si = selectRanklist.begin(), se = selectRanklist.end();
 	for (; si != se; ++si)
 	{
-		if (m_ar[si].size() != m_vecsize) throw std::runtime_error( _TXT("inconsistent dataset passed to sim hash map (sim hash element sizes differ)"));
-		m_selar1[ si] = m_ar[ si].ar()[ m_select1];
-		m_selar2[ si] = m_ar[ si].ar()[ m_select2];
+		Index elemid = m_idar[ si->idx];
+		SimHash val = m_reader->load( elemid);
+		if (val.defined())
+		{
+			sampleDistAr[ sampleDistArSize++] = val.dist( needle);
+		}
 	}
+	if (sampleDistArSize == 0) return 0;
+	std::sort( sampleDistAr, sampleDistAr + sampleDistArSize);
+	return maxNofElements >= sampleDistArSize ? 0 : sampleDistAr[ maxNofElements];
 }
 
-
-struct RankList
+std::vector<SimHashQueryResult> SimHashMap::findSimilar( const SimHash& needle, int maxSimDist, int maxProbSimDist, int maxNofElements) const
 {
-	RankList( unsigned int maxNofRanks_)
-		:m_nofRanks(0),m_maxNofRanks(maxNofRanks_)
-	{
-		if (maxNofRanks_ == 0 || m_maxNofRanks > MaxIndexSize) throw strus::runtime_error( "%s",  _TXT( "illegal value for max number of ranks"));
-		for (unsigned int ii=0; ii<m_maxNofRanks; ++ii) m_brute_index[ii] = ii;
-	}
+	if (m_idar.empty()) return std::vector<SimHashQueryResult>();
 
-	void bruteInsert_at( std::size_t idx, const SimRelationMap::Element& elem)
-	{
-		std::size_t elemidx = m_brute_index[ m_maxNofRanks-1];
-		std::memmove( m_brute_index+idx+1, m_brute_index+idx, m_maxNofRanks-idx-1);
-		m_brute_index[ idx] = elemidx;
-		m_brute_ar[ elemidx] = elem;
-	}
+	SimHashRankList ranklist( maxNofElements);
 
-	unsigned short lastdist() const
-	{
-		std::size_t last = m_nofRanks > m_maxNofRanks ? m_maxNofRanks:m_nofRanks;
-		return m_brute_ar[ m_brute_index[ last-1]].simdist;
-	}
+	std::vector<SimHashSelect> candidates;
+	m_filter.search( candidates, needle, maxSimDist, maxProbSimDist);
 
-	void insert( const SimRelationMap::Element& elem)
+	int nofSampleReads = maxNofElements*2 + 10;
+	if (nofSampleReads > RankList<SimHashSelect>::MaxSize) nofSampleReads = RankList<SimHashSelect>::MaxSize;
+
+	int lastdist = getMaxSimDistFromBestFilterSamples( candidates, needle, maxNofElements, nofSampleReads);
+	if (lastdist == 0) lastdist = maxSimDist;
+	int probSum = m_filter.maxProbSumDist( maxSimDist, lastdist * ((float)maxProbSimDist / (float)maxSimDist) + 1);
+
+	std::vector<SimHashSelect>::const_iterator ci = candidates.begin(), ce = candidates.end();
+	for (; ci != ce; ++ci)
 	{
-		if (!m_nofRanks)
+		Index elemid = m_idar[ ci->idx];
+		if (ci->shdiff < probSum)
 		{
-			m_brute_ar[ m_brute_index[ 0] = 0] = elem;
-		}
-		else
-		{
-			std::size_t first = 0;
-			std::size_t last = m_nofRanks > m_maxNofRanks ? m_maxNofRanks:m_nofRanks;
-			std::size_t mid = last-1;
-	
-			while (last - first > 2)
+			SimHash val = m_reader->load( elemid);
+			if (val.defined())
 			{
-				if (elem < m_brute_ar[ m_brute_index[ mid]])
+				if (val.near( needle, maxSimDist))
 				{
-					last = mid;
-					mid = (first + mid) >> 1;
-				}
-				else if (m_brute_ar[ m_brute_index[ mid]] < elem)
-				{
-					first = mid+1;
-					mid = (last + mid) >> 1;
-				}
-				else
-				{
-					bruteInsert_at( mid, elem);
-					++m_nofRanks;
-					return;
-				}
-			}
-			for (; first < last; ++first)
-			{
-				if (elem < m_brute_ar[ m_brute_index[ first]])
-				{
-					bruteInsert_at( first, elem);
-					break;
-				}
-			}
-			if (first == last && last < m_maxNofRanks)
-			{
-				bruteInsert_at( last, elem);
-			}
-		}
-		++m_nofRanks;
-	}
-
-	std::vector<VectorQueryResult> result( unsigned int width, Index indexofs) const
-	{
-		std::vector<VectorQueryResult> rt;
-		double width_f = width;
-		std::size_t limit = m_nofRanks > m_maxNofRanks ? m_maxNofRanks:m_nofRanks;
-		for (std::size_t ridx=0; ridx<limit; ++ridx)
-		{
-			double weight = 1.0 - (double)m_brute_ar[ m_brute_index[ ridx]].simdist / width_f;
-			rt.push_back( VectorQueryResult( m_brute_ar[ m_brute_index[ ridx]].index + indexofs, weight));
-		}
-		return rt;
-	}
-
-	std::string tostring() const
-	{
-		std::ostringstream buf;
-		std::size_t limit = m_nofRanks > m_maxNofRanks ? m_maxNofRanks:m_nofRanks;
-		for (std::size_t ridx=0; ridx<limit; ++ridx)
-		{
-			buf << "(" << m_brute_ar[ m_brute_index[ ridx]].simdist << "," << m_brute_ar[ m_brute_index[ ridx]].index << ") ";
-		}
-		return buf.str();
-	}
-
-private:
-	enum {MaxIndexSize=256};
-	unsigned int m_nofRanks;
-	unsigned int m_maxNofRanks;
-	unsigned char m_brute_index[ MaxIndexSize];
-	SimRelationMap::Element m_brute_ar[ MaxIndexSize];
-};
-
-std::vector<VectorQueryResult> SimHashMap::findSimilar( const SimHash& sh, unsigned short simdist, unsigned short prob_simdist, unsigned int maxNofElements, const Index& indexofs) const
-{
-	RankList ranklist( maxNofElements);
-	unsigned int ranklistSize = 0;
-	double prob_simdist_factor = (double)prob_simdist / (double)simdist;
-	unsigned int shdiff = ((unsigned int)prob_simdist * 64U) / m_vecsize;
-	uint64_t needle1 = sh.ar()[ m_select1];
-	uint64_t needle2 = sh.ar()[ m_select2];
-	std::size_t si = 0, se = m_ar.size();
-	for (; si != se; ++si)
-	{
-		if (strus::BitOperations::bitCount( m_selar1[si] ^ needle1) <= shdiff)
-		{
-			if (strus::BitOperations::bitCount( m_selar2[si] ^ needle2) <= shdiff)
-			{
-				if (m_ar[ si].near( sh, simdist))
-				{
-					unsigned short dist = m_ar[ si].dist( sh);
-					ranklist.insert( SimRelationMap::Element( si, dist));
-					ranklistSize++;
-					if (ranklistSize > maxNofElements)
-					{
-						unsigned short lastdist = ranklist.lastdist();
-						if (lastdist < dist)
-						{
-							simdist = lastdist;
-							shdiff = (unsigned int)(prob_simdist_factor * simdist * 64U) / m_vecsize;
-						}
-					}
+					int dist = val.dist( needle);
+					(void)ranklist.insert( SimHashRank( elemid, dist));
 				}
 			}
 		}
 	}
-	return ranklist.result( sh.size(), indexofs);
+	return ranklist.result( needle.size());
 }
 
-std::vector<VectorQueryResult> SimHashMap::findSimilar( const SimHash& sh, unsigned short simdist, unsigned int maxNofElements, const Index& indexofs) const
+std::vector<SimHashQueryResult> SimHashMap::findSimilarWithStats( Stats& stats, const SimHash& needle, int maxSimDist, int maxProbSimDist, int maxNofElements) const
 {
-	RankList ranklist( maxNofElements);
-	unsigned int ranklistSize = 0;
-	std::size_t si = 0, se = m_ar.size();
-	for (; si != se; ++si)
+	stats.nofValues = m_idar.size();
+	if (m_idar.empty()) return std::vector<SimHashQueryResult>();
+
+	SimHashRankList ranklist( maxNofElements);
+
+	std::vector<SimHashSelect> candidates;
+	m_filter.searchWithStats( stats, candidates, needle, maxSimDist, maxProbSimDist);
+
+	int nofSampleReads = maxNofElements*2 + 10;
+	if (nofSampleReads > RankList<SimHashSelect>::MaxSize) nofSampleReads = RankList<SimHashSelect>::MaxSize;
+
+	int lastdist = getMaxSimDistFromBestFilterSamples( candidates, needle, maxNofElements, nofSampleReads);
+	if (lastdist == 0) lastdist = maxSimDist;
+	int probSum = m_filter.maxProbSumDist( maxSimDist, lastdist * ((float)maxProbSimDist / (float)maxSimDist) + 1);
+
+	stats.nofDatabaseReads += nofSampleReads;
+	stats.probSum = probSum;
+	stats.samplesMaxDist = lastdist;
+
+	std::vector<SimHashSelect>::const_iterator ci = candidates.begin(), ce = candidates.end();
+	for (; ci != ce; ++ci)
 	{
-		if (m_ar[ si].near( sh, simdist))
+		Index elemid = m_idar[ ci->idx];
+		if (ci->shdiff < probSum)
 		{
-			unsigned short dist = m_ar[ si].dist( sh);
-			ranklist.insert( SimRelationMap::Element( si, dist));
-			ranklistSize++;
-			if (ranklistSize > maxNofElements)
+			++stats.nofDatabaseReads;
+			SimHash val = m_reader->load( elemid);
+			if (val.defined())
 			{
-				unsigned short lastdist = ranklist.lastdist();
-				if (lastdist < dist)
+				if (val.near( needle, maxSimDist))
 				{
-					simdist = lastdist;
+					++stats.nofResults;
+					int dist = val.dist( needle);
+					(void) ranklist.insert( SimHashRank( elemid, dist));
 				}
 			}
 		}
 	}
-	return ranklist.result( sh.size(), indexofs);
+	return ranklist.result( needle.size());
 }
 
-std::vector<VectorQueryResult> SimHashMap::findSimilarFromSelection( const std::vector<Index>& selection, const SimHash& sh, unsigned short simdist, unsigned int maxNofElements, const Index& indexofs) const
-{
-	RankList ranklist( maxNofElements);
-	unsigned int ranklistSize = 0;
-	std::vector<Index>::const_iterator si = selection.begin(), se = selection.end();
-	for (; si != se; ++si)
-	{
-		if (*si < indexofs) continue;
-		Index sidx = *si - indexofs;
-		if (sidx >= (Index)m_ar.size()) continue;
-		if (m_ar[ sidx].near( sh, simdist))
-		{
-			unsigned short dist = m_ar[ sidx].dist( sh);
-			ranklist.insert( SimRelationMap::Element( sidx, dist));
-			ranklistSize++;
-			if (ranklistSize > maxNofElements)
-			{
-				unsigned short lastdist = ranklist.lastdist();
-				if (lastdist < dist)
-				{
-					simdist = lastdist;
-				}
-			}
-		}
-	}
-	return ranklist.result( sh.size(), indexofs);
-}
 

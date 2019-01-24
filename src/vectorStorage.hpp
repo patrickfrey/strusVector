@@ -9,6 +9,7 @@
 #ifndef _STRUS_VECTOR_STORAGE_IMPLEMENTATION_HPP_INCLUDED
 #define _STRUS_VECTOR_STORAGE_IMPLEMENTATION_HPP_INCLUDED
 #include "strus/vectorStorageInterface.hpp"
+#include "strus/debugTraceInterface.hpp"
 #include <string>
 
 namespace strus {
@@ -28,20 +29,77 @@ class VectorStorage
 	:public VectorStorageInterface
 {
 public:
-	VectorStorage( const std::string& workdir_, ErrorBufferInterface* errorhnd_)
-		:m_errorhnd(errorhnd_),m_workdir(workdir_){}
-	virtual ~VectorStorage(){}
+	enum DefaultConfigValues
+	{
+		DefaultDim = 300,
+		DefaultBits = 64,
+		DefaultVariations = 32,
+		DefaultSim = 340,
+		DefaultProbSim = 640
+	};
+
+	struct Config
+	{
+		int vecdim;
+		int bits;
+		int variations;
+		int simdist;
+		int probsimdist;
+
+		Config( const Config& o)
+			:vecdim(o.vecdim),bits(o.bits),variations(o.variations),simdist(o.simdist),probsimdist(o.probsimdist){}
+		Config()
+			:vecdim(DefaultDim),bits(DefaultBits),variations(DefaultVariations),simdist(DefaultSim),probsimdist(DefaultProbSim){}
+		explicit Config( int vecdim_)
+			:vecdim(vecdim_)
+			,bits(bitsFromVecdim(vecdim_))
+			,variations(variationsFromVecdim(vecdim_))
+			,simdist(simdistFromVecdim(vecdim_))
+			,probsimdist(probsimdistFromVecdim(vecdim_/9))
+		{
+			while (vecdim/2 < bits && bits > 1)
+			{
+				bits /= 2;
+				variations *= 2;
+			}
+		}
+
+		static int bitsFromVecdim( int vecdim_)
+		{
+			int rt = 64;
+			while (vecdim_/2 < rt && rt > 1)
+			{
+				rt /= 2;
+			}
+			return rt;
+		}
+		static int variationsFromVecdim( int vecdim_)
+		{
+			int bits_ = bitsFromVecdim( vecdim_);
+			return (vecdim_ * 640) / (93 * bits_);
+		}
+		static int simdistFromVecdim( int vecdim_)
+		{
+			return (vecdim_ + vecdim_/9);
+		}
+		static int probsimdistFromVecdim( int vecdim_)
+		{
+			return (2 * vecdim_ + vecdim_/9);
+		}
+	};
+
+	VectorStorage( const std::string& workdir_, ErrorBufferInterface* errorhnd_);
+	virtual ~VectorStorage();
 
 	virtual bool createStorage( const std::string& configsource, const DatabaseInterface* database) const;
 
-	virtual VectorStorageClientInterface* createClient( const std::string& configsrc, const DatabaseInterface* database) const;
-	virtual VectorStorageDumpInterface* createDump( const std::string& configsource, const DatabaseInterface* database, const std::string& keyprefix) const;
-
-	virtual bool runBuild( const std::string& commands, const std::string& configsource, const DatabaseInterface* database) const;
+	virtual VectorStorageClientInterface* createClient( const std::string& configsource, const DatabaseInterface* database) const;
+	virtual VectorStorageDumpInterface* createDump( const std::string& configsource, const DatabaseInterface* database) const;
 
 private:
-	ErrorBufferInterface* m_errorhnd;	///< buffer for reporting errors
-	std::string m_workdir;
+	ErrorBufferInterface* m_errorhnd;		///< buffer for reporting errors
+	DebugTraceContextInterface* m_debugtrace;	///< debug trace interface
+	std::string m_workdir;				///< working directory
 };
 
 }//namespace

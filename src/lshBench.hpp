@@ -21,7 +21,7 @@ class LshBench
 public:
 	enum {Width=256,ReserveMemSize=(1<<14)};
 
-	LshBench( const SimHash* base, const strus::Index& basesize_, unsigned int seed_, unsigned int seeksimdist);
+	LshBench( const SimHash* base, const strus::Index& basesize_, int seed_, int seeksimdist);
 	LshBench( const LshBench& o);
 	strus::Index init( const strus::Index& ofs_);
 
@@ -42,7 +42,7 @@ public:
 
 	strus::Index startIndex() const	{return m_ofs;}
 	strus::Index endIndex() const	{return m_ofs+m_size;}
-	unsigned int maxDiff() const	{return m_maxdiff;}
+	int maxDiff() const	{return m_maxdiff;}
 
 private:
 	uint64_t selmask( const SimHash& sh) const;
@@ -52,9 +52,9 @@ private:
 	strus::Index m_basesize;
 	strus::Index m_ofs;
 	strus::Index m_size;
-	unsigned int m_shsize;
-	unsigned int m_seed;
-	unsigned int m_maxdiff;
+	int m_shsize;
+	int m_seed;
+	int m_maxdiff;
 	uint64_t m_ar[ Width];
 };
 
