@@ -21,9 +21,19 @@ class SimHashReaderInterface
 {
 public:
 	virtual ~SimHashReaderInterface(){}
+	/// \brief Loads the first LSH value (for iteration)
+	/// \note not thead-safe
 	virtual const SimHash* loadFirst()=0;
+	/// \brief Loads the next LSH value (for iteration)
+	/// \note not thead-safe
 	virtual const SimHash* loadNext()=0;
-	virtual SimHash load( const Index& id) const=0;
+
+	/// \brief Loads a specific LSH value
+	/// \param[in] id feature number of LSH value to retrieve
+	/// \param[out] buf buffer to use for value read if needed, not necessarily used
+	/// \return pointer to value loaded (value not necessarily in buf, depends on implementation)
+	/// \note thead-safe
+	virtual const SimHash* load( const Index& id, SimHash& buf) const=0;
 };
 
 
@@ -36,7 +46,7 @@ public:
 
 	virtual const SimHash* loadFirst();
 	virtual const SimHash* loadNext();
-	virtual SimHash load( const Index& featno) const;
+	virtual const SimHash* load( const Index& featno, SimHash& buf) const;
 
 private:
 	enum {ReadChunkSize=1024};
@@ -45,6 +55,7 @@ private:
 	Index m_typeno;
 	std::size_t m_aridx;
 	std::vector<SimHash> m_ar;
+	SimHash m_value;
 };
 
 class SimHashReaderMemory
@@ -56,7 +67,7 @@ public:
 
 	virtual const SimHash* loadFirst();
 	virtual const SimHash* loadNext();
-	virtual SimHash load( const Index& featno) const;
+	virtual const SimHash* load( const Index& featno, SimHash& buf) const;
 
 private:
 	const DatabaseAdapter* m_database;

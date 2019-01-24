@@ -12,7 +12,7 @@
 using namespace strus;
 
 SimHashReaderDatabase::SimHashReaderDatabase( const DatabaseAdapter* database_, const std::string& type_)
-	:m_database(database_),m_type(type_),m_typeno(database_->readTypeno( type_)),m_aridx(0),m_ar()
+	:m_database(database_),m_type(type_),m_typeno(database_->readTypeno( type_)),m_aridx(0),m_ar(),m_value()
 {
 	if (!m_typeno) throw strus::runtime_error( _TXT("error instantiating similarity hash reader: unknown type %s"), m_type.c_str());
 }
@@ -38,9 +38,10 @@ const SimHash* SimHashReaderDatabase::loadNext()
 	return &m_ar[ m_aridx++];
 }
 
-SimHash SimHashReaderDatabase::load( const Index& featno) const
+const SimHash* SimHashReaderDatabase::load( const Index& featno, SimHash& buf) const
 {
-	return m_database->readSimHash( m_typeno, featno);
+	buf = m_database->readSimHash( m_typeno, featno);
+	return buf.defined() ? &buf : NULL;
 }
 
 
@@ -69,11 +70,11 @@ const SimHash* SimHashReaderMemory::loadNext()
 	return &m_ar[ m_aridx++];
 }
 
-SimHash SimHashReaderMemory::load( const Index& featno) const
+const SimHash* SimHashReaderMemory::load( const Index& featno, SimHash&) const
 {
 	std::map<Index,std::size_t>::const_iterator fi = m_indexmap.find( featno);
-	if (fi == m_indexmap.end()) return SimHash();
-	return m_ar[ fi->second];
+	if (fi == m_indexmap.end()) return NULL;
+	return &m_ar[ fi->second];
 }
 
 

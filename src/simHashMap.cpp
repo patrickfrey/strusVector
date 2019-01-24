@@ -104,10 +104,11 @@ int SimHashMap::getMaxSimDistFromBestFilterSamples( const std::vector<SimHashSel
 	for (; si != se; ++si)
 	{
 		Index elemid = m_idar[ si->idx];
-		SimHash val = m_reader->load( elemid);
-		if (val.defined())
+		SimHash shbuf;
+		const SimHash* val = m_reader->load( elemid, shbuf);
+		if (val)
 		{
-			sampleDistAr[ sampleDistArSize++] = val.dist( needle);
+			sampleDistAr[ sampleDistArSize++] = val->dist( needle);
 		}
 	}
 	if (sampleDistArSize == 0) return 0;
@@ -137,12 +138,13 @@ std::vector<SimHashQueryResult> SimHashMap::findSimilar( const SimHash& needle, 
 		Index elemid = m_idar[ ci->idx];
 		if (ci->shdiff < probSum)
 		{
-			SimHash val = m_reader->load( elemid);
-			if (val.defined())
+			SimHash shbuf;
+			const SimHash* val = m_reader->load( elemid, shbuf);
+			if (val)
 			{
-				if (val.near( needle, maxSimDist))
+				if (val->near( needle, maxSimDist))
 				{
-					int dist = val.dist( needle);
+					int dist = val->dist( needle);
 					(void)ranklist.insert( SimHashRank( elemid, dist));
 				}
 			}
@@ -179,13 +181,14 @@ std::vector<SimHashQueryResult> SimHashMap::findSimilarWithStats( Stats& stats, 
 		if (ci->shdiff < probSum)
 		{
 			++stats.nofDatabaseReads;
-			SimHash val = m_reader->load( elemid);
-			if (val.defined())
+			SimHash shbuf;
+			const SimHash* val = m_reader->load( elemid, shbuf);
+			if (val)
 			{
-				if (val.near( needle, maxSimDist))
+				if (val->near( needle, maxSimDist))
 				{
 					++stats.nofResults;
-					int dist = val.dist( needle);
+					int dist = val->dist( needle);
 					(void) ranklist.insert( SimHashRank( elemid, dist));
 				}
 			}
