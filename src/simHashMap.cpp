@@ -97,7 +97,6 @@ int SimHashMap::getMaxSimDistFromBestFilterSamples( const std::vector<SimHashSel
 	{
 		selectRanklist.insert( *ci);
 	}
-	int lastdist = 0;
 	int sampleDistAr[ RankList<SimHashSelect>::MaxSize];
 	int sampleDistArSize = 0;
 
