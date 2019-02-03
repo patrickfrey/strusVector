@@ -17,11 +17,13 @@
 #include "strus/base/string_conv.hpp"
 #include "simHashReader.hpp"
 #include "simHashRankList.hpp"
+#include "sentenceLexerInstance.hpp"
 #include "armautils.hpp"
 #include "errorUtils.hpp"
 #include "internationalization.hpp"
 #include <cstring>
 #include <algorithm>
+#include <limits>
 #define MODULENAME   "vector storage"
 #define MAIN_CONCEPT_CLASSNAME ""
 #define STRUS_DBGTRACE_COMPONENT_NAME "vector"
@@ -31,6 +33,9 @@ using namespace strus;
 VectorStorageClient::VectorStorageClient( const DatabaseInterface* database_, const std::string& configstring_, ErrorBufferInterface* errorhnd_)
 	:m_errorhnd(errorhnd_),m_debugtrace(0),m_database(),m_model(),m_simHashMapMap(),m_inMemoryTypes(),m_transaction_mutex()
 {
+	DebugTraceInterface* dbgi = m_errorhnd->debugTrace();
+	if (dbgi) m_debugtrace = dbgi->createTraceContext( STRUS_DBGTRACE_COMPONENT_NAME);
+
 	std::string configstring = configstring_;
 	unsigned int value;
 	std::string stringvalue;
@@ -59,9 +64,6 @@ VectorStorageClient::VectorStorageClient( const DatabaseInterface* database_, co
 	m_model = m_database->readLshModel();
 	if (simdist >= 0) m_model.set_simdist( simdist);
 	if (probsimdist >= 0) m_model.set_probsimdist( probsimdist);
-
-	DebugTraceInterface* dbgi = m_errorhnd->debugTrace();
-	if (dbgi) m_debugtrace = dbgi->createTraceContext( STRUS_DBGTRACE_COMPONENT_NAME);
 }
 
 VectorStorageClient::~VectorStorageClient()
@@ -360,11 +362,12 @@ double VectorStorageClient::vectorSimilarity( const WordVector& v1, const WordVe
 {
 	try
 	{
+		if (v1.size() != v2.size()) throw std::runtime_error(_TXT("invalid arguments (vector sizes do not match"));
 		arma::fvec vv1 = arma::fvec( v1);
 		arma::fvec vv2 = arma::fvec( v2);
 		return arma::norm_dot( vv1, vv2);
 	}
-	CATCH_ERROR_ARG1_MAP_RETURN( _TXT("error in client interface of '%s' calculating the similarity of two vectors: %s"), MODULENAME, *m_errorhnd, 0.0);
+	CATCH_ERROR_ARG1_MAP_RETURN( _TXT("error in client interface of '%s' calculating the similarity of two vectors: %s"), MODULENAME, *m_errorhnd, std::numeric_limits<double>::quiet_NaN());
 }
 
 WordVector VectorStorageClient::normalize( const WordVector& vec) const
@@ -382,6 +385,15 @@ WordVector VectorStorageClient::normalize( const WordVector& vec) const
 		return rt;
 	}
 	CATCH_ERROR_ARG1_MAP_RETURN( _TXT("error in client interface of '%s' normalizing a vector: %s"), MODULENAME, *m_errorhnd, WordVector());
+}
+
+SentenceLexerInstanceInterface* VectorStorageClient::createSentenceLexer() const
+{
+	try
+	{
+		return new SentenceLexerInstance( this, m_errorhnd);
+	}
+	CATCH_ERROR_ARG1_MAP_RETURN( _TXT("error in client interface of '%s' getting the configuration string this storage was built with: %s"), MODULENAME, *m_errorhnd, NULL);
 }
 
 std::string VectorStorageClient::config() const

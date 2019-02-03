@@ -57,6 +57,8 @@ public:
 
 	virtual WordVector normalize( const WordVector& vec) const;
 
+	virtual SentenceLexerInstanceInterface* createSentenceLexer() const;
+	
 	virtual std::string config() const;
 
 	virtual void close();
