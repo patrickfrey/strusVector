@@ -91,6 +91,13 @@ std::vector<VectorQueryResult> VectorStorageClient::simHashToVectorQueryResults(
 	return rt;
 }
 
+std::string VectorStorageClient::getUpperboundFeature( std::string& key) const
+{
+	std::string keyfound;
+	DatabaseAdapter::FeatureCursor cursor( m_database->database());
+	return cursor.skipPrefix( key, keyfound) ? keyfound : std::string();
+}
+
 std::vector<VectorQueryResult> VectorStorageClient::findSimilar( const std::string& type, const WordVector& vec, int maxNofResults, double minSimilarity, bool realVecWeights) const
 {
 	try
@@ -391,7 +398,7 @@ SentenceLexerInstanceInterface* VectorStorageClient::createSentenceLexer() const
 {
 	try
 	{
-		return new SentenceLexerInstance( this, m_errorhnd);
+		return new SentenceLexerInstance( this, m_database->database(), m_errorhnd);
 	}
 	CATCH_ERROR_ARG1_MAP_RETURN( _TXT("error in client interface of '%s' getting the configuration string this storage was built with: %s"), MODULENAME, *m_errorhnd, NULL);
 }

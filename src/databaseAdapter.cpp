@@ -287,20 +287,30 @@ DatabaseAdapter::FeatureCursor::FeatureCursor( const DatabaseClientInterface* da
 	:m_cursor( database->createCursor( DatabaseOptions()))
 {}
 
-bool DatabaseAdapter::FeatureCursor::skip( const std::string& key, std::string& keyfound)
+bool DatabaseAdapter::FeatureCursor::skip( const char* keyptr, std::size_t keysize, std::string& keyfound)
 {
 	std::string dbkey;
 	dbkey.push_back( KeyFeatureTypeRelations);
-	dbkey.append( key);
+	dbkey.append( keyptr, keysize);
 	DatabaseCursorInterface::Slice reskey( m_cursor->seekUpperBound( dbkey.c_str(), dbkey.size(), 1/*domain key size*/));
 	if (!reskey.defined()) return false;
 	keyfound = std::string( reskey.ptr()+1, reskey.size()-1);
 	return true;
 }
 
+bool DatabaseAdapter::FeatureCursor::skip( const std::string& key, std::string& keyfound)
+{
+	return skip( key.c_str(), key.size(), keyfound);
+}
+
 bool DatabaseAdapter::FeatureCursor::skipPrefix( const std::string& key, std::string& keyfound)
 {
 	return skip( key, keyfound) && key.size() <= keyfound.size() && 0==std::memcmp( key.c_str(), keyfound.c_str(), key.size());
+}
+
+bool DatabaseAdapter::FeatureCursor::skipPrefix( const char* keyptr, std::size_t keysize, std::string& keyfound)
+{
+	return skip( keyptr, keysize, keyfound) && keysize <= keyfound.size() && 0==std::memcmp( keyptr, keyfound.c_str(), keysize);
 }
 
 bool DatabaseAdapter::FeatureCursor::loadFirst( std::string& key)

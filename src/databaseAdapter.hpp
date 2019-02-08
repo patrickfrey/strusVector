@@ -54,8 +54,11 @@ public:
 	{
 	public:
 		explicit FeatureCursor( const DatabaseClientInterface* database_);
-
+		FeatureCursor( const FeatureCursor& o)
+			:m_cursor(o.m_cursor){}
+		bool skip( const char* keyptr, std::size_t keysize, std::string& keyfound);
 		bool skip( const std::string& key, std::string& keyfound);
+		bool skipPrefix( const char* keyptr, std::size_t keysize, std::string& keyfound);
 		bool skipPrefix( const std::string& key, std::string& keyfound);
 		bool loadFirst( std::string& key);
 		bool loadNext( std::string& key);

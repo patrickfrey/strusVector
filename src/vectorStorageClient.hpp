@@ -88,6 +88,9 @@ public:/*VectorStorageTransaction*/
 
 	void resetSimHashMapTypes( const std::vector<std::string>& types_);
 
+public://SentenceLexerContext
+	std::string getUpperboundFeature( std::string& key) const;
+
 private:
 	strus::Reference<SimHashMap> getOrCreateTypeSimHashMap( const std::string& type) const;
 	strus::Reference<SimHashMap> getSimHashMap( const std::string& type) const;

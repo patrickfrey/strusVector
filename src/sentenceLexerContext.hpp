@@ -10,7 +10,11 @@
 #ifndef _STRUS_SENTENCE_LEXER_CONTEXT_IMPL_HPP_INCLUDED
 #define _STRUS_SENTENCE_LEXER_CONTEXT_IMPL_HPP_INCLUDED
 #include "strus/sentenceLexerContextInterface.hpp"
+#include "sentenceLexerInstance.hpp"
+#include "vectorStorageClient.hpp"
 #include <vector>
+#include <utility>
+#include <algorithm>
 
 namespace strus {
 
@@ -24,20 +28,72 @@ class SentenceLexerContext
 	:public SentenceLexerContextInterface
 {
 public:
+	typedef SentenceLexerInstance::LinkChar LinkChar;
+	typedef SentenceLexerInstance::LinkDef LinkDef;
+	typedef SentenceLexerInstance::SeparatorDef SeparatorDef;
+
+public:
 	/// \brief Constructor
-	SentenceLexerContext( ErrorBufferInterface* errorhnd_);
+	SentenceLexerContext(
+		const VectorStorageClient* vstorage_,
+		const DatabaseClientInterface* database_, 
+		const std::vector<SeparatorDef>& separators,
+		const std::vector<LinkDef>& links,
+		const std::vector<LinkChar>& linkChars,
+		const std::string& source_,
+		ErrorBufferInterface* errorhnd_);
 	
 	virtual ~SentenceLexerContext();
 
-	virtual std::vector<SentenceTerm> altLexems() const;
+	virtual bool fetchFirstSplit();
 
-	virtual bool skipToFollow( int length);
+	virtual bool fetchNextSplit();
 
-	virtual void skipBack();
+	virtual int nofTokens() const;
+
+	virtual std::string featureValue( int idx);
+
+	virtual std::vector<std::string> featureTypes( int idx);
+
+public:
+	struct AlternativeSplit
+	{
+		struct Element
+		{
+			std::string feat;
+			std::vector<std::string> types;
+
+			Element()
+				:feat(),types(){}
+			Element( const std::string& feat_, const std::vector<std::string>& types_)
+				:feat(feat_),types(types_){}
+			Element( const Element& o)
+				:feat(o.feat),types(o.types){}
+			Element& operator=( const Element& o) {feat=o.feat;types=o.types; return *this;}
+#if __cplusplus >= 201103L
+			Element( Element&& o) :feat(std::move(o.feat)),types(std::move(o.types)){}
+			Element& operator=( Element&& o) {feat=std::move(o.feat);types=std::move(o.types); return *this;}
+#endif
+		};
+		AlternativeSplit()
+			:ar(){}
+		AlternativeSplit( const AlternativeSplit& o)
+			:ar(o.ar){}
+		AlternativeSplit& operator=( const AlternativeSplit& o) {ar=o.ar; return *this;}
+#if __cplusplus >= 201103L
+		AlternativeSplit( AlternativeSplit&& o) :ar(std::move(o.ar)){}
+		AlternativeSplit& operator=( AlternativeSplit&& o) {ar=std::move(o.ar); return *this;}
+#endif
+		std::vector<Element> ar;
+	};
 
 private:
 	ErrorBufferInterface* m_errorhnd;
 	DebugTraceContextInterface* m_debugtrace;
+	const VectorStorageClient* m_vstorage;
+	const DatabaseClientInterface* m_database;
+	std::vector<AlternativeSplit> m_splits;
+	int m_splitidx;
 };
 
 }//namespace
