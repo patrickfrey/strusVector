@@ -75,7 +75,7 @@ void SentenceLexerInstance::addLink( int uchr, char sbchr, int priority)
 		{
 			std::vector<LinkChar>::iterator ci = m_linkChars.begin(), ce = m_linkChars.begin();
 			for (; ci != ce && (unsigned char)ci->chr < (unsigned char)sbchr; ++ci){}
-			if (ci->chr == sbchr)
+			if (ci != ce && ci->chr == sbchr)
 			{
 				if (ci->priority > priority)
 				{

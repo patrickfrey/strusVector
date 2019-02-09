@@ -24,8 +24,8 @@
 #include <cstring>
 #include <algorithm>
 #include <limits>
+
 #define MODULENAME   "vector storage"
-#define MAIN_CONCEPT_CLASSNAME ""
 #define STRUS_DBGTRACE_COMPONENT_NAME "vector"
 
 using namespace strus;

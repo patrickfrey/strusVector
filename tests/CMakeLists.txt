@@ -6,4 +6,4 @@ add_subdirectory( vectorSpaceModel )
 IF (WITH_PAGERANK STREQUAL "YES")
 add_subdirectory( pagerank )
 ENDIF (WITH_PAGERANK STREQUAL "YES")
- 
+add_subdirectory( sentenceLexer )

@@ -39,6 +39,9 @@
 #define VEC_EPSILON 1e-5
 static bool g_verbose = false;
 static strus::PseudoRandom g_random;
+static strus::ErrorBufferInterface* g_errorhnd = 0;
+
+#define DEFAULT_CONFIG "path=vstorage"
 
 static arma::fvec normalizeVector( const arma::fvec& vec)
 {
@@ -207,24 +210,6 @@ static void printResult( std::ostream& out, const std::vector<strus::VectorQuery
 		out << ri->value() << " " << ri->weight() << std::endl;
 	}
 }
-
-static std::string wordVectorToString( const strus::WordVector& vec, const char* separator, std::size_t maxNofElements)
-{
-	std::string rt;
-	std::size_t ii = 0;
-	for (; ii < vec.size() && ii < maxNofElements; ++ii)
-	{
-		if (ii) rt.append( separator);
-		char buf[ 32];
-		std::snprintf( buf, sizeof(buf), "%.5f", vec[ii]);
-		rt.append( buf);
-	}
-	return rt;
-}
-
-static strus::ErrorBufferInterface* g_errorhnd = 0;
-
-#define DEFAULT_CONFIG "path=vstorage"
 
 struct FeatureDef
 {
@@ -396,7 +381,7 @@ int main( int argc, const char** argv)
 						}
 						else
 						{
-							std::string vecstr = wordVectorToString( defs.back().vec, ", ", 6);
+							std::string vecstr = defs.back().vec.tostring( ", ", 6);
 							if (g_verbose) std::cerr << strus::string_format( "add feature %s '%s' vector %s (%s ...)", defs.back().type.c_str(),defs.back().feat.c_str(), gentype, vecstr.c_str()) << std::endl;
 						}
 					}
@@ -473,8 +458,8 @@ int main( int argc, const char** argv)
 							double sim = arma::norm_dot( arma::fvec(di->vec), arma::fvec(oi->vec));
 							if (di->feat == oi->feat && sim < 1.000 - VEC_EPSILON)
 							{
-								std::cerr << "vector 1: (" << wordVectorToString( di->vec, ", ", 20) << " ...)" << std::endl;
-								std::cerr << "vector 2: (" << wordVectorToString( oi->vec, ", ", 20) << " ...)" << std::endl;
+								std::cerr << "vector 1: (" << di->vec.tostring( ", ", 20) << " ...)" << std::endl;
+								std::cerr << "vector 2: (" << oi->vec.tostring( ", ", 20) << " ...)" << std::endl;
 								char sbuf[ 32];
 								std::snprintf( sbuf, sizeof(sbuf), "%.5f", (float)sim);
 								std::cerr << "similarity: " << sbuf << std::endl;

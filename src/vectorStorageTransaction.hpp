@@ -21,6 +21,8 @@ namespace strus {
 
 /// \brief Forward declaration
 class VectorStorageClient;
+/// \brief Forward declaration
+class DebugTraceContextInterface;
 
 /// \brief Interface for building a repository of vectors with classifiers to map them to discrete features.
 /// \remark This interface has the transaction context logically enclosed in the object, though use in a multithreaded context does not make much sense. Thread safety of the interface is guaranteed, but not the performance in a multithreaded context. It is thought as class that internally makes heavily use of multithreading, but is not thought to be fed by mutliple threads.
@@ -30,7 +32,7 @@ class VectorStorageTransaction
 public:
 	VectorStorageTransaction( VectorStorageClient* storage_, Reference<DatabaseAdapter>& database_, ErrorBufferInterface* errorhnd_);
 
-	virtual ~VectorStorageTransaction(){}
+	virtual ~VectorStorageTransaction();
 
 	virtual void defineVector( const std::string& type, const std::string& name, const WordVector& vec);
 
@@ -50,6 +52,7 @@ private:
 
 private:
 	ErrorBufferInterface* m_errorhnd;
+	DebugTraceContextInterface* m_debugtrace;
 	VectorStorageClient* m_storage;
 
 	Reference<DatabaseAdapter> m_database;

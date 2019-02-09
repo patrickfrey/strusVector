@@ -16,6 +16,7 @@
 #include <algorithm>
 
 #define MODULENAME   "vector storage"
+#define STRUS_DBGTRACE_COMPONENT_NAME "vector"
 
 using namespace strus;
 
@@ -23,7 +24,7 @@ VectorStorageTransaction::VectorStorageTransaction(
 		VectorStorageClient* storage_,
 		Reference<DatabaseAdapter>& database_,
 		ErrorBufferInterface* errorhnd_)
-	:m_errorhnd(errorhnd_),m_storage(storage_)
+	:m_errorhnd(errorhnd_),m_debugtrace(0),m_storage(storage_)
 	,m_database(database_),m_transaction(database_->createTransaction())
 	,m_vecar(),m_typetab(errorhnd_),m_nametab(errorhnd_),m_featTypeRelations()
 	,m_simdist(-1),m_probsimdist(-1)
@@ -32,6 +33,13 @@ VectorStorageTransaction::VectorStorageTransaction(
 	{
 		throw strus::runtime_error( _TXT("failed to create transaction: %s"), errorhnd_->fetchError());
 	}
+	DebugTraceInterface* dbgi = m_errorhnd->debugTrace();
+	if (dbgi) m_debugtrace = dbgi->createTraceContext( STRUS_DBGTRACE_COMPONENT_NAME);
+}
+
+VectorStorageTransaction::~VectorStorageTransaction()
+{
+	if (m_debugtrace) delete m_debugtrace;
 }
 
 void VectorStorageTransaction::defineElement( const std::string& type, const std::string& name, const WordVector& vec)
@@ -66,6 +74,10 @@ void VectorStorageTransaction::defineFeature( const std::string& type, const std
 	try
 	{
 		defineElement( type, name, WordVector());
+		if (m_debugtrace)
+		{
+			m_debugtrace->event( "define", "feature type %s name '%s'", type.c_str(), name.c_str());
+		}
 	}
 	CATCH_ERROR_ARG1_MAP( _TXT("error defining feature in '%s': %s"), MODULENAME, *m_errorhnd);
 }
@@ -75,6 +87,11 @@ void VectorStorageTransaction::defineVector( const std::string& type, const std:
 	try
 	{
 		defineElement( type, name, vec);
+		if (m_debugtrace)
+		{
+			std::string vecstr = vec.tostring( ", ", 10);
+			m_debugtrace->event( "define", "feature type %s name '%s' vector %s", type.c_str(), name.c_str(), vecstr.c_str());
+		}
 	}
 	CATCH_ERROR_ARG1_MAP( _TXT("error defining feature vector in '%s': %s"), MODULENAME, *m_errorhnd);
 }
@@ -96,6 +113,10 @@ void VectorStorageTransaction::defineScalar( const std::string& name, double val
 		else
 		{
 			throw strus::runtime_error(_TXT("unknown name of scalar %s"), name.c_str());
+		}
+		if (m_debugtrace)
+		{
+			m_debugtrace->event( "define", "scalar key %s value %.5f", name.c_str(), (float)value);
 		}
 	}
 	CATCH_ERROR_ARG1_MAP( _TXT("error defining scalar configuration parameter '%s': %s"), MODULENAME, *m_errorhnd);
@@ -220,6 +241,7 @@ bool VectorStorageTransaction::commit()
 		m_storage->resetSimHashMapTypes( typestrings);
 		if (m_transaction->commit())
 		{
+			if (m_debugtrace) m_debugtrace->event( "commit", "types %d features %d", noftypeno, noffeatno);
 			reset();
 			return true;
 		}
@@ -236,6 +258,7 @@ void VectorStorageTransaction::rollback()
 	try
 	{
 		m_transaction->rollback();
+		if (m_debugtrace) m_debugtrace->event( "rollback", "%s", "");
 		reset();
 	}
 	CATCH_ERROR_ARG1_MAP( _TXT("error in rollback of '%s' transaction: %s"), MODULENAME, *m_errorhnd);
