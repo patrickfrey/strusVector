@@ -243,22 +243,39 @@ public:
 	KeyIterator( const DatabaseClientInterface* database, const NormalizedField& field_, const std::vector<LinkChar>& linkChars_)
 		:field(field_),keysize(0),keyfound(),cursor(database),splitstate(),linkChars(linkChars_)
 	{
-		std::vector<DelimiterDef>::const_iterator di = field.delimiters.begin(), de = field.delimiters.end();
-		for (; di != de; ++di)
+		if (field.delimiters.empty())
 		{
-			splitstate.push_back( State( di->pos, 0, di->priority));
-			if (!keysize) keysize = di->pos;
-			field.key[ di->pos] = 0;
+			keysize = field.key.size();
+		}
+		else
+		{
+			std::vector<DelimiterDef>::const_iterator di = field.delimiters.begin(), de = field.delimiters.end();
+			for (; di != de; ++di)
+			{
+				splitstate.push_back( State( di->pos, 0, di->priority));
+				if (!keysize) keysize = di->pos;
+				field.key[ di->pos] = 0;
+			}
 		}
 	}
 
 	KeyIterator( const KeyIterator& o)
 		:field(o.field),keysize(o.keysize),keyfound(o.keyfound),cursor(o.cursor),splitstate(o.splitstate),linkChars(o.linkChars){}
 
-	bool next()
+	bool first()
 	{
 		return skipToNextKey();
 	}
+
+	bool next()
+	{
+		if (!nextState(false/*not backTrack*/))
+		{
+			return false;
+		}
+		return skipToNextKey();
+	}
+
 	const std::string& getKey() const
 	{
 		return keyfound;
@@ -279,7 +296,14 @@ public:
 	{
 		if (keyfound.empty())
 		{
-			return field.delimiters[0].pos;
+			if (field.delimiters.empty())
+			{
+				return field.key.size();
+			}
+			else
+			{
+				return field.delimiters[0].pos+1;
+			}
 		}
 		else
 		{
@@ -351,22 +375,13 @@ private:
 		}
 		for (;;)
 		{
-			if (backtrack && si->idx == 0)
-			{
-				--si;
-				if (si == splitstate.begin())
-				{
-					return false;
-				}
-			}
+			if (backtrack) for (; si != splitstate.begin() && si->idx == 0; --si){}
 			for (++si->idx; si->idx <= (int)linkChars.size() && linkChars[si->idx].priority < si->priority; ++si->idx){}
+
 			if (si->idx > (int)linkChars.size())
 			{
 				si->idx = 0;
-				if (si == splitstate.begin())
-				{
-					return false;
-				}
+				if (si == splitstate.begin()) return false;
 				--si;
 			}
 			else
@@ -458,10 +473,6 @@ private:
 
 	bool skipToNextKey()
 	{
-		if (keysize == 0 && !nextState(false/*not backTrack*/))
-		{
-			return false;
-		}
 		for (;;)
 		{
 			if (keysize && cursor.skipPrefix( field.key.c_str(), keysize, keyfound))
@@ -566,82 +577,117 @@ public:
 	}
 };
 
+struct AlternativeSplitQueue
+{
+public:
+	AlternativeSplitQueue( const NormalizedField& origfield)
+		:m_results(),m_paths(),m_pathqueue(),m_elements(),m_elementlists(),m_minNofUntyped(std::numeric_limits<int>::max())
+
+	{
+		m_paths.push_back( KeyIteratorPath( origfield));
+		m_pathqueue.insert( KeyIteratorPathRef( 0/*index*/, 0/*nofUntyped*/, 0/*pos*/));
+	}
+
+	const NormalizedField* firstField()
+	{
+		while (!m_pathqueue.empty())
+		{
+			std::set<KeyIteratorPathRef>::iterator pqitr = m_pathqueue.begin();
+			if (pqitr->nofUntyped > m_minNofUntyped)
+			{
+				m_pathqueue.erase( pqitr);
+				continue;
+			}
+			return &m_paths[ pqitr->index].field;
+		}
+		return NULL;
+	}
+
+	const NormalizedField* nextField()
+	{
+		if (m_pathqueue.empty()) return NULL;
+		m_pathqueue.erase( m_pathqueue.begin());
+		return firstField();
+	}
+
+	void push( const NormalizedField& followfield, const AlternativeSplit::Element& element, int followPosIncr)
+	{
+		std::set<KeyIteratorPathRef>::iterator pqitr = m_pathqueue.begin();
+		int nofUntyped = pqitr->nofUntyped + (element.types.empty() ? 1:0);
+
+		if (followfield.defined())
+		{
+			if (nofUntyped <= m_minNofUntyped)
+			{
+				int eref = m_elementlists.size();
+				m_elementlists.push_back( AlternativeSplitElementRef( m_elements.size(), m_paths[ pqitr->index].eref));
+				m_elements.push_back( element);
+	
+				KeyIteratorPath follow( followfield, eref);
+				m_pathqueue.insert( KeyIteratorPathRef( m_paths.size()/*index*/, nofUntyped, pqitr->pos + followPosIncr));
+				m_paths.push_back( follow);
+			}
+		}
+		else
+		{
+			if (nofUntyped < m_minNofUntyped)
+			{
+				m_minNofUntyped = nofUntyped;
+			}
+			int eitr = m_paths[ pqitr->index].eref;
+			AlternativeSplit split;
+			split.ar.push_back( element);
+
+			for (;eitr >= 0; eitr = m_elementlists[ eitr].next)
+			{
+				split.ar.push_back( m_elements[ m_elementlists[ eitr].eidx]);
+			}
+			std::reverse( split.ar.begin(), split.ar.end());
+			m_results.push_back( split);
+		}
+	}
+
+	const std::vector<AlternativeSplit>& results() const
+	{
+		return m_results;
+	}
+
+private:
+	std::vector<AlternativeSplit> m_results;
+	std::vector<KeyIteratorPath> m_paths;
+	std::set<KeyIteratorPathRef> m_pathqueue;
+	std::vector<AlternativeSplit::Element> m_elements;
+	std::vector<AlternativeSplitElementRef> m_elementlists;
+	int m_minNofUntyped;
+};
 
 static std::vector<AlternativeSplit> getAlternativeSplits( const VectorStorageClient* vstorage, const DatabaseClientInterface* database, const NormalizedField& origfield, const std::vector<LinkChar>& linkChars)
 {
-	std::vector<AlternativeSplit> rt;
-	std::vector<KeyIteratorPath> paths;
-	std::set<KeyIteratorPathRef> pathqueue;
-	std::vector<AlternativeSplit::Element> elements;
-	std::vector<AlternativeSplitElementRef> elementlists;
+	AlternativeSplitQueue queue( origfield);
 
-	paths.push_back( KeyIteratorPath( origfield));
-	pathqueue.insert( KeyIteratorPathRef( 0/*index*/, 0/*nofUntyped*/, 0/*pos*/));
-
-	int minNofUntyped = std::numeric_limits<int>::max();
-	while (!pathqueue.empty())
+	const NormalizedField* field = queue.firstField();
+	for (; field; field=queue.nextField())
 	{
-		std::set<KeyIteratorPathRef>::iterator pqitr = pathqueue.begin();
-		if (pqitr->nofUntyped > minNofUntyped)
+		KeyIterator kitr( database, *field, linkChars);
+		bool hasMore = kitr.first();
+		std::string defaultKey = kitr.defaultKey();
+		bool useDefault = !defaultKey.empty();
+
+		for (;hasMore; hasMore = kitr.next())
 		{
-			pathqueue.erase( pqitr);
-			continue;
+			AlternativeSplit::Element element( kitr.getKey(), vstorage->featureTypes( kitr.getKey()));
+			/*[-]*/std::cerr << "++visit '" << element.feat << "'" << std::endl;
+			queue.push( kitr.follow(), element, kitr.followPosIncr());
+			if (element.feat == defaultKey) useDefault = false;
 		}
-		const NormalizedField& field = paths[ pqitr->index].field;
-		KeyIterator kitr( database, field, linkChars);
-		bool done = false;
-		while (!done)
+		if (useDefault)
 		{
-			AlternativeSplit::Element element;
-			int nofUntyped = pqitr->nofUntyped;
-
-			if (kitr.next())
-			{
-				element.feat = kitr.getKey();
-				element.types = vstorage->featureTypes( element.feat);
-			}
-			else
-			{
-				element.feat = kitr.defaultKey();
-				++nofUntyped;
-				if (nofUntyped > minNofUntyped)
-				{
-					pathqueue.erase( pqitr);
-					continue;// -> while (!done)
-				}
-			}
-			NormalizedField followfield = kitr.follow();
-			if (followfield.defined())
-			{
-				int eref = elementlists.size();
-				elementlists.push_back( AlternativeSplitElementRef( elements.size(), paths[ pqitr->index].eref));
-				elements.push_back( element);
-
-				KeyIteratorPath follow( followfield, eref);
-				pathqueue.insert( KeyIteratorPathRef( paths.size()/*index*/, nofUntyped, pqitr->pos + kitr.followPosIncr()));
-				paths.push_back( follow);
-			}
-			else
-			{
-				if (nofUntyped < minNofUntyped)
-				{
-					minNofUntyped = nofUntyped;
-				}
-				int eitr = paths[ pqitr->index].eref;
-				AlternativeSplit split;
-				split.ar.push_back( element);
-
-				for (;eitr >= 0; eitr = elementlists[ eitr].next)
-				{
-					split.ar.push_back( elements[ elementlists[ eitr].eidx]);
-				}
-				std::reverse( split.ar.begin(), split.ar.end());
-				rt.push_back( split);
-			}
+			/*[-]*/std::cerr << "++default key '" << defaultKey << "'" << std::endl;
+			AlternativeSplit::Element element( kitr.defaultKey(), std::vector<std::string>());
+			queue.push( kitr.follow(), element, kitr.followPosIncr());
 		}
-		pathqueue.erase( pqitr);
 	}
-	return rt;
+	return queue.results();
 }
 
 static void joinAlternativeSplits( std::vector<AlternativeSplit>& split, const std::vector<AlternativeSplit>& add)

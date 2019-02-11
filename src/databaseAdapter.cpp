@@ -140,15 +140,6 @@ static std::string vectorSerialization( const std::vector<ScalarType>& vec)
 	return rt;
 }
 
-static std::string readKeyString( const char* keyptr, std::size_t keysize)
-{
-	DatabaseKeyScanner scanner( keyptr, keysize);
-	char const* strptr;
-	std::size_t strsize;
-	scanner( strptr, strsize);
-	return std::string( strptr, strsize);
-}
-
 void DatabaseAdapter::checkVersion()
 {
 	std::string version = readVariable( "version");
@@ -200,7 +191,7 @@ std::vector<DatabaseAdapter::VariableDef> DatabaseAdapter::readVariables() const
 	DatabaseCursorInterface::Slice key = cursor->seekFirst( keyprefix.c_str(), keyprefix.size());
 	for (; key.defined(); key = cursor->seekNext())
 	{
-		std::string varname = readKeyString( key.ptr()+1, key.size()-1);
+		std::string varname = std::string( key.ptr()+1, key.size()-1);
 		rt.push_back( VariableDef( varname, cursor->value()));
 	}
 	return rt;
@@ -217,7 +208,7 @@ std::vector<std::string> DatabaseAdapter::readTypes() const
 	DatabaseCursorInterface::Slice key = cursor->seekFirst( keyprefix.c_str(), keyprefix.size());
 	for (; key.defined(); key = cursor->seekNext())
 	{
-		std::string type = readKeyString( key.ptr()+1, key.size()-1);
+		std::string type = std::string( key.ptr()+1, key.size()-1);
 		rt.push_back( type);
 	}
 	return rt;
@@ -290,7 +281,7 @@ DatabaseAdapter::FeatureCursor::FeatureCursor( const DatabaseClientInterface* da
 bool DatabaseAdapter::FeatureCursor::skip( const char* keyptr, std::size_t keysize, std::string& keyfound)
 {
 	std::string dbkey;
-	dbkey.push_back( KeyFeatureTypeRelations);
+	dbkey.push_back( KeyFeatureValuePrefix);
 	dbkey.append( keyptr, keysize);
 	DatabaseCursorInterface::Slice reskey( m_cursor->seekUpperBound( dbkey.c_str(), dbkey.size(), 1/*domain key size*/));
 	if (!reskey.defined()) return false;
@@ -316,7 +307,7 @@ bool DatabaseAdapter::FeatureCursor::skipPrefix( const char* keyptr, std::size_t
 bool DatabaseAdapter::FeatureCursor::loadFirst( std::string& key)
 {
 	std::string dbkey;
-	dbkey.push_back( KeyFeatureTypeRelations);
+	dbkey.push_back( KeyFeatureValuePrefix);
 	DatabaseCursorInterface::Slice reskey = m_cursor->seekFirst( dbkey.c_str(), dbkey.size());
 	if (!reskey.defined()) return false;
 	key = std::string( reskey.ptr()+1, reskey.size()-1);
@@ -618,7 +609,7 @@ void DatabaseAdapter::DumpIterator::dumpKeyValue( std::ostream& out, const strus
 	{
 		case DatabaseAdapter::KeyVariable:
 		{
-			out << readKeyString( key.ptr()+1, key.size()-1) << " " << value.tostring() << std::endl;
+			out << std::string( key.ptr()+1, key.size()-1) << " " << value.tostring() << std::endl;
 			break;
 		}
 		case DatabaseAdapter::KeyFeatureTypePrefix:
@@ -627,7 +618,7 @@ void DatabaseAdapter::DumpIterator::dumpKeyValue( std::ostream& out, const strus
 			DatabaseValueScanner scanner( value);
 			Index no = 0;
 			scanner[ no];
-			out << readKeyString( key.ptr()+1,key.size()-1) << " " << no << std::endl;
+			out << std::string( key.ptr()+1,key.size()-1) << " " << no << std::endl;
 			break;
 		}
 		case DatabaseAdapter::KeyFeatureTypeInvPrefix:

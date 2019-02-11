@@ -25,10 +25,12 @@
 #include "strus/base/numstring.hpp"
 #include "strus/base/pseudoRandom.hpp"
 #include "strus/base/utf8.hpp"
+#include "strus/base/string_format.hpp"
 #include <iostream>
 #include <sstream>
 #include <vector>
 #include <string>
+#include <map>
 #include <set>
 #include <cstring>
 #include <limits>
@@ -51,6 +53,7 @@ strus::Index g_nofTerms = 1000;
 strus::Index g_nofFeatures = 10000;
 int g_maxTermLength = 30;
 int g_maxFeatureTerms = 5;
+int g_maxNofCollisions = 1000;
 
 #define DEFAULT_CONFIG "path=vstorage"
 
@@ -86,7 +89,7 @@ static std::string typeString( int tidx)
 static std::string randomTerm()
 {
 	std::string rt;
-	std::size_t length = g_random.get( 0, 1+g_random.get( 0, 1+g_random.get( 0, g_maxTermLength)));
+	std::size_t length = 1+g_random.get( 0, 1+g_random.get( 0, 1+g_random.get( 0, 1+g_maxTermLength)));
 	if (length == 0) length = 1;
 	std::size_t li = 0, le = length;
 	for (; li != le; ++li)
@@ -118,38 +121,125 @@ class TestData
 public:
 	TestData()
 	{
+		std::set<std::string> termset;
+		std::set<std::string> unknownTermset;
+
+		if (g_verbose) std::cerr << "create random known terms ... " << std::endl;
+		int nofTries = 0;
 		int ti = 0, te = g_nofTerms;
 		for (; ti != te; ++ti)
 		{
-			m_terms.push_back( randomTerm());
-		}
-		std::sort( m_terms.begin(), m_terms.end());
-
-		std::set< std::vector<int> > fset;
-		int nofTries = g_nofFeatures / 10 + 1000;
-		while (nofTries > 0 && g_nofFeatures > (int)m_features.size())
-		{
-			FeatureDef fdef;
-			if (fset.insert( fdef.termindices).second != true)
+			std::string term = randomTerm();
+			if (termset.insert( term).second == false)
 			{
-				//... feature is not new
-				--nofTries;
+				//... no insert, collision
+				--ti;
+				++nofTries;
+				if (nofTries >= g_maxNofCollisions)
+				{
+					int newMaxTermLength = g_maxTermLength + g_maxTermLength / 2;
+					std::cerr << strus::string_format( "maximum number of collisions (%d) reached, raising maximum term length from %d to %d to be able to create a random collection of terms", g_maxNofCollisions, g_maxTermLength, newMaxTermLength) << std::endl;
+					g_maxTermLength = newMaxTermLength;
+					nofTries = 0;
+				}
 				continue;
 			}
-			nofTries = g_nofFeatures / 10 + 1000;
+			m_termmap[ term] = ti;
+			nofTries = 0;
+		}
+		m_terms.insert( m_terms.end(), termset.begin(), termset.end());
+
+		if (g_verbose) std::cerr << "create random unknown terms ... " << std::endl;
+		nofTries = 0;
+		ti = 0, te = g_nofTerms;
+		for (; ti != te; ++ti)
+		{
+			std::string term = randomTerm();
+			if (termset.find( term) != termset.end() || unknownTermset.insert( term).second == false)
+			{
+				//... no insert, collision
+				--ti;
+				++nofTries;
+				if (nofTries >= g_maxNofCollisions)
+				{
+					int newMaxTermLength = g_maxTermLength + g_maxTermLength / 5;
+					std::cerr << strus::string_format( "maximum number of collisions (%d) reached, raising maximum term length from %d to %d to be able to create a random collection of terms", g_maxNofCollisions, g_maxTermLength, newMaxTermLength) << std::endl;
+					g_maxTermLength = newMaxTermLength;
+					nofTries = 0;
+				}
+				continue;
+			}
+			nofTries = 0;
+		}
+		m_unknownTerms.insert( m_unknownTerms.end(), unknownTermset.begin(), unknownTermset.end());
+		ti = 0, te = g_nofTypes;
+		for (; ti != te; ++ti)
+		{
+			m_typemap[ typeString( ti)] = ti;
+		}
+
+		if (g_verbose) std::cerr << "create random features ... " << std::endl;
+		std::set<FeatureDef::Id> fset;
+		nofTries = 0;
+		while (g_nofFeatures > (int)m_features.size())
+		{
+			FeatureDef fdef;
+			if (fset.insert( fdef.id()).second != true)
+			{
+				//... no insert, collision
+				++nofTries;
+				if (nofTries >= g_maxNofCollisions)
+				{
+					int newMaxFeatureTerms = g_maxFeatureTerms + g_maxFeatureTerms / 2;
+					std::cerr << strus::string_format( "maximum number of collisions (%d) reached, raising maximum feature terms from %d to %d to be able to create a random collection of features", g_maxNofCollisions, g_maxFeatureTerms, newMaxFeatureTerms) << std::endl;
+					g_maxFeatureTerms = newMaxFeatureTerms;
+					nofTries = 0;
+				}
+				continue;
+			}
 			m_features.push_back( fdef);
-			while (g_nofFeatures > (int)m_features.size() && g_random.get( 0, (int)(g_nofFeatures/10 + 10)) == 1)
+			while (g_nofFeatures > (int)m_features.size() && g_random.get( 0, 5) == 1)
 			{
 				fdef.modify();
-				m_features.push_back( fdef);
+				if (fset.insert( fdef.id()).second == true)
+				{
+					m_features.push_back( fdef);
+				}
 			}
+			nofTries = 0;
 		}
-		if (g_nofFeatures > (int)m_features.size())
+
+		if (g_verbose) std::cerr << "create random queries ... " << std::endl;
+		int qi = 0, qe = g_nofFeatures;
+		for (; qi != qe; ++qi)
 		{
-			throw std::runtime_error("unable to create random collection, too many collisions, assuming endless loop or too many random features requested");
+			if (g_random.get( 0,3) == 1)
+			{
+				// ... Query derived from an existing feature
+				int featidx = g_random.get( 0, 1+g_random.get( 0, m_features.size()));
+				QueryDef query( m_features[ featidx]);
+				m_queries.push_back( query);
+			}
+			else
+			{
+				// ... Random query existing
+				QueryDef query;
+				m_queries.push_back( query);
+			}
+			while (m_queries.size() > 10 && g_random.get( 0,3) == 1)
+			{
+				// ... Join query created with another query
+				int joinidx = g_random.get( 0, 1+g_random.get( 0, m_queries.size()));
+				m_queries.back().join( m_queries[ joinidx]);
+			}
 		}
 	}
 
+	int termIndex( const std::string& term) const
+	{
+		std::map<std::string,int>::const_iterator mi = m_termmap.find( term);
+		return mi == m_termmap.end() ? -1 : mi->second;
+	}
 	int nofFeatures() const
 	{
 		return m_features.size();
@@ -181,32 +271,98 @@ public:
 		}
 		return rt;
 	}
+	int nofQueries() const
+	{
+		return m_queries.size();
+	}
+	std::vector<std::string> queryTerms( int queryIdx) const
+	{
+		std::vector<std::string> rt;
+		const QueryDef& qdef = m_queries[ queryIdx];
+		std::vector<int>::const_iterator ti = qdef.termindices.begin(), te = qdef.termindices.end();
+		for (; ti != te; ++ti)
+		{
+			rt.push_back( (*ti >= 0) ? m_terms[ *ti] : m_unknownTerms[ -*ti]);
+		}
+		return rt;
+	}
+	static std::string randomDelimiterString( const std::vector<int>& delimiters)
+	{
+		std::string rt;
+		do
+		{
+			int chr = delimiters[ g_random.get( 0, 1+g_random.get( 0, delimiters.size()))];
+			char chrbuf[32];
+			std::size_t chrlen = strus::utf8encode( chrbuf, chr);
+			rt.append( chrbuf, chrlen);
+		}
+		while (g_random.get( 0, 10) == 1);
+		return rt;
+	}
+
+	std::string queryString( int queryIdx) const
+	{
+		std::string rt;
+		const QueryDef& qdef = m_queries[ queryIdx];
+		if (qdef.seperatorAtStart)
+		{
+			rt.append( randomDelimiterString( g_delimiters));
+		}
+		std::vector<std::string> terms = queryTerms( queryIdx);
+		std::vector<std::string>::const_iterator ti = terms.begin(), te = terms.end();
+		std::vector<int>::const_iterator si = qdef.sepindices.begin(), se = qdef.sepindices.end();
+		for (int tidx=0; ti != te; ++ti,++tidx)
+		{
+			if (si != se && *si == tidx)
+			{
+				++si;
+				rt.append( randomDelimiterString( g_random.get( 0,2) == 1 ? g_delimiters : g_spaces));
+			}
+			else
+			{
+				rt.append( randomDelimiterString( g_spaces));
+			}
+			rt.append( *ti);
+		}
+		if (g_random.get( 0,7) == 1)
+		{
+			rt.append( randomDelimiterString( g_spaces));
+		}
+		if (qdef.seperatorAtEnd)
+		{
+			rt.append( randomDelimiterString( g_delimiters));
+		}
+		return rt;
+	}
 
 private:
 	struct FeatureDef
 	{
+		typedef std::vector<int> Id;
+
 		FeatureDef( const FeatureDef& o)
 			:termindices(o.termindices),typeindices(o.typeindices),seperatorAtStart(o.seperatorAtStart),seperatorAtEnd(o.seperatorAtEnd){}
 		FeatureDef()
 		{
-			int fi = 0, fe = g_random.get( 0, 1+g_random.get( 0, g_maxFeatureTerms));
+			int fi = 0, fe = 1+g_random.get( 0, 1+g_random.get( 0, g_maxFeatureTerms));
 			for (; fi != fe; ++fi)
 			{
 				termindices.push_back( g_random.get( 0, 1+g_random.get( 0, 1+g_random.get( 0, g_nofTerms))));
 			}
 			std::set<int> typeset;
-			int ti = 0, te = g_random.get( 0, 1+g_random.get( 0, 1+g_nofTypes));
+			int ti = 0, te = 1+g_random.get( 0, 1+g_random.get( 0, 1+g_nofTypes));
 			for (; ti != te; ++ti)
 			{
 				typeset.insert( g_random.get( 0, g_nofTypes));
 			}
 			typeindices.insert( typeindices.end(), typeset.begin(), typeset.end());
-			seperatorAtStart = g_random.get( 1, 100 + g_nofFeatures / 100) == 1;
-			seperatorAtEnd = g_random.get( 1, 100 + g_nofFeatures / 20) == 1;
+			seperatorAtStart = g_random.get( 1, 50 + g_nofFeatures / 20) == 1;
+			seperatorAtEnd = g_random.get( 1, 50 + g_nofFeatures / 20) == 1;
 		}
 		void modify()
 		{
 			int rndidx;
+			int newtermidx;
 			do
 			{
 				switch (g_random.get( 0, 4))
@@ -219,7 +375,10 @@ private:
 						break;
 					case 2:
 						rndidx = g_random.get( 0, termindices.size());
-						termindices[ rndidx] = g_random.get( 0, 1+g_random.get( 0, 1+g_random.get( 0, g_nofTerms)));
+						newtermidx = (g_random.get( 0, 3) == 1)
+							? g_random.get( 0, 1+g_random.get( 0, 1+g_random.get( 0, g_nofTerms)))
+							: ((termindices[ rndidx] + 1) % g_nofTerms);
+						termindices[ rndidx] = newtermidx;
 						break;
 					default:
 						termindices.push_back( g_random.get( 0, 1+g_random.get( 0, 1+g_random.get( 0, g_nofTerms))));
@@ -227,6 +386,12 @@ private:
 				}
 			}
 			while (g_random.get( 0, 4) == 1);
+		}
+		Id id() const
+		{
+			Id rt( termindices);
+			rt.push_back( (seperatorAtStart ? 1 : 0) + (seperatorAtEnd ? 2 : 0));
+			return rt;
 		}
 
 		std::vector<int> termindices;
@@ -236,12 +401,86 @@ private:
 	};
 	struct QueryDef
 	{
-		
+		QueryDef( const QueryDef& o)
+			:termindices(o.termindices),seperatorAtStart(o.seperatorAtStart),seperatorAtEnd(o.seperatorAtEnd){}
+		QueryDef()
+		{
+			int fi = 0, fe = 1+g_random.get( 0, 1+g_random.get( 0, g_maxFeatureTerms));
+			for (; fi != fe; ++fi)
+			{
+				termindices.push_back( g_random.get( 0, 1+g_random.get( 0, 1+g_random.get( 0, g_nofTerms))));
+				if (g_random.get( 0, 10) == 1)
+				{
+					termindices.back() = -termindices.back();
+				}
+			}
+			seperatorAtStart = g_random.get( 1, 50 + g_nofFeatures / 20) == 1;
+			seperatorAtEnd = g_random.get( 1, 50 + g_nofFeatures / 20) == 1;
+		}
+		QueryDef( const FeatureDef& o)
+			:termindices(o.termindices),seperatorAtStart(o.seperatorAtStart),seperatorAtEnd(o.seperatorAtEnd){}
+
+		QueryDef& join( const QueryDef& o)
+		{
+			sepindices.push_back( termindices.size());
+			termindices.insert( termindices.end(), o.termindices.begin(), o.termindices.end());
+			seperatorAtEnd = o.seperatorAtEnd;
+			return *this;
+		}
+
+		std::vector<int> termindices;
+		std::vector<int> sepindices;
+		bool seperatorAtStart;
+		bool seperatorAtEnd;
 	};
 
 private:
+	std::map<std::string,int> m_typemap;
+	std::map<std::string,int> m_termmap;
 	std::vector<std::string> m_terms;
+	std::vector<std::string> m_unknownTerms;
 	std::vector<FeatureDef> m_features;
+	std::vector<QueryDef> m_queries;
+};
+
+class TestResults
+{
+public:
+	TestResults(){}
+
+	struct AnswerElement
+	{
+		std::string feat;
+		std::vector<std::string> types;
+
+		AnswerElement()
+			:feat(),types(){}
+		AnswerElement( const std::string& feat_, const std::vector<std::string>& types_)
+			:feat(feat_),types(types_){}
+		AnswerElement( const AnswerElement& o)
+			:feat(o.feat),types(o.types){}
+	};
+	struct Answer
+	{
+		std::vector<AnswerElement> ar;
+
+		Answer(){}
+		Answer( const Answer& o)
+			:ar(o.ar){}
+
+		void addElement( std::string feat, std::vector<std::string> types)
+		{
+			ar.push_back( AnswerElement( feat, types));
+		}
+	};
+
+	void addAnswer( Answer& answer)
+	{
+		m_answers.push_back( answer);
+	}
+
+private:
+	std::vector<Answer> m_answers;
 };
 
 void instantiateLexer( strus::SentenceLexerInstanceInterface* lexer)
@@ -271,6 +510,7 @@ void insertTestData( strus::VectorStorageClientInterface* storage, const TestDat
 		for (; fi != fe; ++fi)
 		{
 			std::string feat = testdata.featureString( fi);
+			if (g_verbose) std::cerr << "insert feature '" << feat << "'" << std::endl;
 			std::vector<std::string> types = testdata.featureTypes( fi);
 			std::vector<std::string>::const_iterator ti = types.begin(), te = types.end();
 			for (; ti != te; ++ti)
@@ -282,6 +522,49 @@ void insertTestData( strus::VectorStorageClientInterface* storage, const TestDat
 		transaction->commit();
 		if (g_verbose) std::cerr << nofFeatureDefinitions << " features inserted" << std::endl;
 	}
+}
+
+void runQueries( TestResults& results, const strus::SentenceLexerInstanceInterface* lexerinst, const TestData& testdata)
+{
+	int qi = 0, qe = testdata.nofQueries();
+	for (; qi != qe; ++qi)
+	{
+		std::string querystr = testdata.queryString( qi);
+		if (g_verbose) std::cerr << "QRY " << querystr << std::endl;
+
+		TestResults::Answer answer;
+		strus::local_ptr<strus::SentenceLexerContextInterface> lexer( lexerinst->createContext( querystr));
+		if (!lexer.get()) throw std::runtime_error( "failed to create lexer context");
+		bool hasMore = lexer->fetchFirstSplit();
+		for (; hasMore; hasMore = lexer->fetchNextSplit())
+		{
+			if (g_verbose) std::cerr << "SPLIT" << std::endl;
+			int ti = 0, te = lexer->nofTokens();
+			for (; ti != te; ++ti)
+			{
+				std::string feat = lexer->featureValue( ti);
+				std::vector<std::string> types = lexer->featureTypes( ti);
+				answer.addElement( feat, types);
+				if (g_verbose)
+				{
+					std::cerr << "TOK " << ti << ": '" << feat << "' {";
+					std::vector<std::string>::const_iterator yi = types.begin(), ye = types.end();
+					for (int yidx=0; yi != ye; ++yi,++yidx)
+					{
+						if (yidx) std::cerr << ",";
+						std::cerr << *yi;
+					}
+					std::cerr << "}" << std::endl;
+				}
+			}
+		}
+		results.addAnswer( answer);
+	}
+}
+
+void verifyResults( const TestResults& results, const TestData& testdata)
+{
+	
 }
 
 int main( int argc, const char** argv)
@@ -423,13 +706,22 @@ int main( int argc, const char** argv)
 		if (!storage.get()) throw std::runtime_error( g_errorhnd->fetchError());
 
 		// Insert the feature definitions:
-		TestData testdata;
-		insertTestData( storage.get(), testdata);
+		if (g_verbose) std::cerr << "create test data ..." << std::endl;
+		TestData testData;
+		if (g_verbose) std::cerr << "insert test data ..." << std::endl;
+		insertTestData( storage.get(), testData);
 
 		// Creating the lexer:
 		strus::local_ptr<strus::SentenceLexerInstanceInterface> lexer( storage->createSentenceLexer());
 		if (!lexer.get()) throw std::runtime_error( "failed to create sentence lexer of vector storage");
 		instantiateLexer( lexer.get());
+
+		// Run the tests:
+		if (g_verbose) std::cerr << "run queries..." << std::endl;
+		TestResults testResults;
+		runQueries( testResults, lexer.get(), testData);
+		if (g_verbose) std::cerr << "verify results ..." << std::endl;
+		verifyResults( testResults, testData);
 
 		// Debug output dump:
 		if (!strus::dumpDebugTrace( dbgtrace, NULL/*filename (stderr)*/))
