@@ -28,7 +28,6 @@ class SentenceLexerContext
 	:public SentenceLexerContextInterface
 {
 public:
-	typedef SentenceLexerInstance::LinkChar LinkChar;
 	typedef SentenceLexerInstance::LinkDef LinkDef;
 	typedef SentenceLexerInstance::SeparatorDef SeparatorDef;
 
@@ -38,8 +37,8 @@ public:
 		const VectorStorageClient* vstorage_,
 		const DatabaseClientInterface* database_, 
 		const std::vector<SeparatorDef>& separators,
-		const std::vector<LinkDef>& links,
-		const std::vector<LinkChar>& linkChars,
+		const std::vector<LinkDef>& linkDefs,
+		const std::vector<char>& linkChars,
 		const std::string& source_,
 		ErrorBufferInterface* errorhnd_);
 	
@@ -72,7 +71,7 @@ public:
 			Element& operator=( const Element& o) {feat=o.feat;types=o.types; return *this;}
 #if __cplusplus >= 201103L
 			Element( Element&& o) :feat(std::move(o.feat)),types(std::move(o.types)){}
-			Element& operator=( Element&& o) {feat=std::move(o.feat);types=std::move(o.types); return *this;}
+			Element& operator=( Element&& o) {feat=std::move(o.feat); types=std::move(o.types); return *this;}
 #endif
 		};
 		AlternativeSplit()
@@ -86,6 +85,17 @@ public:
 #endif
 		std::vector<Element> ar;
 	};
+
+public:
+	/// \brief Defines prunning of evaluation paths not minimizing the number of features detected
+	enum {MaxPositionVisits=3};
+	/// \brief Defines a limit for prunning variants evaluated dependend on the minimum number of features of a found solution
+	static int maxFeaturePrunning( int minNofFeatures)
+	{
+		enum {ArSize=16};
+		static const int ar[ ArSize+1] = {0/*0*/,2/*1*/,3/*2*/,4/*3*/,6/*4*/,7/*5*/,9/*6*/,10/*7*/,11/*8*/,12/*9*/,13/*10*/,14/*11*/,16/*12*/,17/*13*/,18/*14*/,19/*15*/,21/*16*/};
+		return (minNofFeatures <= ArSize) ? ar[ minNofFeatures] : (minNofFeatures + 5 + (minNofFeatures >> 4));
+	}
 
 private:
 	ErrorBufferInterface* m_errorhnd;

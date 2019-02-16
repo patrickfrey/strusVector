@@ -35,12 +35,11 @@ SentenceLexerInstance::~SentenceLexerInstance()
 	if (m_debugtrace) delete m_debugtrace;
 }
 
-SentenceLexerInstance::LinkDef::LinkDef( int uchr_, char sbchr_, int priority_)
-	:sbchr(sbchr_),priority(priority_)
+SentenceLexerInstance::LinkDef::LinkDef( int uchr_, char substchr_)
+	:substchr(substchr_)
 {
 	std::size_t uchrlen = strus::utf8encode( uchr, uchr_);
 	if (uchrlen == 0 || uchrlen >= sizeof(uchr)) throw std::runtime_error(_TXT("punctuation character is not unicode or out of the range accepted by this method"));
-	if (priority_ < std::numeric_limits<char>::min() || priority_ > std::numeric_limits<char>::max()) throw std::runtime_error(_TXT("punctuation priority is out of the range accepted by this method"));
 	uchr[ uchrlen] = 0;
 }
 
@@ -61,36 +60,6 @@ SentenceLexerInstance::SeparatorDef::SeparatorDef( const SeparatorDef& o)
 	std::memcpy( this, &o, sizeof(*this));
 }
 
-
-void SentenceLexerInstance::addLink( int uchr, char sbchr, int priority)
-{
-	try
-	{
-		if (priority > std::numeric_limits<char>::max() || priority < std::numeric_limits<char>::min())
-		{
-			throw std::runtime_error(_TXT("priority out of range"));
-		}
-		m_linkDefs.push_back( LinkDef( uchr, sbchr, priority));
-		if (sbchr)
-		{
-			std::vector<LinkChar>::iterator ci = m_linkChars.begin(), ce = m_linkChars.begin();
-			for (; ci != ce && (unsigned char)ci->chr < (unsigned char)sbchr; ++ci){}
-			if (ci != ce && ci->chr == sbchr)
-			{
-				if (ci->priority > priority)
-				{
-					ci->priority = priority;
-				}
-			}
-			else
-			{
-				m_linkChars.insert( ci, LinkChar( sbchr, (char)priority));
-			}
-		}
-	}
-	CATCH_ERROR_ARG1_MAP( _TXT("error in '%s' adding a link character: %s"), MODULENAME, *m_errorhnd);
-}
-
 void SentenceLexerInstance::addSeparator( int uchr)
 {
 	try
@@ -98,6 +67,39 @@ void SentenceLexerInstance::addSeparator( int uchr)
 		m_separators.push_back( SeparatorDef( uchr));
 	}
 	CATCH_ERROR_ARG1_MAP( _TXT("error in '%s' adding a separator character: %s"), MODULENAME, *m_errorhnd);
+}
+
+void SentenceLexerInstance::addLinkDef( int uchr, char substchr)
+{
+	m_linkDefs.push_back( LinkDef( uchr, substchr));
+	std::vector<char>::iterator ci = m_linkChars.begin(), ce = m_linkChars.end();
+	for (; ci != ce && (unsigned char)*ci < (unsigned char)substchr; ++ci){}
+	if (ci == ce || *ci != substchr)
+	{
+		m_linkChars.insert( ci, substchr);
+	}
+}
+
+void SentenceLexerInstance::addSpace( int uchr)
+{
+	try
+	{
+		addLinkDef( uchr, ' ');
+	}
+	CATCH_ERROR_ARG1_MAP( _TXT("error in '%s' adding a separator character: %s"), MODULENAME, *m_errorhnd);
+}
+
+void SentenceLexerInstance::addLink( int uchr, char substchr)
+{
+	try
+	{
+		if (substchr == ' ')
+		{
+			throw std::runtime_error(_TXT("space (' ') not allowed as linking character substitute"));
+		}
+		addLinkDef( uchr, substchr);
+	}
+	CATCH_ERROR_ARG1_MAP( _TXT("error in '%s' adding a link character: %s"), MODULENAME, *m_errorhnd);
 }
 
 SentenceLexerContextInterface* SentenceLexerInstance::createContext( const std::string& source) const

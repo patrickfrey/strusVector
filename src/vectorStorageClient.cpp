@@ -153,6 +153,8 @@ std::vector<VectorQueryResult> VectorStorageClient::findSimilar( const std::stri
 		}
 		if (m_debugtrace)
 		{
+			std::string vecstr = vec.tostring(", ", 10);
+			m_debugtrace->event( "findsim", "%s {%s,...}", type.c_str(), vecstr.c_str());
 			m_debugtrace->open( "search");
 			m_debugtrace->event( "param", _TXT("LSH simdist %d"), simdist);
 			m_debugtrace->event( "param", _TXT("LSH prob simdist %d"), probsimdist);

@@ -36,40 +36,23 @@ public:
 
 	virtual ~SentenceLexerInstance();
 
-	virtual void addLink( int uchr, char sbchr, int priority);
-
 	virtual void addSeparator( int uchr);
+
+	virtual void addSpace( int uchr);
+	
+	virtual void addLink( int uchr, char substchr);
 
 	virtual SentenceLexerContextInterface* createContext( const std::string& source) const;
 
 	virtual double getSimilarity( const SentenceTerm& term, const SentenceTerm& other) const;
 
 public:
-	struct LinkChar
-	{
-		char chr;
-		char priority;
-
-		LinkChar()
-			:chr(0),priority(0){}
-		LinkChar( char chr_, char priority_)
-			:chr(chr_),priority(priority_){}
-		LinkChar( const LinkChar& o)
-			:chr(o.chr),priority(o.priority){}
-
-		bool operator < (const LinkChar& o) const
-		{
-			return chr == o.chr ? (priority > o.priority) : (chr < o.chr);
-		}
-	};
-
 	struct LinkDef
 	{
 		char uchr[ 6];
-		char sbchr;
-		char priority;
+		char substchr;
 
-		LinkDef( int uchr_, char sbchr_, int priority_);
+		LinkDef( int uchr_, char substchr_);
 		LinkDef( const LinkDef& o);
 	};
 
@@ -82,13 +65,16 @@ public:
 	};
 
 private:
+	void addLinkDef( int uchr, char substchr);
+
+private:
 	ErrorBufferInterface* m_errorhnd;
 	DebugTraceContextInterface* m_debugtrace;
 	const VectorStorageClient* m_vstorage;
 	const DatabaseClientInterface* m_database;
 	std::vector<LinkDef> m_linkDefs;
 	std::vector<SeparatorDef> m_separators;
-	std::vector<LinkChar> m_linkChars;
+	std::vector<char> m_linkChars;
 };
 
 }//namespace

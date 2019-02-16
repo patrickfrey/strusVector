@@ -102,19 +102,302 @@ static std::string randomTerm()
 	return rt;
 }
 
-static std::string termListToString( const std::vector<std::string>& terms, char separator, bool seperatorAtStart, bool seperatorAtEnd)
+static char randomSeparator( bool withEmpty)
+{
+	char rndsep[3] = {'\0',g_delimiterSubst,g_spaceSubst};
+	return rndsep[ g_random.get( withEmpty ? 0 : 1, 3)];
+}
+
+static std::string randomDelimiterString( const std::vector<int>& delimiters)
 {
 	std::string rt;
-	if (seperatorAtStart) rt.push_back( separator);
-	std::vector<std::string>::const_iterator ti = terms.begin(), te = terms.end();
-	for (int tidx=0; ti != te; ++ti,++tidx)
+	do
 	{
-		if (tidx) rt.push_back( separator);
-		rt.append( *ti);
+		int chr = delimiters[ g_random.get( 0, 1+g_random.get( 0, delimiters.size()))];
+		char chrbuf[32];
+		std::size_t chrlen = strus::utf8encode( chrbuf, chr);
+		rt.append( chrbuf, chrlen);
 	}
-	if (seperatorAtEnd) rt.push_back( separator);
+	while (g_random.get( 0, 10) == 1);
 	return rt;
 }
+
+static std::string randomSeparatorMasking( char separator)
+{
+	std::string rt;
+	bool hasDelimiter = false;
+	if (g_random.get( 0,5) == 1)
+	{
+		rt.append( randomDelimiterString( g_spaces));
+		hasDelimiter = true;
+	}
+	while (g_random.get( 0,5) == 1 || !hasDelimiter)
+	{
+		rt.push_back( separator ? separator : ' ');
+		hasDelimiter = true;
+	}
+	if (g_random.get( 0,5) == 1 || !hasDelimiter)
+	{
+		rt.append( randomDelimiterString( g_spaces));
+	}
+	return rt;
+}
+
+struct TermDef
+{
+	int termidx;
+	char separator;
+
+	TermDef( bool withSpace)
+	{
+		termidx = g_random.get( 0, 1+g_random.get( 0, 1+g_random.get( 0, g_nofTerms)));
+		separator = randomSeparator( withSpace);
+	}
+
+	TermDef( int termidx_, char separator_)
+		:termidx(termidx_),separator(separator_){}
+	TermDef( const TermDef& o)
+		:termidx(o.termidx),separator(o.separator){}
+
+	bool operator < (const TermDef& o) const
+	{
+		return termidx == o.termidx ? separator < o.separator : termidx < o.termidx;
+	}
+	bool operator == (const TermDef& o) const
+	{
+		return termidx == o.termidx && separator == o.separator;
+	}
+	int compare( const TermDef& o) const
+	{
+		return termidx == o.termidx ? separator - o.separator : termidx - o.termidx;
+	}
+};
+
+struct TermSequenceDef
+{
+	TermSequenceDef( const std::vector<TermDef>& terms_, char separatorAtStart_)
+		:terms(terms_),separatorAtStart(separatorAtStart_){}
+	TermSequenceDef( const TermSequenceDef& o)
+		:terms(o.terms),separatorAtStart(o.separatorAtStart){}
+	TermSequenceDef( bool withUnknownTerms, bool withSpace)
+	{
+		int fi = 0, fe = 1+g_random.get( 0, 1+g_random.get( 0, g_maxFeatureTerms));
+		for (; fi != fe; ++fi)
+		{
+			terms.push_back( TermDef( withSpace));
+			if (withUnknownTerms && g_random.get( 0, 20) == 1)
+			{
+				terms.back().termidx = -terms.back().termidx;
+			}
+		}
+		separatorAtStart = g_random.get( 1, 50 + g_nofFeatures / 20) == 1 ? randomSeparator(true) : '\0';
+		if (g_random.get( 1, 20 + g_nofFeatures / 20) > 1)
+		{
+			//... mask out separator and end
+			terms.back().separator = '\0';
+		}
+	}
+	TermSequenceDef& operator = (const TermSequenceDef& o)
+	{
+		terms = o.terms;
+		separatorAtStart = o.separatorAtStart;
+		return *this;
+	}
+
+	void modify()
+	{
+		int rndidx;
+		int newtermidx;
+		do
+		{
+			switch (g_random.get( 0, 4))
+			{
+				case 0:
+					separatorAtStart = randomSeparator( true);
+					break;
+				case 1:
+					rndidx = g_random.get( 0, terms.size());
+					terms[ rndidx].separator = randomSeparator( false);
+					break;
+				case 2:
+					rndidx = g_random.get( 0, terms.size());
+					newtermidx = (g_random.get( 0, 3) == 1)
+						? g_random.get( 0, 1+g_random.get( 0, 1+g_random.get( 0, g_nofTerms)))
+						: ((terms[ rndidx].termidx + 1) % g_nofTerms);
+					terms[ rndidx].termidx = newtermidx;
+					break;
+				default:
+					terms.push_back( TermDef( false));
+					break;
+			}
+		}
+		while (g_random.get( 0, 4) == 1);
+	}
+	typedef std::vector<int> Id;
+	Id id() const
+	{
+		Id rt;
+		rt.push_back( separatorAtStart );
+		std::vector<TermDef>::const_iterator ei = terms.begin(), ee = terms.end();
+		for (; ei != ee; ++ei)
+		{
+			rt.push_back( ei->termidx);
+			rt.push_back( ei->separator);
+		}
+		return rt;
+	}
+
+	std::string tostring( const std::vector<std::string>& termstrings) const
+	{
+		std::string rt;
+		if (separatorAtStart) rt.push_back( separatorAtStart);
+		std::vector<TermDef>::const_iterator ei = terms.begin(), ee = terms.end();
+		for (; ei != ee; ++ei)
+		{
+			if (ei->termidx < 0) throw std::runtime_error("logic error: call tostring with query string");
+			rt.append( termstrings[ ei->termidx]);
+			rt.push_back( ei->separator ? ei->separator : ' ');
+		}
+		return rt;
+	}
+
+	std::string querystring( const std::vector<std::string>& termstrings, const std::vector<std::string>& unknown_termstrings) const
+	{
+		std::string rt;
+		while (g_random.get( 0,5) == 1)
+		{
+			rt.append( randomDelimiterString( g_spaces));
+		}
+		if (separatorAtStart) rt.append( randomSeparatorMasking( separatorAtStart));
+		while (g_random.get( 0,5) == 1)
+		{
+			rt.append( randomDelimiterString( g_spaces));
+		}
+		std::vector<TermDef>::const_iterator ei = terms.begin(), ee = terms.end();
+		for (; ei != ee; ++ei)
+		{
+			rt.append( (ei->termidx >= 0) ? termstrings[ ei->termidx] : unknown_termstrings[ ei->termidx]);
+			rt.append( randomSeparatorMasking( ei->separator));
+		}
+		return rt;
+	}
+
+	bool operator < ( const TermSequenceDef& o) const {return compare( o) < 0;}
+	bool operator == ( const TermSequenceDef& o) const {return compare( o) == 0;}
+
+	int compare( const TermSequenceDef& o) const
+	{
+		if (separatorAtStart == o.separatorAtStart)
+		{
+			if (terms.size() == o.terms.size())
+			{
+				std::vector<TermDef>::const_iterator ai = terms.begin(), ae = terms.end(), bi = o.terms.begin(), be = o.terms.end();
+				for (; ai != ae && *ai == *bi; ++ai,++bi){}
+				return ai == ae ? 0 : ai->compare(*bi);
+			}
+			else return (int)terms.size() - (int)o.terms.size();
+		}
+		else return ((int)separatorAtStart - (int)o.separatorAtStart);
+	}
+
+	std::vector<TermDef> terms;
+	char separatorAtStart;
+};
+
+struct FeatureDef
+	:public TermSequenceDef
+{
+	FeatureDef( const TermSequenceDef& terms_, const std::vector<int>& typeindices_)
+		:TermSequenceDef(terms_),typeindices(typeindices_){}
+	FeatureDef( const FeatureDef& o)
+		:TermSequenceDef(o),typeindices(o.typeindices){}
+	FeatureDef()
+		:TermSequenceDef( false/*with unknowns*/, false/*with spaces*/)
+	{
+		std::set<int> typeset;
+		int ti = 0, te = 1+g_random.get( 0, 1+g_random.get( 0, 1+g_nofTypes));
+		for (; ti != te; ++ti)
+		{
+			typeset.insert( g_random.get( 0, g_nofTypes));
+		}
+		typeindices.insert( typeindices.end(), typeset.begin(), typeset.end());
+	}
+	FeatureDef& operator = (const FeatureDef& o)
+	{
+		TermSequenceDef::operator =(o);
+		typeindices = o.typeindices;
+		return *this;
+	}
+
+	std::string typestring() const
+	{
+		std::string rt;
+		rt.push_back( '{');
+		std::vector<int>::const_iterator ti = typeindices.begin(), te = typeindices.end();
+		for (int tidx=0; ti != te; ++ti,++tidx)
+		{
+			if (tidx) rt.append(", ");
+			rt.append( typeString( *ti));
+		}
+		rt.push_back( '}');
+		return rt;
+	}
+
+	bool operator < ( const FeatureDef& o) const	{return compare( o) < 0;}
+	bool operator == ( const FeatureDef& o) const	{return compare( o) == 0;}
+
+	int compareTypes( const FeatureDef& o) const
+	{
+		std::set<int> aa( typeindices.begin(), typeindices.end());
+		std::set<int> bb( o.typeindices.begin(), o.typeindices.end());
+		std::set<int>::const_iterator ai = aa.begin(), ae = aa.end(), bi = bb.begin(), be = bb.end();
+		for (; ai != ae && bi != be && *ai == *bi; ++ai,++bi){}
+		return (ai == ae || bi == be) ? (ai == ae ? +1:-1) : (*ai - *bi);
+	}
+	int compare( const FeatureDef& o) const
+	{
+		int cmp = TermSequenceDef::compare( o);
+		return cmp ? cmp : compareTypes( o);
+	}
+
+	std::vector<int> typeindices;
+};
+
+struct QueryDef
+	:public TermSequenceDef
+{
+	QueryDef( const QueryDef& o)
+		:TermSequenceDef(o){}
+	QueryDef()
+		:TermSequenceDef( true/*with unknowns*/, true/*with spaces*/){}
+	QueryDef( const FeatureDef& o)
+		:TermSequenceDef(o){}
+
+	QueryDef& operator = (const QueryDef& o)
+	{
+		TermSequenceDef::operator =(o);
+		return *this;
+	}
+
+	static bool tryJoin( QueryDef& ths, const QueryDef& o)
+	{
+		bool match = false;
+		if (ths.terms.empty())
+		{
+			match = (ths.separatorAtStart == o.separatorAtStart);
+		}
+		else if (ths.terms.back().separator == o.separatorAtStart)
+		{
+			match = true;
+		}
+		if (match)
+		{
+			ths.terms.insert( ths.terms.end(), o.terms.begin(), o.terms.end());
+			return true;
+		}
+		return false;
+	}
+};
 
 class TestData
 {
@@ -169,6 +452,7 @@ public:
 				}
 				continue;
 			}
+			m_unknownTermmap[ term] = -ti;
 			nofTries = 0;
 		}
 		m_unknownTerms.insert( m_unknownTerms.end(), unknownTermset.begin(), unknownTermset.end());
@@ -197,6 +481,7 @@ public:
 				}
 				continue;
 			}
+			m_featureStartMap.insert( std::pair<int,int>( fdef.terms[0].termidx, m_features.size()));
 			m_features.push_back( fdef);
 			while (g_nofFeatures > (int)m_features.size() && g_random.get( 0, 5) == 1)
 			{
@@ -213,28 +498,41 @@ public:
 		int qi = 0, qe = g_nofFeatures;
 		for (; qi != qe; ++qi)
 		{
-			if (g_random.get( 0,3) == 1)
+			if (qi == 0 || g_random.get( 0,3) == 1)
 			{
 				// ... Query derived from an existing feature
 				int featidx = g_random.get( 0, 1+g_random.get( 0, m_features.size()));
-				QueryDef query( m_features[ featidx]);
-				m_queries.push_back( query);
+				QueryDef qdef( m_features[ featidx]);
+				m_queries.push_back( qdef);
 			}
 			else
 			{
 				// ... Random query existing
-				QueryDef query;
-				m_queries.push_back( query);
+				QueryDef qdef;
+				m_queries.push_back( qdef);
 			}
 			while (m_queries.size() > 10 && g_random.get( 0,3) == 1)
 			{
 				// ... Join query created with another query
 				int joinidx = g_random.get( 0, 1+g_random.get( 0, m_queries.size()));
-				m_queries.back().join( m_queries[ joinidx]);
+				QueryDef::tryJoin( m_queries.back(), m_queries[ joinidx]);
 			}
+			m_querystrings.push_back( m_queries.back().querystring( m_terms, m_unknownTerms));
 		}
 	}
 
+	const std::map<std::string,int>& termmap() const
+	{
+		return m_termmap;
+	}
+	const std::map<std::string,int>& typemap() const
+	{
+		return m_typemap;
+	}
+	const std::vector<std::string>& terms() const
+	{
+		return m_terms;
+	}
 	int termIndex( const std::string& term) const
 	{
 		std::map<std::string,int>::const_iterator mi = m_termmap.find( term);
@@ -244,21 +542,9 @@ public:
 	{
 		return m_features.size();
 	}
-	std::vector<std::string> featureTerms( int featureIdx) const
-	{
-		std::vector<std::string> rt;
-		const FeatureDef& fdef = m_features[ featureIdx];
-		std::vector<int>::const_iterator ti = fdef.termindices.begin(), te = fdef.termindices.end();
-		for (; ti != te; ++ti)
-		{
-			rt.push_back( m_terms[  *ti]);
-		}
-		return rt;
-	}
 	std::string featureString( int featureIdx) const
 	{
-		const FeatureDef& fdef = m_features[ featureIdx];
-		return termListToString( featureTerms( featureIdx), g_delimiterSubst, fdef.seperatorAtStart, fdef.seperatorAtEnd);
+		return m_features[ featureIdx].tostring( m_terms);
 	}
 	std::vector<std::string> featureTypes( int featureIdx) const
 	{
@@ -275,172 +561,200 @@ public:
 	{
 		return m_queries.size();
 	}
-	std::vector<std::string> queryTerms( int queryIdx) const
+	const std::string& queryString( int queryIdx) const
 	{
-		std::vector<std::string> rt;
-		const QueryDef& qdef = m_queries[ queryIdx];
-		std::vector<int>::const_iterator ti = qdef.termindices.begin(), te = qdef.termindices.end();
-		for (; ti != te; ++ti)
-		{
-			rt.push_back( (*ti >= 0) ? m_terms[ *ti] : m_unknownTerms[ -*ti]);
-		}
-		return rt;
+		return m_querystrings[ queryIdx];
 	}
-	static std::string randomDelimiterString( const std::vector<int>& delimiters)
+	const QueryDef& query( int queryIdx) const
 	{
-		std::string rt;
-		do
+		return m_queries[ queryIdx];
+	}
+	static bool match( const TermDef& feat, const TermDef& query)
+	{
+		if (query.termidx != feat.termidx) return false;
+		if (query.separator && query.separator != feat.separator) return false;
+		return true;
+	}
+
+	struct Candidate
+	{
+		std::vector<TermDef>::const_iterator itr;
+		std::vector<int> featindices;
+		int nofUnknown;
+		int pos;
+
+		Candidate( std::vector<TermDef>::const_iterator itr_, const std::vector<int>& featindices_, int nofUnknown_, int pos_)
+			:itr(itr_),featindices(featindices_),nofUnknown(nofUnknown_),pos(pos_){}
+		Candidate( const Candidate& o)
+			:itr(o.itr),featindices(o.featindices),nofUnknown(o.nofUnknown),pos(o.pos){}
+
+		static bool compareFeatIndices( const std::vector<int>& a, const std::vector<int>& b)
 		{
-			int chr = delimiters[ g_random.get( 0, 1+g_random.get( 0, delimiters.size()))];
-			char chrbuf[32];
-			std::size_t chrlen = strus::utf8encode( chrbuf, chr);
-			rt.append( chrbuf, chrlen);
+			if (a.size() == b.size())
+			{
+				std::vector<int>::const_iterator ai = a.begin(), ae = a.end();
+				std::vector<int>::const_iterator bi = b.begin(), be = b.end();
+				for (; ai < ae && *ai == *bi; ++ai,++bi){}
+				if (ai == ae) return false;
+				return *ai < *bi;
+			}
+			else return a.size() < b.size();
 		}
-		while (g_random.get( 0, 10) == 1);
+
+		bool operator < (const Candidate& o) const
+		{
+			return pos == o.pos
+				? (nofUnknown == o.nofUnknown
+					? compareFeatIndices( featindices, o.featindices)
+					: nofUnknown < o.nofUnknown)
+				: pos < o.pos;
+		}
+	};
+
+	/// \note HACK: Copied from SentenceLexer context to make prunning identical for making search results comparable
+	/// \brief Defines prunning of evaluation paths not minimizing the number of features detected
+	enum {MaxPositionVisits=3};
+	/// \brief Defines a limit for prunning variants evaluated dependend on the minimum number of features of a found solution
+	static int maxFeaturePrunning( int minNofFeatures)
+	{
+		enum {ArSize=16};
+		static const int ar[ ArSize+1] = {0/*0*/,2/*1*/,3/*2*/,4/*3*/,6/*4*/,7/*5*/,9/*6*/,10/*7*/,11/*8*/,12/*9*/,13/*10*/,14/*11*/,16/*12*/,17/*13*/,18/*14*/,19/*15*/,21/*16*/};
+		return (minNofFeatures <= ArSize) ? ar[ minNofFeatures] : (minNofFeatures + 5 + (minNofFeatures >> 4));
+	}
+
+	std::vector<FeatureDef> featuresFromIndices( const std::vector<int>& indices) const
+	{
+		std::vector<FeatureDef> rt;
+		std::vector<int>::const_iterator ii = indices.begin(), ie = indices.end();
+		for (; ii != ie; ++ii)
+		{
+			rt.push_back( m_features[ *ii]);
+		}
 		return rt;
 	}
 
-	std::string queryString( int queryIdx) const
+	std::vector<std::vector<FeatureDef> > findTermSequence( const TermSequenceDef& termdef) const
 	{
-		std::string rt;
-		const QueryDef& qdef = m_queries[ queryIdx];
-		if (qdef.seperatorAtStart)
+		std::vector<std::vector<FeatureDef> > rt;
+		std::set<Candidate> candidates;
+		candidates.insert( Candidate( termdef.terms.begin(), std::vector<int>(), 0, 0));
+		int minNofUnknown = std::numeric_limits<int>::max();
+		int minNofFeats = std::numeric_limits<int>::max();
+		struct VisitCount
 		{
-			rt.append( randomDelimiterString( g_delimiters));
-		}
-		std::vector<std::string> terms = queryTerms( queryIdx);
-		std::vector<std::string>::const_iterator ti = terms.begin(), te = terms.end();
-		std::vector<int>::const_iterator si = qdef.sepindices.begin(), se = qdef.sepindices.end();
-		for (int tidx=0; ti != te; ++ti,++tidx)
+			int nofFeatures;
+			int cnt;
+
+			VisitCount()
+				:nofFeatures(0),cnt(0){}
+			VisitCount( int nofFeatures_, int cnt_)
+				:nofFeatures(nofFeatures_),cnt(cnt_){}
+			VisitCount( const VisitCount& o)
+				:nofFeatures(o.nofFeatures),cnt(o.cnt){}
+		};
+		std::vector<VisitCount> visitCountMap;
+
+		typedef std::multimap<int,int>::const_iterator Iter;
+		typedef std::pair<Iter,Iter> Range;
+
+		while (!candidates.empty())
 		{
-			if (si != se && *si == tidx)
+			// Prunning by number of unknown features
+			if (candidates.begin()->nofUnknown > minNofUnknown)
 			{
-				++si;
-				rt.append( randomDelimiterString( g_random.get( 0,2) == 1 ? g_delimiters : g_spaces));
+				candidates.erase( candidates.begin());
+				continue;
+			}
+			Candidate candidate = *candidates.begin();
+			candidates.erase( candidates.begin());
+
+			// Prunning by visit count and expected features:
+			int nofFeats = candidate.featindices.size();
+			int expectedNofFeats = candidate.featindices.size();
+			while ((int)visitCountMap.size() <= candidate.pos) visitCountMap.push_back( VisitCount());
+			VisitCount& vc = visitCountMap[ candidate.pos];
+			if (vc.cnt == 0)
+			{
+				vc.nofFeatures = nofFeats;
+				vc.cnt = 1;
+			}
+			else if (nofFeats < vc.nofFeatures)
+			{
+				vc.nofFeatures = nofFeats;
+				expectedNofFeats = minNofFeats;
 			}
 			else
 			{
-				rt.append( randomDelimiterString( g_spaces));
+				if (vc.cnt++ >= MaxPositionVisits) continue;
+				expectedNofFeats = nofFeats + minNofFeats - vc.nofFeatures;
 			}
-			rt.append( *ti);
-		}
-		if (g_random.get( 0,7) == 1)
-		{
-			rt.append( randomDelimiterString( g_spaces));
-		}
-		if (qdef.seperatorAtEnd)
-		{
-			rt.append( randomDelimiterString( g_delimiters));
+			if (minNofFeats != std::numeric_limits<int>::max() && expectedNofFeats > maxFeaturePrunning( minNofFeats)) continue;
+
+			// Search matches:
+			Range range = m_featureStartMap.equal_range( candidate.itr->termidx);
+			Iter ri = range.first;
+			Iter re = range.second;
+			for (; ri != re; ++ri)
+			{
+				const FeatureDef& fdef = m_features[ ri->second];
+				if (candidate.pos == 0 && termdef.separatorAtStart && termdef.separatorAtStart != fdef.separatorAtStart) continue;
+
+				std::vector<TermDef>::const_iterator
+					ai = candidate.itr, ae = termdef.terms.end(),
+					bi = fdef.terms.begin(), be = fdef.terms.end();
+				int aidx = 0;
+				for (; ai != ae && bi != be && match(*ai,*bi); ++ai,++bi,++aidx){}
+				if (ai == ae && bi != be) continue;
+				std::vector<int> featindices( candidate.featindices);
+				featindices.push_back( ri->second);
+				if (ai == ae)
+				{
+					if (minNofUnknown > candidate.nofUnknown)
+					{
+						minNofUnknown = candidate.nofUnknown;
+					}
+					rt.push_back( featuresFromIndices( featindices));
+				}
+				else
+				{
+					candidates.insert( Candidate( ai, featindices, candidate.nofUnknown, candidate.pos + aidx));
+				}
+			}
+
+			// Add default unknown match:
+			std::vector<TermDef>::const_iterator ai = candidate.itr;
+			++ai;
+			if (ai == termdef.terms.end())
+			{
+				if (minNofUnknown > candidate.nofUnknown+1)
+				{
+					minNofUnknown = candidate.nofUnknown+1;
+				}
+				rt.push_back( featuresFromIndices( candidate.featindices));
+			}
+			else
+			{
+				candidates.insert( Candidate( ai, candidate.featindices, candidate.nofUnknown+1, candidate.pos + 1));
+			}
 		}
 		return rt;
 	}
 
-private:
-	struct FeatureDef
+	std::vector<std::vector<FeatureDef> > evaluateQuery( const QueryDef& qdef) const
 	{
-		typedef std::vector<int> Id;
-
-		FeatureDef( const FeatureDef& o)
-			:termindices(o.termindices),typeindices(o.typeindices),seperatorAtStart(o.seperatorAtStart),seperatorAtEnd(o.seperatorAtEnd){}
-		FeatureDef()
-		{
-			int fi = 0, fe = 1+g_random.get( 0, 1+g_random.get( 0, g_maxFeatureTerms));
-			for (; fi != fe; ++fi)
-			{
-				termindices.push_back( g_random.get( 0, 1+g_random.get( 0, 1+g_random.get( 0, g_nofTerms))));
-			}
-			std::set<int> typeset;
-			int ti = 0, te = 1+g_random.get( 0, 1+g_random.get( 0, 1+g_nofTypes));
-			for (; ti != te; ++ti)
-			{
-				typeset.insert( g_random.get( 0, g_nofTypes));
-			}
-			typeindices.insert( typeindices.end(), typeset.begin(), typeset.end());
-			seperatorAtStart = g_random.get( 1, 50 + g_nofFeatures / 20) == 1;
-			seperatorAtEnd = g_random.get( 1, 50 + g_nofFeatures / 20) == 1;
-		}
-		void modify()
-		{
-			int rndidx;
-			int newtermidx;
-			do
-			{
-				switch (g_random.get( 0, 4))
-				{
-					case 0:
-						seperatorAtStart ^= true;
-						break;
-					case 1:
-						seperatorAtEnd ^= true;
-						break;
-					case 2:
-						rndidx = g_random.get( 0, termindices.size());
-						newtermidx = (g_random.get( 0, 3) == 1)
-							? g_random.get( 0, 1+g_random.get( 0, 1+g_random.get( 0, g_nofTerms)))
-							: ((termindices[ rndidx] + 1) % g_nofTerms);
-						termindices[ rndidx] = newtermidx;
-						break;
-					default:
-						termindices.push_back( g_random.get( 0, 1+g_random.get( 0, 1+g_random.get( 0, g_nofTerms))));
-						break;
-				}
-			}
-			while (g_random.get( 0, 4) == 1);
-		}
-		Id id() const
-		{
-			Id rt( termindices);
-			rt.push_back( (seperatorAtStart ? 1 : 0) + (seperatorAtEnd ? 2 : 0));
-			return rt;
-		}
-
-		std::vector<int> termindices;
-		std::vector<int> typeindices;
-		bool seperatorAtStart;
-		bool seperatorAtEnd;
-	};
-	struct QueryDef
-	{
-		QueryDef( const QueryDef& o)
-			:termindices(o.termindices),seperatorAtStart(o.seperatorAtStart),seperatorAtEnd(o.seperatorAtEnd){}
-		QueryDef()
-		{
-			int fi = 0, fe = 1+g_random.get( 0, 1+g_random.get( 0, g_maxFeatureTerms));
-			for (; fi != fe; ++fi)
-			{
-				termindices.push_back( g_random.get( 0, 1+g_random.get( 0, 1+g_random.get( 0, g_nofTerms))));
-				if (g_random.get( 0, 10) == 1)
-				{
-					termindices.back() = -termindices.back();
-				}
-			}
-			seperatorAtStart = g_random.get( 1, 50 + g_nofFeatures / 20) == 1;
-			seperatorAtEnd = g_random.get( 1, 50 + g_nofFeatures / 20) == 1;
-		}
-		QueryDef( const FeatureDef& o)
-			:termindices(o.termindices),seperatorAtStart(o.seperatorAtStart),seperatorAtEnd(o.seperatorAtEnd){}
-
-		QueryDef& join( const QueryDef& o)
-		{
-			sepindices.push_back( termindices.size());
-			termindices.insert( termindices.end(), o.termindices.begin(), o.termindices.end());
-			seperatorAtEnd = o.seperatorAtEnd;
-			return *this;
-		}
-
-		std::vector<int> termindices;
-		std::vector<int> sepindices;
-		bool seperatorAtStart;
-		bool seperatorAtEnd;
-	};
+		return findTermSequence( qdef);
+	}
 
 private:
 	std::map<std::string,int> m_typemap;
 	std::map<std::string,int> m_termmap;
+	std::map<std::string,int> m_unknownTermmap;
+	std::multimap<int,int> m_featureStartMap;
 	std::vector<std::string> m_terms;
 	std::vector<std::string> m_unknownTerms;
 	std::vector<FeatureDef> m_features;
 	std::vector<QueryDef> m_queries;
+	std::vector<std::string> m_querystrings;
 };
 
 class TestResults
@@ -459,25 +773,115 @@ public:
 			:feat(feat_),types(types_){}
 		AnswerElement( const AnswerElement& o)
 			:feat(o.feat),types(o.types){}
+
+		TermSequenceDef termseq( const std::map<std::string,int>& termmap) const
+		{
+			char const* si = feat.c_str();
+			char const* start = si;
+			char separatorAtStart = '\0';
+
+			if (*si == g_delimiterSubst || *si == g_spaceSubst)
+			{
+				separatorAtStart = *si++;
+			}
+			std::vector<TermDef> terms;
+
+			for (; *si; ++si)
+			{
+				if (*si == g_delimiterSubst || *si == g_spaceSubst)
+				{
+					std::string subterm( start, si - start);
+					std::map<std::string,int>::const_iterator mi = termmap.find( subterm);
+					if (mi != termmap.end())
+					{
+						terms.push_back( TermDef( mi->second, *si));
+					}
+					else
+					{
+						throw std::runtime_error( strus::string_format( "unknown term '%s' in answer", subterm.c_str()));
+					}
+					start = si+1;
+				}
+			}
+			if (start < si)
+			{
+				std::string subterm( start, si - start);
+				std::map<std::string,int>::const_iterator mi = termmap.find( subterm);
+				if (mi != termmap.end())
+				{
+					terms.push_back( TermDef( mi->second, '\0'));
+				}
+				else
+				{
+					throw std::runtime_error( strus::string_format( "unknown term '%s' in answer", subterm.c_str()));
+				}
+			}
+			return TermSequenceDef( terms, separatorAtStart);
+		}
+
+		FeatureDef feature( const std::map<std::string,int>& termmap, const std::map<std::string,int>& typemap) const
+		{
+			std::vector<int> typeindices_;
+			std::vector<std::string>::const_iterator ti = types.begin(), te = types.end();
+			for (; ti != te; ++ti)
+			{
+				std::map<std::string,int>::const_iterator mi = typemap.find( *ti);
+				if (mi != termmap.end())
+				{
+					typeindices_.push_back( mi->second);
+				}
+				else
+				{
+					throw std::runtime_error( strus::string_format( "unknown term type '%s' in answer", ti->c_str()));
+				}
+			}
+			return FeatureDef( termseq( termmap), typeindices_);
+		}
 	};
+
 	struct Answer
 	{
-		std::vector<AnswerElement> ar;
-
-		Answer(){}
+	public:
+		explicit Answer( int queryidx_)
+			:m_queryidx(queryidx_){}
 		Answer( const Answer& o)
-			:ar(o.ar){}
+			:m_queryidx(o.m_queryidx),m_ar(o.m_ar){}
 
 		void addElement( std::string feat, std::vector<std::string> types)
 		{
-			ar.push_back( AnswerElement( feat, types));
+			m_ar.push_back( AnswerElement( feat, types));
 		}
+
+		int queryidx() const		{return m_queryidx;}
+
+		typedef std::vector<AnswerElement>::const_iterator const_iterator;
+		const_iterator begin() const	{return m_ar.begin();}
+		const_iterator end() const	{return m_ar.end();}
+
+		std::vector<FeatureDef> features( const std::map<std::string,int>& termmap, const std::map<std::string,int>& typemap) const
+		{
+			std::vector<FeatureDef> rt;
+			std::vector<AnswerElement>::const_iterator ai = m_ar.begin(), ae = m_ar.end();
+			for (; ai != ae; ++ai)
+			{
+				rt.push_back( ai->feature( termmap, typemap));
+			}
+			return rt;
+		}
+
+	private:
+		int m_queryidx;
+		std::vector<AnswerElement> m_ar;
 	};
 
 	void addAnswer( Answer& answer)
 	{
 		m_answers.push_back( answer);
 	}
+
+	typedef std::vector<Answer>::const_iterator const_iterator;
+	const_iterator begin() const	{return m_answers.begin();}
+	const_iterator end() const	{return m_answers.end();}
 
 private:
 	std::vector<Answer> m_answers;
@@ -488,14 +892,16 @@ void instantiateLexer( strus::SentenceLexerInstanceInterface* lexer)
 	std::vector<int>::const_iterator di = g_delimiters.begin(), de = g_delimiters.end();
 	for (; di != de; ++di)
 	{
-		lexer->addLink( *di, g_delimiterSubst, 1);
+		lexer->addLink( *di, g_delimiterSubst);
 	}
 	di = g_spaces.begin(), de = g_spaces.end();
+	for (; di != de; ++di)
 	{
-		lexer->addLink( *di, g_spaceSubst, 0);
+		lexer->addSpace( *di);
 	}
+	lexer->addSpace( g_spaceSubst);
+	lexer->addLink( g_spaceSubst, g_spaceSubst);
 	lexer->addSeparator( '"');
-	lexer->addSeparator( '\t');
 	lexer->addSeparator( ';');
 }
 
@@ -510,13 +916,13 @@ void insertTestData( strus::VectorStorageClientInterface* storage, const TestDat
 		for (; fi != fe; ++fi)
 		{
 			std::string feat = testdata.featureString( fi);
-			if (g_verbose) std::cerr << "insert feature '" << feat << "'" << std::endl;
 			std::vector<std::string> types = testdata.featureTypes( fi);
 			std::vector<std::string>::const_iterator ti = types.begin(), te = types.end();
 			for (; ti != te; ++ti)
 			{
 				++nofFeatureDefinitions;
 				transaction->defineFeature( *ti, feat);
+				if (g_verbose) std::cerr << "insert feature '" << feat << "' type " << *ti << std::endl;
 			}
 		}
 		transaction->commit();
@@ -530,14 +936,14 @@ void runQueries( TestResults& results, const strus::SentenceLexerInstanceInterfa
 	for (; qi != qe; ++qi)
 	{
 		std::string querystr = testdata.queryString( qi);
-		if (g_verbose) std::cerr << "QRY " << querystr << std::endl;
+		if (g_verbose) std::cerr << "QRY " << qi << " " << querystr << std::endl;
 
-		TestResults::Answer answer;
 		strus::local_ptr<strus::SentenceLexerContextInterface> lexer( lexerinst->createContext( querystr));
 		if (!lexer.get()) throw std::runtime_error( "failed to create lexer context");
 		bool hasMore = lexer->fetchFirstSplit();
 		for (; hasMore; hasMore = lexer->fetchNextSplit())
 		{
+			TestResults::Answer answer( qi);
 			if (g_verbose) std::cerr << "SPLIT" << std::endl;
 			int ti = 0, te = lexer->nofTokens();
 			for (; ti != te; ++ti)
@@ -557,14 +963,193 @@ void runQueries( TestResults& results, const strus::SentenceLexerInstanceInterfa
 					std::cerr << "}" << std::endl;
 				}
 			}
+			results.addAnswer( answer);
 		}
-		results.addAnswer( answer);
 	}
 }
 
-void verifyResults( const TestResults& results, const TestData& testdata)
+template <class TYPE>
+class ResultSet
 {
-	
+public:
+	ResultSet( const std::vector<TYPE>& list)
+		:m_elements( list.begin(), list.end()){}
+	ResultSet( const ResultSet& o)
+		:m_elements(o.m_elements){}
+	ResultSet()
+		:m_elements(){}
+
+	typedef typename std::set<TYPE>::const_iterator const_iterator;
+
+	bool operator < (const ResultSet& o) const		{return compare(o) < 0;}
+	bool operator == (const ResultSet& o) const	{return compare(o) == 0;}
+	bool operator <= (const ResultSet& o) const	{return compare(o) <= 0;}
+	bool operator >= (const ResultSet& o) const	{return compare(o) >= 0;}
+	bool operator > (const ResultSet& o) const		{return compare(o) > 0;}
+	bool operator != (const ResultSet& o) const	{return compare(o) != 0;}
+
+	int compare( const ResultSet& o) const
+	{
+		const_iterator ai = m_elements.begin(), ae = m_elements.end();
+		const_iterator bi = o.m_elements.begin(), be = o.m_elements.end();
+		for (; ai != ae && bi != be && *ai == *bi; ++ai,++bi){}
+		if (ai == ae)
+		{
+			return (bi == be) ? 0 : -1;
+		}
+		else if (bi == be)
+		{
+			return (ai == ae) ? 0 : +1;
+		}
+		else
+		{
+			return (*ai < *bi) ? -1 : +1;
+		}
+	}
+
+	const_iterator begin() const	{return m_elements.begin();}
+	const_iterator end() const	{return m_elements.end();}
+
+	void insert( const TYPE& elem)
+	{
+		m_elements.insert( elem);
+	}
+	void insert( const typename std::vector<TYPE>::const_iterator& li, const typename std::vector<TYPE>::const_iterator& le)
+	{
+		m_elements.insert( li, le);
+	}
+
+private:
+	std::set<TYPE> m_elements;
+};
+
+static ResultSet<ResultSet<FeatureDef> > createResultSetSet( const std::vector< std::vector<FeatureDef> >& orig)
+{
+	ResultSet<ResultSet<FeatureDef> > rt;
+	typename std::vector< std::vector<FeatureDef> >::const_iterator oi = orig.begin(), oe = orig.end();
+	for (; oi != oe; ++oi)
+	{
+		rt.insert( ResultSet<FeatureDef>( *oi));
+	}
+	return rt;
+}
+
+template <class TYPE>
+static std::pair<const TYPE*,const TYPE*> getFirstDiff( const ResultSet<TYPE>& aa, const ResultSet<TYPE>& bb)
+{
+	typedef std::pair<const TYPE*,const TYPE*> DiffType;
+	typename ResultSet<TYPE>::const_iterator ai = aa.begin(), ae = aa.end();
+	typename ResultSet<TYPE>::const_iterator bi = bb.begin(), be = bb.end();
+	for (; ai != ae && bi != be && *ai == *bi; ++ai,++bi){}
+	if (ai == ae)
+	{
+		return (bi == be) ? DiffType(0,0) : DiffType(0,&*bi);
+	}
+	else if (bi == be)
+	{
+		return (ai == ae) ? DiffType(0,0) : DiffType(&*ai,0);
+	}
+	else
+	{
+		return DiffType(&*ai,&*bi);
+	}
+}
+
+bool isEqualTestResultExpected( const std::vector<std::vector<FeatureDef> >& result, const std::vector< std::vector<FeatureDef> >& expected, const TestData& testdata)
+{
+	ResultSet< ResultSet< FeatureDef> > ee( createResultSetSet( expected));
+	ResultSet< ResultSet< FeatureDef> > rr( createResultSetSet( result));
+
+	if (rr.compare( ee) != 0)
+	{
+		std::pair<const ResultSet< FeatureDef>*, const ResultSet< FeatureDef>*> firstSetDiff = getFirstDiff( rr, ee);
+		std::pair<const FeatureDef*, const FeatureDef*> firstElementDiff = getFirstDiff( *firstSetDiff.first, *firstSetDiff.second);
+		const FeatureDef* rptr = firstElementDiff.first;
+		const FeatureDef* eptr = firstElementDiff.second;
+		if (rptr && eptr)
+		{
+			if (*eptr < *rptr)
+			{
+				std::string termstr = eptr->tostring( testdata.terms());
+				std::string typestr = eptr->typestring();
+				std::cerr << strus::string_format( "expected result '%s' {%s} not found", termstr.c_str(), typestr.c_str()) << std::endl;
+				return false;
+			}
+			else if (*rptr < *eptr)
+			{
+				std::string termstr = rptr->tostring( testdata.terms());
+				std::string typestr = rptr->typestring();
+				std::cerr << strus::string_format( "unexpected result '%s' {%s} found", termstr.c_str(), typestr.c_str()) << std::endl;
+				return false;
+			}
+		}
+		else if (eptr)
+		{
+			std::string termstr = eptr->tostring( testdata.terms());
+			std::string typestr = eptr->typestring();
+			std::cerr << strus::string_format( "expected result '%s' {%s} not found", termstr.c_str(), typestr.c_str()) << std::endl;
+			return false;
+		}
+		else
+		{
+			std::string termstr = rptr->tostring( testdata.terms());
+			std::string typestr = rptr->typestring();
+			std::cerr << strus::string_format( "unexpected result '%s' {%s} found", termstr.c_str(), typestr.c_str()) << std::endl;
+			return false;
+		}
+	}
+	return true;
+}
+
+void printFeatureDefs( std::ostream& out, const std::vector<std::vector<FeatureDef> >& list, const TestData& testdata)
+{
+	typename std::vector<std::vector<FeatureDef> >::const_iterator li = list.begin(), le = list.end();
+	int lidx = 0;
+	for (; li != le; ++li,++lidx)
+	{
+		out << strus::string_format( "result %d:", lidx) << std::endl;
+		std::vector<FeatureDef>::const_iterator fi = li->begin(), fe = li->end();
+		int fidx = 0;
+		for (; fi != fe; ++fi,++fidx)
+		{
+			std::string fstr = fi->tostring( testdata.terms());
+			std::string tstr = fi->typestring();
+			out << strus::string_format( "\tfeature %d: '%s' {%s}", fidx, fstr.c_str(), tstr.c_str()) << std::endl;
+		}
+	}
+}
+
+void verifyTestResults( const TestResults& results, const TestData& testdata)
+{
+	TestResults::const_iterator ai = results.begin(), ae = results.end();
+	int qidx = 0;
+	for (; ai != ae; ++qidx)
+	{
+		const QueryDef& qdef = testdata.query( qidx);
+		const std::string& qstr = testdata.queryString( qidx);
+		std::vector<std::vector<FeatureDef> > expected = testdata.evaluateQuery( qdef);
+		std::vector<std::vector<FeatureDef> > result;
+
+		for (; ai != ae && qidx == ai->queryidx(); ++ai)
+		{
+			result.push_back( ai->features( testdata.termmap(), testdata.typemap()));
+		}
+		if (isEqualTestResultExpected( result, expected, testdata))
+		{
+			if (g_verbose) std::cerr << strus::string_format( "successful test %d", qidx) << std::endl;
+		}
+		else
+		{
+			if (g_verbose)
+			{
+				std::cerr << "result:" << std::endl;
+				printFeatureDefs( std::cerr, result, testdata);
+				std::cerr << "expected:" << std::endl;
+				printFeatureDefs( std::cerr, expected, testdata);
+			}
+			std::cerr << strus::string_format( "error in test %d, query '%s'", qidx, qstr.c_str()) << std::endl;
+		}
+	}
 }
 
 int main( int argc, const char** argv)
@@ -619,6 +1204,11 @@ int main( int argc, const char** argv)
 			else if (0==std::strcmp( argv[argidx], "--"))
 			{
 				finished_options = true;
+			}
+			else
+			{
+				std::cerr << "unknown option " << argv[argidx] << std::endl;
+				printUsageAndExit = true;
 			}
 			++argidx;
 		}
@@ -721,7 +1311,7 @@ int main( int argc, const char** argv)
 		TestResults testResults;
 		runQueries( testResults, lexer.get(), testData);
 		if (g_verbose) std::cerr << "verify results ..." << std::endl;
-		verifyResults( testResults, testData);
+		verifyTestResults( testResults, testData);
 
 		// Debug output dump:
 		if (!strus::dumpDebugTrace( dbgtrace, NULL/*filename (stderr)*/))
