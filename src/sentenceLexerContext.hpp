@@ -88,12 +88,12 @@ public:
 
 public:
 	/// \brief Defines prunning of evaluation paths not minimizing the number of features detected
-	enum {MaxPositionVisits=3};
+	enum {MaxPositionVisits=10};
 	/// \brief Defines a limit for prunning variants evaluated dependend on the minimum number of features of a found solution
 	static int maxFeaturePrunning( int minNofFeatures)
 	{
 		enum {ArSize=16};
-		static const int ar[ ArSize+1] = {0/*0*/,2/*1*/,3/*2*/,4/*3*/,6/*4*/,7/*5*/,9/*6*/,10/*7*/,11/*8*/,12/*9*/,13/*10*/,14/*11*/,16/*12*/,17/*13*/,18/*14*/,19/*15*/,21/*16*/};
+		static const int ar[ ArSize+1] = {0/*0*/,3/*1*/,4/*2*/,5/*3*/,7/*4*/,8/*5*/,10/*6*/,11/*7*/,12/*8*/,13/*9*/,14/*10*/,15/*11*/,16/*12*/,17/*13*/,18/*14*/,19/*15*/,21/*16*/};
 		return (minNofFeatures <= ArSize) ? ar[ minNofFeatures] : (minNofFeatures + 5 + (minNofFeatures >> 4));
 	}
 

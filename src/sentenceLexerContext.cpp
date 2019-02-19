@@ -813,7 +813,7 @@ public:
 
 		if (followfield.defined())
 		{
-			int expectedNofFeatures = nofFeatures;
+			int expectedNofFeatures = nofFeatures + 1;
 			int nextpos = m_top.pos + followPosIncr;
 			std::pair<Pos2minNofFeaturesMap::iterator,bool> ins =
 				m_pos2minNofFeaturesMap.insert( Pos2minNofFeaturesMap::value_type( nextpos, VisitCount( nofFeatures, 0)));
@@ -824,18 +824,25 @@ public:
 				if (nofFeatures < vc.nofFeatures)
 				{
 					vc.nofFeatures = nofFeatures;
-					expectedNofFeatures = m_minNofFeatures;
+					if (m_minNofFeatures != std::numeric_limits<int>::max())
+					{
+						expectedNofFeatures = m_minNofFeatures;
+					}
 				}
 				else
 				{
 					if (++vc.cnt >= SentenceLexerContext::MaxPositionVisits)
 					{
-						expectedNofFeatures = std::numeric_limits<int>::max();
-						/// ... rule out this path, because we visited it already a MaxPositionVisits times without improvement
+						if (m_minNofFeatures != std::numeric_limits<int>::max())
+						{
+							if (m_debugtrace) m_debugtrace->event( "prunning", "pos %d, node visits %d", nextpos, vc.cnt);
+							return;
+							/// ... rule out this path, because we visited it already a MaxPositionVisits times without improvement
+						}
 					}
 					else if (m_minNofFeatures < std::numeric_limits<int>::max())
 					{
-						expectedNofFeatures = nofFeatures + m_minNofFeatures - vc.nofFeatures;
+						expectedNofFeatures = nofFeatures + 1 + m_minNofFeatures - vc.nofFeatures;
 					}
 				}
 			}
@@ -861,7 +868,7 @@ public:
 				if (m_debugtrace) m_debugtrace->event( "prunning", "pos %d, expected nof features %d, min nof features %d", nextpos, expectedNofFeatures, m_minNofFeatures);
 			}
 		}
-		else
+		else if (m_minNofFeatures == std::numeric_limits<int>::max() || nofFeatures <= SentenceLexerContext::maxFeaturePrunning( m_minNofFeatures))
 		{
 			if (nofUntyped < m_minNofUntyped)
 			{
@@ -881,6 +888,10 @@ public:
 			}
 			std::reverse( split.ar.begin(), split.ar.end());
 			m_results.push_back( split);
+		}
+		else
+		{
+			if (m_debugtrace) m_debugtrace->event( "prunning", "result with %d features, min nof features %d", nofFeatures, m_minNofFeatures);
 		}
 	}
 

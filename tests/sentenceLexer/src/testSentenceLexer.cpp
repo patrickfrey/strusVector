@@ -615,18 +615,18 @@ public:
 	{
 		std::vector<TermDef>::const_iterator itr;
 		std::vector<FeatureDef> features;
-		int nofUnknown;
+		int nofUntyped;
 		int pos;
 
-		Candidate( std::vector<TermDef>::const_iterator itr_, const std::vector<FeatureDef>& features_, int nofUnknown_, int pos_)
-			:itr(itr_),features(features_),nofUnknown(nofUnknown_),pos(pos_){}
+		Candidate( std::vector<TermDef>::const_iterator itr_, const std::vector<FeatureDef>& features_, int nofUntyped_, int pos_)
+			:itr(itr_),features(features_),nofUntyped(nofUntyped_),pos(pos_){}
 		Candidate( const Candidate& o)
-			:itr(o.itr),features(o.features),nofUnknown(o.nofUnknown),pos(o.pos){}
+			:itr(o.itr),features(o.features),nofUntyped(o.nofUntyped),pos(o.pos){}
 		Candidate& operator = ( const Candidate& o)
 		{
 			itr = o.itr;
 			features = o.features;
-			nofUnknown = o.nofUnknown;
+			nofUntyped = o.nofUntyped;
 			pos = o.pos;
 			return *this;
 		}
@@ -647,21 +647,21 @@ public:
 		bool operator < (const Candidate& o) const
 		{
 			return pos == o.pos
-				? (nofUnknown == o.nofUnknown
+				? (nofUntyped == o.nofUntyped
 					? compareFeatures( features, o.features)
-					: nofUnknown < o.nofUnknown)
+					: nofUntyped < o.nofUntyped)
 				: pos < o.pos;
 		}
 	};
 
 	/// \note HACK: Copied from SentenceLexer context to make prunning identical for making search results comparable
 	/// \brief Defines prunning of evaluation paths not minimizing the number of features detected
-	enum {MaxPositionVisits=3};
+	enum {MaxPositionVisits=10};
 	/// \brief Defines a limit for prunning variants evaluated dependend on the minimum number of features of a found solution
 	static int maxFeaturePrunning( int minNofFeatures)
 	{
 		enum {ArSize=16};
-		static const int ar[ ArSize+1] = {0/*0*/,2/*1*/,3/*2*/,4/*3*/,6/*4*/,7/*5*/,9/*6*/,10/*7*/,11/*8*/,12/*9*/,13/*10*/,14/*11*/,16/*12*/,17/*13*/,18/*14*/,19/*15*/,21/*16*/};
+		static const int ar[ ArSize+1] = {0/*0*/,3/*1*/,4/*2*/,5/*3*/,7/*4*/,8/*5*/,10/*6*/,11/*7*/,12/*8*/,13/*9*/,14/*10*/,15/*11*/,16/*12*/,17/*13*/,18/*14*/,19/*15*/,21/*16*/};
 		return (minNofFeatures <= ArSize) ? ar[ minNofFeatures] : (minNofFeatures + 5 + (minNofFeatures >> 4));
 	}
 
@@ -709,7 +709,7 @@ public:
 		{
 			candidates.insert( Candidate( itr, std::vector<FeatureDef>(), 0, 0));
 		}
-		int minNofUnknown = std::numeric_limits<int>::max();
+		int minNofUntyped = std::numeric_limits<int>::max();
 		int minNofFeats = std::numeric_limits<int>::max();
 		struct VisitCount
 		{
@@ -731,7 +731,7 @@ public:
 		while (!candidates.empty())
 		{
 			// Prunning by number of unknown features
-			if (candidates.begin()->nofUnknown > minNofUnknown)
+			if (candidates.begin()->nofUntyped > minNofUntyped)
 			{
 				candidates.erase( candidates.begin());
 				continue;
@@ -749,7 +749,7 @@ public:
 			}
 			// Prunning by visit count and expected features:
 			int nofFeats = candidate.features.size();
-			int expectedNofFeats = candidate.features.size();
+			int expectedNofFeats = candidate.features.size()+1;
 			while ((int)visitCountMap.size() <= candidate.pos) visitCountMap.push_back( VisitCount());
 			VisitCount& vc = visitCountMap[ candidate.pos];
 			if (vc.cnt == 0)
@@ -819,9 +819,9 @@ public:
 				}
 				if (ai == ae)
 				{
-					if (minNofUnknown > candidate.nofUnknown)
+					if (minNofUntyped > candidate.nofUntyped)
 					{
-						minNofUnknown = candidate.nofUnknown;
+						minNofUntyped = candidate.nofUntyped;
 					}
 					if (minNofFeats > (int)features.size())
 					{
@@ -841,7 +841,7 @@ public:
 						std::string fliststr = featureListToString( features);
 						m_debugtrace->event( "follow", "'%s' next pos %d", fliststr.c_str(), (int)(candidate.pos + aidx));
 					}
-					candidates.insert( Candidate( ai, features, candidate.nofUnknown, candidate.pos + aidx));
+					candidates.insert( Candidate( ai, features, candidate.nofUntyped, candidate.pos + aidx));
 				}
 			}
 
@@ -859,9 +859,9 @@ public:
 				ai += defaultTerms.size();
 				if (ai >= termdef.terms.end())
 				{
-					if (minNofUnknown > candidate.nofUnknown+1)
+					if (minNofUntyped > candidate.nofUntyped+1)
 					{
-						minNofUnknown = candidate.nofUnknown+1;
+						minNofUntyped = candidate.nofUntyped+1;
 					}
 					if (minNofFeats > (int)features.size())
 					{
@@ -881,7 +881,7 @@ public:
 						std::string fliststr = featureListToString( features);
 						m_debugtrace->event( "follow", "'%s' (default) next pos %d", fliststr.c_str(), (int)(candidate.pos + 1));
 					}
-					candidates.insert( Candidate( ai, features, candidate.nofUnknown+1, candidate.pos + 1));
+					candidates.insert( Candidate( ai, features, candidate.nofUntyped+1, candidate.pos + 1));
 				}
 			}
 		}
@@ -1323,6 +1323,9 @@ void verifyTestResults( const TestResults& results, const TestData& testdata, in
 		{
 			result.push_back( ai->features( testdata.termmap(), testdata.unknownTermmap(), testdata.typemap()));
 		}
+		std::sort( expected.begin(), expected.end());
+		std::sort( result.begin(), result.end());
+
 		if (isEqualTestResultExpected( result, expected, testdata))
 		{
 			if (g_verbose) std::cerr << strus::string_format( "successful test %d query '%s'", qi, qstr.c_str()) << std::endl;
