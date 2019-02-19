@@ -22,6 +22,7 @@ using namespace strus;
 
 #define MODULENAME "sentence lexer context (vector)"
 #define STRUS_DBGTRACE_COMPONENT_NAME "sentence"
+#define SEPARATOR_CHR_SPLIT '\1'
 
 typedef SentenceLexerInstance::SeparatorDef SeparatorDef;
 typedef SentenceLexerInstance::LinkDef LinkDef;
@@ -31,11 +32,12 @@ struct LinkSplit
 {
 	int splitpos;
 	char substchr;
+	bool mapsToItself;
 
-	LinkSplit( int splitpos_, char substchr_)
-		:splitpos(splitpos_),substchr(substchr_){}
+	LinkSplit( int splitpos_, char substchr_, bool mapsToItself_)
+		:splitpos(splitpos_),substchr(substchr_),mapsToItself(mapsToItself_){}
 	LinkSplit( const LinkSplit& o)
-		:splitpos(o.splitpos),substchr(o.substchr){}
+		:splitpos(o.splitpos),substchr(o.substchr),mapsToItself(o.mapsToItself){}
 
 	bool operator<( const LinkSplit& o) const
 	{
@@ -49,11 +51,12 @@ struct DelimiterDef
 {
 	int pos;
 	char substchr;
+	bool mapsToItself;
 
-	DelimiterDef( int pos_, char substchr_)
-		:pos(pos_),substchr(substchr_){}
+	DelimiterDef( int pos_, char substchr_, bool mapsToItself_)
+		:pos(pos_),substchr(substchr_),mapsToItself(mapsToItself_){}
 	DelimiterDef( const DelimiterDef& o)
-		:pos(o.pos),substchr(o.substchr){}
+		:pos(o.pos),substchr(o.substchr),mapsToItself(o.mapsToItself){}
 };
 
 struct NormalizedField
@@ -76,14 +79,25 @@ struct NormalizedField
 	{
 		return !key.empty();
 	}
+	std::string tostring( char sep) const
+	{
+		std::string rt( key);
+		std::string::iterator ri = rt.begin(), re = rt.end();
+		for (; ri != re; ++ri)
+		{
+			if (*ri == SEPARATOR_CHR_SPLIT)
+			{
+				*ri = sep;
+			}
+		}
+		return rt;
+	}
 };
 
 static NormalizedField normalizeField( const std::string& source, const std::vector<LinkDef>& linkDefs);
 static std::vector<std::string> getFields( const std::string& source, const std::vector<SeparatorDef>& separatorDefs);
 static std::vector<AlternativeSplit> getAlternativeSplits( const VectorStorageClient* vstorage, const DatabaseClientInterface* database, const std::vector<NormalizedField>& fields, const std::vector<char>& linkChars, DebugTraceContextInterface* debugtrace);
 static std::string typeListString( const std::vector<std::string>& types, const char* sep);
-
-#define SEPARATOR_CHR_SPLIT '\1'
 
 
 SentenceLexerContext::SentenceLexerContext(
@@ -110,40 +124,38 @@ SentenceLexerContext::SentenceLexerContext(
 
 	if (m_debugtrace)
 	{
+		m_debugtrace->open( "lexer");
 		m_debugtrace->event( "sentence", "'%s'", source.c_str());
-		m_debugtrace->open( "split");
-		fi = fields.begin(), fe = fields.end();
-		for (; fi != fe; ++fi)
+		std::size_t fidx = 0;
+		for (; fidx != normalizedFields.size(); ++fidx)
 		{
-			m_debugtrace->event( "field", "content '%s'", fi->c_str());
-		}
-		m_debugtrace->close();
-		m_debugtrace->open( "normalized");
-		std::vector<NormalizedField>::const_iterator ni = normalizedFields.begin(), ne = normalizedFields.end();
-		for (; ni != ne; ++ni)
-		{
-			m_debugtrace->open( "field");
-			std::vector<DelimiterDef>::const_iterator di = ni->delimiters.begin(), de = ni->delimiters.end();
+			std::string fstr = normalizedFields[ fidx].tostring(' ');
+			m_debugtrace->event( "field", "content '%s'", fstr.c_str());
+			const NormalizedField& normField = normalizedFields[ fidx];
+
+			std::string fieldstr;
+			std::vector<DelimiterDef>::const_iterator di = normField.delimiters.begin(), de = normField.delimiters.end();
 			int pi = 0;
 			for (; di != de; ++di)
 			{
 				if (di->pos > pi)
 				{
-					std::string tok( ni->key.c_str() + pi, di->pos - pi);
-					m_debugtrace->event( "token", "'%s'", tok.c_str());
+					if (!fieldstr.empty()) fieldstr.append( ", ");
+					std::string tok( normField.key.c_str() + pi, di->pos - pi);
+					fieldstr.append( strus::string_format( "'%s'", tok.c_str()));
 				}
-				m_debugtrace->event( "delim", "pos  %d, substitution char '%c'", di->pos, di->substchr);
+				fieldstr.append( strus::string_format( "|%d'%c'", di->pos, di->substchr));
 				pi = di->pos + 1;
 			}
-			if ((int)ni->key.size() > pi)
+			if ((int)normField.key.size() > pi)
 			{
-				std::string tok( ni->key.c_str() + pi, ni->key.size() - pi);
-				m_debugtrace->event( "token", "'%s'", tok.c_str());
+				if (!fieldstr.empty()) fieldstr.append( ", ");
+				std::string tok( normField.key.c_str() + pi, normField.key.size() - pi);
+				fieldstr.append( strus::string_format( "'%s'", tok.c_str()));
 			}
-			m_debugtrace->close();
+			m_debugtrace->event( "normalized", "%s", fieldstr.c_str());
 		}
-		m_debugtrace->close();
-		m_debugtrace->open("alternatives");
+
 		std::vector<AlternativeSplit>::const_iterator ai = m_splits.begin(), ae = m_splits.end();
 		for (; ai != ae; ++ai)
 		{
@@ -220,10 +232,13 @@ static NormalizedField normalizeField( const std::string& source, const std::vec
 	for (; pi != pe; ++pi)
 	{
 		char const* si = std::strstr( source.c_str(), pi->uchr);
-		for (; si; si = std::strstr( si + strus::utf8charlen( *si), pi->uchr))
+		int charlen = 0;
+		for (; si; si = std::strstr( si + charlen, pi->uchr))
 		{
+			charlen = strus::utf8charlen( *si);
 			int splitpos = si - source.c_str();
-			split.insert( LinkSplit( splitpos, pi->substchr));
+			bool mapsToItself = (charlen == 1 && pi->uchr[0] == pi->substchr && pi->substchr != ' ');
+			split.insert( LinkSplit( splitpos, pi->substchr, mapsToItself));
 		}
 	}
 	int pos = 0;
@@ -243,28 +258,26 @@ static NormalizedField normalizeField( const std::string& source, const std::vec
 		int nextpos = splitpos + strus::utf8charlen( source[ splitpos]);
 		rt.key.append( source.c_str() + pos, splitpos - pos);
 		bool isSpaceSplit = si->substchr == ' ';
+		bool mapsToItself = si->mapsToItself;
 		char substchr = si->substchr;
-		for (++si; si != se && si->splitpos <= nextpos; ++si)
+		int cnt = 0;
+		for (++si; si != se && si->splitpos <= nextpos; ++si,++cnt)
 		{
+			if (!isSpaceSplit && si->substchr != ' ')
+			{
+				substchr = si->substchr;
+			}
 			if (si->splitpos > splitpos)
 			{
 				splitpos = si->splitpos;
 				nextpos = splitpos + strus::utf8charlen( source[ splitpos]);
 			}
-			if (si->substchr != ' ')
-			{
-				if (isSpaceSplit)
-				{
-					isSpaceSplit = false;
-					substchr = si->substchr;
-				}
-				else
-				{
-					substchr = ' ';
-				}
-			}
 		}
-		rt.delimiters.push_back( DelimiterDef( rt.key.size(), substchr));
+		if (cnt > 1)
+		{
+			mapsToItself = false;
+		}
+		rt.delimiters.push_back( DelimiterDef( rt.key.size(), substchr, mapsToItself));
 		rt.key.push_back( SEPARATOR_CHR_SPLIT);
 		pos = nextpos;
 	}
@@ -283,21 +296,45 @@ struct KeyCandidate
 	int editref;		///< reference to edit list
 	int editpos;		///< position of edits
 	int followpos;		///< following token position
+	bool useAsDefault;	///< true if this candidate is a valable defaule value
 
 	explicit KeyCandidate( std::size_t keylen_)
-		:keylen(keylen_),editref(-1),editpos(-1),followpos(-1){}
-	KeyCandidate( std::size_t keylen_, int editref_, int editpos_, int followpos_)
-		:keylen(keylen_),editref(editref_),editpos(editpos_),followpos(followpos_){}
+		:keylen(keylen_),editref(-1),editpos(-1),followpos(-1),useAsDefault(true){}
+	KeyCandidate( std::size_t keylen_, int editref_, int editpos_, int followpos_, bool useAsDefault_)
+		:keylen(keylen_),editref(editref_),editpos(editpos_),followpos(followpos_),useAsDefault(useAsDefault_){}
 	KeyCandidate( const KeyCandidate& o)
-		:keylen(o.keylen),editref(o.editref),editpos(o.editpos),followpos(o.followpos){}
+		:keylen(o.keylen),editref(o.editref),editpos(o.editpos),followpos(o.followpos),useAsDefault(o.useAsDefault){}
 };
+
+static int nextEditStr( const std::string& edits, int pos)
+{
+	char const* ptr = std::strchr( edits.c_str()+pos, '\0');
+	int rt = (ptr - edits.c_str()) + pos;
+	return (rt >= (int)edits.size()) ? 0 : rt+1;
+}
+
+static int findEditRef( const std::string& edits, int editref)
+{
+	int ei = nextEditStr( edits, 0);
+	for (; ei && ei < editref; ei = nextEditStr( edits, ei+1))
+	{
+		if (0==std::strcmp( edits.c_str()+ei, edits.c_str() + editref))
+		{
+			return ei;
+		}
+	}
+	return 0;
+}
 
 static void collectFollowKeyCandidates( std::vector<KeyCandidate>& candidates, std::string& edits, const NormalizedField& field, const std::vector<char>& linkChars)
 {
 	std::vector<DelimiterDef>::const_iterator di = field.delimiters.begin(), de = field.delimiters.end();
 	for (; di != de; ++di)
 	{
-		candidates.push_back( KeyCandidate( di->pos/*keylen*/, -1/*no edits*/, -1/*no edit pos*/, di->pos+1));
+		if (!di->mapsToItself && di->pos != 0)
+		{
+			candidates.push_back( KeyCandidate( di->pos/*keylen*/, -1/*no edits*/, -1/*no edit pos*/, di->pos+1, true/*use as default*/));
+		}
 		edits.push_back( '\0');
 		int editref = edits.size();
 		if (di->substchr == ' ')
@@ -315,24 +352,72 @@ static void collectFollowKeyCandidates( std::vector<KeyCandidate>& candidates, s
 		{
 			edits.push_back( di->substchr);
 		}
-
-		candidates.push_back( KeyCandidate( di->pos+1/*keylen*/, editref, di->pos/*editpos*/, di->pos+1/*followpos*/));
+		int prev_editref = findEditRef( edits, editref);
+		if (prev_editref)
+		{
+			edits.resize( editref-1);
+			editref = prev_editref;
+		}
+		candidates.push_back( KeyCandidate( di->pos+1/*keylen*/, editref, di->pos/*editpos*/, di->pos+1/*followpos*/,di->substchr == ' '/*use as default*/));
 	}
-	candidates.push_back( KeyCandidate( field.key.size()));
+	if (!field.key.empty())
+	{
+		candidates.push_back( KeyCandidate( field.key.size()));
+	}
 }
 
 class KeyIterator
 {
 public:
-	KeyIterator( const DatabaseClientInterface* database, const NormalizedField& field_, const std::vector<char>& linkChars_)
-		:m_field(field_),m_edits(),m_candidates(),m_states(),m_candidateidx(0),m_keyfound(),m_linkChars(linkChars_),m_cursor(database)
+	struct DefaultElement
+	{
+		std::string key;
+		int followPosIncr;
+
+		DefaultElement()
+			:key(),followPosIncr(0){}
+		DefaultElement( const std::string& key_, int followPosIncr_)
+			:key(key_),followPosIncr(followPosIncr_){}
+		DefaultElement( const DefaultElement& o)
+			:key(o.key),followPosIncr(o.followPosIncr){}
+		DefaultElement& operator = ( const DefaultElement& o)
+			{key = o.key; followPosIncr = o.followPosIncr; return *this;}
+
+		bool defined() const
+		{
+			return !key.empty();
+		}
+	};
+
+public:
+	KeyIterator( const DatabaseClientInterface* database, const NormalizedField& field_, const std::vector<char>& linkChars_, strus::DebugTraceContextInterface* debugtrace_)
+		:m_field(field_),m_edits(),m_candidates(),m_states()
+		,m_candidateidx(0),m_keyfound(),m_linkChars(linkChars_)
+		,m_cursor(database),m_defaultElement(),m_debugtrace(debugtrace_)
 	{
 		collectFollowKeyCandidates( m_candidates, m_edits, m_field, m_linkChars);
 		m_states.assign( m_candidates.size(), 0);
+
+		if (!m_candidates.empty())
+		{
+			std::vector<KeyCandidate>::const_iterator ci = m_candidates.begin(), ce = m_candidates.end();
+			for (int cidx=0; ci != ce; ++ci,++cidx)
+			{
+				editState( cidx);
+				if (ci->useAsDefault)
+				{
+					m_defaultElement = DefaultElement( std::string( m_field.key.c_str(), ci->keylen), ci->followpos);
+					break;
+				}
+			}
+			editState( 0);
+		}
 	}
 
 	KeyIterator( const KeyIterator& o)
-		:m_field(o.m_field),m_candidates(o.m_candidates),m_candidateidx(o.m_candidateidx),m_keyfound(o.m_keyfound),m_linkChars(o.m_linkChars),m_cursor(o.m_cursor){}
+		:m_field(o.m_field),m_edits(o.m_edits),m_candidates(o.m_candidates),m_states(o.m_states)
+		,m_candidateidx(o.m_candidateidx),m_keyfound(o.m_keyfound),m_linkChars(o.m_linkChars)
+		,m_cursor(o.m_cursor),m_defaultElement(o.m_defaultElement),m_debugtrace(o.m_debugtrace){}
 
 	std::vector<std::string> keys( int maxsize)
 	{
@@ -341,6 +426,18 @@ public:
 		for (; idx < maxsize && editState( idx); ++idx)
 		{
 			rt.push_back( std::string( m_field.key.c_str(), m_candidates[ idx].keylen));
+		}
+		return rt;
+	}
+
+	std::string keyStrings( const char* delim, int maxsize)
+	{
+		std::string rt;
+		int idx = 0;
+		for (; idx < maxsize && editState( idx); ++idx)
+		{
+			if (idx) rt.append( delim);
+			rt.append( m_field.key.c_str(), m_candidates[ idx].keylen);
 		}
 		return rt;
 	}
@@ -360,13 +457,9 @@ public:
 		return m_keyfound;
 	}
 
-	std::string defaultKey() const
+	const DefaultElement& defaultElement() const
 	{
-		return m_candidates.empty() ? std::string() : std::string( m_field.key.c_str(), m_candidates[0].keylen);
-	}
-	int defaultPosIncr() const
-	{
-		return m_candidates.empty() ? 0 : m_candidates[ 0].followpos;
+		return m_defaultElement;
 	}
 
 	int followPosIncr() const
@@ -387,7 +480,7 @@ public:
 			for (; di != de && di->pos < posincr; ++di){}
 			for (; di != de; ++di)
 			{
-				delim.push_back( DelimiterDef( di->pos - posincr, di->substchr));
+				delim.push_back( DelimiterDef( di->pos - posincr, di->substchr, di->mapsToItself));
 			}
 			return NormalizedField( std::string( m_field.key.c_str() + posincr), delim);
 		}
@@ -425,9 +518,8 @@ private:
 	static int findLinkChar( const std::vector<char>& linkChars, char chr)
 	{
 		std::vector<char>::const_iterator li = std::find( linkChars.begin(), linkChars.end(), chr);
-		return li == linkChars.end() ? 0 : (li - linkChars.begin() + 1);
+		return li == linkChars.end() ? -1 : (li - linkChars.begin());
 	}
-
 
 	bool checkKeyFound( const char* keyptr, std::size_t keylen)
 	{
@@ -448,8 +540,8 @@ private:
 		for (; ci >= 0; --ci)
 		{
 			const KeyCandidate& cd = m_candidates[ ci];
-			int ei = m_states[ ci];
 			if (cd.editref < 0) continue;
+			int ei = m_states[ ci];
 			if (m_edits[ cd.editref+ei] && m_edits[ cd.editref+ei+1])
 			{
 				m_states[ ci] = ei + 1;
@@ -515,7 +607,7 @@ private:
 					if (edit[ei])
 					{
 						bool foundUpperBound = edit[ei] > m_keyfound[ cd.editpos];
-						m_states[ ci] = ei - cd.editref;
+						m_states[ ci] = ei;
 						m_field.key[ cd.editpos] = edit[ei];
 						m_candidateidx = ci;
 						if (foundUpperBound) return AdjustStateUpperBound;
@@ -552,19 +644,46 @@ private:
 			{
 				if (checkKeyFound( keyptr, keylen))
 				{
+					if (m_debugtrace) m_debugtrace->event( "key", "search %d found '%s'", (int)keylen, m_keyfound.c_str());
 					return true;
 				}
-				else switch (adjustStateUpperBound())
+				else
 				{
-					case AdjustStateMis:
-						return false;
-					case AdjustStateUpperBound:
-						continue;
-					case AdjustStateMatch:
-						return true;
+					if (m_debugtrace)
+					{
+						std::string keystr( keyptr, keylen);
+						m_debugtrace->event( "key", "search '%s' missed", keystr.c_str());
+					}
+					switch (adjustStateUpperBound())
+					{
+						case AdjustStateMis:
+							return false;
+						case AdjustStateUpperBound:
+							if (m_debugtrace)
+							{
+								std::string keystr( m_field.key.c_str(), m_candidates[ m_candidateidx].keylen);
+								m_debugtrace->event( "key", "adjust upper bound '%s'", keystr.c_str());
+							}
+							continue;
+						case AdjustStateMatch:
+							if (m_debugtrace)
+							{
+								std::string keystr( m_field.key.c_str(), m_candidates[ m_candidateidx].keylen);
+								m_debugtrace->event( "key", "adjust match '%s'", keystr.c_str());
+							}
+							return true;
+					}
 				}
 			}
-			else if (!backtrackStateUpperBound( m_candidateidx))
+			else if (backtrackStateUpperBound( m_candidateidx))
+			{
+				if (m_debugtrace)
+				{
+					std::string keystr( m_field.key.c_str(), m_candidates[ m_candidateidx].keylen);
+					m_debugtrace->event( "key", "backtrack to '%s'", keystr.c_str());
+				}
+			}
+			else
 			{
 				return false;
 			}
@@ -582,6 +701,8 @@ private:
 	std::string m_keyfound;
 	std::vector<char> m_linkChars;
 	DatabaseAdapter::FeatureCursor m_cursor;
+	DefaultElement m_defaultElement;
+	strus::DebugTraceContextInterface* m_debugtrace;
 };
 
 
@@ -646,10 +767,11 @@ public:
 struct AlternativeSplitQueue
 {
 public:
-	explicit AlternativeSplitQueue( const NormalizedField& origfield)
+	AlternativeSplitQueue( const NormalizedField& origfield, DebugTraceContextInterface* debugtrace_)
 		:m_results(),m_paths(),m_pathqueue(),m_top(),m_elements(),m_elementlists(),m_pos2minNofFeaturesMap()
 		,m_minNofUntyped(std::numeric_limits<int>::max())
 		,m_minNofFeatures(std::numeric_limits<int>::max())
+		,m_debugtrace(debugtrace_)
 	{
 		m_paths.push_back( KeyIteratorPath( origfield));
 		m_pathqueue.insert( KeyIteratorPathRef());
@@ -662,6 +784,7 @@ public:
 			std::set<KeyIteratorPathRef>::iterator pqitr = m_pathqueue.begin();
 			if (pqitr->nofUntyped > m_minNofUntyped)
 			{
+				if (m_debugtrace) m_debugtrace->event( "prunning", "pos %d, nof untyped %d, min nof untyped %d", pqitr->pos, pqitr->nofUntyped, m_minNofUntyped);
 				m_pathqueue.erase( pqitr);
 				continue;
 			}
@@ -669,7 +792,18 @@ public:
 			m_pathqueue.erase( pqitr);
 			return &m_paths[ m_top.index].field;
 		}
+		m_top = KeyIteratorPathRef();
 		return NULL;
+	}
+
+	std::string elementStackToString( int eref) const
+	{
+		if (eref < 0) return std::string();
+		const AlternativeSplitElementRef& elem = m_elementlists[ eref];
+		std::string rt = elementStackToString( elem.next);
+		if (!rt.empty()) rt.push_back( '/');
+		rt.append( m_elements[ elem.eidx].feat);
+		return rt;
 	}
 
 	void push( const NormalizedField& followfield, const AlternativeSplit::Element& element, int followPosIncr)
@@ -686,21 +820,22 @@ public:
 			if (ins.second == false)
 			{
 				Pos2minNofFeaturesMap::iterator itr = ins.first;
-				if (nofFeatures < itr->second.nofFeatures)
+				VisitCount& vc = itr->second;
+				if (nofFeatures < vc.nofFeatures)
 				{
-					itr->second.nofFeatures = nofFeatures;
+					vc.nofFeatures = nofFeatures;
 					expectedNofFeatures = m_minNofFeatures;
 				}
 				else
 				{
-					if (++itr->second.cnt >= SentenceLexerContext::MaxPositionVisits)
+					if (++vc.cnt >= SentenceLexerContext::MaxPositionVisits)
 					{
 						expectedNofFeatures = std::numeric_limits<int>::max();
 						/// ... rule out this path, because we visited it already a MaxPositionVisits times without improvement
 					}
 					else if (m_minNofFeatures < std::numeric_limits<int>::max())
 					{
-						expectedNofFeatures = nofFeatures + m_minNofFeatures - ins.second;
+						expectedNofFeatures = nofFeatures + m_minNofFeatures - vc.nofFeatures;
 					}
 				}
 			}
@@ -709,10 +844,21 @@ public:
 				int eref = m_elementlists.size();
 				m_elementlists.push_back( AlternativeSplitElementRef( m_elements.size(), m_paths[ m_top.index].eref));
 				m_elements.push_back( element);
-	
+
 				KeyIteratorPath follow( followfield, eref);
 				m_pathqueue.insert( KeyIteratorPathRef( m_paths.size()/*index*/, nofUntyped, nofFeatures, nextpos));
 				m_paths.push_back( follow);
+				if (m_debugtrace)
+				{
+					std::string fieldstr = followfield.tostring(' ');
+					std::string stack = elementStackToString( eref);
+
+					m_debugtrace->event( "follow", "found '%s', next '%s'", stack.c_str(), fieldstr.c_str());
+				}
+			}
+			else
+			{
+				if (m_debugtrace) m_debugtrace->event( "prunning", "pos %d, expected nof features %d, min nof features %d", nextpos, expectedNofFeatures, m_minNofFeatures);
 			}
 		}
 		else
@@ -764,52 +910,47 @@ private:
 	Pos2minNofFeaturesMap m_pos2minNofFeaturesMap;
 	int m_minNofUntyped;
 	int m_minNofFeatures;
+	DebugTraceContextInterface* m_debugtrace;
 };
 
 static std::vector<AlternativeSplit> getAlternativeSplits( const VectorStorageClient* vstorage, const DatabaseClientInterface* database, const NormalizedField& origfield, const std::vector<char>& linkChars, DebugTraceContextInterface* debugtrace)
 {
-	AlternativeSplitQueue queue( origfield);
+	AlternativeSplitQueue queue( origfield, debugtrace);
 
 	const NormalizedField* field = queue.nextField();
 	for (; field; field=queue.nextField())
 	{
 		if (debugtrace) debugtrace->open( "field");
-		KeyIterator kitr( database, *field, linkChars);
+		KeyIterator kitr( database, *field, linkChars, debugtrace);
 		if (debugtrace)
 		{
-			debugtrace->event( "key", "%s", field->key.c_str());
-			std::vector<std::string> cd = kitr.keys( 100);
-			std::vector<std::string>::const_iterator ci = cd.begin(), ce = cd.end();
-			for (; ci != ce; ++ci)
-			{
-				debugtrace->event( "candidate", "%s", ci->c_str());
-			}
+			std::string fstr = field->tostring(' ');
+			debugtrace->event( "string", "%s", fstr.c_str());
+			std::string keystr = kitr.keyStrings( "','", 20);
+			debugtrace->event( "candidates", "'%s'", keystr.c_str());
 		}
 		bool hasMore = kitr.first();
-		std::string defaultKey = kitr.defaultKey();
-		bool useDefault = !defaultKey.empty();
+		bool useDefault = kitr.defaultElement().defined();
 
 		for (;hasMore; hasMore = kitr.next())
 		{
 			AlternativeSplit::Element element( kitr.getKey(), vstorage->featureTypes( kitr.getKey()));
+			int fpos = kitr.followPosIncr();
 			if (debugtrace)
 			{
 				std::string typeliststr = typeListString( element.types, ",");
-				debugtrace->event( "element", "%s  {%s}", element.feat.c_str(), typeliststr.c_str());
+				debugtrace->event( "element", "follow pos %d, feat '%s', types {%s}", fpos, element.feat.c_str(), typeliststr.c_str());
 			}
-			int fpos = kitr.followPosIncr();
 			queue.push( kitr.followField( fpos), element, fpos);
-			if (element.feat == defaultKey) useDefault = false;
+			if (element.feat == kitr.defaultElement().key) useDefault = false;
 		}
 		if (useDefault)
 		{
-			AlternativeSplit::Element element( defaultKey, std::vector<std::string>());
-			int fpos = kitr.defaultPosIncr();
-			
-			queue.push( kitr.followField( fpos), element, fpos);
+			AlternativeSplit::Element element( kitr.defaultElement().key, std::vector<std::string>());
+			queue.push( kitr.followField( kitr.defaultElement().followPosIncr), element, kitr.defaultElement().followPosIncr);
 			if (debugtrace)
 			{
-				debugtrace->event( "default", "%s", defaultKey.c_str());
+				debugtrace->event( "default", "%s", kitr.defaultElement().key.c_str());
 			}
 		}
 		if (debugtrace) debugtrace->close();
@@ -848,6 +989,7 @@ static void joinAlternativeSplits( std::vector<AlternativeSplit>& split, const s
 
 static std::vector<AlternativeSplit> getAlternativeSplits( const VectorStorageClient* vstorage, const DatabaseClientInterface* database, const std::vector<NormalizedField>& fields, const std::vector<char>& linkChars, DebugTraceContextInterface* debugtrace)
 {
+	if (debugtrace) debugtrace->event( "fields", "%d", (int)fields.size());
 	if (fields.empty()) return std::vector<AlternativeSplit>();
 	std::vector<NormalizedField>::const_iterator fi = fields.begin(), fe = fields.end();
 	std::vector<AlternativeSplit> rt = getAlternativeSplits( vstorage, database, *fi, linkChars, debugtrace);
