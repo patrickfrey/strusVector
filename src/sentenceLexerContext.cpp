@@ -51,12 +51,11 @@ struct DelimiterDef
 {
 	int pos;
 	char substchr;
-	bool mapsToItself;
 
-	DelimiterDef( int pos_, char substchr_, bool mapsToItself_)
-		:pos(pos_),substchr(substchr_),mapsToItself(mapsToItself_){}
+	DelimiterDef( int pos_, char substchr_)
+		:pos(pos_),substchr(substchr_){}
 	DelimiterDef( const DelimiterDef& o)
-		:pos(o.pos),substchr(o.substchr),mapsToItself(o.mapsToItself){}
+		:pos(o.pos),substchr(o.substchr){}
 };
 
 struct NormalizedField
@@ -260,8 +259,8 @@ static NormalizedField normalizeField( const std::string& source, const std::vec
 		bool isSpaceSplit = si->substchr == ' ';
 		bool mapsToItself = si->mapsToItself;
 		char substchr = si->substchr;
-		int cnt = 0;
-		for (++si; si != se && si->splitpos <= nextpos; ++si,++cnt)
+		int cnt = 1;
+		for (++si; si != se && si->splitpos <= nextpos; ++si)
 		{
 			if (!isSpaceSplit && si->substchr != ' ')
 			{
@@ -269,6 +268,7 @@ static NormalizedField normalizeField( const std::string& source, const std::vec
 			}
 			if (si->splitpos > splitpos)
 			{
+				++cnt;
 				splitpos = si->splitpos;
 				nextpos = splitpos + strus::utf8charlen( source[ splitpos]);
 			}
@@ -277,8 +277,15 @@ static NormalizedField normalizeField( const std::string& source, const std::vec
 		{
 			mapsToItself = false;
 		}
-		rt.delimiters.push_back( DelimiterDef( rt.key.size(), substchr, mapsToItself));
-		rt.key.push_back( SEPARATOR_CHR_SPLIT);
+		if (mapsToItself)
+		{
+			rt.key.push_back( substchr);
+		}
+		else
+		{
+			rt.delimiters.push_back( DelimiterDef( rt.key.size(), substchr));
+			rt.key.push_back( SEPARATOR_CHR_SPLIT);
+		}
 		pos = nextpos;
 	}
 	rt.key.append( source.c_str() + pos, source.size() - pos);
@@ -309,14 +316,14 @@ struct KeyCandidate
 static int nextEditStr( const std::string& edits, int pos)
 {
 	char const* ptr = std::strchr( edits.c_str()+pos, '\0');
-	int rt = (ptr - edits.c_str()) + pos;
+	int rt = (ptr - edits.c_str());
 	return (rt >= (int)edits.size()) ? 0 : rt+1;
 }
 
 static int findEditRef( const std::string& edits, int editref)
 {
 	int ei = nextEditStr( edits, 0);
-	for (; ei && ei < editref; ei = nextEditStr( edits, ei+1))
+	for (; ei && ei < editref; ei = nextEditStr( edits, ei))
 	{
 		if (0==std::strcmp( edits.c_str()+ei, edits.c_str() + editref))
 		{
@@ -331,7 +338,7 @@ static void collectFollowKeyCandidates( std::vector<KeyCandidate>& candidates, s
 	std::vector<DelimiterDef>::const_iterator di = field.delimiters.begin(), de = field.delimiters.end();
 	for (; di != de; ++di)
 	{
-		if (!di->mapsToItself && di->pos != 0)
+		if (di->pos != 0)
 		{
 			candidates.push_back( KeyCandidate( di->pos/*keylen*/, -1/*no edits*/, -1/*no edit pos*/, di->pos+1, true/*use as default*/));
 		}
@@ -449,7 +456,15 @@ public:
 
 	bool next()
 	{
-		return editState( m_candidateidx+1) && skipToNextKey();
+		if (m_candidateidx+1 == m_candidates.size())
+		{
+			if (!backtrackStateUpperBound()) return false;
+		}
+		else
+		{
+			if (!editState( m_candidateidx+1)) return false;
+		}
+		return skipToNextKey();
 	}
 
 	const std::string& getKey() const
@@ -480,7 +495,7 @@ public:
 			for (; di != de && di->pos < posincr; ++di){}
 			for (; di != de; ++di)
 			{
-				delim.push_back( DelimiterDef( di->pos - posincr, di->substchr, di->mapsToItself));
+				delim.push_back( DelimiterDef( di->pos - posincr, di->substchr));
 			}
 			return NormalizedField( std::string( m_field.key.c_str() + posincr), delim);
 		}
@@ -492,6 +507,10 @@ private:
 		if (idx >= m_candidates.size()) return false;
 		if (idx == 0 || idx == m_candidateidx + 1 || idx == m_candidateidx)
 		{
+			if (idx == m_candidateidx + 1)
+			{
+				m_states[ idx] = 0;
+			}
 			m_candidateidx = idx;
 			const KeyCandidate& cd = m_candidates[ m_candidateidx];
 			if (cd.editref >= 0)
@@ -521,161 +540,160 @@ private:
 		return li == linkChars.end() ? -1 : (li - linkChars.begin());
 	}
 
-	bool checkKeyFound( const char* keyptr, std::size_t keylen)
+	bool backtrackStateUpperBound()
 	{
-		if (m_keyfound.size() == keylen)
-		{
-			return true;
-		}
-		else if (m_keyfound.size() == keylen+1 && 0<=findLinkChar( m_linkChars, m_keyfound[keylen]))
-		{
-			return true;
-		}
-		return false;
-	}
-
-	bool backtrackStateUpperBound( int ci)
-	{
-		m_candidateidx = ci;
+		int ci = m_candidateidx;
 		for (; ci >= 0; --ci)
 		{
-			const KeyCandidate& cd = m_candidates[ ci];
+			m_candidateidx = ci;
+			const KeyCandidate& cd = m_candidates[ m_candidateidx];
 			if (cd.editref < 0) continue;
-			int ei = m_states[ ci];
+			int ei = m_states[ m_candidateidx];
 			if (m_edits[ cd.editref+ei] && m_edits[ cd.editref+ei+1])
 			{
-				m_states[ ci] = ei + 1;
-				m_candidateidx = ci;
-				editState( ci);
+				m_states[ m_candidateidx] = ei + 1;
+				editState( m_candidateidx);
 				return true;
 			}
 			else
 			{
-				m_states[ ci] = 0;
+				m_states[ m_candidateidx] = 0;
+				editState( m_candidateidx);
 				continue;
 			}
 		}
 		return false;
 	}
 
-	enum AdjustStateResult {AdjustStateMis,AdjustStateUpperBound,AdjustStateMatch};
-	/// \brief Set the state as first element in the upper bound of the search key
-	AdjustStateResult adjustStateUpperBound()
+	enum KeyUpperBoundResult {KeyUpperBoundMiss,KeyUpperBoundFound,KeyUpperBoundMatch};
+	/// \brief Set the search key to the first upper bound of the found key
+	KeyUpperBoundResult skipToKeyUpperBound()
 	{
-		int ci = m_candidateidx, ce = m_candidates.size();
-		int pos = 0;
-		for (; ci < ce; ++ci)
+		for (;;)
 		{
-			const KeyCandidate& cd = m_candidates[ ci];
-			int newpos = (cd.editpos < 0) ? cd.keylen : cd.editpos;
-			if (newpos > (int)m_keyfound.size())
+			const KeyCandidate& cd = m_candidates[ m_candidateidx];
+			if (cd.keylen >= m_keyfound.size())
 			{
-				int cmp = std::memcmp( m_keyfound.c_str()+pos, m_field.key.c_str()+pos, m_keyfound.size() - pos);
+				int cmp = std::memcmp( m_keyfound.c_str(), m_field.key.c_str(), m_keyfound.size());
 				if (cmp < 0)
 				{
-					return editState( ci) ? AdjustStateUpperBound : AdjustStateMis;
+					//... we found a key that is alphabetically greater than the searched one
+					return KeyUpperBoundFound;
 				}
 				else if (cmp > 0)
 				{
-					return backtrackStateUpperBound( ci) ? AdjustStateUpperBound : AdjustStateMis;
+					//... the key is still alphabetically greater than the searched key and making the key longer does not change this situation
+					if (backtrackStateUpperBound())
+					{
+						continue;
+					}
+					else
+					{
+						return KeyUpperBoundMiss;
+					}
 				}
-				else if (newpos >= (int)m_keyfound.size())
+				else if (cd.keylen == m_keyfound.size())
 				{
-					return editState( ci) ? AdjustStateUpperBound : AdjustStateMis;
+					//... we found an exact match
+					return KeyUpperBoundMatch;
 				}
 				else
 				{
-					return backtrackStateUpperBound( ci) ? AdjustStateUpperBound : AdjustStateMis;
+					//... the key tested is not an exact match but an upperbound
+					return KeyUpperBoundFound;
 				}
 			}
 			else
 			{
-				int cmp = std::memcmp( m_keyfound.c_str()+pos, m_field.key.c_str()+pos, newpos - pos);
+				int cmp = std::memcmp( m_keyfound.c_str(), m_field.key.c_str(), cd.keylen);
 				if (cmp < 0)
 				{
-					return editState( ci) ? AdjustStateUpperBound : AdjustStateMis;
+					//... we found a key that is alphabetically greater than the searched one
+					return KeyUpperBoundFound;
 				}
 				else if (cmp > 0)
 				{
-					return backtrackStateUpperBound( ci) ? AdjustStateUpperBound : AdjustStateMis;
-				}
-				else if (cd.editref >= 0)
-				{
-					char const* edit = m_edits.c_str() + cd.editref;
-					int ei=0;
-					for (;edit[ei] && edit[ei] < m_keyfound[ cd.editpos]; ++ei){}
-					if (edit[ei])
+					//... the key is still alphabetically greater than the searched key and making the key longer does not change this situation
+					if (backtrackStateUpperBound())
 					{
-						bool foundUpperBound = edit[ei] > m_keyfound[ cd.editpos];
-						m_states[ ci] = ei;
-						m_field.key[ cd.editpos] = edit[ei];
-						m_candidateidx = ci;
-						if (foundUpperBound) return AdjustStateUpperBound;
-						pos = cd.editpos+1;
+						continue;
 					}
 					else
 					{
-						return backtrackStateUpperBound( ci) ? AdjustStateUpperBound : AdjustStateMis;
+						return KeyUpperBoundMiss;
 					}
 				}
-				else if (checkKeyFound( m_field.key.c_str(), cd.keylen))
+				else if (cd.keylen+1 == m_keyfound.size() && 0<=findLinkChar( m_linkChars, m_keyfound[cd.keylen]))
 				{
-					m_candidateidx = ci;
-					return AdjustStateMatch;
+					//... we found a match with a link character at the end (what we count as an exact match)
+					return KeyUpperBoundMatch;
+				}
+				else if (editState( m_candidateidx+1))
+				{
+					//... try to test a longer key
+					continue;
+				}
+				else
+				{
+					//... no longer keys left, try to backtrack to get a greater key
+					if (backtrackStateUpperBound())
+					{
+						continue;
+					}
+					else
+					{
+						//... no backtracking possible any more, expanded the whole tree of key candidates
+						return KeyUpperBoundMiss;
+					}
 				}
 			}
 		}
-		m_candidateidx = m_candidates.size();
-		return AdjustStateMis;
+	}
+
+	std::string currentKeyString() const
+	{
+		return m_candidateidx < m_candidates.size() ? std::string( m_field.key.c_str(), m_candidates[ m_candidateidx].keylen) : std::string();
 	}
 
 	bool skipToNextKey()
 	{
 		/// Algorithm: Start with the first key.
 		/// We search an upperbound with the key as prefix.
-		/// With the upperbound found try to find upperbound candidate for the found key by performing edit operations on the search key.
-		/// If the upperbound gets equal to the found key, we are finished (we have the next key).
-		/// If the upperbound is bigger than the found key, we start the search again with this upperbound key as candidate.
-		while (m_candidateidx < m_candidates.size())
+		/// If we do not find an upper bound the search fails.
+		/// If the upper bound is a match we are finished (we have the next key)
+		/// Otherwise, we start the search again with this upperbound key as candidate.
+		for(;;)
 		{
 			char const* keyptr = m_field.key.c_str();
 			std::size_t keylen = m_candidates[ m_candidateidx].keylen;
 			if (m_cursor.skipPrefix( keyptr, keylen, m_keyfound))
 			{
-				if (checkKeyFound( keyptr, keylen))
+				if (m_debugtrace)
 				{
-					if (m_debugtrace) m_debugtrace->event( "key", "search %d found '%s'", (int)keylen, m_keyfound.c_str());
-					return true;
+					std::string keystr( keyptr, keylen);
+					m_debugtrace->event( "key", "search '%s' got '%s'", keystr.c_str(), m_keyfound.c_str());
 				}
-				else
+				switch (skipToKeyUpperBound())
 				{
-					if (m_debugtrace)
-					{
-						std::string keystr( keyptr, keylen);
-						m_debugtrace->event( "key", "search '%s' missed", keystr.c_str());
-					}
-					switch (adjustStateUpperBound())
-					{
-						case AdjustStateMis:
-							return false;
-						case AdjustStateUpperBound:
-							if (m_debugtrace)
-							{
-								std::string keystr( m_field.key.c_str(), m_candidates[ m_candidateidx].keylen);
-								m_debugtrace->event( "key", "adjust upper bound '%s'", keystr.c_str());
-							}
-							continue;
-						case AdjustStateMatch:
-							if (m_debugtrace)
-							{
-								std::string keystr( m_field.key.c_str(), m_candidates[ m_candidateidx].keylen);
-								m_debugtrace->event( "key", "adjust match '%s'", keystr.c_str());
-							}
-							return true;
-					}
+					case KeyUpperBoundMiss:
+						return false;
+					case KeyUpperBoundFound:
+						if (m_debugtrace)
+						{
+							std::string keystr = currentKeyString();
+							m_debugtrace->event( "key", "skip to upper bound '%s'", keystr.c_str());
+						}
+						continue;
+					case KeyUpperBoundMatch:
+						if (m_debugtrace)
+						{
+							std::string keystr = currentKeyString();
+							m_debugtrace->event( "key", "match '%s'", keystr.c_str());
+						}
+						return true;
 				}
 			}
-			else if (backtrackStateUpperBound( m_candidateidx))
+			else if (backtrackStateUpperBound())
 			{
 				if (m_debugtrace)
 				{
@@ -688,8 +706,6 @@ private:
 				return false;
 			}
 		}
-		m_keyfound.clear();
-		return false;
 	}
 
 private:
@@ -744,7 +760,7 @@ public:
 	int pos;
 
 	KeyIteratorPathRef()
-		:index(0),nofUntyped(0),nofFeatures(0),pos(0){}
+		:index(0),nofUntyped(0),nofFeatures(0),pos(-1){}
 	KeyIteratorPathRef( std::size_t index_, int nofUntyped_, int nofFeatures_, int pos_)
 		:index(index_),nofUntyped(nofUntyped_),nofFeatures(nofFeatures_),pos(pos_){}
 	KeyIteratorPathRef( const KeyIteratorPathRef& o)
@@ -754,13 +770,13 @@ public:
 
 	bool operator < (const KeyIteratorPathRef& o) const
 	{
-		return pos == o.pos
-			? (nofUntyped == o.nofUntyped
-				? (nofFeatures == o.nofFeatures
-					? index < o.index
-					: nofFeatures < o.nofFeatures)
-				: nofUntyped < o.nofUntyped)
-			: pos > o.pos;
+		return nofFeatures == o.nofFeatures
+				? (pos == o.pos
+					? (nofUntyped == o.nofUntyped
+						? index < o.index
+						: nofUntyped < o.nofUntyped)
+					: pos > o.pos)
+				: nofFeatures < o.nofFeatures ;
 	}
 };
 
@@ -842,7 +858,8 @@ public:
 					}
 					else if (m_minNofFeatures < std::numeric_limits<int>::max())
 					{
-						expectedNofFeatures = nofFeatures + 1 + m_minNofFeatures - vc.nofFeatures;
+						int numberOfFeaturesMoreThanMinumum = nofFeatures - vc.nofFeatures;
+						expectedNofFeatures = m_minNofFeatures + numberOfFeaturesMoreThanMinumum;
 					}
 				}
 			}
@@ -868,11 +885,14 @@ public:
 				if (m_debugtrace) m_debugtrace->event( "prunning", "pos %d, expected nof features %d, min nof features %d", nextpos, expectedNofFeatures, m_minNofFeatures);
 			}
 		}
-		else if (m_minNofFeatures == std::numeric_limits<int>::max() || nofFeatures <= SentenceLexerContext::maxFeaturePrunning( m_minNofFeatures))
+		else if ((m_minNofFeatures == std::numeric_limits<int>::max() || nofFeatures <= SentenceLexerContext::maxFeaturePrunning( m_minNofFeatures))
+			&& (m_minNofUntyped == std::numeric_limits<int>::max() || nofUntyped <= m_minNofUntyped))
 		{
 			if (nofUntyped < m_minNofUntyped)
 			{
 				m_minNofUntyped = nofUntyped;
+				if (m_debugtrace) m_debugtrace->event( "prunning", "clear %d results (nof untyped)", (int)m_results.size());
+				m_results.clear();
 			}
 			if (nofFeatures < m_minNofFeatures)
 			{
@@ -895,6 +915,17 @@ public:
 		}
 	}
 
+	std::string stackStateString() const
+	{
+		if (m_top.pos >= 0)
+		{
+			return strus::string_format("size %d, top pos %d", (int)m_pathqueue.size(), m_top.pos);
+		}
+		else
+		{
+			return strus::string_format("size %d", (int)m_pathqueue.size());
+		}
+	}
 	const std::vector<AlternativeSplit>& results() const
 	{
 		return m_results;
@@ -931,10 +962,13 @@ static std::vector<AlternativeSplit> getAlternativeSplits( const VectorStorageCl
 	const NormalizedField* field = queue.nextField();
 	for (; field; field=queue.nextField())
 	{
-		if (debugtrace) debugtrace->open( "field");
 		KeyIterator kitr( database, *field, linkChars, debugtrace);
 		if (debugtrace)
 		{
+			std::string stkstr = queue.stackStateString();
+			debugtrace->event( "stack", "%s", stkstr.c_str());
+			debugtrace->open( "field");
+
 			std::string fstr = field->tostring(' ');
 			debugtrace->event( "string", "%s", fstr.c_str());
 			std::string keystr = kitr.keyStrings( "','", 20);
@@ -964,7 +998,10 @@ static std::vector<AlternativeSplit> getAlternativeSplits( const VectorStorageCl
 				debugtrace->event( "default", "%s", kitr.defaultElement().key.c_str());
 			}
 		}
-		if (debugtrace) debugtrace->close();
+		if (debugtrace)
+		{
+			debugtrace->close();
+		}
 	}
 	return queue.results();
 }

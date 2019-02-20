@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018 Patrick P. Frey
+ * Copyright (c) 2019 Patrick P. Frey
  *
  * This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
@@ -288,10 +288,7 @@ struct TermSequenceDef
 		{
 			rt.append( (ei->termidx >= 0) ? termstrings[ ei->termidx] : unknownTermstrings[ -ei->termidx]);
 			std::string sep = randomSeparatorMasking( ei->separator);
-			if (sep.size() == 1 && (sep[0] == g_spaceSubst || sep[0] == g_delimiterSubst))
-			{
-				ei->split = false;
-			}
+			ei->split = !(sep.size() == 1 && (sep[0] == g_spaceSubst || sep[0] == g_delimiterSubst));
 			rt.append( sep);
 		}
 		return rt;
@@ -646,11 +643,13 @@ public:
 
 		bool operator < (const Candidate& o) const
 		{
-			return pos == o.pos
-				? (nofUntyped == o.nofUntyped
-					? compareFeatures( features, o.features)
-					: nofUntyped < o.nofUntyped)
-				: pos < o.pos;
+			return features.size() == o.features.size()
+				? (pos == o.pos
+					? (nofUntyped == o.nofUntyped
+						? compareFeatures( features, o.features)
+						: nofUntyped < o.nofUntyped)
+					: pos < o.pos)
+				: features.size() < o.features.size();
 		}
 	};
 
@@ -787,15 +786,23 @@ public:
 					m_debugtrace->event( "testmatch", "'%s'", fstr.c_str());
 				}
 				const FeatureDef& fdef = m_features[ ri->second];
-				if (candidate.pos == 0 && termdef.separatorAtStart != fdef.separatorAtStart) continue;
-
+				if (candidate.pos == 0)
+				{
+					if (termdef.separatorAtStart != fdef.separatorAtStart) continue;
+				}
+				else
+				{
+					if (fdef.separatorAtStart) continue;
+				}
 				std::vector<TermDef>::const_iterator
 					ai = candidate.itr, ae = termdef.terms.end(),
 					bi = fdef.terms.begin(), be = fdef.terms.end();
 				int aidx = 0;
+				bool split = false;
 				for (; ai != ae && bi != be; ++ai,++bi,++aidx)
 				{
-					if (ai->split && aidx+1 == (int)fdef.terms.size())
+					split = ai->split;
+					if (split && aidx+1 == (int)fdef.terms.size())
 					{
 						if (!match( TermDef( ai->termidx, '\0'), *bi)) break;
 					}
@@ -805,6 +812,8 @@ public:
 					}
 				}
 				if (bi != be) continue;
+				if (!split && ai != ae) continue;
+
 				std::vector<FeatureDef> features( candidate.features);
 				features.push_back( fdef);
 				if (m_debugtrace)
@@ -817,11 +826,23 @@ public:
 				{
 					hasDefault = false;
 				}
-				if (ai == ae)
+				if (ai != ae)
+				{
+					if (m_debugtrace)
+					{
+						std::string fliststr = featureListToString( features);
+						m_debugtrace->event( "follow", "'%s' next pos %d", fliststr.c_str(), (int)(candidate.pos + aidx));
+					}
+					candidates.insert( Candidate( ai, features, candidate.nofUntyped, candidate.pos + aidx));
+				}
+				else if ((minNofFeats == std::numeric_limits<int>::max() || (int)features.size() <= maxFeaturePrunning( minNofFeats))
+				&&	(minNofUntyped == std::numeric_limits<int>::max() || candidate.nofUntyped <= minNofUntyped))
 				{
 					if (minNofUntyped > candidate.nofUntyped)
 					{
 						minNofUntyped = candidate.nofUntyped;
+						if (m_debugtrace) m_debugtrace->event( "prunning", "clear %d results (nof untyped)", (int)rt.size());
+						rt.clear();
 					}
 					if (minNofFeats > (int)features.size())
 					{
@@ -833,15 +854,6 @@ public:
 						m_debugtrace->event( "result", "'%s'", fliststr.c_str());
 					}
 					rt.push_back( features);
-				}
-				else
-				{
-					if (m_debugtrace)
-					{
-						std::string fliststr = featureListToString( features);
-						m_debugtrace->event( "follow", "'%s' next pos %d", fliststr.c_str(), (int)(candidate.pos + aidx));
-					}
-					candidates.insert( Candidate( ai, features, candidate.nofUntyped, candidate.pos + aidx));
 				}
 			}
 
@@ -857,11 +869,23 @@ public:
 				}
 				std::vector<TermDef>::const_iterator ai = candidate.itr;
 				ai += defaultTerms.size();
-				if (ai >= termdef.terms.end())
+				if (ai < termdef.terms.end())
+				{
+					if (m_debugtrace)
+					{
+						std::string fliststr = featureListToString( features);
+						m_debugtrace->event( "follow", "'%s' (default) next pos %d", fliststr.c_str(), (int)(candidate.pos + 1));
+					}
+					candidates.insert( Candidate( ai, features, candidate.nofUntyped+1, candidate.pos + 1));
+				}
+				else if ((minNofFeats == std::numeric_limits<int>::max() || (int)features.size() <= maxFeaturePrunning( minNofFeats))
+				&&	(minNofUntyped == std::numeric_limits<int>::max() || candidate.nofUntyped+1 <= minNofUntyped))
 				{
 					if (minNofUntyped > candidate.nofUntyped+1)
 					{
 						minNofUntyped = candidate.nofUntyped+1;
+						if (m_debugtrace) m_debugtrace->event( "prunning", "clear %d results (nof untyped)", (int)rt.size());
+						rt.clear();
 					}
 					if (minNofFeats > (int)features.size())
 					{
@@ -874,20 +898,22 @@ public:
 					}
 					rt.push_back( features);
 				}
-				else
-				{
-					if (m_debugtrace)
-					{
-						std::string fliststr = featureListToString( features);
-						m_debugtrace->event( "follow", "'%s' (default) next pos %d", fliststr.c_str(), (int)(candidate.pos + 1));
-					}
-					candidates.insert( Candidate( ai, features, candidate.nofUntyped+1, candidate.pos + 1));
-				}
 			}
 		}
 		if (m_debugtrace)
 		{
 			m_debugtrace->close();
+		}
+		return rt;
+	}
+
+	int getNofUntyped( const std::vector<FeatureDef>& feats)
+	{
+		int rt = 0;
+		std::vector<FeatureDef>::const_iterator fi = feats.begin(), fe = feats.end();
+		for (; fi != fe; ++fi)
+		{
+			if (fi->typeindices.empty()) ++rt;
 		}
 		return rt;
 	}
