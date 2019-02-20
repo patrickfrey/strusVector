@@ -303,7 +303,7 @@ struct TermSequenceDef
 		{
 			if (terms.size() == o.terms.size())
 			{
-				std::vector<TermDef>::const_iterator ai = terms.begin(), ae = terms.end(), bi = o.terms.begin(), be = o.terms.end();
+				std::vector<TermDef>::const_iterator ai = terms.begin(), ae = terms.end(), bi = o.terms.begin();
 				for (; ai != ae && *ai == *bi; ++ai,++bi){}
 				return ai == ae ? 0 : ai->compare(*bi);
 			}
@@ -633,7 +633,7 @@ public:
 			if (a.size() == b.size())
 			{
 				std::vector<FeatureDef>::const_iterator ai = a.begin(), ae = a.end();
-				std::vector<FeatureDef>::const_iterator bi = b.begin(), be = b.end();
+				std::vector<FeatureDef>::const_iterator bi = b.begin();
 				for (; ai < ae && *ai == *bi; ++ai,++bi){}
 				if (ai == ae) return false;
 				return *ai < *bi;
