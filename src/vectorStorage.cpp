@@ -160,7 +160,7 @@ const char* VectorStorage::getConfigDescription( const ConfigType& type) const
 			return "simdist=<difference in bits of LSH value considered similar>\nprobsimdist=<estimate in difference in bits of LSH value used for prunning (bigger than simdist)>";
 
 		case CmdCreate:
-			return "vecdim=<dimension of vectors>;bits=<number of bits calculated by separating hyperplanes (optional)>;variations=<number of random images used (bits*variations = number of bits in LSH values>;simdist=<difference in bits of LSH value considered similar (optional)>\nprobsimdist=<estimate in difference in bits of LSH value used for prunning (bigger than simdist - optional)>";
+			return "vecdim=<dimension of vectors>\nbits=<number of bits calculated by separating hyperplanes (optional)>\nvariations=<number of random images used (bits*variations = number of bits in LSH values>\nsimdist=<difference in bits of LSH value considered similar (optional)>\nprobsimdist=<estimate in difference in bits of LSH value used for prunning (bigger than simdist - optional)>";
 	}
 	return 0;
 }
