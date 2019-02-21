@@ -10,6 +10,7 @@
 #ifndef _STRUS_SENTENCE_LEXER_CONTEXT_IMPL_HPP_INCLUDED
 #define _STRUS_SENTENCE_LEXER_CONTEXT_IMPL_HPP_INCLUDED
 #include "strus/sentenceLexerContextInterface.hpp"
+#include "strus/wordVector.hpp"
 #include "sentenceLexerInstance.hpp"
 #include "vectorStorageClient.hpp"
 #include <vector>
@@ -54,24 +55,26 @@ public:
 
 	virtual std::vector<std::string> featureTypes( int idx);
 
+	virtual double getWeight( const std::vector<SentenceTerm>& terms);
+
 public:
 	struct AlternativeSplit
 	{
 		struct Element
 		{
 			std::string feat;
-			std::vector<std::string> types;
+			strus::Index featno;
 
 			Element()
-				:feat(),types(){}
-			Element( const std::string& feat_, const std::vector<std::string>& types_)
-				:feat(feat_),types(types_){}
+				:feat(),featno(){}
+			Element( const std::string& feat_, const strus::Index& featno_)
+				:feat(feat_),featno(featno_){}
 			Element( const Element& o)
-				:feat(o.feat),types(o.types){}
-			Element& operator=( const Element& o) {feat=o.feat;types=o.types; return *this;}
+				:feat(o.feat),featno(o.featno){}
+			Element& operator=( const Element& o) {feat=o.feat;featno=o.featno; return *this;}
 #if __cplusplus >= 201103L
-			Element( Element&& o) :feat(std::move(o.feat)),types(std::move(o.types)){}
-			Element& operator=( Element&& o) {feat=std::move(o.feat); types=std::move(o.types); return *this;}
+			Element( Element&& o) :feat(std::move(o.feat)),featno(o.featno){}
+			Element& operator=( Element&& o) {feat=std::move(o.feat); featno=o.featno; return *this;}
 #endif
 		};
 		AlternativeSplit()
@@ -98,12 +101,57 @@ public:
 	}
 
 private:
+	struct FeatNum
+	{
+		strus::Index typeno;
+		strus::Index featno;
+
+		FeatNum( const strus::Index& typeno_, const strus::Index& featno_)
+			:typeno(typeno_),featno(featno_){}
+		FeatNum( const FeatNum& o)
+			:typeno(o.typeno),featno(o.featno){}
+		FeatNum()
+			:typeno(0),featno(0){}
+
+		bool operator < (const FeatNum& o) const
+		{
+			return featno == o.featno ? typeno < o.typeno : featno < o.featno;
+		}
+		bool valid() const
+		{
+			return typeno && featno;
+		}
+	};
+	typedef int GroupId;
+	struct FeatGroup
+	{
+		WordVector vec;
+		std::vector<GroupId> neighbours;
+
+		explicit FeatGroup( const WordVector& vec_)
+			:vec(vec_),neighbours(){}
+		FeatGroup( const WordVector& vec_, const std::vector<GroupId>& neighbours_)
+			:vec(vec_),neighbours(neighbours_){}
+		FeatGroup( const FeatGroup& o)
+			:vec(o.vec),neighbours(o.neighbours){}
+		FeatGroup()
+			:vec(),neighbours(){}
+	};
+
+	FeatNum getOrCreateFeatNum( const SentenceTerm& term);
+	FeatGroup& getOrCreateFeatGroup( const FeatNum& featnum);
+
+private:
 	ErrorBufferInterface* m_errorhnd;
 	DebugTraceContextInterface* m_debugtrace;
 	const VectorStorageClient* m_vstorage;
 	const DatabaseClientInterface* m_database;
 	std::vector<AlternativeSplit> m_splits;
-	int m_splitidx;
+	int m_splitidx;	
+	std::map<std::string,strus::Index> m_featnomap;
+	std::map<std::string,strus::Index> m_typenomap;
+	std::vector<FeatGroup> m_groups;
+	std::map<FeatNum,GroupId> m_featmap;
 };
 
 }//namespace

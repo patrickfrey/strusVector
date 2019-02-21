@@ -44,8 +44,6 @@ public:
 
 	virtual SentenceLexerContextInterface* createContext( const std::string& source) const;
 
-	virtual double getSimilarity( const SentenceTerm& term, const SentenceTerm& other) const;
-
 public:
 	struct LinkDef
 	{

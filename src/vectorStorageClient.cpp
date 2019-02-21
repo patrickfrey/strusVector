@@ -493,5 +493,31 @@ strus::Reference<SimHashMap> VectorStorageClient::getOrCreateTypeSimHashMap( con
 	return simHashMapRef;
 }
 
+std::vector<std::string> VectorStorageClient::getTypeNames( const strus::Index& featno) const
+{
+	std::vector<std::string> rt;
+	std::vector<Index> typelist = m_database->readFeatureTypeRelations( featno);
+	std::vector<Index>::const_iterator ti = typelist.begin(), te = typelist.end();
+	for (; ti != te; ++ti)
+	{
+		rt.push_back( m_database->readTypeName( *ti));
+	}
+	return rt;
+	
+}
 
+strus::Index VectorStorageClient::getFeatNo( const std::string& featname) const
+{
+	return m_database->readFeatno( featname);
+}
+
+strus::Index VectorStorageClient::getTypeNo( const std::string& typname) const
+{
+	return m_database->readTypeno( typname);
+}
+
+WordVector VectorStorageClient::getVector(  const strus::Index& typeno, const strus::Index& featno) const
+{
+	return m_database->readVector( typeno, featno);
+}
 

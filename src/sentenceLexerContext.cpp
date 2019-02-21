@@ -107,7 +107,9 @@ SentenceLexerContext::SentenceLexerContext(
 		const std::vector<char>& linkChars,
 		const std::string& source,
 		ErrorBufferInterface* errorhnd_)
-	:m_errorhnd(errorhnd_),m_debugtrace(0),m_vstorage(vstorage_),m_database(database_),m_splits(),m_splitidx(-1)
+	:m_errorhnd(errorhnd_),m_debugtrace(0),m_vstorage(vstorage_),m_database(database_)
+	,m_splits(),m_splitidx(-1)
+	,m_featnomap(),m_typenomap(),m_groups(),m_featmap()
 {
 	DebugTraceInterface* dbgi = m_errorhnd->debugTrace();
 	if (dbgi) m_debugtrace = dbgi->createTraceContext( STRUS_DBGTRACE_COMPONENT_NAME);
@@ -163,7 +165,7 @@ SentenceLexerContext::SentenceLexerContext(
 			std::vector<Element>::const_iterator ei = ai->ar.begin(), ee = ai->ar.end();
 			for (; ei != ee; ++ei)
 			{
-				std::string typelist = typeListString( ei->types, ",");
+				std::string typelist = typeListString( m_vstorage->getTypeNames( ei->featno) , ",");
 				if (!elemlist.empty()) elemlist.append( ", ");
 				elemlist.append( strus::string_format( "'%s' {%s}", ei->feat.c_str(), typelist.c_str()));
 			}
@@ -824,7 +826,7 @@ public:
 
 	void push( const NormalizedField& followfield, const AlternativeSplit::Element& element, int followPosIncr)
 	{
-		int nofUntyped = m_top.nofUntyped + (element.types.empty() ? 1:0);
+		int nofUntyped = m_top.nofUntyped + (element.featno ? 0:1);
 		int nofFeatures = m_top.nofFeatures + 1;
 
 		if (followfield.defined())
@@ -882,11 +884,18 @@ public:
 			}
 			else
 			{
-				if (m_debugtrace) m_debugtrace->event( "prunning", "pos %d, expected nof features %d, min nof features %d", nextpos, expectedNofFeatures, m_minNofFeatures);
+				if (m_debugtrace) m_debugtrace->event( "prunning", "pos %d, expected nof features %d, min nof features %d (accepted %d)", nextpos, expectedNofFeatures, m_minNofFeatures, SentenceLexerContext::maxFeaturePrunning( m_minNofFeatures));
 			}
 		}
-		else if ((m_minNofFeatures == std::numeric_limits<int>::max() || nofFeatures <= SentenceLexerContext::maxFeaturePrunning( m_minNofFeatures))
-			&& (m_minNofUntyped == std::numeric_limits<int>::max() || nofUntyped <= m_minNofUntyped))
+		else if (m_minNofFeatures != std::numeric_limits<int>::max() && nofFeatures > SentenceLexerContext::maxFeaturePrunning( m_minNofFeatures))
+		{
+			if (m_debugtrace) m_debugtrace->event( "prunning", "result with %d features, min nof features %d (accepted %d)", nofFeatures, m_minNofFeatures, SentenceLexerContext::maxFeaturePrunning( m_minNofFeatures));
+		}
+		else if (m_minNofUntyped != std::numeric_limits<int>::max() && nofUntyped > m_minNofUntyped)
+		{
+			if (m_debugtrace) m_debugtrace->event( "prunning", "result with %d untyped, min nof untyped %d", nofUntyped, m_minNofUntyped);
+		}
+		else
 		{
 			if (nofUntyped < m_minNofUntyped)
 			{
@@ -908,10 +917,6 @@ public:
 			}
 			std::reverse( split.ar.begin(), split.ar.end());
 			m_results.push_back( split);
-		}
-		else
-		{
-			if (m_debugtrace) m_debugtrace->event( "prunning", "result with %d features, min nof features %d", nofFeatures, m_minNofFeatures);
 		}
 	}
 
@@ -979,11 +984,11 @@ static std::vector<AlternativeSplit> getAlternativeSplits( const VectorStorageCl
 
 		for (;hasMore; hasMore = kitr.next())
 		{
-			AlternativeSplit::Element element( kitr.getKey(), vstorage->featureTypes( kitr.getKey()));
+			AlternativeSplit::Element element( kitr.getKey(), vstorage->getFeatNo( kitr.getKey()));
 			int fpos = kitr.followPosIncr();
 			if (debugtrace)
 			{
-				std::string typeliststr = typeListString( element.types, ",");
+				std::string typeliststr = typeListString( vstorage->getTypeNames( element.featno), ",");
 				debugtrace->event( "element", "follow pos %d, feat '%s', types {%s}", fpos, element.feat.c_str(), typeliststr.c_str());
 			}
 			queue.push( kitr.followField( fpos), element, fpos);
@@ -991,7 +996,7 @@ static std::vector<AlternativeSplit> getAlternativeSplits( const VectorStorageCl
 		}
 		if (useDefault)
 		{
-			AlternativeSplit::Element element( kitr.defaultElement().key, std::vector<std::string>());
+			AlternativeSplit::Element element( kitr.defaultElement().key, 0/*featno*/);
 			queue.push( kitr.followField( kitr.defaultElement().followPosIncr), element, kitr.defaultElement().followPosIncr);
 			if (debugtrace)
 			{
@@ -1064,7 +1069,7 @@ std::vector<std::string> SentenceLexerContext::featureTypes( int idx)
 {
 	try
 	{
-		if (m_splitidx >= 0 && m_splitidx < (int)m_splits.size()) return m_splits[ m_splitidx].ar[ idx].types;
+		if (m_splitidx >= 0 && m_splitidx < (int)m_splits.size()) return m_vstorage->getTypeNames( m_splits[ m_splitidx].ar[ idx].featno);
 		throw std::runtime_error(_TXT("array bound read"));
 	}
 	CATCH_ERROR_ARG1_MAP_RETURN( _TXT("error in '%s' getting list of alternative feature types in current split: %s"), MODULENAME, *m_errorhnd, std::vector<std::string>());
@@ -1093,6 +1098,83 @@ int SentenceLexerContext::nofTokens() const
 {
 	if (m_splitidx >= 0 && m_splitidx < (int)m_splits.size()) return m_splits[ m_splitidx].ar.size();
 	return 0;
+}
+
+SentenceLexerContext::FeatNum SentenceLexerContext::getOrCreateFeatNum( const SentenceTerm& term)
+{
+	typedef std::map<std::string,strus::Index> Map;
+	strus::Index featno = 0;
+	strus::Index typeno = 0;
+	{
+		Map::const_iterator mi = m_featnomap.find( term.value());
+		if (mi == m_featnomap.end())
+		{
+			m_featnomap.insert( Map::value_type( term.value(), featno=m_vstorage->getFeatNo( term.value())));
+		}
+		else
+		{
+			featno = mi->second;
+		}
+	}{
+		Map::const_iterator mi = m_typenomap.find( term.type());
+		if (mi == m_typenomap.end())
+		{
+			m_typenomap.insert( Map::value_type( term.type(), typeno=m_vstorage->getTypeNo( term.type())));
+		}
+		else
+		{
+			typeno = mi->second;
+		}
+	}
+	return FeatNum( typeno, featno);
+}
+
+#define SIMILIARITY_DISTANCE 0.5
+
+SentenceLexerContext::FeatGroup& SentenceLexerContext::getOrCreateFeatGroup( const FeatNum& featnum)
+{
+	typedef std::map<FeatNum,GroupId> Map;
+	std::pair<Map::iterator,bool> ins = m_featmap.insert( Map::value_type( featnum, m_groups.size()));
+	if (ins.second /*insert took place*/)
+	{
+		m_groups.push_back( FeatGroup( m_vstorage->getVector( featnum.typeno, featnum.typeno)));
+
+		std::vector<FeatGroup>::iterator gi = m_groups.begin(), ge = m_groups.end();
+		GroupId gidx = 0, last_gidx = m_groups.size();
+		for (--ge/*without new group added*/; gi != ge; ++gi,++gidx)
+		{
+			double sim = m_vstorage->vectorSimilarity( m_groups.back().vec, gi->vec);
+			if (sim > SIMILIARITY_DISTANCE)
+			{
+				m_groups.back().neighbours.push_back( gidx);
+				gi->neighbours.push_back( last_gidx);
+			}
+		}
+		return m_groups.back();
+	}
+	else
+	{
+		return m_groups[ ins.first->second];
+	}
+}
+
+double SentenceLexerContext::getWeight( const std::vector<SentenceTerm>& terms)
+{
+	int nofUnknown = 0;
+	std::vector<SentenceTerm>::const_iterator ti = terms.begin(), te = terms.end();
+	for (; ti != te; ++ti)
+	{
+		FeatNum featnum = getOrCreateFeatNum( *ti);
+		if (featnum.valid())
+		{
+			(void)getOrCreateFeatGroup( featnum);
+		}
+		else
+		{
+			++nofUnknown;
+		}
+	}
+	return 0.0;
 }
 
 

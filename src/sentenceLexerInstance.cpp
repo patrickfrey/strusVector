@@ -112,15 +112,5 @@ SentenceLexerContextInterface* SentenceLexerInstance::createContext( const std::
 	CATCH_ERROR_ARG1_MAP_RETURN( _TXT("error in '%s' creating context for analysis: %s"), MODULENAME, *m_errorhnd, NULL);
 }
 
-double SentenceLexerInstance::getSimilarity( const SentenceTerm& term, const SentenceTerm& other) const
-{
-	try
-	{
-		WordVector term_vec = m_vstorage->featureVector( term.type(), term.value());
-		WordVector other_vec = m_vstorage->featureVector( other.type(), other.value());
-		return m_vstorage->vectorSimilarity( term_vec, other_vec);
-	}
-	CATCH_ERROR_ARG1_MAP_RETURN( _TXT("error in '%s' calculating the similarity of terms: %s"), MODULENAME, *m_errorhnd, std::numeric_limits<double>::quiet_NaN());
-}
 
 

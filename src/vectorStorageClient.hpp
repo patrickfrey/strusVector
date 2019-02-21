@@ -88,6 +88,12 @@ public:/*VectorStorageTransaction*/
 
 	void resetSimHashMapTypes( const std::vector<std::string>& types_);
 
+public:/*SentenceLexerContext*/
+	std::vector<std::string> getTypeNames( const strus::Index& featno) const;
+	strus::Index getFeatNo( const std::string& featname) const;
+	strus::Index getTypeNo( const std::string& typname) const;
+	WordVector getVector( const strus::Index& typeno, const strus::Index& featno) const;
+
 private:
 	strus::Reference<SimHashMap> getOrCreateTypeSimHashMap( const std::string& type) const;
 	strus::Reference<SimHashMap> getSimHashMap( const std::string& type) const;
