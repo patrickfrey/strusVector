@@ -152,3 +152,28 @@ VectorStorageDumpInterface* VectorStorage::createDump( const std::string& config
 }
 
 
+const char* VectorStorage::getConfigDescription( const ConfigType& type) const
+{
+	switch (type)
+	{
+		case CmdCreateClient:
+			return "simdist=<difference in bits of LSH value considered similar>\nprobsimdist=<estimate in difference in bits of LSH value used for prunning (bigger than simdist)>";
+
+		case CmdCreate:
+			return "vecdim=<dimension of vectors>;bits=<number of bits calculated by separating hyperplanes (optional)>;variations=<number of random images used (bits*variations = number of bits in LSH values>;simdist=<difference in bits of LSH value considered similar (optional)>\nprobsimdist=<estimate in difference in bits of LSH value used for prunning (bigger than simdist - optional)>";
+	}
+	return 0;
+}
+
+const char** VectorStorage::getConfigParameters( const ConfigType& type) const
+{
+	static const char* keys_CreateStorageClient[]	= {"simdist", "probsimdist", 0};
+	static const char* keys_CreateStorage[]		= {"vecdim", "simdist", "probsimdist", "bits", "variations", 0};
+	switch (type)
+	{
+		case CmdCreateClient:	return keys_CreateStorageClient;
+		case CmdCreate:		return keys_CreateStorage;
+	}
+	return 0;
+}
+
