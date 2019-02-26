@@ -12,9 +12,11 @@
 #include "strus/debugTraceInterface.hpp"
 #include "strus/base/utf8.hpp"
 #include "strus/base/string_format.hpp"
+#include "strus/base/minimalCover.hpp"
 #include "internationalization.hpp"
 #include "errorUtils.hpp"
 #include <algorithm>
+#include <limits>
 #include <set>
 #include <map>
 
@@ -109,7 +111,6 @@ SentenceLexerContext::SentenceLexerContext(
 		ErrorBufferInterface* errorhnd_)
 	:m_errorhnd(errorhnd_),m_debugtrace(0),m_vstorage(vstorage_),m_database(database_)
 	,m_splits(),m_splitidx(-1)
-	,m_featnomap(),m_typenomap(),m_groups(),m_featmap()
 {
 	DebugTraceInterface* dbgi = m_errorhnd->debugTrace();
 	if (dbgi) m_debugtrace = dbgi->createTraceContext( STRUS_DBGTRACE_COMPONENT_NAME);
@@ -178,6 +179,18 @@ SentenceLexerContext::SentenceLexerContext(
 SentenceLexerContext::~SentenceLexerContext()
 {
 	if (m_debugtrace) delete m_debugtrace;
+}
+
+static std::string termListString( const SentenceTermList& terms, const char* sep)
+{
+	std::string rt;
+	SentenceTermList::const_iterator ti = terms.begin(), te = terms.end();
+	for (; ti != te; ++ti)
+	{
+		if (!rt.empty()) rt.append( sep);
+		rt.append( strus::string_format( "%s '%s'", ti->type().c_str(), ti->value().c_str()));
+	}
+	return rt;
 }
 
 static std::string typeListString( const std::vector<std::string>& types, const char* sep)
@@ -1055,7 +1068,7 @@ static std::vector<AlternativeSplit> getAlternativeSplits( const VectorStorageCl
 	return rt;
 }
 
-std::string SentenceLexerContext::featureValue( int idx)
+std::string SentenceLexerContext::featureValue( int idx) const
 {
 	try
 	{
@@ -1065,7 +1078,7 @@ std::string SentenceLexerContext::featureValue( int idx)
 	CATCH_ERROR_ARG1_MAP_RETURN( _TXT("error in '%s' getting feature value in current split: %s"), MODULENAME, *m_errorhnd, std::string());
 }
 
-std::vector<std::string> SentenceLexerContext::featureTypes( int idx)
+std::vector<std::string> SentenceLexerContext::featureTypes( int idx) const
 {
 	try
 	{
@@ -1096,11 +1109,67 @@ bool SentenceLexerContext::fetchNextSplit()
 
 int SentenceLexerContext::nofTokens() const
 {
-	if (m_splitidx >= 0 && m_splitidx < (int)m_splits.size()) return m_splits[ m_splitidx].ar.size();
-	return 0;
+	if (m_splitidx >= 0 && m_splitidx < (int)m_splits.size())
+	{
+		return m_splits[ m_splitidx].ar.size();
+	}
+	else
+	{
+		return 0;
+	}
 }
 
-SentenceLexerContext::FeatNum SentenceLexerContext::getOrCreateFeatNum( const SentenceTerm& term)
+struct FeatNum
+{
+	strus::Index typeno;
+	strus::Index featno;
+
+	FeatNum( const strus::Index& typeno_, const strus::Index& featno_)
+		:typeno(typeno_),featno(featno_){}
+	FeatNum( const FeatNum& o)
+		:typeno(o.typeno),featno(o.featno){}
+	FeatNum()
+		:typeno(0),featno(0){}
+
+	bool operator < (const FeatNum& o) const
+	{
+		return featno == o.featno ? typeno < o.typeno : featno < o.featno;
+	}
+	bool valid() const
+	{
+		return typeno && featno;
+	}
+};
+
+typedef int GroupId;
+typedef std::vector<GroupId> Group;
+
+class SimGroupData
+{
+public:
+	explicit SimGroupData( const VectorStorageClient* vstorage_)
+		:m_vstorage(vstorage_),m_featnomap(),m_typenomap(),m_vectors(),m_groups(),m_featmap(){}
+
+	FeatNum getOrCreateFeatNum( const SentenceTerm& term);
+	GroupId getOrCreateFeatGroup( const FeatNum& featnum);
+
+	const std::vector<Group>& groups() const
+	{
+		return m_groups;
+	}
+
+private:
+	const VectorStorageClient* m_vstorage;
+	std::map<std::string,strus::Index> m_featnomap;
+	std::map<std::string,strus::Index> m_typenomap;
+	std::vector<WordVector> m_vectors;
+	std::vector<Group> m_groups;
+	std::map<FeatNum,GroupId> m_featmap;
+};
+
+#define SIMILIARITY_DISTANCE 0.5
+
+FeatNum SimGroupData::getOrCreateFeatNum( const SentenceTerm& term)
 {
 	typedef std::map<std::string,strus::Index> Map;
 	strus::Index featno = 0;
@@ -1129,52 +1198,167 @@ SentenceLexerContext::FeatNum SentenceLexerContext::getOrCreateFeatNum( const Se
 	return FeatNum( typeno, featno);
 }
 
-#define SIMILIARITY_DISTANCE 0.5
-
-SentenceLexerContext::FeatGroup& SentenceLexerContext::getOrCreateFeatGroup( const FeatNum& featnum)
+GroupId SimGroupData::getOrCreateFeatGroup( const FeatNum& featnum)
 {
 	typedef std::map<FeatNum,GroupId> Map;
 	std::pair<Map::iterator,bool> ins = m_featmap.insert( Map::value_type( featnum, m_groups.size()));
 	if (ins.second /*insert took place*/)
 	{
-		m_groups.push_back( FeatGroup( m_vstorage->getVector( featnum.typeno, featnum.typeno)));
+		m_vectors.push_back( m_vstorage->getVector( featnum.typeno, featnum.typeno));
+		m_groups.push_back( Group());
+		m_groups.back().push_back( m_groups.size());
 
-		std::vector<FeatGroup>::iterator gi = m_groups.begin(), ge = m_groups.end();
+		std::vector<Group>::iterator gi = m_groups.begin(), ge = m_groups.end();
 		GroupId gidx = 0, last_gidx = m_groups.size();
+		m_groups.back().push_back( last_gidx);
+
 		for (--ge/*without new group added*/; gi != ge; ++gi,++gidx)
 		{
-			double sim = m_vstorage->vectorSimilarity( m_groups.back().vec, gi->vec);
+			double sim = m_vstorage->vectorSimilarity( m_vectors.back(), m_vectors[ gidx]);
 			if (sim > SIMILIARITY_DISTANCE)
 			{
-				m_groups.back().neighbours.push_back( gidx);
-				gi->neighbours.push_back( last_gidx);
+				m_groups.back().push_back( gidx);
+				gi->push_back( last_gidx);
 			}
 		}
-		return m_groups.back();
+		return last_gidx;
 	}
 	else
 	{
-		return m_groups[ ins.first->second];
+		return ins.first->second;
 	}
 }
 
-double SentenceLexerContext::getWeight( const std::vector<SentenceTerm>& terms)
+
+std::vector<SentenceGuess> SentenceLexerContext::rankSentences( const std::vector<SentenceGuess>& sentences, int maxNofResults) const
 {
-	int nofUnknown = 0;
-	std::vector<SentenceTerm>::const_iterator ti = terms.begin(), te = terms.end();
-	for (; ti != te; ++ti)
+	try
 	{
-		FeatNum featnum = getOrCreateFeatNum( *ti);
-		if (featnum.valid())
+		if (sentences.empty()) return std::vector<SentenceGuess>();
+		struct Rank
 		{
-			(void)getOrCreateFeatGroup( featnum);
-		}
-		else
+			int idx;
+			double weight;
+
+			Rank( int idx_, double weight_)
+				:idx(idx_),weight(weight_){}
+			Rank( const Rank& o)
+				:idx(o.idx),weight(o.weight){}
+
+			bool operator < (const Rank& o) const
+			{
+				return (std::abs( weight - o.weight) <= std::numeric_limits<float>::epsilon()) ? idx < o.idx : weight < o.weight;
+			}
+		};
+		struct Range
 		{
-			++nofUnknown;
+			int min;
+			int max;
+		
+			Range( int min_, int max_) :min(min_),max(max_){}
+			Range( const Range& o) :min(o.min),max(o.max){}
+		};
+
+		struct Local
+		{
+			static int getWeight( const Range& hirange, const Range& lorange, int hival, int loval)
+			{
+				int lodiff = lorange.max - lorange.min;
+				hival -= hirange.min;
+				loval -= lorange.min;
+				return hival * (lodiff + 1) + loval;
+			}
+		};
+
+		// Map features to sets of integers with the property that A * B != {}, if A ~ B
+		// Each set gets an integer assigned
+		// Assign group of such integers to sentences
+		// The minimal cover of a group is used to calculate the weight of the candidate
+		SimGroupData simGroupData( m_vstorage);
+		std::vector<std::vector<GroupId> > sentence_groups;
+		sentence_groups.reserve( sentences.size());
+
+		std::vector<SentenceGuess>::const_iterator si = sentences.begin(), se = sentences.end();
+		for (; si != se; ++si)
+		{
+			sentence_groups.push_back( std::vector<GroupId>());
+			SentenceTermList::const_iterator ti = si->terms().begin(), te = si->terms().end();
+			for (; ti != te; ++ti)
+			{
+				FeatNum featnum = simGroupData.getOrCreateFeatNum( *ti);
+				if (featnum.valid())
+				{
+					GroupId gid = simGroupData.getOrCreateFeatGroup( featnum);
+					sentence_groups.back().push_back( gid);
+				}
+			}
 		}
+
+		// Calculate minimal cover approximations and value boundaries for mapping pairs of (minimal cover size, nof terms) to an integer:
+		MinimalCoverData minimalCoverData( simGroupData.groups());
+		std::vector<Rank> ranks;
+		ranks.reserve( sentences.size());
+
+		Range coverRange( std::numeric_limits<int>::max(), 0);
+		Range sentsizeRange( std::numeric_limits<int>::max(), 0);
+
+		std::vector<std::vector<GroupId> >::const_iterator gi = sentence_groups.begin(), ge = sentence_groups.end();
+		for (int gidx=0; gi != ge; ++gi,++gidx)
+		{
+			int minimalCoverSize = minimalCoverData.minimalCoverSizeApproximation( *gi);
+			Rank rank( gidx, minimalCoverSize);
+			ranks.push_back( rank);
+
+			if (minimalCoverSize < coverRange.min) coverRange.min = minimalCoverSize;
+			if (minimalCoverSize > coverRange.max) coverRange.max = minimalCoverSize;
+			int nofTerms = sentences[gidx].terms().size();
+			if (nofTerms < sentsizeRange.min) sentsizeRange.min = nofTerms;
+			if (nofTerms > sentsizeRange.max) sentsizeRange.max = nofTerms;
+		}
+
+		// Calculate the weights of the ranks by dividing the integer corresponding to the pair (minimal cover size, nof terms) by the maximum value 
+		//	to get normalized values between 0.0 and 1.0
+		double maxWeight = 0.0;
+		std::vector<Rank>::iterator ri = ranks.begin(), re = ranks.end();
+		for (; ri != re; ++ri)
+		{
+			const std::vector<GroupId>& group = sentence_groups[ ri->idx];
+			ri->weight = Local::getWeight( coverRange, sentsizeRange, (int)ri->weight, group.size());
+			if (ri->weight > maxWeight) maxWeight = ri->weight;
+		}
+		ri = ranks.begin(), re = ranks.end();
+		for (; ri != re; ++ri)
+		{
+			ri->weight /= maxWeight;
+		}
+
+		// Select the best N (weight) of the ranks and return them
+		if (maxNofResults > (int)ranks.size())
+		{
+			maxNofResults = ranks.size();
+		}
+		std::nth_element( ranks.begin(), ranks.begin() + maxNofResults, ranks.end());
+		std::sort( ranks.begin(), ranks.begin() + maxNofResults);
+
+		std::vector<SentenceGuess> rt;
+		rt.reserve( maxNofResults);
+		ri = ranks.begin();
+		re = ranks.begin() + maxNofResults;
+		for (; ri != re; ++ri)
+		{
+			const SentenceGuess& sentence = sentences[ ri->idx];
+			rt.push_back( SentenceGuess( sentence.classname(), sentence.terms(), ri->weight));
+		}
+		if (m_debugtrace)
+		{
+			m_debugtrace->open( "ranklist");
+			std::string sentstr = termListString( si->terms(), ", ");
+			m_debugtrace->event( "sentence", "weight %.3f class %s %s", si->weight(), si->classname().c_str(), sentstr.c_str());
+			m_debugtrace->close();
+		}
+		return rt;
 	}
-	return 0.0;
+	CATCH_ERROR_ARG1_MAP_RETURN( _TXT("error in '%s' getting ranked list of sentence guesses: %s"), MODULENAME, *m_errorhnd, std::vector<SentenceGuess>());
 }
 
 

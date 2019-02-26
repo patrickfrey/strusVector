@@ -51,11 +51,11 @@ public:
 
 	virtual int nofTokens() const;
 
-	virtual std::string featureValue( int idx);
+	virtual std::string featureValue( int idx) const;
 
-	virtual std::vector<std::string> featureTypes( int idx);
+	virtual std::vector<std::string> featureTypes( int idx) const;
 
-	virtual double getWeight( const std::vector<SentenceTerm>& terms);
+	virtual std::vector<SentenceGuess> rankSentences( const std::vector<SentenceGuess>& sentences, int maxNofResults) const;
 
 public:
 	struct AlternativeSplit
@@ -101,57 +101,12 @@ public:
 	}
 
 private:
-	struct FeatNum
-	{
-		strus::Index typeno;
-		strus::Index featno;
-
-		FeatNum( const strus::Index& typeno_, const strus::Index& featno_)
-			:typeno(typeno_),featno(featno_){}
-		FeatNum( const FeatNum& o)
-			:typeno(o.typeno),featno(o.featno){}
-		FeatNum()
-			:typeno(0),featno(0){}
-
-		bool operator < (const FeatNum& o) const
-		{
-			return featno == o.featno ? typeno < o.typeno : featno < o.featno;
-		}
-		bool valid() const
-		{
-			return typeno && featno;
-		}
-	};
-	typedef int GroupId;
-	struct FeatGroup
-	{
-		WordVector vec;
-		std::vector<GroupId> neighbours;
-
-		explicit FeatGroup( const WordVector& vec_)
-			:vec(vec_),neighbours(){}
-		FeatGroup( const WordVector& vec_, const std::vector<GroupId>& neighbours_)
-			:vec(vec_),neighbours(neighbours_){}
-		FeatGroup( const FeatGroup& o)
-			:vec(o.vec),neighbours(o.neighbours){}
-		FeatGroup()
-			:vec(),neighbours(){}
-	};
-
-	FeatNum getOrCreateFeatNum( const SentenceTerm& term);
-	FeatGroup& getOrCreateFeatGroup( const FeatNum& featnum);
-
-private:
 	ErrorBufferInterface* m_errorhnd;
 	DebugTraceContextInterface* m_debugtrace;
 	const VectorStorageClient* m_vstorage;
 	const DatabaseClientInterface* m_database;
 	std::vector<AlternativeSplit> m_splits;
 	int m_splitidx;	
-	std::map<std::string,strus::Index> m_featnomap;
-	std::map<std::string,strus::Index> m_typenomap;
-	std::vector<FeatGroup> m_groups;
-	std::map<FeatNum,GroupId> m_featmap;
 };
 
 }//namespace
