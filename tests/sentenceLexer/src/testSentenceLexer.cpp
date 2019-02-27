@@ -1487,7 +1487,7 @@ int main( int argc, const char** argv)
 		}
 		if (argc > argidx)
 		{
-			std::cerr << "too many arguments (maximum 5 expected)" << std::endl;
+			std::cerr << "too many arguments (maximum 6 expected)" << std::endl;
 			rt = 1;
 			printUsageAndExit = true;
 		}
