@@ -32,7 +32,7 @@ class SentenceLexerInstance
 {
 public:
 	/// \brief Constructor
-	SentenceLexerInstance( const VectorStorageClient* vstorage_, const DatabaseClientInterface* database_, ErrorBufferInterface* errorhnd_);
+	SentenceLexerInstance( const VectorStorageClient* vstorage_, const DatabaseClientInterface* database_, int max_pos_visits_, ErrorBufferInterface* errorhnd_);
 
 	virtual ~SentenceLexerInstance();
 
@@ -73,6 +73,7 @@ private:
 	std::vector<LinkDef> m_linkDefs;
 	std::vector<SeparatorDef> m_separators;
 	std::vector<char> m_linkChars;
+	int m_max_pos_visits;
 };
 
 }//namespace

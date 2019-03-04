@@ -22,8 +22,8 @@ using namespace strus;
 #define MODULENAME "sentence lexer instance (vector)"
 #define STRUS_DBGTRACE_COMPONENT_NAME "sentence"
 
-SentenceLexerInstance::SentenceLexerInstance( const VectorStorageClient* vstorage_, const DatabaseClientInterface* database_, ErrorBufferInterface* errorhnd_)
-	:m_errorhnd(errorhnd_),m_debugtrace(0),m_vstorage(vstorage_),m_database(database_)
+SentenceLexerInstance::SentenceLexerInstance( const VectorStorageClient* vstorage_, const DatabaseClientInterface* database_, int max_pos_visits_, ErrorBufferInterface* errorhnd_)
+	:m_errorhnd(errorhnd_),m_debugtrace(0),m_vstorage(vstorage_),m_database(database_),m_linkDefs(),m_separators(),m_linkChars(),m_max_pos_visits(max_pos_visits_)
 {
 	DebugTraceInterface* dbgi = m_errorhnd->debugTrace();
 	if (dbgi) m_debugtrace = dbgi->createTraceContext( STRUS_DBGTRACE_COMPONENT_NAME);
@@ -106,7 +106,7 @@ SentenceLexerContextInterface* SentenceLexerInstance::createContext( const std::
 {
 	try
 	{
-		return new SentenceLexerContext( m_vstorage, m_database, m_separators, m_linkDefs, m_linkChars, source, m_errorhnd);
+		return new SentenceLexerContext( m_vstorage, m_database, m_separators, m_linkDefs, m_linkChars, source, m_max_pos_visits, m_errorhnd);
 
 	}
 	CATCH_ERROR_ARG1_MAP_RETURN( _TXT("error in '%s' creating context for analysis: %s"), MODULENAME, *m_errorhnd, NULL);

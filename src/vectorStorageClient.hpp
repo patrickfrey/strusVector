@@ -99,6 +99,8 @@ private:
 	strus::Reference<SimHashMap> getSimHashMap( const std::string& type) const;
 	std::vector<VectorQueryResult> simHashToVectorQueryResults( const std::vector<SimHashQueryResult>& res, int maxNofResults, double minSimilarity) const;
 
+public:
+	enum {DefaultLexerPrunning=3};
 private:
 	ErrorBufferInterface* m_errorhnd;
 	DebugTraceContextInterface* m_debugtrace;
@@ -109,6 +111,7 @@ private:
 	typedef strus::Reference<SimHashMapMap> SimHashMapMapRef;
 	mutable strus::Reference<SimHashMapMap> m_simHashMapMap;
 	std::vector<std::string> m_inMemoryTypes;
+	int m_lexer_prunning;			///< parameter for lexer: number candidates on equal position not improving followed (default is DefaultLexerPrunning)
 	strus::mutex m_transaction_mutex;	///< mutual exclusion in the critical part of a transaction
 };
 

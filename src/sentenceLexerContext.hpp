@@ -41,6 +41,7 @@ public:
 		const std::vector<LinkDef>& linkDefs,
 		const std::vector<char>& linkChars,
 		const std::string& source_,
+		int max_pos_visits,
 		ErrorBufferInterface* errorhnd_);
 	
 	virtual ~SentenceLexerContext();
@@ -90,8 +91,6 @@ public:
 	};
 
 public:
-	/// \brief Defines prunning of evaluation paths not minimizing the number of features detected
-	enum {MaxPositionVisits=10};
 	/// \brief Defines a limit for prunning variants evaluated dependend on the minimum number of features of a found solution
 	static int maxFeaturePrunning( int minNofFeatures)
 	{

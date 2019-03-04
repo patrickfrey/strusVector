@@ -97,7 +97,7 @@ struct NormalizedField
 
 static NormalizedField normalizeField( const std::string& source, const std::vector<LinkDef>& linkDefs);
 static std::vector<std::string> getFields( const std::string& source, const std::vector<SeparatorDef>& separatorDefs);
-static std::vector<AlternativeSplit> getAlternativeSplits( const VectorStorageClient* vstorage, const DatabaseClientInterface* database, const std::vector<NormalizedField>& fields, const std::vector<char>& linkChars, DebugTraceContextInterface* debugtrace);
+static std::vector<AlternativeSplit> getAlternativeSplits( const VectorStorageClient* vstorage, const DatabaseClientInterface* database, const std::vector<NormalizedField>& fields, const std::vector<char>& linkChars, int max_pos_visits, DebugTraceContextInterface* debugtrace);
 static std::string typeListString( const std::vector<std::string>& types, const char* sep);
 
 
@@ -108,6 +108,7 @@ SentenceLexerContext::SentenceLexerContext(
 		const std::vector<LinkDef>& linkDefs,
 		const std::vector<char>& linkChars,
 		const std::string& source,
+		int max_pos_visits,
 		ErrorBufferInterface* errorhnd_)
 	:m_errorhnd(errorhnd_),m_debugtrace(0),m_vstorage(vstorage_),m_database(database_)
 	,m_splits(),m_splitidx(-1)
@@ -122,7 +123,7 @@ SentenceLexerContext::SentenceLexerContext(
 	{
 		normalizedFields.push_back( normalizeField( *fi, linkDefs));
 	}
-	m_splits = getAlternativeSplits( vstorage_, database_, normalizedFields, linkChars, m_debugtrace);
+	m_splits = getAlternativeSplits( vstorage_, database_, normalizedFields, linkChars, max_pos_visits, m_debugtrace);
 
 	if (m_debugtrace)
 	{
@@ -455,11 +456,20 @@ public:
 	std::string keyStrings( const char* delim, int maxsize)
 	{
 		std::string rt;
-		int idx = 0;
-		for (; idx < maxsize && editState( idx); ++idx)
+		int cnt = 0;
+		if (m_candidates.empty()) return std::string();
+		for (; cnt < maxsize; ++cnt)
 		{
-			if (idx) rt.append( delim);
-			rt.append( m_field.key.c_str(), m_candidates[ idx].keylen);
+			if (cnt) rt.append( delim);
+			rt.append( m_field.key.c_str(), m_candidates[ m_candidateidx].keylen);
+			if (m_candidateidx+1 == m_candidates.size())
+			{
+				if (!backtrackStateUpperBound()) return rt;
+			}
+			else
+			{
+				if (!editState( m_candidateidx+1)) return rt;
+			}
 		}
 		return rt;
 	}
@@ -798,10 +808,11 @@ public:
 struct AlternativeSplitQueue
 {
 public:
-	AlternativeSplitQueue( const NormalizedField& origfield, DebugTraceContextInterface* debugtrace_)
+	AlternativeSplitQueue( const NormalizedField& origfield, int max_pos_visits_, DebugTraceContextInterface* debugtrace_)
 		:m_results(),m_paths(),m_pathqueue(),m_top(),m_elements(),m_elementlists(),m_pos2minNofFeaturesMap()
 		,m_minNofUntyped(std::numeric_limits<int>::max())
 		,m_minNofFeatures(std::numeric_limits<int>::max())
+		,m_max_pos_visits(max_pos_visits_)
 		,m_debugtrace(debugtrace_)
 	{
 		m_paths.push_back( KeyIteratorPath( origfield));
@@ -862,13 +873,13 @@ public:
 				}
 				else
 				{
-					if (++vc.cnt >= SentenceLexerContext::MaxPositionVisits)
+					if (++vc.cnt >= m_max_pos_visits)
 					{
 						if (m_minNofFeatures != std::numeric_limits<int>::max())
 						{
 							if (m_debugtrace) m_debugtrace->event( "prunning", "pos %d, node visits %d", nextpos, vc.cnt);
 							return;
-							/// ... rule out this path, because we visited it already a MaxPositionVisits times without improvement
+							/// ... rule out this path, because we visited it already a 'm_max_pos_visits' times without improvement
 						}
 					}
 					else if (m_minNofFeatures < std::numeric_limits<int>::max())
@@ -970,12 +981,13 @@ private:
 	Pos2minNofFeaturesMap m_pos2minNofFeaturesMap;
 	int m_minNofUntyped;
 	int m_minNofFeatures;
+	int m_max_pos_visits;
 	DebugTraceContextInterface* m_debugtrace;
 };
 
-static std::vector<AlternativeSplit> getAlternativeSplits( const VectorStorageClient* vstorage, const DatabaseClientInterface* database, const NormalizedField& origfield, const std::vector<char>& linkChars, DebugTraceContextInterface* debugtrace)
+static std::vector<AlternativeSplit> getAlternativeSplits( const VectorStorageClient* vstorage, const DatabaseClientInterface* database, const NormalizedField& origfield, const std::vector<char>& linkChars, int max_pos_visits, DebugTraceContextInterface* debugtrace)
 {
-	AlternativeSplitQueue queue( origfield, debugtrace);
+	AlternativeSplitQueue queue( origfield, max_pos_visits, debugtrace);
 
 	const NormalizedField* field = queue.nextField();
 	for (; field; field=queue.nextField())
@@ -1053,16 +1065,16 @@ static void joinAlternativeSplits( std::vector<AlternativeSplit>& split, const s
 	}
 }
 
-static std::vector<AlternativeSplit> getAlternativeSplits( const VectorStorageClient* vstorage, const DatabaseClientInterface* database, const std::vector<NormalizedField>& fields, const std::vector<char>& linkChars, DebugTraceContextInterface* debugtrace)
+static std::vector<AlternativeSplit> getAlternativeSplits( const VectorStorageClient* vstorage, const DatabaseClientInterface* database, const std::vector<NormalizedField>& fields, const std::vector<char>& linkChars, int max_pos_visits, DebugTraceContextInterface* debugtrace)
 {
 	if (debugtrace) debugtrace->event( "fields", "%d", (int)fields.size());
 	if (fields.empty()) return std::vector<AlternativeSplit>();
 	std::vector<NormalizedField>::const_iterator fi = fields.begin(), fe = fields.end();
-	std::vector<AlternativeSplit> rt = getAlternativeSplits( vstorage, database, *fi, linkChars, debugtrace);
+	std::vector<AlternativeSplit> rt = getAlternativeSplits( vstorage, database, *fi, linkChars, max_pos_visits, debugtrace);
 
 	for (++fi; fi != fe; ++fi)
 	{
-		std::vector<AlternativeSplit> nextsplits = getAlternativeSplits( vstorage, database, *fi, linkChars, debugtrace);
+		std::vector<AlternativeSplit> nextsplits = getAlternativeSplits( vstorage, database, *fi, linkChars, max_pos_visits, debugtrace);
 		joinAlternativeSplits( rt, nextsplits);
 	}
 	return rt;

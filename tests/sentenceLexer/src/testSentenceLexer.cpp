@@ -37,10 +37,11 @@
 #include <cstdio>
 #include <algorithm>
 
+#define STRUS_PSEUDO_RANDOM_SEED -763074118
 #define STRUS_DBGTRACE_COMPONENT_NAME "test"
 #define VEC_EPSILON 1e-5
 static bool g_verbose = false;
-static strus::PseudoRandom g_random;
+static strus::PseudoRandom g_random( STRUS_PSEUDO_RANDOM_SEED);
 static strus::ErrorBufferInterface* g_errorhnd = 0;
 static strus::DebugTraceInterface* g_dbgtrace = 0;
 
@@ -56,8 +57,9 @@ strus::Index g_nofFeatures = 10000;
 int g_maxTermLength = 30;
 int g_maxFeatureTerms = 5;
 int g_maxNofCollisions = 1000;
+int g_maxNofPositionVisits = 100; //... same value as 'lexprun=?' in DEFAULT_CONFIG
 
-#define DEFAULT_CONFIG "path=vstorage"
+#define DEFAULT_CONFIG "path=vstorage;lexprun=100"
 
 struct FeatureTerm
 {
@@ -169,15 +171,15 @@ struct TermDef
 
 	bool operator < (const TermDef& o) const
 	{
-		return termidx == o.termidx ? separator < o.separator : termidx < o.termidx;
+		return termidx == o.termidx ? (separator == o.separator ? split < o.split : separator < o.separator) : termidx < o.termidx;
 	}
 	bool operator == (const TermDef& o) const
 	{
-		return termidx == o.termidx && separator == o.separator;
+		return termidx == o.termidx && separator == o.separator && split == o.split;
 	}
 	int compare( const TermDef& o) const
 	{
-		return termidx == o.termidx ? separator - o.separator : termidx - o.termidx;
+		return termidx == o.termidx ? (separator == o.separator ? (int)split - (int)o.split : separator - o.separator) : termidx - o.termidx;
 	}
 };
 
@@ -301,13 +303,12 @@ struct TermSequenceDef
 	{
 		if (separatorAtStart == o.separatorAtStart)
 		{
-			if (terms.size() == o.terms.size())
-			{
-				std::vector<TermDef>::const_iterator ai = terms.begin(), ae = terms.end(), bi = o.terms.begin();
-				for (; ai != ae && *ai == *bi; ++ai,++bi){}
-				return ai == ae ? 0 : ai->compare(*bi);
-			}
-			else return (int)terms.size() - (int)o.terms.size();
+			std::vector<TermDef>::const_iterator ai = terms.begin(), ae = terms.end(), bi = o.terms.begin(), be = o.terms.end();
+			for (; ai != ae && bi != be && *ai == *bi; ++ai,++bi){}
+			if (ai == ae && bi == be) return 0;
+			if (ai == ae) return -1;
+			if (bi == be) return +1;
+			return ai->compare(*bi);
 		}
 		else return ((int)separatorAtStart - (int)o.separatorAtStart);
 	}
@@ -321,14 +322,13 @@ struct TermSequenceDef
 };
 
 struct FeatureDef
-	:public TermSequenceDef
 {
-	FeatureDef( const TermSequenceDef& terms_, const std::vector<int>& typeindices_)
-		:TermSequenceDef(terms_),typeindices(typeindices_){}
+	FeatureDef( const TermSequenceDef& termseq_, const std::vector<int>& typeindices_)
+		:termseq(termseq_),typeindices(typeindices_){}
 	FeatureDef( const FeatureDef& o)
-		:TermSequenceDef(o),typeindices(o.typeindices){}
+		:termseq(o.termseq),typeindices(o.typeindices){}
 	FeatureDef()
-		:TermSequenceDef( false/*with unknowns*/, false/*with spaces*/)
+		:termseq( false/*with unknowns*/, false/*with spaces*/),typeindices()
 	{
 		std::set<int> typeset;
 		int ti = 0, te = 1+g_random.get( 0, 1+g_random.get( 0, 1+g_nofTypes));
@@ -340,7 +340,7 @@ struct FeatureDef
 	}
 	FeatureDef& operator = (const FeatureDef& o)
 	{
-		TermSequenceDef::operator =(o);
+		termseq = o.termseq;
 		typeindices = o.typeindices;
 		return *this;
 	}
@@ -358,6 +358,11 @@ struct FeatureDef
 		rt.push_back( '}');
 		return rt;
 	}
+	typedef std::vector<int> Id;
+	Id id() const
+	{
+		return termseq.id();
+	}
 
 	bool operator < ( const FeatureDef& o) const	{return compare( o) < 0;}
 	bool operator == ( const FeatureDef& o) const	{return compare( o) == 0;}
@@ -368,16 +373,31 @@ struct FeatureDef
 		std::set<int> bb( o.typeindices.begin(), o.typeindices.end());
 		std::set<int>::const_iterator ai = aa.begin(), ae = aa.end(), bi = bb.begin(), be = bb.end();
 		for (; ai != ae && bi != be && *ai == *bi; ++ai,++bi){}
-		return (ai == ae || bi == be) ? (ai == ae ? +1:-1) : (*ai - *bi);
+		if (ai == ae && bi == be) return 0;
+		if (ai == ae) return -1;
+		if (bi == be) return +1;
+		return *ai - *bi;
 	}
 	int compare( const FeatureDef& o) const
 	{
-		int cmp = TermSequenceDef::compare( o);
+		int cmp = termseq.compare( o.termseq);
 		return cmp ? cmp : compareTypes( o);
 	}
 
+	TermSequenceDef termseq;
 	std::vector<int> typeindices;
 };
+
+static int compareFeatureDefVectors( const std::vector<FeatureDef>& a, const std::vector<FeatureDef>& b)
+{
+	std::vector<FeatureDef>::const_iterator ai = a.begin(), ae = a.end();
+	std::vector<FeatureDef>::const_iterator bi = b.begin(), be = b.end();
+	for (; ai != ae && bi != be && *ai == *bi; ++ai,++bi){}
+	if (ai == ae && bi == be) return 0;
+	if (ai == ae) return -1;
+	if (bi == be) return +1;
+	return ai->compare( *bi);
+}
 
 struct QueryDef
 	:public TermSequenceDef
@@ -387,7 +407,7 @@ struct QueryDef
 	QueryDef()
 		:TermSequenceDef( true/*with unknowns*/, true/*with spaces*/){}
 	QueryDef( const FeatureDef& o)
-		:TermSequenceDef(o){}
+		:TermSequenceDef(o.termseq){}
 
 	QueryDef& operator = (const QueryDef& o)
 	{
@@ -482,7 +502,7 @@ public:
 		}
 
 		if (g_verbose) std::cerr << "create random features ... " << std::endl;
-		std::set<FeatureDef::Id> fset;
+		std::set<TermSequenceDef::Id> fset;
 		nofTries = 0;
 		while (g_nofFeatures > (int)m_features.size())
 		{
@@ -500,14 +520,14 @@ public:
 				}
 				continue;
 			}
-			m_featureStartMap.insert( std::pair<int,int>( fdef.terms[0].termidx, m_features.size()));
+			m_featureStartMap.insert( std::pair<int,int>( fdef.termseq.terms[0].termidx, m_features.size()));
 			m_features.push_back( fdef);
 			while (g_nofFeatures > (int)m_features.size() && g_random.get( 0, 5) == 1)
 			{
-				fdef.modify( false/*with space*/);
+				fdef.termseq.modify( false/*with space*/);
 				if (fset.insert( fdef.id()).second == true)
 				{
-					m_featureStartMap.insert( std::pair<int,int>( fdef.terms[0].termidx, m_features.size()));
+					m_featureStartMap.insert( std::pair<int,int>( fdef.termseq.terms[0].termidx, m_features.size()));
 					m_features.push_back( fdef);
 				}
 			}
@@ -576,7 +596,7 @@ public:
 	}
 	std::string featureString( int featureIdx) const
 	{
-		return m_features[ featureIdx].tostring( m_terms, m_unknownTerms);
+		return m_features[ featureIdx].termseq.tostring( m_terms, m_unknownTerms);
 	}
 	std::vector<std::string> featureTypes( int featureIdx) const
 	{
@@ -628,34 +648,23 @@ public:
 			return *this;
 		}
 
-		static bool compareFeatures( const std::vector<FeatureDef>& a, const std::vector<FeatureDef>& b)
-		{
-			if (a.size() == b.size())
-			{
-				std::vector<FeatureDef>::const_iterator ai = a.begin(), ae = a.end();
-				std::vector<FeatureDef>::const_iterator bi = b.begin();
-				for (; ai < ae && *ai == *bi; ++ai,++bi){}
-				if (ai == ae) return false;
-				return *ai < *bi;
-			}
-			else return a.size() < b.size();
-		}
-
 		bool operator < (const Candidate& o) const
+		{
+			return compare( o) < 0;
+		}
+		int compare( const Candidate& o) const
 		{
 			return features.size() == o.features.size()
 				? (pos == o.pos
 					? (nofUntyped == o.nofUntyped
-						? compareFeatures( features, o.features)
-						: nofUntyped < o.nofUntyped)
-					: pos < o.pos)
-				: features.size() < o.features.size();
+						? compareFeatureDefVectors( features, o.features)
+						: nofUntyped - o.nofUntyped)
+					: pos - o.pos)
+				: (int)features.size() - (int)o.features.size();
 		}
 	};
 
-	/// \note HACK: Copied from SentenceLexer context to make prunning identical for making search results comparable
 	/// \brief Defines prunning of evaluation paths not minimizing the number of features detected
-	enum {MaxPositionVisits=10};
 	/// \brief Defines a limit for prunning variants evaluated dependend on the minimum number of features of a found solution
 	static int maxFeaturePrunning( int minNofFeatures)
 	{
@@ -671,7 +680,7 @@ public:
 		for (; fi != fe; ++fi)
 		{
 			if (!rt.empty()) rt.push_back(' ');
-			rt.append( fi->tostring( m_terms, m_unknownTerms));
+			rt.append( fi->termseq.tostring( m_terms, m_unknownTerms));
 		}
 		return rt;
 	}
@@ -706,7 +715,8 @@ public:
 		std::vector<TermDef>::const_iterator itr = termdef.terms.begin(), itr_end = termdef.terms.end();
 		if (itr != itr_end)
 		{
-			candidates.insert( Candidate( itr, std::vector<FeatureDef>(), 0, 0));
+			Candidate newCandidate( itr, std::vector<FeatureDef>(), 0, 0);
+			candidates.insert( newCandidate);
 		}
 		int minNofUntyped = std::numeric_limits<int>::max();
 		int minNofFeats = std::numeric_limits<int>::max();
@@ -763,7 +773,7 @@ public:
 			}
 			else
 			{
-				if (vc.cnt++ >= MaxPositionVisits) continue;
+				if (vc.cnt++ >= g_maxNofPositionVisits) continue;
 				expectedNofFeats = nofFeats + minNofFeats - vc.nofFeatures;
 			}
 			if (minNofFeats != std::numeric_limits<int>::max() && expectedNofFeats > maxFeaturePrunning( minNofFeats)) continue;
@@ -788,21 +798,21 @@ public:
 				const FeatureDef& fdef = m_features[ ri->second];
 				if (candidate.pos == 0)
 				{
-					if (termdef.separatorAtStart != fdef.separatorAtStart) continue;
+					if (termdef.separatorAtStart != fdef.termseq.separatorAtStart) continue;
 				}
 				else
 				{
-					if (fdef.separatorAtStart) continue;
+					if (fdef.termseq.separatorAtStart) continue;
 				}
 				std::vector<TermDef>::const_iterator
 					ai = candidate.itr, ae = termdef.terms.end(),
-					bi = fdef.terms.begin(), be = fdef.terms.end();
+					bi = fdef.termseq.terms.begin(), be = fdef.termseq.terms.end();
 				int aidx = 0;
 				bool split = false;
 				for (; ai != ae && bi != be; ++ai,++bi,++aidx)
 				{
 					split = ai->split;
-					if (split && aidx+1 == (int)fdef.terms.size())
+					if (split && aidx+1 == (int)fdef.termseq.terms.size())
 					{
 						if (!match( TermDef( ai->termidx, '\0'), *bi)) break;
 					}
@@ -819,10 +829,10 @@ public:
 				if (m_debugtrace)
 				{
 					std::string typeliststr = fdef.typestring();
-					std::string fstr = fdef.tostring( m_terms, m_unknownTerms);
+					std::string fstr = fdef.termseq.tostring( m_terms, m_unknownTerms);
 					m_debugtrace->event( "feature", "'%s' %s", fstr.c_str(), typeliststr.c_str());
 				}
-				if (defaultTerms == fdef)
+				if (defaultTerms == fdef.termseq)
 				{
 					hasDefault = false;
 				}
@@ -833,7 +843,8 @@ public:
 						std::string fliststr = featureListToString( features);
 						m_debugtrace->event( "follow", "'%s' next pos %d", fliststr.c_str(), (int)(candidate.pos + aidx));
 					}
-					candidates.insert( Candidate( ai, features, candidate.nofUntyped, candidate.pos + aidx));
+					Candidate newCandidate( ai, features, candidate.nofUntyped, candidate.pos + aidx);
+					candidates.insert( newCandidate);
 				}
 				else if ((minNofFeats == std::numeric_limits<int>::max() || (int)features.size() <= maxFeaturePrunning( minNofFeats))
 				&&	(minNofUntyped == std::numeric_limits<int>::max() || candidate.nofUntyped <= minNofUntyped))
@@ -864,7 +875,7 @@ public:
 				features.push_back( FeatureDef( defaultTerms, std::vector<int>()));
 				if (m_debugtrace)
 				{
-					std::string fstr = features.back().tostring( m_terms, m_unknownTerms);
+					std::string fstr = features.back().termseq.tostring( m_terms, m_unknownTerms);
 					m_debugtrace->event( "feature", "'%s' (default)", fstr.c_str());
 				}
 				std::vector<TermDef>::const_iterator ai = candidate.itr;
@@ -876,7 +887,8 @@ public:
 						std::string fliststr = featureListToString( features);
 						m_debugtrace->event( "follow", "'%s' (default) next pos %d", fliststr.c_str(), (int)(candidate.pos + 1));
 					}
-					candidates.insert( Candidate( ai, features, candidate.nofUntyped+1, candidate.pos + 1));
+					Candidate newCandidate( ai, features, candidate.nofUntyped+1, candidate.pos + 1);
+					candidates.insert( newCandidate);
 				}
 				else if ((minNofFeats == std::numeric_limits<int>::max() || (int)features.size() <= maxFeaturePrunning( minNofFeats))
 				&&	(minNofUntyped == std::numeric_limits<int>::max() || candidate.nofUntyped+1 <= minNofUntyped))
@@ -1195,18 +1207,12 @@ public:
 		const_iterator ai = m_elements.begin(), ae = m_elements.end();
 		const_iterator bi = o.m_elements.begin(), be = o.m_elements.end();
 		for (; ai != ae && bi != be && *ai == *bi; ++ai,++bi){}
-		if (ai == ae)
-		{
-			return (bi == be) ? 0 : -1;
-		}
-		else if (bi == be)
-		{
-			return (ai == ae) ? 0 : +1;
-		}
-		else
-		{
-			return (*ai < *bi) ? -1 : +1;
-		}
+		if (ai == ae && bi == be) return 0;
+		if (ai == ae) return -1;
+		if (bi == be) return +1;
+		if (*bi < *ai) return +1;
+		if (*ai < *bi) return -1;
+		return 0;
 	}
 
 	const_iterator begin() const	{return m_elements.begin();}
@@ -1220,6 +1226,14 @@ public:
 	{
 		m_elements.insert( li, le);
 	}
+	void erase( const TYPE& elem)
+	{
+		m_elements.erase( elem);
+	}
+	bool contains( const TYPE& elem)
+	{
+		return m_elements.find( elem) != m_elements.end();
+	}
 
 private:
 	std::set<TYPE> m_elements;
@@ -1227,11 +1241,45 @@ private:
 
 static ResultSet<ResultSet<FeatureDef> > createResultSetSet( const std::vector< std::vector<FeatureDef> >& orig)
 {
+	// Hack to make feature definitions with different split flags equal, turn all split flags to true:
+	std::vector< std::vector<FeatureDef> > fvv( orig);
+	std::vector< std::vector<FeatureDef> >::iterator fvvi = fvv.begin(), fvve = fvv.end();
+	for (; fvvi != fvve; ++fvvi)
+	{
+		std::vector<FeatureDef>::iterator fvi = fvvi->begin(), fve = fvvi->end();
+		for (; fvi != fve; ++fvi)
+		{
+			std::vector<TermDef>::iterator ti = fvi->termseq.terms.begin(), te = fvi->termseq.terms.end();
+			for (; ti != te; ++ti)
+			{
+				ti->split = false;
+			}
+		}
+	}
+	// create the result set:
 	ResultSet<ResultSet<FeatureDef> > rt;
-	typename std::vector< std::vector<FeatureDef> >::const_iterator oi = orig.begin(), oe = orig.end();
+	typename std::vector< std::vector<FeatureDef> >::const_iterator oi = fvv.begin(), oe = fvv.end();
 	for (; oi != oe; ++oi)
 	{
 		rt.insert( ResultSet<FeatureDef>( *oi));
+	}
+	// HACK: Eliminate result without separator at end if the result with separator at the end is in the set:
+	oi = fvv.begin();
+	for (; oi != oe; ++oi)
+	{
+		if (!oi->empty() && !oi->back().termseq.terms.empty())
+		{
+			char sepch = oi->back().termseq.terms.back().separator;
+			if (sepch == g_spaceSubst || sepch == g_delimiterSubst)
+			{
+				std::vector<FeatureDef> fdef = *oi;
+				fdef.back().termseq.terms.back().separator = '\0';
+				if (rt.contains( ResultSet<FeatureDef>( fdef)))
+				{
+					rt.erase( ResultSet<FeatureDef>( *oi));
+				}
+			}
+		}
 	}
 	return rt;
 }
@@ -1282,14 +1330,14 @@ bool isEqualTestResultExpected( const std::vector<std::vector<FeatureDef> >& res
 		{
 			if (*eptr < *rptr)
 			{
-				std::string termstr = eptr->tostring( testdata.terms(), testdata.unknownTerms());
+				std::string termstr = eptr->termseq.tostring( testdata.terms(), testdata.unknownTerms());
 				std::string typestr = eptr->typestring();
 				std::cerr << strus::string_format( "expected result '%s' {%s} not found", termstr.c_str(), typestr.c_str()) << std::endl;
 				return false;
 			}
 			else if (*rptr < *eptr)
 			{
-				std::string termstr = rptr->tostring( testdata.terms(), testdata.unknownTerms());
+				std::string termstr = rptr->termseq.tostring( testdata.terms(), testdata.unknownTerms());
 				std::string typestr = rptr->typestring();
 				std::cerr << strus::string_format( "unexpected result '%s' {%s} found", termstr.c_str(), typestr.c_str()) << std::endl;
 				return false;
@@ -1297,14 +1345,14 @@ bool isEqualTestResultExpected( const std::vector<std::vector<FeatureDef> >& res
 		}
 		else if (eptr)
 		{
-			std::string termstr = eptr->tostring( testdata.terms(), testdata.unknownTerms());
+			std::string termstr = eptr->termseq.tostring( testdata.terms(), testdata.unknownTerms());
 			std::string typestr = eptr->typestring();
 			std::cerr << strus::string_format( "expected result '%s' {%s} not found", termstr.c_str(), typestr.c_str()) << std::endl;
 			return false;
 		}
 		else
 		{
-			std::string termstr = rptr->tostring( testdata.terms(), testdata.unknownTerms());
+			std::string termstr = rptr->termseq.tostring( testdata.terms(), testdata.unknownTerms());
 			std::string typestr = rptr->typestring();
 			std::cerr << strus::string_format( "unexpected result '%s' {%s} found", termstr.c_str(), typestr.c_str()) << std::endl;
 			return false;
@@ -1324,7 +1372,7 @@ void printFeatureDefs( std::ostream& out, const std::vector<std::vector<FeatureD
 		int fidx = 0;
 		for (; fi != fe; ++fi,++fidx)
 		{
-			std::string fstr = fi->tostring( testdata.terms(), testdata.unknownTerms());
+			std::string fstr = fi->termseq.tostring( testdata.terms(), testdata.unknownTerms());
 			std::string tstr = fi->typestring();
 			out << strus::string_format( "\tfeature %d: '%s' %s", fidx, fstr.c_str(), tstr.c_str()) << std::endl;
 		}
@@ -1519,6 +1567,7 @@ int main( int argc, const char** argv)
 			std::cerr << "number of features: " << g_nofFeatures  << std::endl;
 			std::cerr << "maximum number of feature terms: " << g_maxFeatureTerms  << std::endl;
 			std::cerr << "maximum length of a term: " << g_maxTermLength  << std::endl;
+			std::cerr << "random seed: " << g_random.seed() << std::endl;
 		}
 		if (testidx >= 0 && testidx >= g_nofFeatures)
 		{

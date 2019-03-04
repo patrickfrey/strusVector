@@ -157,7 +157,7 @@ const char* VectorStorage::getConfigDescription( const ConfigType& type) const
 	switch (type)
 	{
 		case CmdCreateClient:
-			return "simdist=<difference in bits of LSH value considered similar (optional)>\nprobsimdist=<estimate in difference in bits of LSH value used for prunning (optional - bigger than simdist)>";
+			return "simdist=<difference in bits of LSH value considered similar (optional)>\nprobsimdist=<estimate in difference in bits of LSH value used for prunning (optional - bigger than simdist)>\nlexprun=<parameter for the creation of a lexer, number of candidates with same position not better than the best candidate followed (default 3)>";
 
 		case CmdCreate:
 			return "vecdim=<dimension of vectors>\nbits=<number of bits calculated by separating hyperplanes (optional)>\nvariations=<number of random images used (optional - bits*variations = number of bits in LSH values>\nsimdist=<difference in bits of LSH value considered similar (optional)>\nprobsimdist=<estimate in difference in bits of LSH value used for prunning (optional - bigger than simdist)>";
