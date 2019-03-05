@@ -59,16 +59,6 @@ bool VectorStorage::createStorage( const std::string& configsource, const Databa
 			if (m_debugtrace) m_debugtrace->event( "param", "vecdim %d", value);
 			config = Config( value);
 		}
-		if (strus::extractUIntFromConfigString( value, configstring, "simdist", m_errorhnd))
-		{
-			if (m_debugtrace) m_debugtrace->event( "param", "simdist %d", value);
-			config.simdist = value;
-		}
-		if (strus::extractUIntFromConfigString( value, configstring, "probsimdist", m_errorhnd))
-		{
-			if (m_debugtrace) m_debugtrace->event( "param", "probsimdist %d", value);
-			config.probsimdist = value;
-		}
 		if (strus::extractUIntFromConfigString( value, configstring, "bits", m_errorhnd))
 		{
 			if (m_debugtrace) m_debugtrace->event( "param", "bits %d", value);
@@ -84,7 +74,7 @@ bool VectorStorage::createStorage( const std::string& configsource, const Databa
 		{
 			throw strus::runtime_error(_TXT("error reading vector storage configuration: %s"), m_errorhnd->fetchError());
 		}
-		LshModel lshmodel( config.vecdim, config.bits, config.variations, config.simdist, config.probsimdist);
+		LshModel lshmodel( config.vecdim, config.bits, config.variations);
 		if (dbi->createDatabase( configstring))
 		{
 			DatabaseAdapter database( dbi, configstring, m_errorhnd);
@@ -157,10 +147,10 @@ const char* VectorStorage::getConfigDescription( const ConfigType& type) const
 	switch (type)
 	{
 		case CmdCreateClient:
-			return "simdist=<difference in bits of LSH value considered similar (optional)>\nprobsimdist=<estimate in difference in bits of LSH value used for prunning (optional - bigger than simdist)>\nlexprun=<parameter for the creation of a lexer, number of candidates with same position not better than the best candidate followed (default 3)>";
+			return "lexprun=<parameter for the creation of a lexer, number of candidates with same position not better than the best candidate followed (default 3)>\nmemtypes=<comma separated list of type names where the LSH values should be loaded entirely into memory for speeding up retrieval>";
 
 		case CmdCreate:
-			return "vecdim=<dimension of vectors>\nbits=<number of bits calculated by separating hyperplanes (optional)>\nvariations=<number of random images used (optional - bits*variations = number of bits in LSH values>\nsimdist=<difference in bits of LSH value considered similar (optional)>\nprobsimdist=<estimate in difference in bits of LSH value used for prunning (optional - bigger than simdist)>";
+			return "vecdim=<dimension of vectors>\nbits=<number of bits calculated by separating hyperplanes (optional)>\nvariations=<number of random images used (optional - bits*variations = number of bits in LSH values>";
 	}
 	return 0;
 }

@@ -18,18 +18,15 @@ using namespace strus;
 
 
 LshModel::LshModel()
-	:m_vecdim(0),m_bits(0),m_variations(0),m_simdist(0),m_probsimdist(0)
-	,m_modelMatrix(),m_rotations()
+	:m_vecdim(0),m_bits(0),m_variations(0),m_modelMatrix(),m_rotations()
 {}
 
 LshModel::LshModel( const LshModel& o)
-	:m_vecdim(o.m_vecdim),m_bits(o.m_bits),m_variations(o.m_variations),m_simdist(o.m_simdist),m_probsimdist(o.m_probsimdist)
-	,m_modelMatrix(o.m_modelMatrix),m_rotations(o.m_rotations)
+	:m_vecdim(o.m_vecdim),m_bits(o.m_bits),m_variations(o.m_variations),m_modelMatrix(o.m_modelMatrix),m_rotations(o.m_rotations)
 {}
 
-LshModel::LshModel( int vecdim_, int bits_, int variations_, int simdist_, int probsimdist_)
-	:m_vecdim(vecdim_),m_bits(bits_),m_variations(variations_),m_simdist(simdist_),m_probsimdist(probsimdist_)
-	,m_modelMatrix( createModelMatrix( vecdim_, bits_)),m_rotations()
+LshModel::LshModel( int vecdim_, int bits_, int variations_)
+	:m_vecdim(vecdim_),m_bits(bits_),m_variations(variations_),m_modelMatrix( createModelMatrix( vecdim_, bits_)),m_rotations()
 {
 	int wi=0, we=variations_;
 	for (; wi != we; ++wi)
@@ -44,9 +41,8 @@ LshModel::LshModel( int vecdim_, int bits_, int variations_, int simdist_, int p
 	}
 }
 
-LshModel::LshModel( int vecdim_, int bits_, int variations_, int simdist_, int probsimdist_, const arma::fmat& modelMatrix_, const std::vector<arma::fmat>& rotations_)
-	:m_vecdim(vecdim_),m_bits(bits_),m_variations(variations_),m_simdist(simdist_),m_probsimdist(probsimdist_)
-	,m_modelMatrix(modelMatrix_),m_rotations(rotations_)
+LshModel::LshModel( int vecdim_, int bits_, int variations_, const arma::fmat& modelMatrix_, const std::vector<arma::fmat>& rotations_)
+	:m_vecdim(vecdim_),m_bits(bits_),m_variations(variations_),m_modelMatrix(modelMatrix_),m_rotations(rotations_)
 {
 	std::vector<arma::fmat>::const_iterator ri=m_rotations.begin(), re=m_rotations.end();
 	for (; ri != re; ++ri)
@@ -119,7 +115,7 @@ arma::fmat LshModel::createModelMatrix( int vecdim_, int bits_)
 std::string LshModel::tostring() const
 {
 	std::ostringstream rt;
-	rt << "d=" << m_vecdim << ", n=" << m_bits << ", v=" << m_variations << ", s=" << m_simdist  << ", p=" << m_probsimdist << std::endl;
+	rt << "dim=" << m_vecdim << ", bits=" << m_bits << ", variations=" << m_variations << std::endl;
 	std::vector<arma::fmat>::const_iterator roti = m_rotations.begin(), rote = m_rotations.end();
 	for (; roti != rote; ++roti)
 	{
@@ -158,25 +154,22 @@ union PackedFloat
 struct DumpStructHeader
 {
 	DumpStructHeader()
-		:vecdim(0),bits(0),variations(0),simdist(0),probsimdist(0){}
-	DumpStructHeader( int vecdim_, int bits_, int variations_, int simdist_, int probsimdist_)
-		:vecdim(vecdim_),bits(bits_),variations(variations_),simdist(simdist_),probsimdist(probsimdist_){}
+		:vecdim(0),bits(0),variations(0){}
+	DumpStructHeader( int vecdim_, int bits_, int variations_)
+		:vecdim(vecdim_),bits(bits_),variations(variations_){}
 	DumpStructHeader( const DumpStructHeader& o)
-		:vecdim(o.vecdim),bits(o.bits),variations(o.variations),simdist(o.simdist),probsimdist(o.probsimdist){}
+		:vecdim(o.vecdim),bits(o.bits),variations(o.variations){}
 
 	uint32_t vecdim;
 	uint32_t bits;
 	uint32_t variations;
-	uint32_t simdist;
-	uint32_t probsimdist;
+	enum {NofElements=3};
 
 	void conv_hton()
 	{
 		vecdim = ByteOrder<uint32_t>::hton(vecdim);
 		bits = ByteOrder<uint32_t>::hton(bits);
 		variations = ByteOrder<uint32_t>::hton(variations);
-		simdist = ByteOrder<uint32_t>::hton(simdist);
-		probsimdist = ByteOrder<uint32_t>::hton(probsimdist);
 	}
 
 	void conv_ntoh()
@@ -184,35 +177,29 @@ struct DumpStructHeader
 		vecdim = ByteOrder<uint32_t>::ntoh(vecdim);
 		bits = ByteOrder<uint32_t>::ntoh(bits);
 		variations = ByteOrder<uint32_t>::ntoh(variations);
-		simdist = ByteOrder<uint32_t>::ntoh(simdist);
-		probsimdist = ByteOrder<uint32_t>::ntoh(probsimdist);
 	}
 
 	void printSerialization( std::string& buf)
 	{
-		uint32_t ar[5];
+		uint32_t ar[ NofElements];
 		ar[0] = ByteOrder<uint32_t>::hton(vecdim);
 		ar[1] = ByteOrder<uint32_t>::hton(bits);
 		ar[2] = ByteOrder<uint32_t>::hton(variations);
-		ar[3] = ByteOrder<uint32_t>::hton(simdist);
-		ar[4] = ByteOrder<uint32_t>::hton(probsimdist);
-		buf.append( (char*)(void*)ar, 5*sizeof(uint32_t));
+		buf.append( (char*)(void*)ar, NofElements*sizeof(uint32_t));
 	}
 	void initFromSerialization( const char*& ser)
 	{
 		vecdim = ByteOrder<uint32_t>::ntoh(*(uint32_t*)(void*)ser); ser += sizeof(uint32_t);
 		bits = ByteOrder<uint32_t>::ntoh(*(uint32_t*)(void*)ser); ser += sizeof(uint32_t);
 		variations = ByteOrder<uint32_t>::ntoh(*(uint32_t*)(void*)ser); ser += sizeof(uint32_t);
-		simdist = ByteOrder<uint32_t>::ntoh(*(uint32_t*)(void*)ser); ser += sizeof(uint32_t);
-		probsimdist = ByteOrder<uint32_t>::ntoh(*(uint32_t*)(void*)ser); ser += sizeof(uint32_t);
 	}
 };
 
 struct DumpStruct
 	:public DumpStructHeader
 {
-	DumpStruct( int vecdim_, int bits_, int variations_, int simdist_, int probsimdist_)
-		:DumpStructHeader(vecdim_,bits_,variations_,simdist_,probsimdist_),ar(0),arsize(0)
+	DumpStruct( int vecdim_, int bits_, int variations_)
+		:DumpStructHeader(vecdim_,bits_,variations_),ar(0),arsize(0)
 	{
 		std::size_t nofFloats = (vecdim * bits) + (vecdim * vecdim * variations);
 		arsize = nofFloats;
@@ -319,7 +306,7 @@ private:
 std::string LshModel::serialization() const
 {
 	std::string rt;
-	DumpStruct st( m_vecdim, m_bits, m_variations, m_simdist, m_probsimdist);
+	DumpStruct st( m_vecdim, m_bits, m_variations);
 
 	std::size_t aidx = 0;
 	std::vector<arma::fmat>::const_iterator roti = m_rotations.begin(), rote = m_rotations.end();
@@ -347,7 +334,7 @@ LshModel LshModel::fromSerialization( const char* blob, std::size_t blobsize)
 	if (blobsize < sizeof( DumpStructHeader)) throw std::runtime_error( _TXT("lsh model dump is corrupt (dump header too small)"));
 	hdr.initFromSerialization( src);
 
-	DumpStruct st( hdr.vecdim, hdr.bits, hdr.variations, hdr.simdist, hdr.probsimdist);
+	DumpStruct st( hdr.vecdim, hdr.bits, hdr.variations);
 	if (st.contentAllocSize() > (blobsize - (src - blob)))
 	{
 		throw std::runtime_error( _TXT("LSH model dump is corrupt (dump too small)"));
@@ -379,7 +366,7 @@ LshModel LshModel::fromSerialization( const char* blob, std::size_t blobsize)
 	{
 		throw std::runtime_error( _TXT( "lsh model dump is corrupt"));
 	}
-	return LshModel( hdr.vecdim, hdr.bits, hdr.variations, hdr.simdist, hdr.probsimdist, modelMatrix, rotations);
+	return LshModel( hdr.vecdim, hdr.bits, hdr.variations, modelMatrix, rotations);
 }
 
 LshModel LshModel::fromSerialization( const std::string& dump)

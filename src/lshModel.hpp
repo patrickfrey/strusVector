@@ -22,7 +22,7 @@ class LshModel
 public:
 	/// \brief Constructor
 	LshModel();
-	LshModel( int vecdim_, int bits_, int variations_, int simdist_, int probsimdist_);
+	LshModel( int vecdim_, int bits_, int variations_);
 	LshModel( const LshModel& o);
 
 	/// \brief map contents to string in readable form
@@ -54,22 +54,6 @@ public:
 	{
 		return m_variations;
 	}
-	int simdist() const
-	{
-		return m_simdist;
-	}
-	int probsimdist() const
-	{
-		return m_probsimdist;
-	}
-	void set_simdist( int value)
-	{
-		m_simdist = value;
-	}
-	void set_probsimdist( int value)
-	{
-		m_probsimdist = value;
-	}
 	int vectorBits() const
 	{
 		return m_bits * m_variations;
@@ -77,14 +61,12 @@ public:
 
 private:
 	static arma::fmat createModelMatrix( int vecdim_, int bits_);
-	LshModel( int vecdim_, int bits_, int variations_, int simdist_, int probsimdist_, const arma::fmat& modelMatrix_, const std::vector<arma::fmat>& rotations_);
+	LshModel( int vecdim_, int bits_, int variations_, const arma::fmat& modelMatrix_, const std::vector<arma::fmat>& rotations_);
 
 private:
 	int m_vecdim;
 	int m_bits;
 	int m_variations;
-	int m_simdist;
-	int m_probsimdist;
 	arma::fmat m_modelMatrix;
 	std::vector<arma::fmat> m_rotations;
 };

@@ -503,9 +503,7 @@ static void readAndCheckDatabase( const std::string& testdir, const std::string&
 	"path=vsmodel;"\
 	"vecdim=121;"\
 	"bits=7;"\
-	"variations=13;"\
-	"simdist=13;" \
-	"probsimdist=23;"
+	"variations=13;"
 
 int main( int argc, const char** argv)
 {
@@ -578,7 +576,7 @@ int main( int argc, const char** argv)
 		if (g_errorhnd->hasError()) throw std::runtime_error("error in test configuration");
 
 		TestDataset dataset( nofTypes, nofFeatures, configstr);
-		strus::LshModel model( dataset.config().vecdim, dataset.config().bits, dataset.config().variations, dataset.config().simdist, dataset.config().probsimdist);
+		strus::LshModel model( dataset.config().vecdim, dataset.config().bits, dataset.config().variations);
 
 		writeDatabase( workdir, configstr, dataset, model);
 		readAndCheckDatabase( workdir, configstr, dataset, model);

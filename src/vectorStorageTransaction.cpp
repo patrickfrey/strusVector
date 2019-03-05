@@ -27,7 +27,6 @@ VectorStorageTransaction::VectorStorageTransaction(
 	:m_errorhnd(errorhnd_),m_debugtrace(0),m_storage(storage_)
 	,m_database(database_),m_transaction(database_->createTransaction())
 	,m_vecar(),m_typetab(errorhnd_),m_nametab(errorhnd_),m_featTypeRelations()
-	,m_simdist(-1),m_probsimdist(-1)
 {
 	if (errorhnd_->hasError())
 	{
@@ -96,32 +95,6 @@ void VectorStorageTransaction::defineVector( const std::string& type, const std:
 	CATCH_ERROR_ARG1_MAP( _TXT("error defining feature vector in '%s': %s"), MODULENAME, *m_errorhnd);
 }
 
-void VectorStorageTransaction::defineScalar( const std::string& name, double value)
-{
-	try
-	{
-		if (strus::caseInsensitiveEquals( name, "simdist"))
-		{
-			if (value < 0.0) throw strus::runtime_error(_TXT("integer equal or bigger than 0 expected for %s"), "simdist");
-			m_simdist = value;
-		}
-		else if (strus::caseInsensitiveEquals( name, "probsimdist"))
-		{
-			if (value < 0.0) throw strus::runtime_error(_TXT("integer equal or bigger than 0 expected for %s"), "probsimdist");
-			m_probsimdist = value;
-		}
-		else
-		{
-			throw strus::runtime_error(_TXT("unknown name of scalar %s"), name.c_str());
-		}
-		if (m_debugtrace)
-		{
-			m_debugtrace->event( "define", "scalar key %s value %.5f", name.c_str(), (float)value);
-		}
-	}
-	CATCH_ERROR_ARG1_MAP( _TXT("error defining scalar configuration parameter '%s': %s"), MODULENAME, *m_errorhnd);
-}
-
 void VectorStorageTransaction::clear()
 {
 	try
@@ -137,8 +110,6 @@ void VectorStorageTransaction::reset()
 	m_nametab.clear();
 	m_typetab.clear();
 	m_featTypeRelations.clear();
-	m_simdist = -1;
-	m_probsimdist = -1;
 }
 
 bool VectorStorageTransaction::commit()
@@ -214,13 +185,6 @@ bool VectorStorageTransaction::commit()
 				}
 			}
 			m_transaction->writeNofVectors( typeno, nofvec + featset.size());
-		}
-		if (m_simdist >= 0 || m_probsimdist >= 0)
-		{
-			LshModel model = m_database->readLshModel();
-			if (m_simdist >= 0) model.set_simdist( m_simdist);
-			if (m_probsimdist >= 0) model.set_probsimdist( m_probsimdist);
-			m_transaction->writeLshModel( model);
 		}
 		std::set<FeatureTypeRelation>::const_iterator ri = m_featTypeRelations.begin(), re = m_featTypeRelations.end();
 		while (ri != re)

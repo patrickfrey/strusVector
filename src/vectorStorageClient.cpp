@@ -39,23 +39,7 @@ VectorStorageClient::VectorStorageClient( const DatabaseInterface* database_, co
 	std::string configstring = configstring_;
 	unsigned int value;
 	std::string stringvalue;
-	int simdist = -1;
-	int probsimdist = -1;
-	if (strus::extractUIntFromConfigString( value, configstring, "simdist", m_errorhnd))
-	{
-		if (m_debugtrace) m_debugtrace->event( "param", "simdist %d", value);
-		simdist = value;
-	}
-	if (strus::extractUIntFromConfigString( value, configstring, "probsimdist", m_errorhnd))
-	{
-		if (m_debugtrace) m_debugtrace->event( "param", "probsimdist %d", value);
-		probsimdist = value;
-	}
-	if (strus::extractUIntFromConfigString( value, configstring, "probsimdist", m_errorhnd))
-	{
-		if (m_debugtrace) m_debugtrace->event( "param", "probsimdist %d", value);
-		probsimdist = value;
-	}
+
 	if (strus::extractUIntFromConfigString( value, configstring, "lexprun", m_errorhnd))
 	{
 		if (m_debugtrace) m_debugtrace->event( "param", "probsimdist %d", value);
@@ -72,8 +56,6 @@ VectorStorageClient::VectorStorageClient( const DatabaseInterface* database_, co
 	m_database.reset( new DatabaseAdapter( database_,configstring,m_errorhnd));
 	m_database->checkVersion();
 	m_model = m_database->readLshModel();
-	if (simdist >= 0) m_model.set_simdist( simdist);
-	if (probsimdist >= 0) m_model.set_probsimdist( probsimdist);
 }
 
 VectorStorageClient::~VectorStorageClient()
@@ -101,7 +83,7 @@ std::vector<VectorQueryResult> VectorStorageClient::simHashToVectorQueryResults(
 	return rt;
 }
 
-std::vector<VectorQueryResult> VectorStorageClient::findSimilar( const std::string& type, const WordVector& vec, int maxNofResults, double minSimilarity, bool realVecWeights) const
+std::vector<VectorQueryResult> VectorStorageClient::findSimilar( const std::string& type, const WordVector& vec, int maxNofResults, double minSimilarity, double speedRecallFactor, bool realVecWeights) const
 {
 	try
 	{
@@ -111,7 +93,7 @@ std::vector<VectorQueryResult> VectorStorageClient::findSimilar( const std::stri
 
 		int simdist = SimHashRankList::lshSimDistFromWeight( m_model.vectorBits(), minSimilarity);
 		if (simdist > m_model.vectorBits()) simdist = m_model.vectorBits();
-		int probsimdist = ((double)m_model.probsimdist() / (double)m_model.simdist()) * simdist;
+		int probsimdist = (1.0 + speedRecallFactor) * simdist;
 		if (probsimdist > m_model.vectorBits()) probsimdist = m_model.vectorBits();
 
 		if (realVecWeights)

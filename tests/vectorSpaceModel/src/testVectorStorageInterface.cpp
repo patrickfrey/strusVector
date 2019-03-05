@@ -240,6 +240,8 @@ int main( int argc, const char** argv)
 		bool printUsageAndExit = false;
 		float sim_cos = 0.9;
 		float result_sim_cos = 0.95;
+		double minSimilarity = 0.9;
+		double speedRecallFactor = 0.88;
 
 		// Parse parameters:
 		int argidx = 1;
@@ -609,7 +611,7 @@ int main( int argc, const char** argv)
 						if (!di->vec.empty() && di->type == type)
 						{
 							if (g_verbose) std::cerr << strus::string_format( "find similar of '%s'",di->feat.c_str()) << std::endl;
-							std::vector<strus::VectorQueryResult> simar = storage->findSimilar( type, di->vec, 20/*maxNofResults*/, 0.9, useRealWeights);
+							std::vector<strus::VectorQueryResult> simar = storage->findSimilar( type, di->vec, 20/*maxNofResults*/, minSimilarity, speedRecallFactor, useRealWeights);
 							std::vector<strus::VectorQueryResult> expect;
 
 							SimMatrix::const_iterator mi = simMatrix.find( di->feat);

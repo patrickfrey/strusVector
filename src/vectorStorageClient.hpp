@@ -39,7 +39,7 @@ public:
 
 	virtual void prepareSearch( const std::string& type);
 
-	virtual std::vector<VectorQueryResult> findSimilar( const std::string& type, const WordVector& vec, int maxNofResults, double minSimilarity, bool realVecWeights) const;
+	virtual std::vector<VectorQueryResult> findSimilar( const std::string& type, const WordVector& vec, int maxNofResults, double minSimilarity, double speedRecallFactor, bool realVecWeights) const;
 
 	virtual VectorStorageTransactionInterface* createTransaction();
 

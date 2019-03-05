@@ -33,9 +33,7 @@ public:
 	{
 		DefaultDim = 300,
 		DefaultBits = 64,
-		DefaultVariations = 32,
-		DefaultSim = 340,
-		DefaultProbSim = 640
+		DefaultVariations = 32
 	};
 
 	struct Config
@@ -43,19 +41,15 @@ public:
 		int vecdim;
 		int bits;
 		int variations;
-		int simdist;
-		int probsimdist;
 
 		Config( const Config& o)
-			:vecdim(o.vecdim),bits(o.bits),variations(o.variations),simdist(o.simdist),probsimdist(o.probsimdist){}
+			:vecdim(o.vecdim),bits(o.bits),variations(o.variations){}
 		Config()
-			:vecdim(DefaultDim),bits(DefaultBits),variations(DefaultVariations),simdist(DefaultSim),probsimdist(DefaultProbSim){}
+			:vecdim(DefaultDim),bits(DefaultBits),variations(DefaultVariations){}
 		explicit Config( int vecdim_)
 			:vecdim(vecdim_)
 			,bits(bitsFromVecdim(vecdim_))
 			,variations(variationsFromVecdim(vecdim_))
-			,simdist(simdistFromVecdim(vecdim_))
-			,probsimdist(probsimdistFromVecdim(vecdim_/9))
 		{
 			while (vecdim/2 < bits && bits > 1)
 			{
@@ -77,14 +71,6 @@ public:
 		{
 			int bits_ = bitsFromVecdim( vecdim_);
 			return (vecdim_ * 640) / (93 * bits_);
-		}
-		static int simdistFromVecdim( int vecdim_)
-		{
-			return (vecdim_ + vecdim_/9);
-		}
-		static int probsimdistFromVecdim( int vecdim_)
-		{
-			return (2 * vecdim_ + vecdim_/9);
 		}
 	};
 

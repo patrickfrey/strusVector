@@ -38,8 +38,6 @@ public:
 
 	virtual void defineFeature( const std::string& type, const std::string& name);
 
-	virtual void defineScalar( const std::string& name, double value);
-
 	virtual void clear();
 
 	virtual bool commit();
@@ -78,8 +76,6 @@ private:
 	};
 
 	std::set<FeatureTypeRelation> m_featTypeRelations;
-	int m_simdist;
-	int m_probsimdist;
 };
 
 }//namespace
