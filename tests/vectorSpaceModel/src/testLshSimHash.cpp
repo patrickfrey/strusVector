@@ -48,7 +48,7 @@ static strus::SimHash createDivBitSet( unsigned int size, unsigned int div)
 
 static bool isPrimeNumber( unsigned int num)
 {
-	unsigned int di=2, de=(unsigned int)(strus::Math::sqrt(num));
+	unsigned int di=2, de=(unsigned int)(strus::Math::sqrt( (double)num));
 	for (; di <= de; ++di)
 	{
 		if (num % di == 0) return false;
