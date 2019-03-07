@@ -32,7 +32,6 @@
 #include <memory>
 #include <iomanip>
 #include <cstdlib>
-#include <cmath>
 #include <limits>
 #include <algorithm>
 

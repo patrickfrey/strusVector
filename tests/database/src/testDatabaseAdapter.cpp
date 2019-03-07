@@ -36,7 +36,6 @@
 #include <memory>
 #include <iomanip>
 #include <cstdlib>
-#include <cmath>
 #include <limits>
 
 #define VEC_EPSILON  (1.0E-8)

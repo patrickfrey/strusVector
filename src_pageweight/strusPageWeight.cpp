@@ -10,12 +10,12 @@
 #include "pageweightdefs.hpp"
 #include "strus/base/inputStream.hpp"
 #include "strus/base/string_format.hpp"
+#include "strus/base/math.hpp"
 #include <vector>
 #include <iostream>
 #include <stdexcept>
 #include <cstring>
 #include <cstdio>
-#include <cmath>
 
 #undef STRUS_LOWLEVEL_DEBUG
 
@@ -394,7 +394,7 @@ int main( int argc, const char** argv)
 				double resval = *ri;
 				if (logscale)
 				{
-					resval = std::log10( resval * pageweight.nofPages() + 1);
+					resval = strus::Math::log10( resval * pageweight.nofPages() + 1);
 				}
 				if (resval > maxresval)
 				{
@@ -408,7 +408,7 @@ int main( int argc, const char** argv)
 			double resval = *ri;
 			if (logscale)
 			{
-				resval = std::log10( resval * pageweight.nofPages() + 1);
+				resval = strus::Math::log10( resval * pageweight.nofPages() + 1);
 			}
 			if (normval > 0)
 			{

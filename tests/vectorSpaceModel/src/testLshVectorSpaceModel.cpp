@@ -14,7 +14,6 @@
 #include <string>
 #include <iomanip>
 #include <cstdlib>
-#include <cmath>
 #include <limits>
 
 #undef STRUS_LOWLEVEL_DEBUG

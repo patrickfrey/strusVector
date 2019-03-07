@@ -6,7 +6,6 @@
 #include <iomanip>
 #include <cstdlib>
 #include <cstdio>
-#include <cmath>
 #include <limits>
 
 #define VEC_EPSILON 1e-5

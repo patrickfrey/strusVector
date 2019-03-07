@@ -7,10 +7,10 @@
  */
 /// \brief Test program for pagerank
 #include "pageweight.hpp"
+#include "strus/base/math.hpp"
 #include <vector>
 #include <iostream>
 #include <stdexcept>
-#include <cmath>
 
 int main( int argc, const char** argv)
 {
@@ -47,7 +47,7 @@ int main( int argc, const char** argv)
 		double exp[] = { 0.143994, 0.143994, 0.144, 0.152406, 0.0623895 };
 		for (unsigned int ridx=0; ri != re; ++ri,++ridx)
 		{
-			double err = std::fabs(*ri - exp[ridx]);
+			double err = strus::Math::abs(*ri - exp[ridx]);
 			if (err > 1E-4)
 			{
 				throw std::runtime_error("output not as expected");
