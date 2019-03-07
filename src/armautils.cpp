@@ -7,6 +7,7 @@
  */
 /// \brief Some local helper functions in the context of the armadillo library
 #include "armautils.hpp"
+#include "strus/base/math.hpp"
 
 using namespace strus;
 
@@ -20,7 +21,7 @@ arma::fvec strus::normalizeVector( const strus::WordVector& vec)
 	{
 		sqlen += *vi * *vi;
 	}
-	float normdiv = std::sqrt( sqlen);
+	float normdiv = strus::Math::sqrt( sqlen);
 	arma::fvec::iterator ri = res.begin(), re = res.end();
 	for (; ri != re; ++ri)
 	{
@@ -38,7 +39,7 @@ arma::fvec strus::normalizeVector( const arma::fvec& vec)
 	{
 		sqlen += *vi * *vi;
 	}
-	float normdiv = std::sqrt( sqlen);
+	float normdiv = strus::Math::sqrt( sqlen);
 	arma::fvec::iterator ri = res.begin(), re = res.end();
 	for (; ri != re; ++ri)
 	{

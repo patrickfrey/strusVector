@@ -23,6 +23,7 @@
 #include "strus/base/string_format.hpp"
 #include "strus/base/numstring.hpp"
 #include "strus/base/pseudoRandom.hpp"
+#include "strus/base/math.hpp"
 #include "armadillo"
 #include <iostream>
 #include <sstream>
@@ -51,7 +52,7 @@ static arma::fvec normalizeVector( const arma::fvec& vec)
 	{
 		sqlen += *vi * *vi;
 	}
-	float normdiv = std::sqrt( sqlen);
+	float normdiv = strus::Math::sqrt( sqlen);
 	arma::fvec::iterator ri = res.begin(), re = res.end();
 	for (; ri != re; ++ri)
 	{

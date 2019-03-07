@@ -7,6 +7,7 @@
  */
 /// \brief Test program for the similarity Hash data structure
 #include "simHash.hpp"
+#include "strus/base/math.hpp"
 #include <iostream>
 #include <sstream>
 #include <vector>
@@ -47,7 +48,7 @@ static strus::SimHash createDivBitSet( unsigned int size, unsigned int div)
 
 static bool isPrimeNumber( unsigned int num)
 {
-	unsigned int di=2, de=(unsigned int)(std::sqrt(num));
+	unsigned int di=2, de=(unsigned int)(strus::Math::sqrt(num));
 	for (; di <= de; ++di)
 	{
 		if (num % di == 0) return false;
