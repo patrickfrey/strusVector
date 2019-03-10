@@ -1345,7 +1345,7 @@ std::vector<SentenceGuess> SentenceLexerContext::rankSentences( const std::vecto
 		}
 
 		// Select the best N (weight) of the ranks and return them
-		if (maxNofResults > (int)ranks.size())
+		if (maxNofResults < 0 || maxNofResults > (int)ranks.size())
 		{
 			maxNofResults = ranks.size();
 		}
