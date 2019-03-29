@@ -49,6 +49,10 @@ public:
 
 	virtual std::vector<std::string> featureTypes( const std::string& featureValue) const;
 
+	virtual int nofTypes() const;
+
+	virtual int nofFeatures() const;
+
 	virtual int nofVectors( const std::string& type) const;
 
 	virtual WordVector featureVector( const std::string& type, const std::string& featureValue) const;
@@ -63,6 +67,8 @@ public:
 
 	virtual void close();
 
+	virtual void compaction();
+	
 public:/*VectorStorageTransaction*/
 	friend class TransactionLock;
 	class TransactionLock

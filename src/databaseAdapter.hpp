@@ -80,6 +80,7 @@ public:
 	LshModel readLshModel() const;
 
 	void close();
+	void compaction();
 
 private:
 	Index readIndexValue( const char* keystr, std::size_t keysize, bool errorIfNotFound) const;

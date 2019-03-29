@@ -312,6 +312,24 @@ std::vector<std::string> VectorStorageClient::featureTypes( const std::string& f
 	CATCH_ERROR_ARG1_MAP_RETURN( _TXT("error in client interface of '%s' getting the types defined for a feature value: %s"), MODULENAME, *m_errorhnd, std::vector<std::string>());
 }
 
+int VectorStorageClient::nofTypes() const
+{
+	try
+	{
+		return m_database->readNofTypeno();
+	}
+	CATCH_ERROR_ARG1_MAP_RETURN( _TXT("error in client interface of '%s' getting the number of types defined: %s"), MODULENAME, *m_errorhnd, 0);
+}
+
+int VectorStorageClient::nofFeatures() const
+{
+	try
+	{
+		return m_database->readNofFeatno();
+	}
+	CATCH_ERROR_ARG1_MAP_RETURN( _TXT("error in client interface of '%s' getting the number of features defined: %s"), MODULENAME, *m_errorhnd, 0);
+}
+
 int VectorStorageClient::nofVectors( const std::string& type) const
 {
 	try
@@ -404,6 +422,15 @@ void VectorStorageClient::close()
 	try
 	{
 		m_database->close();
+	}
+	CATCH_ERROR_ARG1_MAP( _TXT("error in client interface of '%s' closing this storage client: %s"), MODULENAME, *m_errorhnd);
+}
+
+void VectorStorageClient::compaction()
+{
+	try
+	{
+		m_database->compaction();
 	}
 	CATCH_ERROR_ARG1_MAP( _TXT("error in client interface of '%s' closing this storage client: %s"), MODULENAME, *m_errorhnd);
 }

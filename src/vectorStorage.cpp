@@ -157,8 +157,8 @@ const char* VectorStorage::getConfigDescription( const ConfigType& type) const
 
 const char** VectorStorage::getConfigParameters( const ConfigType& type) const
 {
-	static const char* keys_CreateStorageClient[]	= {"simdist", "probsimdist", 0};
-	static const char* keys_CreateStorage[]		= {"vecdim", "simdist", "probsimdist", "bits", "variations", 0};
+	static const char* keys_CreateStorageClient[]	= {"memtypes", "lexprun", 0};
+	static const char* keys_CreateStorage[]		= {"vecdim", "bits", "variations", 0};
 	switch (type)
 	{
 		case CmdCreateClient:	return keys_CreateStorageClient;

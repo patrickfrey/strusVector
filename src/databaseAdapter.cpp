@@ -527,6 +527,12 @@ void DatabaseAdapter::close()
 	m_database->close();
 }
 
+void DatabaseAdapter::compaction()
+{
+	m_database->compactDatabase();
+}
+
+
 LshModel DatabaseAdapter::readLshModel() const
 {
 	DatabaseKeyBuffer key( KeyLshModel);
