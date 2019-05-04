@@ -42,6 +42,8 @@ public:
 	
 	virtual void addLink( int uchr, char substchr);
 
+	virtual void defineGroupSimilarityDistance( double value);
+
 	virtual SentenceLexerContextInterface* createContext( const std::string& source) const;
 
 public:
@@ -74,6 +76,7 @@ private:
 	std::vector<SeparatorDef> m_separators;
 	std::vector<char> m_linkChars;
 	int m_max_pos_visits;
+	double m_groupSimilarityDistance;
 };
 
 }//namespace

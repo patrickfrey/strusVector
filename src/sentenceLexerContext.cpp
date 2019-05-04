@@ -109,9 +109,10 @@ SentenceLexerContext::SentenceLexerContext(
 		const std::vector<char>& linkChars,
 		const std::string& source,
 		int max_pos_visits,
+		double similarityDistance_,
 		ErrorBufferInterface* errorhnd_)
 	:m_errorhnd(errorhnd_),m_debugtrace(0),m_vstorage(vstorage_),m_database(database_)
-	,m_splits(),m_splitidx(-1)
+	,m_splits(),m_splitidx(-1),m_similarityDistance(similarityDistance_)
 {
 	DebugTraceInterface* dbgi = m_errorhnd->debugTrace();
 	if (dbgi) m_debugtrace = dbgi->createTraceContext( STRUS_DBGTRACE_COMPONENT_NAME);
@@ -1159,7 +1160,7 @@ typedef std::vector<GroupId> Group;
 class SimGroupData
 {
 public:
-	explicit SimGroupData( const VectorStorageClient* vstorage_)
+	SimGroupData( const VectorStorageClient* vstorage_, double similarityDistance_)
 		:m_vstorage(vstorage_),m_featnomap(),m_typenomap(),m_vectors(),m_groups(),m_featmap(){}
 
 	FeatNum getOrCreateFeatNum( const SentenceTerm& term);
@@ -1177,9 +1178,8 @@ private:
 	std::vector<WordVector> m_vectors;
 	std::vector<Group> m_groups;
 	std::map<FeatNum,GroupId> m_featmap;
+	double m_similarityDistance;
 };
-
-#define SIMILIARITY_DISTANCE 0.5
 
 FeatNum SimGroupData::getOrCreateFeatNum( const SentenceTerm& term)
 {
@@ -1221,16 +1221,18 @@ GroupId SimGroupData::getOrCreateFeatGroup( const FeatNum& featnum)
 		m_groups.back().push_back( m_groups.size());
 
 		std::vector<Group>::iterator gi = m_groups.begin(), ge = m_groups.end();
-		GroupId gidx = 0, last_gidx = m_groups.size();
-		m_groups.back().push_back( last_gidx);
+		GroupId gidx = 0, last_gidx = m_groups.size()-1;
 
 		for (--ge/*without new group added*/; gi != ge; ++gi,++gidx)
 		{
-			double sim = m_vstorage->vectorSimilarity( m_vectors.back(), m_vectors[ gidx]);
-			if (sim > SIMILIARITY_DISTANCE)
+			if (!m_vectors.back().empty() && !m_vectors[ gidx].empty())
 			{
-				m_groups.back().push_back( gidx);
-				gi->push_back( last_gidx);
+				double sim = m_vstorage->vectorSimilarity( m_vectors.back(), m_vectors[ gidx]);
+				if (sim > m_similarityDistance)
+				{
+					m_groups.back().push_back( gidx);
+					gi->push_back( last_gidx);
+				}
 			}
 		}
 		return last_gidx;
@@ -1250,35 +1252,24 @@ std::vector<SentenceGuess> SentenceLexerContext::rankSentences( const std::vecto
 		struct Rank
 		{
 			int idx;
+			int minimalCoverSize;
 			double weight;
 
-			Rank( int idx_, double weight_)
-				:idx(idx_),weight(weight_){}
+			Rank( int idx_, int minimalCoverSize_)
+				:idx(idx_),minimalCoverSize(minimalCoverSize_),weight(0.0){}
 			Rank( const Rank& o)
-				:idx(o.idx),weight(o.weight){}
+				:idx(o.idx),minimalCoverSize(o.minimalCoverSize),weight(o.weight){}
 
-			bool operator < (const Rank& o) const
+			bool operator > (const Rank& o) const
 			{
-				return (std::abs( weight - o.weight) <= std::numeric_limits<float>::epsilon()) ? idx < o.idx : weight < o.weight;
+				return (std::abs( weight - o.weight) <= std::numeric_limits<float>::epsilon()) ? (minimalCoverSize == o.minimalCoverSize ? idx < o.idx : minimalCoverSize < o.minimalCoverSize): weight > o.weight;
 			}
 		};
-		struct Range
-		{
-			int min;
-			int max;
-		
-			Range( int min_, int max_) :min(min_),max(max_){}
-			Range( const Range& o) :min(o.min),max(o.max){}
-		};
-
 		struct Local
 		{
-			static int getWeight( const Range& hirange, const Range& lorange, int hival, int loval)
+			static double getWeight( int coverSize, int sentenceSize)
 			{
-				int lodiff = lorange.max - lorange.min;
-				hival -= hirange.min;
-				loval -= lorange.min;
-				return hival * (lodiff + 1) + loval;
+				return 1.0/(double)std::sqrt(coverSize) + 1.0/(double)sentenceSize;
 			}
 		};
 
@@ -1286,7 +1277,7 @@ std::vector<SentenceGuess> SentenceLexerContext::rankSentences( const std::vecto
 		// Each set gets an integer assigned
 		// Assign group of such integers to sentences
 		// The minimal cover of a group is used to calculate the weight of the candidate
-		SimGroupData simGroupData( m_vstorage);
+		SimGroupData simGroupData( m_vstorage, m_similarityDistance);
 		std::vector<std::vector<GroupId> > sentence_groups;
 		sentence_groups.reserve( sentences.size());
 
@@ -1311,21 +1302,12 @@ std::vector<SentenceGuess> SentenceLexerContext::rankSentences( const std::vecto
 		std::vector<Rank> ranks;
 		ranks.reserve( sentences.size());
 
-		Range coverRange( std::numeric_limits<int>::max(), 0);
-		Range sentsizeRange( std::numeric_limits<int>::max(), 0);
-
 		std::vector<std::vector<GroupId> >::const_iterator gi = sentence_groups.begin(), ge = sentence_groups.end();
 		for (int gidx=0; gi != ge; ++gi,++gidx)
 		{
 			int minimalCoverSize = minimalCoverData.minimalCoverSizeApproximation( *gi);
 			Rank rank( gidx, minimalCoverSize);
 			ranks.push_back( rank);
-
-			if (minimalCoverSize < coverRange.min) coverRange.min = minimalCoverSize;
-			if (minimalCoverSize > coverRange.max) coverRange.max = minimalCoverSize;
-			int nofTerms = sentences[gidx].terms().size();
-			if (nofTerms < sentsizeRange.min) sentsizeRange.min = nofTerms;
-			if (nofTerms > sentsizeRange.max) sentsizeRange.max = nofTerms;
 		}
 
 		// Calculate the weights of the ranks by dividing the integer corresponding to the pair (minimal cover size, nof terms) by the maximum value 
@@ -1334,8 +1316,8 @@ std::vector<SentenceGuess> SentenceLexerContext::rankSentences( const std::vecto
 		std::vector<Rank>::iterator ri = ranks.begin(), re = ranks.end();
 		for (; ri != re; ++ri)
 		{
-			const std::vector<GroupId>& group = sentence_groups[ ri->idx];
-			ri->weight = Local::getWeight( coverRange, sentsizeRange, (int)ri->weight, group.size());
+			int sentenceSize = sentences[ ri->idx].terms().size();
+			ri->weight = sentences[ ri->idx].weight() * Local::getWeight( ri->minimalCoverSize, sentenceSize);
 			if (ri->weight > maxWeight) maxWeight = ri->weight;
 		}
 		ri = ranks.begin(), re = ranks.end();
@@ -1343,14 +1325,13 @@ std::vector<SentenceGuess> SentenceLexerContext::rankSentences( const std::vecto
 		{
 			ri->weight /= maxWeight;
 		}
-
 		// Select the best N (weight) of the ranks and return them
 		if (maxNofResults < 0 || maxNofResults > (int)ranks.size())
 		{
 			maxNofResults = ranks.size();
 		}
-		std::nth_element( ranks.begin(), ranks.begin() + maxNofResults, ranks.end());
-		std::sort( ranks.begin(), ranks.begin() + maxNofResults);
+		std::nth_element( ranks.begin(), ranks.begin() + maxNofResults, ranks.end(), std::greater<Rank>());
+		std::sort( ranks.begin(), ranks.begin() + maxNofResults, std::greater<Rank>());
 
 		std::vector<SentenceGuess> rt;
 		rt.reserve( maxNofResults);

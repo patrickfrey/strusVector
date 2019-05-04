@@ -42,6 +42,7 @@ public:
 		const std::vector<char>& linkChars,
 		const std::string& source_,
 		int max_pos_visits,
+		double similarityDistance_,
 		ErrorBufferInterface* errorhnd_);
 	
 	virtual ~SentenceLexerContext();
@@ -106,6 +107,7 @@ private:
 	const DatabaseClientInterface* m_database;
 	std::vector<AlternativeSplit> m_splits;
 	int m_splitidx;	
+	double m_similarityDistance;
 };
 
 }//namespace
