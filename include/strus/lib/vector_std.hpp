@@ -15,6 +15,8 @@
 namespace strus {
 
 /// \brief Forward declaration
+class FileLocatorInterface;
+/// \brief Forward declaration
 class ErrorBufferInterface;
 /// \brief Forward declaration
 class VectorStorageInterface;
@@ -22,8 +24,9 @@ class VectorStorageInterface;
 class DatabaseInterface;
 
 /// \brief Create standard vector storage interface
+/// \param[in] filelocator interface to locate files to read or the working directory where to write files to
 /// \param[in] errorhnd error handler to use
-VectorStorageInterface* createVectorStorage_std( const std::string& wordir, ErrorBufferInterface* errorhnd);
+VectorStorageInterface* createVectorStorage_std( const FileLocatorInterface* filelocator, ErrorBufferInterface* errorhnd);
 
 }//namespace
 #endif

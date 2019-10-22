@@ -10,6 +10,7 @@
 #include "vectorStorageClient.hpp"
 #include "vectorStorageDump.hpp"
 #include "strus/errorBufferInterface.hpp"
+#include "strus/fileLocatorInterface.hpp"
 #include "strus/vectorStorageClientInterface.hpp"
 #include "strus/vectorStorageTransactionInterface.hpp"
 #include "strus/databaseInterface.hpp"
@@ -34,8 +35,8 @@ using namespace strus;
 #define MODULENAME   "vector storage"
 #define STRUS_DBGTRACE_COMPONENT_NAME "vector"
 
-VectorStorage::VectorStorage( const std::string& workdir_, ErrorBufferInterface* errorhnd_)
-	:m_errorhnd(errorhnd_),m_debugtrace(0),m_workdir(workdir_)
+VectorStorage::VectorStorage( const FileLocatorInterface* filelocator_, ErrorBufferInterface* errorhnd_)
+	:m_errorhnd(errorhnd_),m_debugtrace(0),m_filelocator(filelocator_)
 {
 	DebugTraceInterface* dbg = m_errorhnd->debugTrace();
 	m_debugtrace = dbg ? dbg->createTraceContext( STRUS_DBGTRACE_COMPONENT_NAME) : NULL;

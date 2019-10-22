@@ -9,10 +9,12 @@
 #include "strus/lib/vector_std.hpp"
 #include "strus/lib/database_leveldb.hpp"
 #include "strus/lib/error.hpp"
+#include "strus/lib/filelocator.hpp"
 #include "strus/vectorStorageInterface.hpp"
 #include "strus/vectorStorageClientInterface.hpp"
 #include "strus/vectorStorageTransactionInterface.hpp"
 #include "strus/databaseInterface.hpp"
+#include "strus/fileLocatorInterface.hpp"
 #include "strus/errorBufferInterface.hpp"
 #include "strus/wordVector.hpp"
 #include "strus/vectorQueryResult.hpp"
@@ -40,6 +42,7 @@
 static bool g_verbose = false;
 static strus::PseudoRandom g_random;
 static strus::ErrorBufferInterface* g_errorhnd = 0;
+static strus::FileLocatorInterface* g_fileLocator = 0;
 
 #define DEFAULT_CONFIG "path=vstorage"
 
@@ -228,8 +231,10 @@ int main( int argc, const char** argv)
 	try
 	{
 		int rt = 0;
-		g_errorhnd = strus::createErrorBuffer_standard( 0, 1, NULL/*debug trace interface*/);
-		if (!g_errorhnd) throw std::runtime_error("failed to create error buffer structure");
+		g_errorhnd = strus::createErrorBuffer_standard( 0, 0, NULL/*debug trace interface*/);
+		if (!g_errorhnd) {std::cerr << "FAILED " << "strus::createErrorBuffer_standard" << std::endl; return -1;}
+		g_fileLocator = strus::createFileLocator_std( g_errorhnd);
+		if (!g_fileLocator) {std::cerr << "FAILED " << "strus::createFileLocator_std" << std::endl; return -1;}
 
 		std::string configstr( DEFAULT_CONFIG);
 		strus::Index nofTypes = 2;
@@ -317,8 +322,8 @@ int main( int argc, const char** argv)
 			if (!g_errorhnd) throw std::runtime_error("failed to create error buffer structure");
 		}
 		// Build all objects:
-		strus::local_ptr<strus::DatabaseInterface> dbi( strus::createDatabaseType_leveldb( workdir, g_errorhnd));
-		strus::local_ptr<strus::VectorStorageInterface> sti( strus::createVectorStorage_std( workdir, g_errorhnd));
+		strus::local_ptr<strus::DatabaseInterface> dbi( strus::createDatabaseType_leveldb( g_fileLocator, g_errorhnd));
+		strus::local_ptr<strus::VectorStorageInterface> sti( strus::createVectorStorage_std( g_fileLocator, g_errorhnd));
 		if (!dbi.get() || !sti.get() || g_errorhnd->hasError()) throw std::runtime_error( g_errorhnd->fetchError());
 
 		// Remove traces of old test model before creating a new one:
@@ -673,6 +678,8 @@ int main( int argc, const char** argv)
 		}
 		if (g_verbose) std::cerr << "config:" << storage->config() << std::endl;
 		std::cerr << "done" << std::endl;
+		delete g_fileLocator;
+		delete g_errorhnd;
 		return 0;
 	}
 	catch (const std::runtime_error& err)
@@ -685,11 +692,15 @@ int main( int argc, const char** argv)
 			msg.append( ")");
 		}
 		std::cerr << "error: " << err.what() << msg << std::endl;
+		delete g_fileLocator;
+		delete g_errorhnd;
 		return 1;
 	}
 	catch (const std::bad_alloc& )
 	{
 		std::cerr << "out of memory" << std::endl;
+		delete g_fileLocator;
+		delete g_errorhnd;
 		return 2;
 	}
 	catch (const std::logic_error& err)
@@ -702,6 +713,8 @@ int main( int argc, const char** argv)
 			msg.append( ")");
 		}
 		std::cerr << "error: " << err.what() << msg << std::endl;
+		delete g_fileLocator;
+		delete g_errorhnd;
 		return 3;
 	}
 }

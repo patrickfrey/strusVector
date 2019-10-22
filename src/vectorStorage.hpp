@@ -19,6 +19,8 @@ class VectorStorageClientInterface;
 /// \brief Forward declaration
 class VectorStorageDumpInterface;
 /// \brief Forward declaration
+class FileLocatorInterface;
+/// \brief Forward declaration
 class ErrorBufferInterface;
 /// \brief Forward declaration
 class DatabaseInterface;
@@ -74,7 +76,7 @@ public:
 		}
 	};
 
-	VectorStorage( const std::string& workdir_, ErrorBufferInterface* errorhnd_);
+	VectorStorage( const FileLocatorInterface* filelocator_, ErrorBufferInterface* errorhnd_);
 	virtual ~VectorStorage();
 
 	virtual bool createStorage( const std::string& configsource, const DatabaseInterface* database) const;
@@ -88,7 +90,7 @@ public:
 private:
 	ErrorBufferInterface* m_errorhnd;		///< buffer for reporting errors
 	DebugTraceContextInterface* m_debugtrace;	///< debug trace interface
-	std::string m_workdir;				///< working directory
+	const FileLocatorInterface* m_filelocator;	///< interface to locate files to read or the working directory where to write files to
 };
 
 }//namespace

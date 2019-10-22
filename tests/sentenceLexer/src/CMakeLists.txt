@@ -15,6 +15,6 @@ link_directories(
 )
 
 add_executable( testSentenceLexer testSentenceLexer.cpp)
-target_link_libraries( testSentenceLexer strus_base strus_error strus_vector_std strus_database_leveldb ${Boost_LIBRARIES} ${Intl_LIBRARIES} )
+target_link_libraries( testSentenceLexer strus_base strus_error strus_filelocator strus_vector_std strus_database_leveldb ${Boost_LIBRARIES} ${Intl_LIBRARIES} )
 
 

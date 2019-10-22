@@ -9,6 +9,7 @@
 #include "strus/lib/vector_std.hpp"
 #include "strus/lib/database_leveldb.hpp"
 #include "strus/lib/error.hpp"
+#include "strus/lib/filelocator.hpp"
 #include "strus/index.hpp"
 #include "strus/wordVector.hpp"
 #include "strus/vectorStorageInterface.hpp"
@@ -69,6 +70,7 @@ static strus::WordVector getRandomVector( unsigned int dim)
 }
 
 static strus::ErrorBufferInterface* g_errorhnd = 0;
+static strus::FileLocatorInterface* g_fileLocator = 0;
 
 static std::string getFeatureName( unsigned int idx)
 {
@@ -189,7 +191,7 @@ static const VariableDef g_variables[] = {{"Variable1", "Value1"},{"Variable2", 
 
 static void writeDatabase( const std::string& testdir, const std::string& configstr, const TestDataset& dataset, const strus::LshModel& model)
 {
-	strus::local_ptr<strus::DatabaseInterface> dbi( strus::createDatabaseType_leveldb( testdir, g_errorhnd));
+	strus::local_ptr<strus::DatabaseInterface> dbi( strus::createDatabaseType_leveldb( g_fileLocator, g_errorhnd));
 	if (dbi->exists( configstr))
 	{
 		if (!dbi->destroyDatabase( configstr))
@@ -320,7 +322,7 @@ static bool compare( const strus::LshModel& m1, const strus::LshModel& m2)
 
 static void readAndCheckDatabase( const std::string& testdir, const std::string& configstr, const TestDataset& dataset, const strus::LshModel& model)
 {
-	strus::local_ptr<strus::DatabaseInterface> dbi( strus::createDatabaseType_leveldb( testdir, g_errorhnd));
+	strus::local_ptr<strus::DatabaseInterface> dbi( strus::createDatabaseType_leveldb( g_fileLocator, g_errorhnd));
 	strus::DatabaseAdapter database( dbi.get(), configstr, g_errorhnd);
 
 	std::size_t nofVariables = 0;
@@ -506,12 +508,14 @@ static void readAndCheckDatabase( const std::string& testdir, const std::string&
 
 int main( int argc, const char** argv)
 {
+	int rt = 0;
+	g_errorhnd = strus::createErrorBuffer_standard( 0, 0, NULL/*debug trace interface*/);
+	if (!g_errorhnd) {std::cerr << "FAILED " << "strus::createErrorBuffer_standard" << std::endl; return -1;}
+	g_fileLocator = strus::createFileLocator_std( g_errorhnd);
+	if (!g_fileLocator) {std::cerr << "FAILED " << "strus::createFileLocator_std" << std::endl; return -1;}
+
 	try
 	{
-		int rt = 0;
-		g_errorhnd = strus::createErrorBuffer_standard( 0, 0, NULL/*debug trace interface*/);
-		if (!g_errorhnd) throw std::runtime_error("failed to create error buffer structure");
-
 		initRandomNumberGenerator();
 		std::string configstr( DEFAULT_CONFIG);
 		strus::Index nofTypes = 2;
@@ -580,7 +584,7 @@ int main( int argc, const char** argv)
 		writeDatabase( workdir, configstr, dataset, model);
 		readAndCheckDatabase( workdir, configstr, dataset, model);
 
-		strus::local_ptr<strus::DatabaseInterface> dbi( strus::createDatabaseType_leveldb( workdir, g_errorhnd));
+		strus::local_ptr<strus::DatabaseInterface> dbi( strus::createDatabaseType_leveldb( g_fileLocator, g_errorhnd));
 		if (dbi.get())
 		{
 			(void)dbi->destroyDatabase( configstr);
@@ -590,6 +594,7 @@ int main( int argc, const char** argv)
 			throw std::runtime_error( "uncaught exception");
 		}
 		std::cerr << "done" << std::endl;
+		delete g_fileLocator;
 		delete g_errorhnd;
 		return 0;
 	}
@@ -603,12 +608,14 @@ int main( int argc, const char** argv)
 			msg.append( ")");
 		}
 		std::cerr << "error: " << err.what() << msg << std::endl;
+		delete g_fileLocator;
 		delete g_errorhnd;
 		return -1;
 	}
 	catch (const std::bad_alloc& )
 	{
 		std::cerr << "out of memory" << std::endl;
+		delete g_fileLocator;
 		delete g_errorhnd;
 		return -2;
 	}
@@ -622,6 +629,7 @@ int main( int argc, const char** argv)
 			msg.append( ")");
 		}
 		std::cerr << "error: " << err.what() << msg << std::endl;
+		delete g_fileLocator;
 		delete g_errorhnd;
 		return -3;
 	}
