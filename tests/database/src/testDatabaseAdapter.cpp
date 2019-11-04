@@ -581,13 +581,17 @@ int main( int argc, const char** argv)
 		TestDataset dataset( nofTypes, nofFeatures, configstr);
 		strus::LshModel model( dataset.config().vecdim, dataset.config().bits, dataset.config().variations);
 
-		writeDatabase( workdir, configstr, dataset, model);
-		readAndCheckDatabase( workdir, configstr, dataset, model);
+		static const char* vectorconfigkeys[] = {"memtypes","lexprun","vecdim","bits","variations",0};
+		std::string dbconfigstr( configstr);
+		removeKeysFromConfigString( dbconfigstr, vectorconfigkeys, g_errorhnd);
+
+		writeDatabase( workdir, dbconfigstr, dataset, model);
+		readAndCheckDatabase( workdir, dbconfigstr, dataset, model);
 
 		strus::local_ptr<strus::DatabaseInterface> dbi( strus::createDatabaseType_leveldb( g_fileLocator, g_errorhnd));
 		if (dbi.get())
 		{
-			(void)dbi->destroyDatabase( configstr);
+			(void)dbi->destroyDatabase( dbconfigstr);
 		}
 		if (g_errorhnd->hasError())
 		{

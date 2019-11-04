@@ -42,7 +42,7 @@ VectorStorageClient::VectorStorageClient( const DatabaseInterface* database_, co
 
 	if (strus::extractUIntFromConfigString( value, configstring, "lexprun", m_errorhnd))
 	{
-		if (m_debugtrace) m_debugtrace->event( "param", "probsimdist %d", value);
+		if (m_debugtrace) m_debugtrace->event( "param", "lexprun %d", value);
 		m_lexer_prunning = value;
 	}
 	if (strus::extractStringArrayFromConfigString( m_inMemoryTypes, configstring, "memtypes", ',', m_errorhnd))

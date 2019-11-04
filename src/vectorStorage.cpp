@@ -55,6 +55,10 @@ bool VectorStorage::createStorage( const std::string& configsource, const Databa
 		std::string configstring( configsource);
 		Config config;
 		unsigned int value;
+
+		removeKeyFromConfigString( configstring, "memtypes", m_errorhnd);
+		removeKeyFromConfigString( configstring, "lexprun", m_errorhnd);
+
 		if (strus::extractUIntFromConfigString( value, configstring, "vecdim", m_errorhnd))
 		{
 			if (m_debugtrace) m_debugtrace->event( "param", "vecdim %d", value);

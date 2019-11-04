@@ -1583,9 +1583,13 @@ int main( int argc, const char** argv)
 		strus::local_ptr<strus::VectorStorageInterface> sti( strus::createVectorStorage_std( g_fileLocator, g_errorhnd));
 		if (!dbi.get() || !sti.get() || g_errorhnd->hasError()) throw std::runtime_error( g_errorhnd->fetchError());
 
+		static const char* vectorconfigkeys[] = {"memtypes","lexprun","vecdim","bits","variations",0};
+		std::string dbconfigstr( configstr);
+		removeKeysFromConfigString( dbconfigstr, vectorconfigkeys, g_errorhnd);
+
 		// Remove traces of old test model before creating a new one:
 		if (g_verbose) std::cerr << "create test repository ..." << std::endl;
-		if (!dbi->destroyDatabase( configstr))
+		if (!dbi->destroyDatabase( dbconfigstr))
 		{
 			(void)g_errorhnd->fetchError();
 		}
