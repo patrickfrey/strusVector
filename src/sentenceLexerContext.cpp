@@ -1298,14 +1298,14 @@ std::vector<SentenceGuess> SentenceLexerContext::rankSentences( const std::vecto
 		}
 
 		// Calculate minimal cover approximations and value boundaries for mapping pairs of (minimal cover size, nof terms) to an integer:
-		MinimalCoverData minimalCoverData( simGroupData.groups());
+		MinimalCoverData minimalCoverData( simGroupData.groups(), m_errorhnd);
 		std::vector<Rank> ranks;
 		ranks.reserve( sentences.size());
 
 		std::vector<std::vector<GroupId> >::const_iterator gi = sentence_groups.begin(), ge = sentence_groups.end();
 		for (int gidx=0; gi != ge; ++gi,++gidx)
 		{
-			int minimalCoverSize = minimalCoverData.minimalCoverSizeApproximation( *gi);
+			int minimalCoverSize = minimalCoverData.minimalCoverApproximation( *gi).size();
 			Rank rank( gidx, minimalCoverSize);
 			ranks.push_back( rank);
 		}
