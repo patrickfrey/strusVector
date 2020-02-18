@@ -442,6 +442,19 @@ struct QueryDef
 	}
 };
 
+struct VisitCount
+{
+	int nofFeatures;
+	int cnt;
+
+	VisitCount()
+		:nofFeatures(0),cnt(0){}
+	VisitCount( int nofFeatures_, int cnt_)
+		:nofFeatures(nofFeatures_),cnt(cnt_){}
+	VisitCount( const VisitCount& o)
+		:nofFeatures(o.nofFeatures),cnt(o.cnt){}
+};
+
 class TestData
 {
 public:
@@ -727,18 +740,6 @@ public:
 		}
 		int minNofUntyped = std::numeric_limits<int>::max();
 		int minNofFeats = std::numeric_limits<int>::max();
-		struct VisitCount
-		{
-			int nofFeatures;
-			int cnt;
-
-			VisitCount()
-				:nofFeatures(0),cnt(0){}
-			VisitCount( int nofFeatures_, int cnt_)
-				:nofFeatures(nofFeatures_),cnt(cnt_){}
-			VisitCount( const VisitCount& o)
-				:nofFeatures(o.nofFeatures),cnt(o.cnt){}
-		};
 		std::vector<VisitCount> visitCountMap;
 
 		typedef std::multimap<int,int>::const_iterator Iter;
