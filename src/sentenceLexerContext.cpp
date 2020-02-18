@@ -1243,35 +1243,36 @@ GroupId SimGroupData::getOrCreateFeatGroup( const FeatNum& featnum)
 	}
 }
 
+struct Rank
+{
+	int idx;
+	int minimalCoverSize;
+	double weight;
+
+	Rank( int idx_, int minimalCoverSize_)
+		:idx(idx_),minimalCoverSize(minimalCoverSize_),weight(0.0){}
+	Rank( const Rank& o)
+		:idx(o.idx),minimalCoverSize(o.minimalCoverSize),weight(o.weight){}
+
+	bool operator > (const Rank& o) const
+	{
+		return (std::abs( weight - o.weight) <= std::numeric_limits<float>::epsilon()) ? (minimalCoverSize == o.minimalCoverSize ? idx < o.idx : minimalCoverSize < o.minimalCoverSize): weight > o.weight;
+	}
+};
+
+struct Local
+{
+	static double getWeight( int coverSize, int sentenceSize)
+	{
+		return 1.0/(double)std::sqrt(coverSize) + 1.0/(double)sentenceSize;
+	}
+};
 
 std::vector<SentenceGuess> SentenceLexerContext::rankSentences( const std::vector<SentenceGuess>& sentences, int maxNofResults) const
 {
 	try
 	{
 		if (sentences.empty()) return std::vector<SentenceGuess>();
-		struct Rank
-		{
-			int idx;
-			int minimalCoverSize;
-			double weight;
-
-			Rank( int idx_, int minimalCoverSize_)
-				:idx(idx_),minimalCoverSize(minimalCoverSize_),weight(0.0){}
-			Rank( const Rank& o)
-				:idx(o.idx),minimalCoverSize(o.minimalCoverSize),weight(o.weight){}
-
-			bool operator > (const Rank& o) const
-			{
-				return (std::abs( weight - o.weight) <= std::numeric_limits<float>::epsilon()) ? (minimalCoverSize == o.minimalCoverSize ? idx < o.idx : minimalCoverSize < o.minimalCoverSize): weight > o.weight;
-			}
-		};
-		struct Local
-		{
-			static double getWeight( int coverSize, int sentenceSize)
-			{
-				return 1.0/(double)std::sqrt(coverSize) + 1.0/(double)sentenceSize;
-			}
-		};
 
 		// Map features to sets of integers with the property that A * B != {}, if A ~ B
 		// Each set gets an integer assigned
