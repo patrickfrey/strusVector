@@ -8,8 +8,8 @@
 /// \brief Definition of a vector with id
 #ifndef _STRUS_VECTOR_DEF_HPP_INCLUDED
 #define _STRUS_VECTOR_DEF_HPP_INCLUDED
-#include "strus/index.hpp"
-#include "strus/wordVector.hpp"
+#include "strus/storage/index.hpp"
+#include "strus/storage/wordVector.hpp"
 #include "simHash.hpp"
 #include <vector>
 

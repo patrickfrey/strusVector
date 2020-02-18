@@ -10,7 +10,7 @@
 #ifndef _STRUS_SENTENCE_LEXER_CONTEXT_IMPL_HPP_INCLUDED
 #define _STRUS_SENTENCE_LEXER_CONTEXT_IMPL_HPP_INCLUDED
 #include "strus/sentenceLexerContextInterface.hpp"
-#include "strus/wordVector.hpp"
+#include "strus/storage/wordVector.hpp"
 #include "sentenceLexerInstance.hpp"
 #include "vectorStorageClient.hpp"
 #include <vector>

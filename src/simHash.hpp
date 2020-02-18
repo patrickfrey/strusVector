@@ -9,7 +9,7 @@
 #ifndef _STRUS_VECTOR_SIMHASH_HPP_INCLUDED
 #define _STRUS_VECTOR_SIMHASH_HPP_INCLUDED
 #include "strus/base/stdint.h"
-#include "strus/index.hpp"
+#include "strus/storage/index.hpp"
 #include "internationalization.hpp"
 #include <vector>
 #include <string>

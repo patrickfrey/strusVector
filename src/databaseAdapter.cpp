@@ -13,7 +13,7 @@
 #include "strus/base/stdint.h"
 #include "strus/base/local_ptr.hpp"
 #include "strus/versionVector.hpp"
-#include "strus/databaseOptions.hpp"
+#include "strus/storage/databaseOptions.hpp"
 #include "strus/databaseCursorInterface.hpp"
 #include "strus/errorBufferInterface.hpp"
 #include "internationalization.hpp"

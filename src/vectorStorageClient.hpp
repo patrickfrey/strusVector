@@ -9,7 +9,7 @@
 #ifndef _STRUS_VECTOR_STORAGE_CLIENT_IMPLEMENTATION_HPP_INCLUDED
 #define _STRUS_VECTOR_STORAGE_CLIENT_IMPLEMENTATION_HPP_INCLUDED
 #include "strus/vectorStorageClientInterface.hpp"
-#include "strus/wordVector.hpp"
+#include "strus/storage/wordVector.hpp"
 #include "strus/reference.hpp"
 #include "databaseAdapter.hpp"
 #include "simHashQueryResult.hpp"

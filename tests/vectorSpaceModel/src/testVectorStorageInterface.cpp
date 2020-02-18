@@ -16,8 +16,8 @@
 #include "strus/databaseInterface.hpp"
 #include "strus/fileLocatorInterface.hpp"
 #include "strus/errorBufferInterface.hpp"
-#include "strus/wordVector.hpp"
-#include "strus/vectorQueryResult.hpp"
+#include "strus/storage/wordVector.hpp"
+#include "strus/storage/vectorQueryResult.hpp"
 #include "strus/base/configParser.hpp"
 #include "strus/base/stdint.h"
 #include "strus/base/fileio.hpp"
@@ -637,7 +637,7 @@ int main( int argc, const char** argv)
 								printResult( std::cerr, expect);
 								throw std::runtime_error("search result does not match");
 							}
-							else if (simar.empty() || simar[0].weight() < 1.0 - VEC_EPSILON*10)
+							else if (simar.empty() || !strus::Math::isequal( simar[0].weight(), 1.0, VEC_EPSILON*40))
 							{
 								throw std::runtime_error( "similarity to itself not found");
 							}
@@ -677,7 +677,7 @@ int main( int argc, const char** argv)
 			throw std::runtime_error( "uncaught exception");
 		}
 		if (g_verbose) std::cerr << "config:" << storage->config() << std::endl;
-		std::cerr << "done" << std::endl;
+		std::cerr << "OK" << std::endl;
 		delete g_fileLocator;
 		delete g_errorhnd;
 		return 0;

@@ -8,7 +8,7 @@
 /// \brief Template for temporary ranklist
 #ifndef _STRUS_VECTOR_RANKLIST_TEMPLATE_HPP_INCLUDED
 #define _STRUS_VECTOR_RANKLIST_TEMPLATE_HPP_INCLUDED
-#include "strus/index.hpp"
+#include "strus/storage/index.hpp"
 #include "simHash.hpp"
 #include "simHashQueryResult.hpp"
 #include <utility>

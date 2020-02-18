@@ -10,7 +10,7 @@
 #include "vectorStorageDump.hpp"
 #include "databaseAdapter.hpp"
 #include "databaseHelpers.hpp"
-#include "strus/databaseOptions.hpp"
+#include "strus/storage/databaseOptions.hpp"
 #include "strus/errorBufferInterface.hpp"
 #include "internationalization.hpp"
 #include "errorUtils.hpp"

@@ -8,7 +8,7 @@
 /// \brief Reader to access LSH values from storage or memory
 #ifndef _STRUS_VECTOR_SIMHASH_READER_HPP_INCLUDED
 #define _STRUS_VECTOR_SIMHASH_READER_HPP_INCLUDED
-#include "strus/index.hpp"
+#include "strus/storage/index.hpp"
 #include "databaseAdapter.hpp"
 #include "simHash.hpp"
 #include <string>

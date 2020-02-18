@@ -9,7 +9,7 @@
 #ifndef _STRUS_VECTOR_ARMADILLO_UTILS_HPP_INCLUDED
 #define _STRUS_VECTOR_ARMADILLO_UTILS_HPP_INCLUDED
 #include "armadillo"
-#include "strus/wordVector.hpp"
+#include "strus/storage/wordVector.hpp"
 
 namespace strus {
 

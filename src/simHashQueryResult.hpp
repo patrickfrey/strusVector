@@ -8,7 +8,7 @@
 /// \brief Element of a result of retrieval of the most similar LSH values
 #ifndef _STRUS_VECTOR_SIMHASH_QUERY_RESULT_HPP_INCLUDED
 #define _STRUS_VECTOR_SIMHASH_QUERY_RESULT_HPP_INCLUDED
-#include "strus/index.hpp"
+#include "strus/storage/index.hpp"
 
 namespace strus {
 

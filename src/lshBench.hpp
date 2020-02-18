@@ -9,7 +9,7 @@
 #ifndef _STRUS_VECTOR_LSH_BENCH_HPP_INCLUDED
 #define _STRUS_VECTOR_LSH_BENCH_HPP_INCLUDED
 #include "strus/base/stdint.h"
-#include "strus/index.hpp"
+#include "strus/storage/index.hpp"
 #include "simHash.hpp"
 #include <vector>
 

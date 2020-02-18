@@ -8,7 +8,7 @@
 /// \brief Temporary ranklist used by similarity hash search
 #ifndef _STRUS_VECTOR_SIMHASH_RANKLIST_HPP_INCLUDED
 #define _STRUS_VECTOR_SIMHASH_RANKLIST_HPP_INCLUDED
-#include "strus/index.hpp"
+#include "strus/storage/index.hpp"
 #include "simHash.hpp"
 #include "simHashQueryResult.hpp"
 #include "rankList.hpp"

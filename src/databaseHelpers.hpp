@@ -11,7 +11,7 @@
 #include "strus/base/hton.hpp"
 #include "strus/base/utf8.hpp"
 #include "strus/base/stdint.h"
-#include "strus/index.hpp"
+#include "strus/storage/index.hpp"
 #include "internationalization.hpp"
 #include <string>
 #include <cstring>
