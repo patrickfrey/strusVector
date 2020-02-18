@@ -50,9 +50,13 @@ static strus::FileLocatorInterface* g_fileLocator = 0;
 
 static char g_delimiterSubst = '-';
 static char g_spaceSubst = '_';
-static std::vector<int> g_delimiters = {0x2019,'`','\'','?','!','/',':','.',',','-',0x2014,')','(','[',']','{','}','<','>'};
-static std::vector<int> g_spaces = {32,'\t',0xA0,0x2008,0x200B};
-static std::vector<int> g_alphabet = {'a','b','c','d','e','f','0','1','2','3','4','5','6','7','8','9',0xC0,0xC1,0xC2,0xC3,0xC4,0xC5,0x391,0x392,0x393,0x394,0x395,0x396,0x9A0,0x9A1,0x9A2,0x9A3,0x9A4,0x9A5,0x10B0,0x10B1,0x10B2,0x10B3,0x10B4,0x10B5,0x35B0,0x35B1,0x35B2,0x35B3,0x35B4,0x35B5};
+enum {NofDelimiters = 19, NofSpaces = 5, NofAlphaCharacters = 46};
+static int g_nofDelimiters = NofDelimiters;
+static const int g_delimiters[ NofDelimiters] = {0x2019,'`','\'','?','!','/',':','.',',','-',0x2014,')','(','[',']','{','}','<','>'};
+static int g_nofSpaces = NofSpaces;
+static const int g_spaces[ NofSpaces] = {32,'\t',0xA0,0x2008,0x200B};
+static int g_nofAlphaCharacters = NofAlphaCharacters;
+static const int g_alphaCharacters[ NofAlphaCharacters] = {'a','b','c','d','e','f','0','1','2','3','4','5','6','7','8','9',0xC0,0xC1,0xC2,0xC3,0xC4,0xC5,0x391,0x392,0x393,0x394,0x395,0x396,0x9A0,0x9A1,0x9A2,0x9A3,0x9A4,0x9A5,0x10B0,0x10B1,0x10B2,0x10B3,0x10B4,0x10B5,0x35B0,0x35B1,0x35B2,0x35B3,0x35B4,0x35B5};
 strus::Index g_nofTypes = 2;
 enum  {MaxNofTypes = 1000};
 strus::Index g_nofTerms = 1000;
@@ -102,7 +106,7 @@ static std::string randomTerm()
 	for (; li != le; ++li)
 	{
 		char chrbuf[ 32];
-		int32_t chr = g_alphabet[ g_random.get( 0, 1+g_random.get( 0, g_alphabet.size()))];
+		int32_t chr = g_alphaCharacters[ g_random.get( 0, 1+g_random.get( 0, g_nofAlphaCharacters))];
 		std::size_t chrlen = strus::utf8encode( chrbuf, chr);
 		rt.append( chrbuf, chrlen);
 	}
@@ -117,12 +121,12 @@ static char randomSeparator( bool withEmpty, bool withSpace)
 	return rndsep[ g_random.get( start, end)];
 }
 
-static std::string randomDelimiterString( const std::vector<int>& delimiters)
+static std::string randomDelimiterString( int const* delimiters, int nofDelimiters)
 {
 	std::string rt;
 	do
 	{
-		int chr = delimiters[ g_random.get( 0, 1+g_random.get( 0, delimiters.size()))];
+		int chr = delimiters[ g_random.get( 0, 1+g_random.get( 0, nofDelimiters))];
 		char chrbuf[32];
 		std::size_t chrlen = strus::utf8encode( chrbuf, chr);
 		rt.append( chrbuf, chrlen);
@@ -141,11 +145,11 @@ static std::string randomSeparatorMasking( char separator)
 	}
 	else if (separator == ' ')
 	{
-		rt.append( randomDelimiterString( g_spaces));
+		rt.append( randomDelimiterString( g_spaces, g_nofSpaces));
 	}
 	else if (separator == g_delimiterSubst)
 	{
-		rt.append( randomDelimiterString( g_delimiters));
+		rt.append( randomDelimiterString( g_delimiters, g_nofDelimiters));
 	}
 	else if (separator == g_spaceSubst)
 	{
@@ -1098,12 +1102,14 @@ private:
 
 void instantiateLexer( strus::SentenceLexerInstanceInterface* lexer)
 {
-	std::vector<int>::const_iterator di = g_delimiters.begin(), de = g_delimiters.end();
+	int const* di = g_delimiters;
+	const int* de = di + g_nofDelimiters;
 	for (; di != de; ++di)
 	{
 		lexer->addLink( *di, g_delimiterSubst);
 	}
-	di = g_spaces.begin(), de = g_spaces.end();
+	di = g_spaces;
+	de = di + g_nofSpaces;
 	for (; di != de; ++di)
 	{
 		lexer->addSpace( *di);
