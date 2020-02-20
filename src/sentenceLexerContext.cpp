@@ -1289,11 +1289,14 @@ std::vector<SentenceGuess> SentenceLexerContext::rankSentences( const std::vecto
 			SentenceTermList::const_iterator ti = si->terms().begin(), te = si->terms().end();
 			for (; ti != te; ++ti)
 			{
-				FeatNum featnum = simGroupData.getOrCreateFeatNum( *ti);
-				if (featnum.valid())
+				if (!ti->type().empty())
 				{
-					GroupId gid = simGroupData.getOrCreateFeatGroup( featnum);
-					sentence_groups.back().push_back( gid);
+					FeatNum featnum = simGroupData.getOrCreateFeatNum( *ti);
+					if (featnum.valid())
+					{
+						GroupId gid = simGroupData.getOrCreateFeatGroup( featnum);
+						sentence_groups.back().push_back( gid);
+					}
 				}
 			}
 		}
@@ -1341,13 +1344,13 @@ std::vector<SentenceGuess> SentenceLexerContext::rankSentences( const std::vecto
 		for (; ri != re; ++ri)
 		{
 			const SentenceGuess& sentence = sentences[ ri->idx];
-			rt.push_back( SentenceGuess( sentence.classname(), sentence.terms(), ri->weight));
+			rt.push_back( SentenceGuess( sentence.terms(), ri->weight));
 		}
 		if (m_debugtrace)
 		{
 			m_debugtrace->open( "ranklist");
 			std::string sentstr = termListString( si->terms(), ", ");
-			m_debugtrace->event( "sentence", "weight %.3f class %s %s", si->weight(), si->classname().c_str(), sentstr.c_str());
+			m_debugtrace->event( "sentence", "weight %.3f content %s", si->weight(), sentstr.c_str());
 			m_debugtrace->close();
 		}
 		return rt;
