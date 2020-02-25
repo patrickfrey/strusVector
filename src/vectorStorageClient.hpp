@@ -13,6 +13,7 @@
 #include "strus/reference.hpp"
 #include "databaseAdapter.hpp"
 #include "simHashQueryResult.hpp"
+#include "sentenceLexerConfig.hpp"
 #include "lshModel.hpp"
 #include "simHashMap.hpp"
 #include "strus/base/thread.hpp"
@@ -96,17 +97,18 @@ public:/*VectorStorageTransaction*/
 
 public:/*SentenceLexerContext*/
 	std::vector<std::string> getTypeNames( const strus::Index& featno) const;
+	std::vector<strus::Index> getRelatedTypes( const strus::Index& featno) const;
 	strus::Index getFeatNo( const std::string& featname) const;
 	strus::Index getTypeNo( const std::string& typname) const;
 	WordVector getVector( const strus::Index& typeno, const strus::Index& featno) const;
+	std::string getTypeNameFromIndex( const Index& typeno) const;
+	std::string getFeatNameFromIndex( const Index& featno) const;
 
 private:
 	strus::Reference<SimHashMap> getOrCreateTypeSimHashMap( const std::string& type) const;
 	strus::Reference<SimHashMap> getSimHashMap( const std::string& type) const;
 	std::vector<VectorQueryResult> simHashToVectorQueryResults( const std::vector<SimHashQueryResult>& res, int maxNofResults, double minSimilarity) const;
 
-public:
-	enum {DefaultLexerPrunning=3};
 private:
 	ErrorBufferInterface* m_errorhnd;
 	DebugTraceContextInterface* m_debugtrace;
@@ -116,9 +118,9 @@ private:
 	typedef std::map<std::string,SimHashMapRef> SimHashMapMap;
 	typedef strus::Reference<SimHashMapMap> SimHashMapMapRef;
 	mutable strus::Reference<SimHashMapMap> m_simHashMapMap;
-	std::vector<std::string> m_inMemoryTypes;
-	int m_lexer_prunning;			///< parameter for lexer: number candidates on equal position not improving followed (default is DefaultLexerPrunning)
-	strus::mutex m_transaction_mutex;	///< mutual exclusion in the critical part of a transaction
+	std::vector<std::string> m_inMemoryTypes;			///< cached types
+	SentenceLexerConfig m_lexerConfig;				///< sentence lexer configuration
+	strus::mutex m_transaction_mutex;				///< mutual exclusion in the critical part of a transaction
 };
 
 }//namespace

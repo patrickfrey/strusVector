@@ -10,7 +10,9 @@
 #ifndef _STRUS_SENTENCE_LEXER_INSTANCE_IMPL_HPP_INCLUDED
 #define _STRUS_SENTENCE_LEXER_INSTANCE_IMPL_HPP_INCLUDED
 #include "strus/sentenceLexerInstanceInterface.hpp"
+#include "sentenceLexerKeySearch.hpp"
 #include "vectorStorageClient.hpp"
+#include "sentenceLexerConfig.hpp"
 #include <vector>
 #include <string>
 #include <algorithm>
@@ -32,51 +34,26 @@ class SentenceLexerInstance
 {
 public:
 	/// \brief Constructor
-	SentenceLexerInstance( const VectorStorageClient* vstorage_, const DatabaseClientInterface* database_, int max_pos_visits_, ErrorBufferInterface* errorhnd_);
+	SentenceLexerInstance(
+			const VectorStorageClient* vstorage_,
+			const DatabaseClientInterface* database_,
+			const SentenceLexerConfig& config_,
+			ErrorBufferInterface* errorhnd_);
 
 	virtual ~SentenceLexerInstance();
 
-	virtual void addSeparator( int uchr);
-
-	virtual void addSpace( int uchr);
-	
-	virtual void addLink( int uchr, char substchr);
-
-	virtual void defineGroupSimilarityDistance( double value);
-
-	virtual SentenceLexerContextInterface* createContext( const std::string& source) const;
-
-public:
-	struct LinkDef
-	{
-		char uchr[ 6];
-		char substchr;
-
-		LinkDef( int uchr_, char substchr_);
-		LinkDef( const LinkDef& o);
-	};
-
-	struct SeparatorDef
-	{
-		char uchr[ 4];
-
-		SeparatorDef( int uchr_);
-		SeparatorDef( const SeparatorDef& o);
-	};
+	virtual std::vector<SentenceGuess> call( const std::string& source, int maxNofResults) const;
 
 private:
-	void addLinkDef( int uchr, char substchr);
+	std::vector<strus::Index> getSelectedTypes( strus::Index featno) const;
 
 private:
 	ErrorBufferInterface* m_errorhnd;
 	DebugTraceContextInterface* m_debugtrace;
 	const VectorStorageClient* m_vstorage;
 	const DatabaseClientInterface* m_database;
-	std::vector<LinkDef> m_linkDefs;
-	std::vector<SeparatorDef> m_separators;
-	std::vector<char> m_linkChars;
-	int m_max_pos_visits;
-	double m_groupSimilarityDistance;
+	SentenceLexerConfig m_config;
+	std::map<strus::Index,int> m_typepriomap;
 };
 
 }//namespace

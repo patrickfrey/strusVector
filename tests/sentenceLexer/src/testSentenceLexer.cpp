@@ -1412,7 +1412,21 @@ void verifyTestResults( const TestResults& results, const TestData& testdata, in
 
 		if (isEqualTestResultExpected( result, expected, testdata))
 		{
-			if (g_verbose) std::cerr << strus::string_format( "successful test %d query '%s'", qi, qstr.c_str()) << std::endl;
+			if (g_verbose)
+			{
+				std::cerr << strus::string_format( "successful test %d query '%s'", qi, qstr.c_str()) << std::endl;
+				std::vector<std::vector<FeatureDef> >::const_iterator ri = result.begin(), re = result.end();
+				for (int ridx=0; ri != re; ++ri,++ridx)
+				{
+					std::cerr << strus::string_format( "\t[%d]", ridx) << std::endl;
+					std::vector<FeatureDef>::const_iterator fi = ri->begin(), fe = ri->end();
+					for (; fi != fe; ++fi)
+					{
+						std::cerr << "\t\t" << fi->termseq.tostring( testdata.terms(), testdata.unknownTerms())
+							<< " " << fi->typestring() << std::endl;
+					}
+				}
+			}
 		}
 		else
 		{

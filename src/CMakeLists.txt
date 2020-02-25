@@ -20,8 +20,9 @@ set( source_files
 	vectorStorageClient.cpp
 	vectorStorageDump.cpp
 	vectorStorageTransaction.cpp
+	sentenceLexerConfig.cpp
+	sentenceLexerKeySearch.cpp
 	sentenceLexerInstance.cpp
-	sentenceLexerContext.cpp
 )
 
 include_directories(

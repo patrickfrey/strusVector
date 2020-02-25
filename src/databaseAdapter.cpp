@@ -285,7 +285,8 @@ bool DatabaseAdapter::FeatureCursor::skip( const char* keyptr, std::size_t keysi
 	dbkey.append( keyptr, keysize);
 	DatabaseCursorInterface::Slice reskey( m_cursor->seekUpperBound( dbkey.c_str(), dbkey.size(), 1/*domain key size*/));
 	if (!reskey.defined()) return false;
-	keyfound = std::string( reskey.ptr()+1, reskey.size()-1);
+	keyfound.clear();
+	keyfound.append( reskey.ptr()+1, reskey.size()-1);
 	return true;
 }
 
@@ -310,7 +311,8 @@ bool DatabaseAdapter::FeatureCursor::loadFirst( std::string& key)
 	dbkey.push_back( KeyFeatureValuePrefix);
 	DatabaseCursorInterface::Slice reskey = m_cursor->seekFirst( dbkey.c_str(), dbkey.size());
 	if (!reskey.defined()) return false;
-	key = std::string( reskey.ptr()+1, reskey.size()-1);
+	key.clear();
+	key.append( reskey.ptr()+1, reskey.size()-1);
 	return true;
 }
 
@@ -318,7 +320,8 @@ bool DatabaseAdapter::FeatureCursor::loadNext( std::string& key)
 {
 	DatabaseCursorInterface::Slice reskey = m_cursor->seekNext();
 	if (!reskey.defined()) return false;
-	key = std::string( reskey.ptr()+1, reskey.size()-1);
+	key.clear();
+	key.append( reskey.ptr()+1, reskey.size()-1);
 	return true;
 }
 
