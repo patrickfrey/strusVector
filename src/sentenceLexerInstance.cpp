@@ -291,7 +291,7 @@ static std::string termListString( const SentenceTermList& terms, const char* se
 	return rt;
 }
 
-std::vector<SentenceGuess> SentenceLexerInstance::call( const std::string& source, int maxNofResults) const
+std::vector<SentenceGuess> SentenceLexerInstance::call( const std::string& source, int maxNofResults, double minWeight) const
 {
 	try
 	{
@@ -416,7 +416,7 @@ std::vector<SentenceGuess> SentenceLexerInstance::call( const std::string& sourc
 		// Build result returned:
 		ri = ranks.begin();
 		re = ranks.end();
-		for (; ri != re; ++ri)
+		for (; ri != re && ri->weight >= minWeight + std::numeric_limits<double>::epsilon(); ++ri)
 		{
 			SentenceTermList termlist;
 			const FeatNumList& feats = sentences.ar[ ri->idx];

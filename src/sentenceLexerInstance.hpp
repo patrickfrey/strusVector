@@ -42,7 +42,7 @@ public:
 
 	virtual ~SentenceLexerInstance();
 
-	virtual std::vector<SentenceGuess> call( const std::string& source, int maxNofResults) const;
+	virtual std::vector<SentenceGuess> call( const std::string& source, int maxNofResults, double minWeight) const;
 
 private:
 	std::vector<strus::Index> getSelectedTypes( strus::Index featno) const;
