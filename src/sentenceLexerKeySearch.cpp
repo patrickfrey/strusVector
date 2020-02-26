@@ -12,6 +12,7 @@
 #include "vectorStorageClient.hpp"
 #include <vector>
 #include <string>
+#include <set>
 #include <cstring>
 #include <algorithm>
 
