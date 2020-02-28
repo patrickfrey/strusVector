@@ -18,6 +18,7 @@
 #include "strus/constants.hpp"
 #include <limits>
 #include <cstring>
+#include <iostream>
 
 using namespace strus;
 
@@ -68,9 +69,22 @@ struct FeatNum
 	{
 		return featno == o.featno ? typeno < o.typeno : featno < o.featno;
 	}
+	bool operator == (const FeatNum& o) const
+	{
+		return featno == o.featno && typeno == o.typeno;
+	}
+	bool operator != (const FeatNum& o) const
+	{
+		return featno != o.featno || typeno != o.typeno;
+	}
 	bool valid() const
 	{
 		return typeno && featno;
+	}
+	unsigned char hash() const
+	{
+		unsigned char rt = ((1+typeno) * featno) & 0xFF;
+		return rt ? rt : 0xFF;
 	}
 };
 
@@ -215,15 +229,38 @@ std::vector<strus::Index> SentenceLexerInstance::getSelectedTypes( strus::Index 
 
 typedef std::vector<FeatNum> FeatNumList;
 
-struct FeatNumVariantList
+static unsigned char hashFeatNumList( const FeatNumList& ar)
 {
-	std::vector<FeatNumList> ar;
+	int res = 179;
+	FeatNumList::const_iterator ai = ar.begin(), ae = ar.end();
+	for (int aidx=0; ai != ae; ++ai,++aidx)
+	{
+		res += ((1+ai->typeno) * (aidx+ai->featno));
+	}
+	unsigned char rt = res & 0xFF;
+	return rt ? rt : 0xFF;
+}
 
-	FeatNumVariantList() :ar() {ar.push_back(FeatNumList());}
+static std::string hashFeatNumListList( const std::vector<FeatNumList>& ar)
+{
+	std::string rt;
+	std::vector<FeatNumList>::const_iterator ai = ar.begin(), ae = ar.end();
+	for (; ai != ae; ++ai)
+	{
+		rt.push_back( hashFeatNumList( *ai));
+	}
+	return rt;
+}
+
+
+class FeatNumVariantList
+{
+public:
+	FeatNumVariantList() :m_ar() {m_ar.push_back(FeatNumList());}
 
 	void add( const FeatNum& fn)
 	{
-		std::vector<FeatNumList>::iterator ai = ar.begin(), ae = ar.end();
+		std::vector<FeatNumList>::iterator ai = m_ar.begin(), ae = m_ar.end();
 		for (; ai != ae; ++ai)
 		{
 			ai->push_back( fn);
@@ -238,7 +275,7 @@ struct FeatNumVariantList
 		FeatNumList::const_iterator li = list.begin(), le = list.end();
 		for (; li != le; ++li)
 		{
-			std::vector<FeatNumList> follow = ar;
+			std::vector<FeatNumList> follow = m_ar;
 			std::vector<FeatNumList>::iterator fi = follow.begin(), fe = follow.end();
 			for (; fi != fe; ++fi)
 			{
@@ -246,7 +283,7 @@ struct FeatNumVariantList
 			}
 			new_ar.insert( new_ar.end(), follow.begin(), follow.end());
 		}
-		ar.swap( new_ar);
+		m_ar.swap( new_ar);
 	}
 
 	void crossJoin( const std::vector<FeatNumList>& list)
@@ -254,7 +291,7 @@ struct FeatNumVariantList
 		if (list.empty()) return;
 		if (list.size() == 1)
 		{
-			std::vector<FeatNumList>::iterator ai = ar.begin(), ae = ar.end();
+			std::vector<FeatNumList>::iterator ai = m_ar.begin(), ae = m_ar.end();
 			for (; ai != ae; ++ai)
 			{
 				ai->insert( ai->end(), list[0].begin(), list[0].end());
@@ -266,7 +303,7 @@ struct FeatNumVariantList
 			std::vector<FeatNumList>::const_iterator li = list.begin(), le = list.end();
 			for (; li != le; ++li)
 			{
-				std::vector<FeatNumList> follow = ar;
+				std::vector<FeatNumList> follow = m_ar;
 				std::vector<FeatNumList>::iterator fi = follow.begin(), fe = follow.end();
 				for (; fi != fe; ++fi)
 				{
@@ -274,9 +311,45 @@ struct FeatNumVariantList
 				}
 				new_ar.insert( new_ar.end(), follow.begin(), follow.end());
 			}
-			ar.swap( new_ar);
+			m_ar.swap( new_ar);
 		}
 	}
+
+	const std::vector<FeatNumList>& ar() const
+	{
+		return m_ar;
+	}
+
+	void eliminateDuplicates()
+	{
+		std::vector<int> duplicates;
+		std::string hhar = hashFeatNumListList( m_ar);
+		char const* hi = hhar.c_str();
+		for (; *hi; ++hi)
+		{
+			int i1 = hi-hhar.c_str();
+			unsigned char needle = *hi;
+
+			char const* hn = std::strchr( hi+1, needle);
+			for (; hn; hn = std::strchr( hn+1, needle))
+			{
+				int i2 = hn-hhar.c_str();
+				if (m_ar[ i1] == m_ar[ i2])
+				{
+					duplicates.push_back( i2);
+				}
+			}
+		}
+		std::sort( duplicates.begin(), duplicates.end(), std::greater<int>());
+		std::vector<int>::const_iterator di = duplicates.begin(), de = duplicates.end();
+		for (; di != de; ++di)
+		{
+			m_ar.erase( m_ar.begin()+*di);
+		}
+	}
+
+private:
+	std::vector<FeatNumList> m_ar;
 };
 
 static std::string termListString( const SentenceTermList& terms, const char* sep)
@@ -286,7 +359,14 @@ static std::string termListString( const SentenceTermList& terms, const char* se
 	for (; ti != te; ++ti)
 	{
 		if (!rt.empty()) rt.append( sep);
-		rt.append( strus::string_format( "%s '%s'", ti->type().c_str(), ti->value().c_str()));
+		if (ti->type().empty())
+		{
+			rt.append( strus::string_format( "? '%s'", ti->value().c_str()));
+		}
+		else
+		{
+			rt.append( strus::string_format( "%s '%s'", ti->type().c_str(), ti->value().c_str()));
+		}
 	}
 	return rt;
 }
@@ -337,6 +417,7 @@ std::vector<SentenceGuess> SentenceLexerInstance::call( const std::string& sourc
 			for (; ii != ie; ++ii)
 			{
 				FeatNumVariantList variants;
+
 				SentenceLexerKeySearch::ItemList::const_iterator
 					ti = ii->begin(), te = ii->end();
 				for (; ti != te; ++ti)
@@ -375,17 +456,40 @@ std::vector<SentenceGuess> SentenceLexerInstance::call( const std::string& sourc
 						variants.add( FeatNum( 0, undefinedFeatureList.size()));
 					}
 				}
-				fieldSentenceList.insert( fieldSentenceList.end(), variants.ar.begin(), variants.ar.end());
+				fieldSentenceList.insert( fieldSentenceList.end(), variants.ar().begin(), variants.ar().end());
 			}
 			sentences.crossJoin( fieldSentenceList);
+			sentences.eliminateDuplicates();
 		}}
 
 		std::vector<std::vector<GroupId> > sentence_groups;
-		sentence_groups.reserve( sentences.ar.size());
+		sentence_groups.reserve( sentences.ar().size());
 
-		std::vector<FeatNumList>::const_iterator si = sentences.ar.begin(), se = sentences.ar.end();
+		if (m_debugtrace) m_debugtrace->open( "candidates");
+		std::vector<FeatNumList>::const_iterator si = sentences.ar().begin(), se = sentences.ar().end();
 		for (; si != se; ++si)
 		{
+			if (m_debugtrace)
+			{
+				// Trace log of selected candidate sequences of terms:
+				std::string sentstr;
+				FeatNumList::const_iterator fi = si->begin(), fe = si->end();
+				for (; fi != fe; ++fi)
+				{
+					if (fi->typeno == 0)
+					{
+						sentstr.append( strus::string_format( " ? '%s'", undefinedFeatureList[ fi->featno-1].c_str()));
+					}
+					else
+					{
+						std::string typenam = m_vstorage->getTypeNameFromIndex( fi->typeno);
+						std::string featnam = m_vstorage->getFeatNameFromIndex( fi->featno);
+						sentstr.append( strus::string_format( " %s '%s'", typenam.c_str(), featnam.c_str()));
+					}
+				}
+				m_debugtrace->event( "sequence", "%s", sentstr.c_str());
+			}
+			// Create a group for each sequence as candidate sentence:
 			sentence_groups.push_back( std::vector<GroupId>());
 			FeatNumList::const_iterator ti = si->begin(), te = si->end();
 			for (; ti != te; ++ti)
@@ -394,17 +498,18 @@ std::vector<SentenceGuess> SentenceLexerInstance::call( const std::string& sourc
 				sentence_groups.back().push_back( gid);
 			}
 		}
+		if (m_debugtrace) m_debugtrace->close();
 
 		// Calculate minimal cover approximations and value boundaries for mapping pairs of (minimal cover size, nof terms) to an integer:
 		MinimalCoverData minimalCoverData( simGroupData.groups(), m_errorhnd);
 		std::vector<Rank> ranks;
-		ranks.reserve( sentences.ar.size());
+		ranks.reserve( sentences.ar().size());
 
 		std::vector<std::vector<GroupId> >::const_iterator gi = sentence_groups.begin(), ge = sentence_groups.end();
 		for (int gidx=0; gi != ge; ++gi,++gidx)
 		{
 			int minimalCoverSize = minimalCoverData.minimalCoverApproximation( *gi).size();
-			Rank rank( gidx, minimalCoverSize + sentences.ar[ gidx].size() * SENTENCESIZE_AGAINST_COVERSIZE_WEIGHT);
+			Rank rank( gidx, minimalCoverSize + sentences.ar()[ gidx].size() * SENTENCESIZE_AGAINST_COVERSIZE_WEIGHT);
 			ranks.push_back( rank);
 		}
 
@@ -439,7 +544,7 @@ std::vector<SentenceGuess> SentenceLexerInstance::call( const std::string& sourc
 		for (; ri != re && ri->weight >= minWeight + std::numeric_limits<double>::epsilon(); ++ri)
 		{
 			SentenceTermList termlist;
-			const FeatNumList& feats = sentences.ar[ ri->idx];
+			const FeatNumList& feats = sentences.ar()[ ri->idx];
 			FeatNumList::const_iterator fi = feats.begin(), fe = feats.end();
 			for (; fi != fe; ++fi)
 			{
@@ -447,18 +552,16 @@ std::vector<SentenceGuess> SentenceLexerInstance::call( const std::string& sourc
 				{
 					termlist.push_back( SentenceTerm( "", undefinedFeatureList[ fi->featno-1]));
 				}
-				else if (fi->typeno >= (int)typestrmap.size())
+				else
 				{
-					typestrmap.resize( fi->typeno+1);
-					typestrmap[ fi->typeno] = m_vstorage->getTypeNameFromIndex( fi->typeno);
-					termlist.push_back(
-						SentenceTerm(
-							typestrmap[ fi->typeno], 
-							m_vstorage->getFeatNameFromIndex( fi->featno)));
-				}
-				else if (typestrmap[ fi->typeno].empty())
-				{
-					typestrmap[ fi->typeno] = m_vstorage->getTypeNameFromIndex( fi->typeno);
+					if (fi->typeno >= (int)typestrmap.size())
+					{
+						typestrmap.resize( fi->typeno+1);
+					}
+					if (typestrmap[ fi->typeno].empty())
+					{
+						typestrmap[ fi->typeno] = m_vstorage->getTypeNameFromIndex( fi->typeno);
+					}
 					termlist.push_back(
 						SentenceTerm(
 							typestrmap[ fi->typeno], 
@@ -466,13 +569,21 @@ std::vector<SentenceGuess> SentenceLexerInstance::call( const std::string& sourc
 				}
 			}
 			rt.push_back( SentenceGuess( termlist, ri->weight));
-			if (m_debugtrace)
+		}
+		if (ri < re)
+		{
+			rt.resize( re-ri);
+		}
+		if (m_debugtrace)
+		{
+			m_debugtrace->open( "ranklist");
+			std::vector<SentenceGuess>::const_iterator zi = rt.begin(), ze = rt.end();
+			for (; zi != ze; ++zi)
 			{
-				m_debugtrace->open( "ranklist");
-				std::string sentstr = termListString( rt.back().terms(), ", ");
-				m_debugtrace->event( "sentence", "weight %.3f content %s", ri->weight, sentstr.c_str());
-				m_debugtrace->close();
+				std::string sentstr = termListString( zi->terms(), ", ");
+				m_debugtrace->event( "sentence", "weight %.3f content %s", zi->weight(), sentstr.c_str());
 			}
+			m_debugtrace->close();
 		}
 		return rt;
 	}

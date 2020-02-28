@@ -119,14 +119,27 @@ struct KeyCursor
 		return *kitr == linkSubst;
 	}
 
+	bool isLinkAt( std::size_t pos) const
+	{
+		return key[pos] == linkSubst;
+	}
+
 	bool tryLoad( DatabaseAdapter::FeatureCursor& cursor, std::string& loadbuf)
 	{
-		return (cursor.skipPrefix( key, kitr-key, loadbuf)
-			&& loadbuf.size() <= (fieldsize-curpos)
-			&& 0==std::memcmp( fieldptr+curpos, loadbuf.c_str(), loadbuf.size())
-			&& ((fieldsize-curpos) == loadbuf.size()
-				|| fieldptr[ curpos+loadbuf.size()] == spaceSubst
-				|| fieldptr[ curpos+loadbuf.size()] == linkSubst));
+		int kofs = kitr-key;
+		while (cursor.skipPrefix( key, kofs, loadbuf) && loadbuf.size() <= (fieldsize-curpos))
+		{
+			if (0==std::memcmp( fieldptr+curpos, loadbuf.c_str(), loadbuf.size())
+				&& ((fieldsize-curpos) == loadbuf.size()
+					|| fieldptr[ curpos+loadbuf.size()] == spaceSubst
+					|| fieldptr[ curpos+loadbuf.size()] == linkSubst
+					|| fieldptr[ curpos+loadbuf.size()-1] == linkSubst))
+			{
+				return true;
+			}
+			if (key[kofs]) ++kofs;
+		}
+		return false;
 	}
 
 	bool tryLoadNext( DatabaseAdapter::FeatureCursor& cursor, std::string& loadbuf)
@@ -202,6 +215,10 @@ std::vector<SentenceLexerKeySearch::ItemList> SentenceLexerKeySearch::scanField(
 				int endTokenPos = cur.pos + loadkey.size();
 				int successorPos = (keyCursor.isSpace()) ? endTokenPos+1 : endTokenPos;
 				queue.insert( QueueElement( cur.nofUnresolved, successorPos, elemar.size()));
+				if (keyCursor.isLinkAt( loadkey.size()-1) && cur.pos < successorPos-1)
+				{
+					queue.insert( QueueElement( cur.nofUnresolved, successorPos-1, elemar.size()));
+				}
 				elemar.push_back( SolutionElement( cur.pos, endTokenPos, cur.predidx, true));
 
 				if (!keyCursor.currentTokenIsWord())
@@ -217,6 +234,10 @@ std::vector<SentenceLexerKeySearch::ItemList> SentenceLexerKeySearch::scanField(
 					endTokenPos = cur.pos + loadkey.size();
 					successorPos = (keyCursor.isSpace()) ? endTokenPos+1 : endTokenPos;
 					queue.insert( QueueElement( cur.nofUnresolved, successorPos, elemar.size()));
+					if (keyCursor.isLinkAt( loadkey.size()-1) && cur.pos < successorPos-1)
+					{
+						queue.insert( QueueElement( cur.nofUnresolved, successorPos-1, elemar.size()));
+					}
 					elemar.push_back( SolutionElement( cur.pos, endTokenPos, cur.predidx, true));
 					keyCursor.setPosition( loadkey.size());
 				}
