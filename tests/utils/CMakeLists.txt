@@ -11,10 +11,14 @@ include_directories(
 	${Boost_INCLUDE_DIRS}
 	"${Intl_INCLUDE_DIRS}"
 	"${ARMADILLO_INCLUDE_DIRS}"
+	"${VECTOR_INCLUDE_DIRS}"
+	"${MAIN_SOURCE_DIR}"
 	"${strusbase_INCLUDE_DIRS}"
 	"${strus_INCLUDE_DIRS}"
+	${TEST_UTILS_INCLUDE_DIR}
 )
 link_directories(
+	"${VECTOR_LIBRARY_DIRS}"
 	${Boost_LIBRARY_DIRS}
 	${ARMADILLO_LIBRARY_DIRS}
 	"${strusbase_LIBRARY_DIRS}"
