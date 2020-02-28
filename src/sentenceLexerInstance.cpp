@@ -291,6 +291,18 @@ static std::string termListString( const SentenceTermList& terms, const char* se
 	return rt;
 }
 
+static std::string fieldListString( const std::vector<std::string>& fields, const char* sep)
+{
+	std::string rt;
+	std::vector<std::string>::const_iterator fi = fields.begin(), fe = fields.end();
+	for (; fi != fe; ++fi)
+	{
+		if (!rt.empty()) rt.append( sep);
+		rt.append( strus::string_format( "'%s'", fi->c_str()));
+	}
+	return rt;
+}
+
 std::vector<SentenceGuess> SentenceLexerInstance::call( const std::string& source, int maxNofResults, double minWeight) const
 {
 	try
@@ -304,8 +316,16 @@ std::vector<SentenceGuess> SentenceLexerInstance::call( const std::string& sourc
 		// The minimal cover of a group is used to calculate the weight of the candidate
 		SimGroupData simGroupData( m_vstorage, m_config.similarityDistance);
 		FeatNumVariantList sentences;
-		std::vector<std::string> fields = m_config.normalizeSource( source);
 
+		std::vector<std::string> fields = m_config.normalizeSource( source);
+		if (m_debugtrace)
+		{
+			m_debugtrace->open( "query");
+			std::string fieldstr = fieldListString( fields, ", ");
+			m_debugtrace->event( "source", "[%s]", source.c_str());
+			m_debugtrace->event( "normalized", "{%s}", fieldstr.c_str());
+			m_debugtrace->close();
+		}
 		{
 		std::vector<std::string>::const_iterator fi = fields.begin(), fe = fields.end();
 		for (; fi != fe; ++fi)

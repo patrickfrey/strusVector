@@ -8,6 +8,7 @@ include_directories(
 	"${MAIN_SOURCE_DIR}"
 	"${strusbase_INCLUDE_DIRS}"
 	"${strus_INCLUDE_DIRS}"
+	${TEST_UTILS_INCLUDE_DIR}
 )
 link_directories(
 	"${VECTOR_LIBRARY_DIRS}"
@@ -31,6 +32,6 @@ add_executable( testLshVectorSpaceModel testLshVectorSpaceModel.cpp)
 target_link_libraries( testLshVectorSpaceModel ${Boost_LIBRARIES} strus_base  ${Boost_LIBRARIES} ${Intl_LIBRARIES}  ${ARMADILLO_LIBRARIES} )
 
 add_executable( testVectorStorageInterface testVectorStorageInterface.cpp)
-target_link_libraries( testVectorStorageInterface ${Boost_LIBRARIES} strus_base strus_error strus_filelocator strus_vector_std strus_database_leveldb ${Boost_LIBRARIES} ${Intl_LIBRARIES}  ${ARMADILLO_LIBRARIES} )
+target_link_libraries( testVectorStorageInterface ${Boost_LIBRARIES} strus_base strus_error strus_filelocator strus_vector_std strus_database_leveldb strus_vector_testutils ${Boost_LIBRARIES} ${Intl_LIBRARIES}  ${ARMADILLO_LIBRARIES} )
 
 

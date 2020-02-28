@@ -26,6 +26,7 @@
 #include "strus/base/numstring.hpp"
 #include "strus/base/pseudoRandom.hpp"
 #include "strus/base/math.hpp"
+#include "vectorUtils.hpp"
 #include "armadillo"
 #include <iostream>
 #include <sstream>
@@ -46,47 +47,6 @@ static strus::FileLocatorInterface* g_fileLocator = 0;
 
 #define DEFAULT_CONFIG "path=vstorage"
 
-static arma::fvec normalizeVector( const arma::fvec& vec)
-{
-	arma::fvec res = vec;
-	arma::fvec::const_iterator vi = vec.begin(), ve = vec.end();
-	double sqlen = 0.0;
-	for (; vi != ve; ++vi)
-	{
-		sqlen += *vi * *vi;
-	}
-	float normdiv = strus::Math::sqrt( sqlen);
-	arma::fvec::iterator ri = res.begin(), re = res.end();
-	for (; ri != re; ++ri)
-	{
-		*ri = *ri / normdiv;
-	}
-	return res;
-}
-
-static arma::fvec randomVector( int dim)
-{
-	strus::WordVector res;
-	int di = 0, de = dim;
-	for (; di != de; ++di)
-	{
-		float val = (1.0 * (float)g_random.get( 0, 10000)) / 10000.0;
-		res.push_back( val);
-	}
-	return arma::fvec( res);
-}
-
-static strus::WordVector convertVectorStd( const arma::fvec& vec)
-{
-	strus::WordVector rt;
-	arma::fvec::const_iterator vi = vec.begin(), ve = vec.end();
-	for (; vi != ve; ++vi)
-	{
-		rt.push_back( *vi);
-	}
-	return rt;
-}
-
 static std::string getFeatureName( unsigned int idx)
 {
 	return strus::string_format( "F%u", idx);
@@ -95,85 +55,6 @@ static std::string getFeatureName( unsigned int idx)
 static std::string getTypeName( unsigned int idx)
 {
 	return strus::string_format( "T%u", idx);
-}
-
-static strus::WordVector createSimilarVector( const strus::WordVector& vec_, double maxCosSim)
-{
-	arma::fvec vec( vec_);
-	arma::fvec orig( vec);
-	for (;;)
-	{
-		struct Change
-		{
-			int idx;
-			float oldvalue;
-		};
-		enum {NofChanges=16};
-		Change changes[ NofChanges];
-		int ci;
-
-		for (ci=0; ci < NofChanges; ++ci)
-		{
-			int idx = g_random.get( 0, vec.size());
-			float elem = vec[ idx];
-			if (g_random.get( 0, 2) == 0)
-			{
-				elem -= elem / 10;
-				if (elem < 0.0) continue;
-			}
-			else
-			{
-				elem += elem / 10;
-			}
-			changes[ ci].idx = idx;
-			changes[ ci].oldvalue = vec[ idx];
-			vec[ idx] = elem;
-		}
-		float cosSim = arma::norm_dot( vec, orig);
-		if (maxCosSim > cosSim)
-		{
-			for (ci=0; ci < NofChanges; ++ci)
-			{
-				vec[ changes[ ci].idx] = changes[ ci].oldvalue;
-			}
-			break;
-		}
-		vec = normalizeVector( vec);
-	}
-	return convertVectorStd( vec);
-}
-
-strus::WordVector createRandomVector( unsigned int dim)
-{
-	return convertVectorStd( normalizeVector( randomVector( dim))); // vector values between 0.0 and 1.0, with normalized vector length 1.0
-}
-
-static bool compareVector( const strus::WordVector& v1, const strus::WordVector& v2)
-{
-	strus::WordVector::const_iterator vi1 = v1.begin(), ve1 = v1.end();
-	strus::WordVector::const_iterator vi2 = v2.begin(), ve2 = v2.end();
-	for (unsigned int vidx=0; vi1 != ve1 && vi2 != ve2; ++vi1,++vi2,++vidx)
-	{
-		float diff = (*vi1 > *vi2)?(*vi1 - *vi2):(*vi2 - *vi1);
-		if (diff > VEC_EPSILON)
-		{
-			for (unsigned int vv=0; vv != vidx; ++vv)
-			{
-				if (g_verbose) std::cerr << strus::string_format("%u: %f == %f", vv, v1[vv], v2[vv]) << std::endl;
-			}
-			std::cerr << strus::string_format("diff of %u: %f and %f is bigger than %f", vidx, *vi1, *vi2, VEC_EPSILON) << std::endl;
-			return false;
-		}
-	}
-	if (vi1 == ve1 && vi2 == ve2)
-	{
-		return true;
-	}
-	else
-	{
-		if (g_verbose) std::cerr << strus::string_format( "vectors have different length %u != %u", (unsigned int)v1.size(), (unsigned int)v2.size()) << std::endl;
-		return false;
-	}
 }
 
 static bool compareResult( const std::vector<strus::VectorQueryResult>& result, const std::vector<strus::VectorQueryResult>& expect, float min_weight)
@@ -367,12 +248,12 @@ int main( int argc, const char** argv)
 							{
 								float ff = (float)(g_random.get( 1, 1001)) / 1000.0;
 								float randsim = sim_cos + (1.0 - sim_cos) * ff;
-								vec = createSimilarVector( vec, randsim);
+								vec = strus::test::createSimilarVector( g_random, vec, randsim);
 								gentype = "similar";
 							}
 							else
 							{
-								vec = createRandomVector( vecdim);
+								vec = strus::test::createRandomVector( g_random, vecdim);
 								gentype = "random";
 							}
 							++nofVectors;
@@ -512,7 +393,7 @@ int main( int argc, const char** argv)
 				for (; di != de; ++di)
 				{
 					strus::WordVector vec = storage->featureVector( di->type, di->feat);
-					if (!compareVector( di->vec, vec))
+					if (!strus::test::compareVector( di->vec, vec, VEC_EPSILON))
 					{
 						throw std::runtime_error("stored vector value does not match its image");
 					}

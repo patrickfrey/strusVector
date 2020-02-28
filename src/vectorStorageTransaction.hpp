@@ -36,6 +36,8 @@ public:
 
 	virtual void defineVector( const std::string& type, const std::string& name, const WordVector& vec);
 
+	virtual void defineFeatureType( const std::string& type);
+
 	virtual void defineFeature( const std::string& type, const std::string& name);
 
 	virtual void clear();
@@ -45,6 +47,7 @@ public:
 	virtual void rollback();
 
 private:
+	int defineType( const std::string& type);
 	void defineElement( const std::string& type, const std::string& name, const WordVector& vec);
 	void reset();
 

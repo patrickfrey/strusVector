@@ -122,11 +122,17 @@ struct KeyCursor
 	bool tryLoad( DatabaseAdapter::FeatureCursor& cursor, std::string& loadbuf)
 	{
 		return (cursor.skipPrefix( key, kitr-key, loadbuf)
-			&& loadbuf.size() <= fieldsize
-			&& 0==std::memcmp( fieldptr, loadbuf.c_str(), loadbuf.size())
-			&& (fieldsize == loadbuf.size()
-				|| fieldptr[ loadbuf.size()] == spaceSubst
-				|| fieldptr[ loadbuf.size()] == linkSubst));
+			&& loadbuf.size() <= (fieldsize-curpos)
+			&& 0==std::memcmp( fieldptr+curpos, loadbuf.c_str(), loadbuf.size())
+			&& ((fieldsize-curpos) == loadbuf.size()
+				|| fieldptr[ curpos+loadbuf.size()] == spaceSubst
+				|| fieldptr[ curpos+loadbuf.size()] == linkSubst));
+	}
+
+	bool tryLoadNext( DatabaseAdapter::FeatureCursor& cursor, std::string& loadbuf)
+	{
+		skipToken();
+		return tryLoad( cursor, loadbuf);
 	}
 
 	void setPosition( std::size_t pos)
@@ -197,19 +203,22 @@ std::vector<SentenceLexerKeySearch::ItemList> SentenceLexerKeySearch::scanField(
 				int successorPos = (keyCursor.isSpace()) ? endTokenPos+1 : endTokenPos;
 				queue.insert( QueueElement( cur.nofUnresolved, successorPos, elemar.size()));
 				elemar.push_back( SolutionElement( cur.pos, endTokenPos, cur.predidx, true));
-				keyCursor.setPosition( loadkey.size());
 
-				while (keyCursor.hasMore())
+				if (!keyCursor.currentTokenIsWord())
 				{
-					keyCursor.skipToken();
-					if (keyCursor.tryLoad( m_cursor, loadkey))
-					{
-						endTokenPos = cur.pos + loadkey.size();
-						successorPos = (keyCursor.isSpace()) ? endTokenPos+1 : endTokenPos;
-						queue.insert( QueueElement( cur.nofUnresolved, successorPos, elemar.size()));
-						elemar.push_back( SolutionElement( cur.pos, endTokenPos, cur.predidx, true));
-						keyCursor.setPosition( loadkey.size());
-					}
+					//... skip lonely link char
+					endTokenPos = cur.pos + keyCursor.keypos();
+					successorPos = (keyCursor.isSpace()) ? endTokenPos+1 : endTokenPos;
+					queue.insert( QueueElement( cur.nofUnresolved, successorPos, cur.predidx));
+				}
+				keyCursor.setPosition( loadkey.size());
+				while (keyCursor.hasMore() && keyCursor.tryLoadNext( m_cursor, loadkey))
+				{
+					endTokenPos = cur.pos + loadkey.size();
+					successorPos = (keyCursor.isSpace()) ? endTokenPos+1 : endTokenPos;
+					queue.insert( QueueElement( cur.nofUnresolved, successorPos, elemar.size()));
+					elemar.push_back( SolutionElement( cur.pos, endTokenPos, cur.predidx, true));
+					keyCursor.setPosition( loadkey.size());
 				}
 			}
 			else

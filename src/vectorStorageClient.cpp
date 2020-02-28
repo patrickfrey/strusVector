@@ -31,7 +31,8 @@
 using namespace strus;
 
 VectorStorageClient::VectorStorageClient( const DatabaseInterface* database_, const std::string& configstring_, ErrorBufferInterface* errorhnd_)
-	:m_errorhnd(errorhnd_),m_debugtrace(0),m_database(),m_model(),m_simHashMapMap(),m_inMemoryTypes(),m_lexerConfig(configstring_),m_transaction_mutex()
+	:m_errorhnd(errorhnd_),m_debugtrace(0),m_database(),m_model(),m_simHashMapMap()
+	,m_inMemoryTypes(),m_lexerConfig(configstring_),m_transaction_mutex()
 {
 	DebugTraceInterface* dbgi = m_errorhnd->debugTrace();
 	if (dbgi) m_debugtrace = dbgi->createTraceContext( STRUS_DBGTRACE_COMPONENT_NAME);

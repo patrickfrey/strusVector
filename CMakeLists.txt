@@ -60,7 +60,8 @@ set( VECTOR_LIBRARY_DIRS             "${CMAKE_CURRENT_BINARY_DIR}/src" )
 set( PAGEWEIGHT_INCLUDE_DIRS    "${CMAKE_CURRENT_BINARY_DIR}/src_pageweight" )
 set( PAGEWEIGHT_LIBRARY_DIRS    "${CMAKE_CURRENT_BINARY_DIR}/src_pageweight" )
 set( MAIN_SOURCE_DIR                     "${PROJECT_SOURCE_DIR}/src" )
-set( MAIN_TESTS_DIR                        "${PROJECT_SOURCE_DIR}/tests" )
+set( MAIN_TESTS_DIR                         "${PROJECT_SOURCE_DIR}/tests" )
+set( TEST_UTILS_INCLUDE_DIR          "${PROJECT_SOURCE_DIR}/tests/utils" )
 
 # Subdirectories:
 add_subdirectory( 3rdParty )

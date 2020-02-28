@@ -41,7 +41,7 @@ VectorStorageTransaction::~VectorStorageTransaction()
 	if (m_debugtrace) delete m_debugtrace;
 }
 
-void VectorStorageTransaction::defineElement( const std::string& type, const std::string& name, const WordVector& vec)
+int VectorStorageTransaction::defineType( const std::string& type)
 {
 	StringConvError err = StringConvOk;
 	int tid = m_typetab.getOrCreate(strus::utf8clean( type, err));
@@ -53,6 +53,14 @@ void VectorStorageTransaction::defineElement( const std::string& type, const std
 	{
 		m_vecar.push_back( std::vector<VectorDef>());
 	}
+	return tid;
+}
+
+void VectorStorageTransaction::defineElement( const std::string& type, const std::string& name, const WordVector& vec)
+{
+	StringConvError err = StringConvOk;
+	int tid = defineType( type);
+	int tidx = tid-1;
 	int fid = m_nametab.getOrCreate(strus::utf8clean( name, err));
 	if (err != StringConvOk) throw strus::stringconv_exception( err);
 	if (fid <= 0) throw strus::runtime_error( _TXT("failed to get or create feature identifier: %s"), m_errorhnd->fetchError());
@@ -66,6 +74,19 @@ void VectorStorageTransaction::defineElement( const std::string& type, const std
 	}
 	m_featTypeRelations.insert( FeatureTypeRelation( fid, tid));
 	if (m_errorhnd->hasError()) throw std::runtime_error( m_errorhnd->fetchError());
+}
+
+void VectorStorageTransaction::defineFeatureType( const std::string& type)
+{
+	try
+	{
+		defineType( type);
+		if (m_debugtrace)
+		{
+			m_debugtrace->event( "define", "feature type %s", type.c_str());
+		}
+	}
+	CATCH_ERROR_ARG1_MAP( _TXT("error defining feature type in '%s': %s"), MODULENAME, *m_errorhnd);
 }
 
 void VectorStorageTransaction::defineFeature( const std::string& type, const std::string& name)

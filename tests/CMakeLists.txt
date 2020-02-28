@@ -1,5 +1,6 @@
 cmake_minimum_required(VERSION 2.8 FATAL_ERROR)
 
+add_subdirectory( utils )
 add_subdirectory( armadillo )
 add_subdirectory( database )
 add_subdirectory( vectorSpaceModel )

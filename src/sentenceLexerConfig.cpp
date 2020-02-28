@@ -11,6 +11,7 @@
 #include "strus/base/utf8.hpp"
 #include "strus/base/localErrorBuffer.hpp"
 #include "strus/base/configParser.hpp"
+#include "strus/base/string_conv.hpp"
 #include "strus/constants.hpp"
 #include "internationalization.hpp"
 #include <cstring>
@@ -43,32 +44,6 @@ static bool isAlnum( char ch)
 	return ((ch|32) >= 'a' && (ch|32) <= 'z') || isDigit(ch) || ch == '_' || ch == '-';
 }
 
-static int parseNumericEntity( char const*& src)
-{
-	char const* si = src;
-	if (*si == '&')
-	{
-		++si;
-		if (*si == '#')
-		{
-			++si;
-			if (*si >= '0' && *si <= '9')
-			{
-				char const* start = si;
-				for (++si; isDigit(*si); ++si){}
-				if (*si == ';')
-				{
-					++si;
-					src = si;
-					return atoi( start);
-				}
-			}
-		}
-	}
-	return -1;
-}
-
-
 static std::map<std::string,int> parseTypePriorityMap( const std::string& src)
 {
 	std::map<std::string,int> rt;
@@ -92,28 +67,13 @@ static std::map<std::string,int> parseTypePriorityMap( const std::string& src)
 static std::vector<SentenceLexerConfig::CharDef> parseCharList( const std::string& str)
 {
 	std::vector<SentenceLexerConfig::CharDef> rt;
-	char const* si = str.c_str();
+	std::string decoded_str = string_conv::decodeXmlEntities( str);
+	char const* si = decoded_str.c_str();
 	while (*si)
 	{
-		if (*si == '&')
-		{
-			int ne = parseNumericEntity( si);
-			if (ne >= 0)
-			{
-				rt.push_back( SentenceLexerConfig::CharDef( ne));
-			}
-			else
-			{
-				rt.push_back( SentenceLexerConfig::CharDef( *si));
-				++si;
-			}
-		}
-		else
-		{
-			unsigned char sl = strus::utf8charlen( *si);
-			rt.push_back( SentenceLexerConfig::CharDef( strus::utf8decode( si, sl)));
-			si += sl;
-		}
+		unsigned char sl = strus::utf8charlen( *si);
+		rt.push_back( SentenceLexerConfig::CharDef( strus::utf8decode( si, sl)));
+		si += sl;
 	}
 	return rt;
 }
@@ -231,7 +191,10 @@ std::vector<std::string> SentenceLexerConfig::normalizeSource( const std::string
 			{
 				current.resize( current.size()-1);
 			}
-			current.push_back( linkSubst);
+			if (current.empty() || current[ current.size()-1] != linkSubst)
+			{
+				current.push_back( linkSubst);
+			}
 		}
 		else if ((cl == 1 && (unsigned char)si[0] <= 32) || memberOfCharDef( spaceChars, si, cl))
 		{
