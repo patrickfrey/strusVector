@@ -17,6 +17,9 @@
 #include "strus/vectorStorageTransactionInterface.hpp"
 #include "strus/normalizerFunctionInterface.hpp"
 #include "strus/normalizerFunctionInstanceInterface.hpp"
+#include "strus/tokenizerFunctionInterface.hpp"
+#include "strus/tokenizerFunctionInstanceInterface.hpp"
+#include "strus/analyzer/token.hpp"
 #include "strus/databaseInterface.hpp"
 #include "strus/errorBufferInterface.hpp"
 #include "strus/fileLocatorInterface.hpp"
@@ -54,7 +57,7 @@ static strus::FileLocatorInterface* g_fileLocator = 0;
 
 enum {NofDelimiters = 19, NofSpaces = 5, NofAlphaCharacters = 46};
 static const int g_delimiters[ NofDelimiters] = {0x2019,'`','\'','?','!','/',':','.',',','-',0x2014,')','(','[',']','{','}','<','>'};
-static const int g_spaces[ NofSpaces] = {32,'\t',0xA0,0x2008,0x200B};
+static const int g_spaces[ NofSpaces] = {32,'\t',0xA0,0x2001,0x2006};
 static const int g_alphaCharacters[ NofAlphaCharacters] = {'a','b','c','d','e','f','0','1','2','3','4','5','6','7','8','9',0xC0,0xC1,0xC2,0xC3,0xC4,0xC5,0x391,0x392,0x393,0x394,0x395,0x396,0x9A0,0x9A1,0x9A2,0x9A3,0x9A4,0x9A5,0x10B0,0x10B1,0x10B2,0x10B3,0x10B4,0x10B5,0x35B0,0x35B1,0x35B2,0x35B3,0x35B4,0x35B5};
 
 static int g_dimVectors = 300;
@@ -208,12 +211,17 @@ public:
 	std::vector<int> solution;
 	std::vector<strus::WordVector> vectors;
 	std::vector<FeatureDef> features;
+	strus::Reference<strus::TokenizerFunctionInstanceInterface> tokenizer;
 	strus::Reference<strus::NormalizerFunctionInstanceInterface> normalizer;
 
 	explicit ProblemSpace( const strus::TextProcessorInterface* textproc)
 	{
+		const strus::TokenizerFunctionInterface* tokenizerFunc = textproc->getTokenizer( "queryfield");
+		if (!tokenizerFunc) throw std::runtime_error("undefined normalizer 'queryfield'");
 		const strus::NormalizerFunctionInterface* normalizerFunc = textproc->getNormalizer( "entityid");
 		if (!normalizerFunc) throw std::runtime_error("undefined normalizer 'entityid'");
+		tokenizer.reset( tokenizerFunc->createInstance( std::vector<std::string>(), textproc));
+		if (!tokenizer.get()) throw std::runtime_error("failes to create instance of tokenizer 'queryfield'");
 		normalizer.reset( normalizerFunc->createInstance( std::vector<std::string>(), textproc));
 		if (!normalizer.get()) throw std::runtime_error("failes to create instance of normalizer 'entityid'");
 
@@ -264,14 +272,48 @@ public:
 		}
 	}
 
+	std::vector<std::string> normalizeQueryString( const std::string& qrystr) const
+	{
+		std::vector<strus::analyzer::Token> fieldtok = tokenizer->tokenize( qrystr.c_str(), qrystr.size());
+		std::vector<std::string> rt;
+		std::vector<strus::analyzer::Token>::const_iterator ti = fieldtok.begin(), te = fieldtok.end();
+		for (; ti != te; ++ti)
+		{
+			const char* qstr = qrystr.c_str() + ti->origpos().ofs();
+			std::size_t qlen = ti->origsize();
+			std::string normval = normalizer->normalize( qstr, qlen);
+			if (!normval.empty() && normval[0] == 0)
+			{
+				throw std::runtime_error("multipart results are nopt supported");
+			}
+			rt.push_back( normval);
+		}
+		return rt;
+	}
+
 	void runQuery( strus::VectorStorageClientInterface* storage) const
 	{
 		strus::local_ptr<strus::SentenceLexerInstanceInterface> lexer( storage->createSentenceLexer());
 		if (!lexer.get()) throw std::runtime_error( "failed to create vector storage transaction");
 
 		std::string qrystr = queryString();
-		if (g_verbose) std::cerr << strus::string_format( "running query [%s]", qrystr.c_str()) << std::endl;
-		std::vector<strus::SentenceGuess> result = lexer->call( qrystr, 20/*maxNofResults*/, 0.8/*minWeight*/);
+		std::vector<std::string> fields = normalizeQueryString( qrystr);
+		if (g_verbose)
+		{
+			std::cerr << strus::string_format( "running query [%s]", qrystr.c_str()) << std::endl;
+			std::vector<std::string>::const_iterator fi = fields.begin(), fe = fields.end();
+			for (; fi != fe; ++fi)
+			{
+				std::cerr << strus::string_format( "\tfield [%s]", fi->c_str()) << std::endl;
+			}
+			std::vector<int>::const_iterator si = solution.begin(), se = solution.end();
+			for (; si != se; ++si)
+			{
+				std::string fstr = featureString( *si);
+				std::cerr << strus::string_format( "\telement [%s]", fstr.c_str()) << std::endl;
+			}
+		}
+		std::vector<strus::SentenceGuess> result = lexer->call( fields, 20/*maxNofResults*/, 0.8/*minWeight*/);
 
 		if (g_verbose)
 		{

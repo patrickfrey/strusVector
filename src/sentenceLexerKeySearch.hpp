@@ -27,14 +27,14 @@ struct SentenceLexerKeySearch
 public:
 	struct Item
 	{
+		strus::Index featno;
 		int startpos;
 		int endpos;
-		bool resolved;
 
-		Item( int startpos_, int endpos_, bool resolved_)
-			:startpos(startpos_),endpos(endpos_),resolved(resolved_){}
+		Item( strus::Index featno_, int startpos_, int endpos_)
+			:featno(featno_),startpos(startpos_),endpos(endpos_){}
 		Item( const Item& o)
-			:startpos(o.startpos),endpos(o.endpos),resolved(o.resolved){}
+			:featno(o.featno),startpos(o.startpos),endpos(o.endpos){}
 	};
 	typedef std::vector<Item> ItemList;
 

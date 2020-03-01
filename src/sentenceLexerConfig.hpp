@@ -22,20 +22,6 @@ public:
 	SentenceLexerConfig( const std::string& cfgstr);
 	SentenceLexerConfig( const SentenceLexerConfig& o);
 
-	std::vector<std::string> normalizeSource( const std::string& source) const;
-
-	static const char* defaultLinkCharDef()
-	{
-		return "’`'?!/;:.,–-— )(+&%*#^[]{}<>_";
-	}
-	static const char* defaultSeparatorCharDef()
-	{
-		return "\";.:";
-	}
-	static const char* defaultSpaceCharDef()
-	{
-		return "\t\b\n\r ";
-	}
 	static const char defaultSpaceSubst()
 	{
 		return '_';
@@ -51,17 +37,6 @@ public:
 
 	void initDefaults();
 
-	struct CharDef
-	{
-		char uchr[ 4];
-
-		CharDef( int uchr_);
-		CharDef( const CharDef& o);
-	};
-
-	std::vector<CharDef> linkChars;			//< characters interpreted as entity linking characters
-	std::vector<CharDef> spaceChars;		//< space characters besides ASCII <= 32
-	std::vector<CharDef> separatorChars;		//< characters interpreted as field separators
 	char spaceSubst;				//< character replacing seqences of spaces without a linking character
 	char linkSubst;					//< character replacing seqences of linking characters (with or without spaces)
 	double similarityDistance;			//< vector distance minimum defining similarity (value between 0.0 and 1.0)

@@ -28,26 +28,26 @@ SentenceLexerKeySearch::SentenceLexerKeySearch(
 	,m_spaceSubst(spaceSubst_),m_linkSubst(linkSubst_)
 {}
 
-static std::size_t initKeyBuf( char* keybuf, std::size_t keybufsize, const char* fieldptr, std::size_t fieldsize, std::size_t pos)
+static std::size_t initKeyBuf( char* keyBuf, std::size_t keyBufSize, const char* fieldPtr, std::size_t fieldSize, std::size_t pos)
 {
-	std::size_t keysize = fieldsize - pos;
-	if (keysize >= keybufsize) keysize = keybufsize-1;
-	std::memcpy( keybuf, fieldptr + pos, keysize);
-	keybuf[ keysize] = 0;
-	return keysize;
+	std::size_t keySize = fieldSize - pos;
+	if (keySize >= keyBufSize) keySize = keyBufSize-1;
+	std::memcpy( keyBuf, fieldPtr + pos, keySize);
+	keyBuf[ keySize] = 0;
+	return keySize;
 }
 
 struct SolutionElement
 {
+	strus::Index featno;
 	int startpos;
 	int endpos;
 	int predidx;
-	bool resolved;
 
-	SolutionElement( int startpos_, int endpos_, int predidx_, bool resolved_)
-		:startpos(startpos_),endpos(endpos_),predidx(predidx_),resolved(resolved_){}
+	SolutionElement( strus::Index featno_, int startpos_, int endpos_, int predidx_)
+		:featno(featno_),startpos(startpos_),endpos(endpos_),predidx(predidx_){}
 	SolutionElement( const SolutionElement& o)
-		:startpos(o.startpos),endpos(o.endpos),predidx(o.predidx),resolved(o.resolved){}
+		:featno(o.featno),startpos(o.startpos),endpos(o.endpos),predidx(o.predidx){}
 };
 
 struct Solution
@@ -86,15 +86,21 @@ struct QueueElement
 struct KeyCursor
 {
 	enum {
-		MaxKeyLen=1024
+		MaxKeyLen=256
 	};
 
 	KeyCursor( const std::string& field_, int curpos_, char spaceSubst_, char linkSubst_)
-		:keysize(0),fieldptr(field_.c_str()),fieldsize(field_.size()),curpos(curpos_)
+		:keySize(0),fieldPtr(field_.c_str()),fieldSize(field_.size()),curpos(curpos_)
 		,kitr(0),key(0),spaceSubst(spaceSubst_),linkSubst(linkSubst_)
 	{
-		keysize = initKeyBuf( keybuf, MaxKeyLen, fieldptr, fieldsize, curpos);
-		kitr = key = keybuf;
+		keySize = initKeyBuf( keyBuf, MaxKeyLen, fieldPtr, fieldSize, curpos);
+		kitr = key = keyBuf;
+	}
+	KeyCursor( const KeyCursor& o)
+		:keySize(o.keySize),fieldPtr(o.fieldPtr),fieldSize(o.fieldSize),curpos(o.curpos)
+		,kitr(o.kitr),key(o.key),spaceSubst(o.spaceSubst),linkSubst(o.linkSubst)
+	{
+		std::memcpy( keyBuf, o.keyBuf, o.keySize);
 	}
 
 	void skipToken()
@@ -105,6 +111,7 @@ struct KeyCursor
 		}
 		else
 		{
+			if (*kitr == spaceSubst) ++kitr;
 			for (;*kitr && *kitr != spaceSubst && *kitr != linkSubst; ++kitr){}
 		}
 	}
@@ -112,6 +119,12 @@ struct KeyCursor
 	bool isSpace() const
 	{
 		return *kitr == spaceSubst;
+	}
+
+	void changeSpaceToLink()
+	{
+		if (!isSpace()) throw std::runtime_error(_TXT("logic error: invalid operation"));
+		*kitr = linkSubst;
 	}
 
 	bool isLink() const
@@ -124,28 +137,44 @@ struct KeyCursor
 		return key[pos] == linkSubst;
 	}
 
-	bool tryLoad( DatabaseAdapter::FeatureCursor& cursor, std::string& loadbuf)
+	bool isEqualField( char const* c1, char const* c2, std::size_t csize) const
+	{
+		for (; csize > 0; ++c1,++c2,--csize)
+		{
+			if (*c1 != *c2)
+			{
+				if (*c1 == spaceSubst && *c2 == linkSubst) continue;
+				if (*c2 == spaceSubst && *c1 == linkSubst) continue;
+				return false;
+			}
+		}
+		return true;
+	}
+
+	bool tryLoad( DatabaseAdapter::FeatureCursor& cursor, std::string& loadbuf, strus::Index& featno)
 	{
 		int kofs = kitr-key;
-		while (cursor.skipPrefix( key, kofs, loadbuf) && loadbuf.size() <= (fieldsize-curpos))
+		while (cursor.skipPrefix( key, kofs, loadbuf) && loadbuf.size() <= (fieldSize-curpos))
 		{
-			if (0==std::memcmp( fieldptr+curpos, loadbuf.c_str(), loadbuf.size())
-				&& ((fieldsize-curpos) == loadbuf.size()
-					|| fieldptr[ curpos+loadbuf.size()] == spaceSubst
-					|| fieldptr[ curpos+loadbuf.size()] == linkSubst
-					|| fieldptr[ curpos+loadbuf.size()-1] == linkSubst))
+			if (isEqualField( fieldPtr+curpos, loadbuf.c_str(), loadbuf.size())
+				&& ((fieldSize-curpos) == loadbuf.size()
+					|| fieldPtr[ curpos+loadbuf.size()] == spaceSubst
+					|| fieldPtr[ curpos+loadbuf.size()] == linkSubst
+					|| fieldPtr[ curpos+loadbuf.size()-1] == linkSubst))
 			{
+				featno = cursor.getCurrentFeatureIndex();
 				return true;
 			}
 			if (key[kofs]) ++kofs;
 		}
+		featno = 0;
 		return false;
 	}
 
-	bool tryLoadNext( DatabaseAdapter::FeatureCursor& cursor, std::string& loadbuf)
+	bool tryLoadNext( DatabaseAdapter::FeatureCursor& cursor, std::string& loadbuf, strus::Index& featno)
 	{
 		skipToken();
-		return tryLoad( cursor, loadbuf);
+		return tryLoad( cursor, loadbuf, featno);
 	}
 
 	void setPosition( std::size_t pos)
@@ -171,10 +200,10 @@ struct KeyCursor
 		return ki != ke;
 	}
 
-	char keybuf[ MaxKeyLen];
-	std::size_t keysize;
-	const char* fieldptr;
-	std::size_t fieldsize;
+	char keyBuf[ MaxKeyLen];
+	std::size_t keySize;
+	const char* fieldPtr;
+	std::size_t fieldSize;
 	int curpos;
 	char* kitr;
 	char* key;
@@ -188,6 +217,7 @@ std::vector<SentenceLexerKeySearch::ItemList> SentenceLexerKeySearch::scanField(
 	std::vector<SolutionElement> elemar;
 	std::set<QueueElement> queue;
 	std::vector<Solution> solutions;
+	std::vector<KeyCursor> keyCursorStack;
 	std::string loadkey;
 
 	// Process candidates in queue:
@@ -209,9 +239,14 @@ std::vector<SentenceLexerKeySearch::ItemList> SentenceLexerKeySearch::scanField(
 		}
 		else
 		{
+			strus::Index featno = 0;
 			keyCursor.skipToken();
-			if (keyCursor.tryLoad( m_cursor, loadkey))
+
+			if (keyCursor.tryLoad( m_cursor, loadkey, featno))
 			{
+				// ... found feature with the key, then examine all variants
+
+				// Push found element and feed the queue with the successor:
 				int endTokenPos = cur.pos + loadkey.size();
 				int successorPos = (keyCursor.isSpace()) ? endTokenPos+1 : endTokenPos;
 				queue.insert( QueueElement( cur.nofUnresolved, successorPos, elemar.size()));
@@ -219,7 +254,7 @@ std::vector<SentenceLexerKeySearch::ItemList> SentenceLexerKeySearch::scanField(
 				{
 					queue.insert( QueueElement( cur.nofUnresolved, successorPos-1, elemar.size()));
 				}
-				elemar.push_back( SolutionElement( cur.pos, endTokenPos, cur.predidx, true));
+				elemar.push_back( SolutionElement( featno, cur.pos, endTokenPos, cur.predidx));
 
 				if (!keyCursor.currentTokenIsWord())
 				{
@@ -228,28 +263,94 @@ std::vector<SentenceLexerKeySearch::ItemList> SentenceLexerKeySearch::scanField(
 					successorPos = (keyCursor.isSpace()) ? endTokenPos+1 : endTokenPos;
 					queue.insert( QueueElement( cur.nofUnresolved, successorPos, cur.predidx));
 				}
+				// Set the key position to the found key length and
+				//	push the key with the first space changed to a link 
+				//	on the alternative variant stack:
+				keyCursorStack.clear();
+				keyCursorStack.push_back( keyCursor);
 				keyCursor.setPosition( loadkey.size());
-				while (keyCursor.hasMore() && keyCursor.tryLoadNext( m_cursor, loadkey))
+				while (keyCursorStack.back().keypos() < keyCursor.keypos())
 				{
-					endTokenPos = cur.pos + loadkey.size();
-					successorPos = (keyCursor.isSpace()) ? endTokenPos+1 : endTokenPos;
-					queue.insert( QueueElement( cur.nofUnresolved, successorPos, elemar.size()));
-					if (keyCursor.isLinkAt( loadkey.size()-1) && cur.pos < successorPos-1)
+					if (keyCursorStack.back().isSpace())
 					{
-						queue.insert( QueueElement( cur.nofUnresolved, successorPos-1, elemar.size()));
+						// ... in case of a space we also search keys combined with a link at this place
+						keyCursorStack.back().changeSpaceToLink();
+						break;
 					}
-					elemar.push_back( SolutionElement( cur.pos, endTokenPos, cur.predidx, true));
-					keyCursor.setPosition( loadkey.size());
+					keyCursorStack.back().skipToken();
+				}
+				if (keyCursorStack.back().keypos() == keyCursor.keypos())
+				{
+					keyCursorStack.pop_back();
+				}
+				if (keyCursor.isSpace())
+				{
+					keyCursorStack.push_back( keyCursor);
+					keyCursorStack.back().changeSpaceToLink();
+				}
+
+				// Expand the key and all its variants with the a space changed to a link on the key variant stack
+				bool hasMoreKeyCursors = true;
+				while (hasMoreKeyCursors)
+				{
+					while (keyCursor.hasMore() && keyCursor.tryLoadNext( m_cursor, loadkey, featno))
+					{
+						// Push found element and feed the queue with the successor:
+						endTokenPos = cur.pos + loadkey.size();
+						successorPos = (keyCursor.isSpace()) ? endTokenPos+1 : endTokenPos;
+						queue.insert( QueueElement( cur.nofUnresolved, successorPos, elemar.size()));
+						if (keyCursor.isLinkAt( loadkey.size()-1) && cur.pos < successorPos-1)
+						{
+							queue.insert( QueueElement( cur.nofUnresolved, successorPos-1, elemar.size()));
+						}
+						elemar.push_back( SolutionElement( featno, cur.pos, endTokenPos, cur.predidx));
+
+						// Set the key position to the found key length and
+						//	push the key with the first space changed to a link 
+						//	on the alternative variant stack:
+						keyCursorStack.push_back( keyCursor);
+						keyCursor.setPosition( loadkey.size());
+						while (keyCursorStack.back().keypos() < keyCursor.keypos())
+						{
+							if (keyCursorStack.back().isSpace())
+							{
+								// ... in case of a space we also search keys combined with a link at this place
+								keyCursorStack.back().changeSpaceToLink();
+								break;
+							}
+							keyCursorStack.back().skipToken();
+						}
+						if (keyCursorStack.back().keypos() == keyCursor.keypos())
+						{
+							keyCursorStack.pop_back();
+						}
+						if (keyCursor.isSpace())
+						{
+							keyCursorStack.push_back( keyCursor);
+							keyCursorStack.back().changeSpaceToLink();
+						}
+					}
+					if (!keyCursorStack.empty())
+					{
+						keyCursor = keyCursorStack.back();
+						keyCursorStack.pop_back();
+						hasMoreKeyCursors = true;
+					}
+					else
+					{
+						hasMoreKeyCursors = false;
+					}
 				}
 			}
 			else
 			{
+				//... No feature found with this key, then push it as unknown
 				int endTokenPos = cur.pos + keyCursor.keypos();
 				int successorPos = (keyCursor.isSpace()) ? endTokenPos+1 : endTokenPos;
 				if (keyCursor.currentTokenIsWord())
 				{
 					queue.insert( QueueElement( cur.nofUnresolved+1, successorPos, elemar.size()));
-					elemar.push_back( SolutionElement( cur.pos, endTokenPos, cur.predidx, false));
+					elemar.push_back( SolutionElement( 0/*featno (unresolved)*/, cur.pos, endTokenPos, cur.predidx));
 				}
 				else
 				{
@@ -269,7 +370,7 @@ std::vector<SentenceLexerKeySearch::ItemList> SentenceLexerKeySearch::scanField(
 		{
 			const SolutionElement& elem = elemar[ ei];
 			ei = elem.predidx;
-			sl.push_back( Item( elem.startpos, elem.endpos, elem.resolved));
+			sl.push_back( Item( elem.featno, elem.startpos, elem.endpos));
 		}
 		std::reverse( sl.begin(), sl.end());
 	}

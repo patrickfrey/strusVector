@@ -18,22 +18,6 @@
 
 using namespace strus;
 
-typedef SentenceLexerConfig::CharDef CharDef;
-
-SentenceLexerConfig::CharDef::CharDef( int uchr_)
-{
-	char buf[ 8];
-	std::size_t sl = strus::utf8encode( buf, uchr_);
-	if (sl > sizeof(uchr)) throw std::runtime_error(_TXT("unicode character definition for sentence lexer out of range"));
-	std::memset( uchr, 0, sizeof(uchr));
-	std::memcpy( uchr, buf, sl);
-}
-
-SentenceLexerConfig::CharDef::CharDef( const CharDef& o)
-{
-	std::memcpy( uchr, o.uchr, sizeof(uchr));
-}
-
 static bool isDigit( char ch)
 {
 	return (ch >= '0' && ch <= '9');
@@ -64,28 +48,11 @@ static std::map<std::string,int> parseTypePriorityMap( const std::string& src)
 	return rt;
 }
 
-static std::vector<SentenceLexerConfig::CharDef> parseCharList( const std::string& str)
-{
-	std::vector<SentenceLexerConfig::CharDef> rt;
-	std::string decoded_str = string_conv::decodeXmlEntities( str);
-	char const* si = decoded_str.c_str();
-	while (*si)
-	{
-		unsigned char sl = strus::utf8charlen( *si);
-		rt.push_back( SentenceLexerConfig::CharDef( strus::utf8decode( si, sl)));
-		si += sl;
-	}
-	return rt;
-}
-
 void SentenceLexerConfig::initDefaults()
 {
 	spaceSubst = defaultSpaceSubst();
 	linkSubst = defaultLinkSubst();
 	similarityDistance = strus::Constants::defaultGroupSimilarityDistance();
-	linkChars = parseCharList(defaultLinkCharDef());
-	spaceChars = parseCharList(defaultSpaceCharDef());
-	separatorChars = parseCharList(defaultSeparatorCharDef());
 	std::string typepriostr = defaultTypesConfig();
 	typepriomap = parseTypePriorityMap( typepriostr);
 }
@@ -96,10 +63,7 @@ SentenceLexerConfig::SentenceLexerConfig()
 }
 
 SentenceLexerConfig::SentenceLexerConfig( const SentenceLexerConfig& o)
-	:linkChars(o.linkChars)
-	,spaceChars(o.spaceChars)
-	,separatorChars(o.separatorChars)
-	,spaceSubst(o.spaceSubst)
+	:spaceSubst(o.spaceSubst)
 	,linkSubst(o.linkSubst)
 	,similarityDistance(o.similarityDistance)
 	,typepriomap(o.typepriomap){}
@@ -110,21 +74,7 @@ SentenceLexerConfig::SentenceLexerConfig( const std::string& cfgstr_)
 
 	strus::LocalErrorBuffer errhnd;
 	std::string cfgstr = cfgstr_;
-	std::string linkchrs;
-	if (strus::extractStringFromConfigString( linkchrs, cfgstr, "link", &errhnd))
-	{
-		linkChars = parseCharList( linkchrs);
-	}
-	std::string spacechrs;
-	if (strus::extractStringFromConfigString( spacechrs, cfgstr, "space", &errhnd))
-	{
-		spaceChars = parseCharList( spacechrs);
-	}
-	std::string separatorchrs;
-	if (strus::extractStringFromConfigString( separatorchrs, cfgstr, "sep", &errhnd))
-	{
-		separatorChars = parseCharList( separatorchrs);
-	}
+
 	std::string spaceSubstStr;
 	if (strus::extractStringFromConfigString( spaceSubstStr, cfgstr, "spacesb", &errhnd))
 	{
@@ -158,68 +108,6 @@ SentenceLexerConfig::SentenceLexerConfig( const std::string& cfgstr_)
 	}
 }
 
-static bool memberOfCharDef( const std::vector<CharDef>& ar, const char* si, int slen)
-{
-	std::vector<CharDef>::const_iterator ai = ar.begin(), ae = ar.end();
-	for (; ai != ae; ++ai)
-	{
-		if (*si == ai->uchr[0] && 0==std::memcmp( si, ai->uchr, slen)) return true;
-	}
-	return false;
-}
-
-std::vector<std::string> SentenceLexerConfig::normalizeSource( const std::string& source) const
-{
-	std::vector<std::string> rt;
-	std::string current;
-	char const* si = source.c_str();
-	const char* se = si + source.size();
-	while (si < se)
-	{
-		int cl = strus::utf8charlen( *si);
-		if (memberOfCharDef( separatorChars, si, cl))
-		{
-			if (!current.empty())
-			{
-				rt.push_back( current);
-				current.clear();
-			}
-		}
-		else if (memberOfCharDef( linkChars, si, cl))
-		{
-			while (!current.empty() && current[ current.size()-1] == spaceSubst)
-			{
-				current.resize( current.size()-1);
-			}
-			if (current.empty() || current[ current.size()-1] != linkSubst)
-			{
-				current.push_back( linkSubst);
-			}
-		}
-		else if ((cl == 1 && (unsigned char)si[0] <= 32) || memberOfCharDef( spaceChars, si, cl))
-		{
-			while (!current.empty() && current[ current.size()-1] == spaceSubst)
-			{
-				current.resize( current.size()-1);
-			}
-			if (!current.empty() && current[ current.size()-1] != linkSubst)
-			{
-				current.push_back( spaceSubst);
-			}
-		}
-		else
-		{
-			current.append( si, cl);
-		}
-		si += cl;
-	}
-	if (!current.empty())
-	{
-		rt.push_back( current);
-		current.clear();
-	}
-	return rt;
-}
 
 
 

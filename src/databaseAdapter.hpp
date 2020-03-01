@@ -43,10 +43,10 @@ public:
 
 	std::vector<std::string> readTypes() const;
 
-	Index readNofTypeno() const;
-	Index readNofFeatno() const;
-	Index readTypeno( const std::string& type) const;
-	Index readFeatno( const std::string& feature) const;
+	strus::Index readNofTypeno() const;
+	strus::Index readNofFeatno() const;
+	strus::Index readTypeno( const std::string& type) const;
+	strus::Index readFeatno( const std::string& feature) const;
 	std::string readTypeName( const Index& typeno) const;
 	std::string readFeatName( const Index& featno) const;
 
@@ -63,6 +63,7 @@ public:
 		bool loadFirst( std::string& key);
 		bool loadNext( std::string& key);
 		bool loadNextPrefix( const std::string& keyprefix, std::string& key);
+		strus::Index getCurrentFeatureIndex() const;
 
 	private:
 		Reference<DatabaseCursorInterface> m_cursor;

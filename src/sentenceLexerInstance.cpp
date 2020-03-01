@@ -383,7 +383,7 @@ static std::string fieldListString( const std::vector<std::string>& fields, cons
 	return rt;
 }
 
-std::vector<SentenceGuess> SentenceLexerInstance::call( const std::string& source, int maxNofResults, double minWeight) const
+std::vector<SentenceGuess> SentenceLexerInstance::call( const std::vector<std::string>& fields, int maxNofResults, double minWeight) const
 {
 	try
 	{
@@ -397,13 +397,11 @@ std::vector<SentenceGuess> SentenceLexerInstance::call( const std::string& sourc
 		SimGroupData simGroupData( m_vstorage, m_config.similarityDistance);
 		FeatNumVariantList sentences;
 
-		std::vector<std::string> fields = m_config.normalizeSource( source);
 		if (m_debugtrace)
 		{
 			m_debugtrace->open( "query");
 			std::string fieldstr = fieldListString( fields, ", ");
-			m_debugtrace->event( "source", "[%s]", source.c_str());
-			m_debugtrace->event( "normalized", "{%s}", fieldstr.c_str());
+			m_debugtrace->event( "fields", "{%s}", fieldstr.c_str());
 			m_debugtrace->close();
 		}
 		{
@@ -422,20 +420,18 @@ std::vector<SentenceGuess> SentenceLexerInstance::call( const std::string& sourc
 					ti = ii->begin(), te = ii->end();
 				for (; ti != te; ++ti)
 				{
-					if (ti->resolved)
+					if (ti->featno)
 					{
-						std::string featstr( fi->c_str() + ti->startpos, ti->endpos - ti->startpos);
-						strus::Index featno = simGroupData.getOrCreateFeatIndex( featstr);
-						if (!featno) throw std::runtime_error(_TXT("inconsistency in vector storage: resolved value not found"));
-						std::vector<strus::Index> selectedTypes = getSelectedTypes( featno);
+						std::vector<strus::Index> selectedTypes = getSelectedTypes( ti->featno);
 						if (selectedTypes.empty())
 						{
+							std::string featstr = m_vstorage->getFeatNameFromIndex( ti->featno);
 							undefinedFeatureList.push_back( featstr);
 							variants.add( FeatNum( 0, undefinedFeatureList.size()));
 						}
 						else if (selectedTypes.size() ==  1)
 						{
-							variants.add( FeatNum( selectedTypes[0], featno));
+							variants.add( FeatNum( selectedTypes[0], ti->featno));
 						}
 						else
 						{
@@ -444,7 +440,7 @@ std::vector<SentenceGuess> SentenceLexerInstance::call( const std::string& sourc
 								si = selectedTypes.begin(), se = selectedTypes.end();
 							for (; si != se; ++si)
 							{
-								fn.push_back( FeatNum( *si, featno));
+								fn.push_back( FeatNum( *si, ti->featno));
 							}
 							variants.add( fn);
 						}

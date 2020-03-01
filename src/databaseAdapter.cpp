@@ -330,6 +330,15 @@ bool DatabaseAdapter::FeatureCursor::loadNextPrefix( const std::string& keyprefi
 	return loadNext( key) && keyprefix.size() <= key.size() && 0==std::memcmp( keyprefix.c_str(), key.c_str(), keyprefix.size());
 }
 
+strus::Index DatabaseAdapter::FeatureCursor::getCurrentFeatureIndex() const
+{
+	DatabaseCursorInterface::Slice valueslice = m_cursor->value();
+	DatabaseValueScanner scanner( valueslice.ptr(), valueslice.size());
+	Index rt = 0;
+	scanner[ rt];
+	return rt;
+}
+
 std::vector<Index> DatabaseAdapter::readFeatureTypeRelations( const Index& featno) const
 {
 	DatabaseKeyBuffer key( KeyFeatureTypeRelations);
