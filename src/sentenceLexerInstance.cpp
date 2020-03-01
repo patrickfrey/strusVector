@@ -322,7 +322,7 @@ public:
 
 	void eliminateDuplicates()
 	{
-		std::vector<int> duplicates;
+		std::set<int> duplicates;
 		std::string hhar = hashFeatNumListList( m_ar);
 		char const* hi = hhar.c_str();
 		for (; *hi; ++hi)
@@ -336,12 +336,11 @@ public:
 				int i2 = hn-hhar.c_str();
 				if (m_ar[ i1] == m_ar[ i2])
 				{
-					duplicates.push_back( i2);
+					duplicates.insert( i2);
 				}
 			}
 		}
-		std::sort( duplicates.begin(), duplicates.end(), std::greater<int>());
-		std::vector<int>::const_iterator di = duplicates.begin(), de = duplicates.end();
+		std::set<int>::reverse_iterator di = duplicates.rbegin(), de = duplicates.rend();
 		for (; di != de; ++di)
 		{
 			m_ar.erase( m_ar.begin()+*di);

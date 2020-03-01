@@ -453,7 +453,7 @@ private:
 				}
 				else
 				{
-					rt.push_back( g_spaces[ g_random.get( 0, NofSpaces)]);
+					printUnicodeChar( rt, g_spaces[ g_random.get( 0, NofSpaces)]);
 				}
 			}
 			rt.append( featureString( *si));
