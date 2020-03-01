@@ -67,7 +67,8 @@ static int g_nofFeatures = 1000;
 static int g_maxFeatureTerms = 10;
 static int g_maxTermLength = 10;
 
-#define DEFAULT_CONFIG "path=vstorage"
+#define CONFIG_COVERSIM 0.8
+#define DEFAULT_CONFIG  "path=vstorage;coversim=0.8"
 
 enum Separator
 {
@@ -246,7 +247,7 @@ public:
 					: "E";
 			typemap[ elements[ ei]] = type;
 		}
-		vectors = strus::test::createDistinctRandomVectors( g_random, g_dimVectors, elements.size(), 0.8);
+		vectors = strus::test::createDistinctRandomVectors( g_random, g_dimVectors, elements.size(), CONFIG_COVERSIM);
 		features = featureDefinitions();
 	}}
 
@@ -670,6 +671,10 @@ int main( int argc, const char** argv)
 		testData.runQuery( storage.get());
 		if (g_verbose) std::cerr << "verify results ..." << std::endl;
 
+		if (g_errorhnd->hasError())
+		{
+			throw std::runtime_error( "sentence lexer failed");
+		}
 		// Debug output dump:
 		if (!strus::dumpDebugTrace( g_dbgtrace, NULL/*filename (stderr)*/))
 		{

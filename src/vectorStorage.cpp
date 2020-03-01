@@ -56,8 +56,11 @@ bool VectorStorage::createStorage( const std::string& configsource, const Databa
 		Config config;
 		unsigned int value;
 
-		removeKeyFromConfigString( configstring, "memtypes", m_errorhnd);
-		removeKeyFromConfigString( configstring, "lexprun", m_errorhnd);
+		(void)strus::removeKeyFromConfigString( configstring, "memtypes", m_errorhnd); //.. vector storage client
+		(void)strus::removeKeyFromConfigString( configstring, "types", m_errorhnd); //... sentence lexer
+		(void)strus::removeKeyFromConfigString( configstring, "coversim", m_errorhnd); //... sentence lexer
+		(void)strus::removeKeyFromConfigString( configstring, "spacesb", m_errorhnd); //... sentence lexer
+		(void)strus::removeKeyFromConfigString( configstring, "linksb", m_errorhnd); //... sentence lexer
 
 		if (strus::extractUIntFromConfigString( value, configstring, "vecdim", m_errorhnd))
 		{

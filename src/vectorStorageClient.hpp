@@ -29,6 +29,8 @@ class ErrorBufferInterface;
 class DebugTraceContextInterface;
 /// \brief Forward declaration
 class DatabaseInterface;
+/// \brief Forward declaration
+class VectorStorage;
 
 class VectorStorageClient
 	:public VectorStorageClientInterface

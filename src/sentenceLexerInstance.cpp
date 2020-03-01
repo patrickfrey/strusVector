@@ -25,6 +25,7 @@ using namespace strus;
 #define MODULENAME "sentence lexer instance (vector storage)"
 #define STRUS_DBGTRACE_COMPONENT_NAME "sentence"
 #define SENTENCESIZE_AGAINST_COVERSIZE_WEIGHT 0.3
+#define DUPLICATES_AGAINST_COVERSIZE_WEIGHT 1.0
 
 SentenceLexerInstance::SentenceLexerInstance( const VectorStorageClient* vstorage_, const DatabaseClientInterface* database_, const SentenceLexerConfig& config_, ErrorBufferInterface* errorhnd_)
 	:m_errorhnd(errorhnd_),m_debugtrace(0),m_vstorage(vstorage_),m_database(database_),m_config(config_)
@@ -138,7 +139,7 @@ GroupId SimGroupData::getOrCreateFeatGroup( const FeatNum& featnum)
 	{
 		GroupId created_gidx = m_groups.size();
 		m_groups.push_back( Group());
-		m_groups.back().push_back( m_groups.size());
+		m_groups.back().push_back( created_gidx);
 
 		if (featnum.typeno == 0)
 		{
@@ -414,7 +415,6 @@ std::vector<SentenceGuess> SentenceLexerInstance::call( const std::vector<std::s
 			for (; ii != ie; ++ii)
 			{
 				FeatNumVariantList variants;
-
 				SentenceLexerKeySearch::ItemList::const_iterator
 					ti = ii->begin(), te = ii->end();
 				for (; ti != te; ++ti)
@@ -458,39 +458,30 @@ std::vector<SentenceGuess> SentenceLexerInstance::call( const std::vector<std::s
 		}}
 
 		std::vector<std::vector<GroupId> > sentence_groups;
+		std::map<int,int> featureDuplicateCountMap;
 		sentence_groups.reserve( sentences.ar().size());
 
 		if (m_debugtrace) m_debugtrace->open( "candidates");
 		std::vector<FeatNumList>::const_iterator si = sentences.ar().begin(), se = sentences.ar().end();
-		for (; si != se; ++si)
+		for (int sidx=0; si != se; ++si,++sidx)
 		{
-			if (m_debugtrace)
-			{
-				// Trace log of selected candidate sequences of terms:
-				std::string sentstr;
-				FeatNumList::const_iterator fi = si->begin(), fe = si->end();
-				for (; fi != fe; ++fi)
-				{
-					if (fi->typeno == 0)
-					{
-						sentstr.append( strus::string_format( " ? '%s'", undefinedFeatureList[ fi->featno-1].c_str()));
-					}
-					else
-					{
-						std::string typenam = m_vstorage->getTypeNameFromIndex( fi->typeno);
-						std::string featnam = m_vstorage->getFeatNameFromIndex( fi->featno);
-						sentstr.append( strus::string_format( " %s '%s'", typenam.c_str(), featnam.c_str()));
-					}
-				}
-				m_debugtrace->event( "sequence", "%s", sentstr.c_str());
-			}
 			// Create a group for each sequence as candidate sentence:
 			sentence_groups.push_back( std::vector<GroupId>());
+
 			FeatNumList::const_iterator ti = si->begin(), te = si->end();
 			for (; ti != te; ++ti)
 			{
 				GroupId gid = simGroupData.getOrCreateFeatGroup( *ti);
-				sentence_groups.back().push_back( gid);
+				std::vector<GroupId>::const_iterator
+					gi = std::find( sentence_groups.back().begin(), sentence_groups.back().end(), gid);
+				if (gi == sentence_groups.back().end())
+				{
+					sentence_groups.back().push_back( gid);
+				}
+				else
+				{
+					++featureDuplicateCountMap[ sidx];
+				}
 			}
 		}
 		if (m_debugtrace) m_debugtrace->close();
@@ -504,8 +495,46 @@ std::vector<SentenceGuess> SentenceLexerInstance::call( const std::vector<std::s
 		for (int gidx=0; gi != ge; ++gi,++gidx)
 		{
 			int minimalCoverSize = minimalCoverData.minimalCoverApproximation( *gi).size();
-			Rank rank( gidx, minimalCoverSize + sentences.ar()[ gidx].size() * SENTENCESIZE_AGAINST_COVERSIZE_WEIGHT);
-			ranks.push_back( rank);
+			if (minimalCoverSize <= 0)
+			{
+				if (m_errorhnd->hasError())
+				{
+					throw strus::runtime_error(_TXT("failed to calculate minimal cover: %s"), m_errorhnd->fetchError());
+				}
+				else
+				{
+					throw strus::runtime_error(_TXT("internal:  minimal cover calculation returned invalid result: %d"), minimalCoverSize);
+				}
+			}
+			std::map<int,int>::const_iterator di = featureDuplicateCountMap.find( gidx);
+			int nofDuplicates = (di == featureDuplicateCountMap.end()) ? 0 : di->second;
+			int sentenceSize = sentences.ar()[ gidx].size();
+			double weight = (1.0 + SENTENCESIZE_AGAINST_COVERSIZE_WEIGHT)
+					/ (minimalCoverSize
+						+ nofDuplicates* DUPLICATES_AGAINST_COVERSIZE_WEIGHT
+						+ sentenceSize * SENTENCESIZE_AGAINST_COVERSIZE_WEIGHT);
+			ranks.push_back( Rank( gidx, weight));
+
+			if (m_debugtrace)
+			{
+				// Trace log of selected candidate sequences of terms:
+				std::string sentstr;
+				FeatNumList::const_iterator fi = sentences.ar()[gidx].begin(), fe = sentences.ar()[gidx].end();
+				for (; fi != fe; ++fi)
+				{
+					if (fi->typeno == 0)
+					{
+						sentstr.append( strus::string_format( " ? '%s'", undefinedFeatureList[ fi->featno-1].c_str()));
+					}
+					else
+					{
+						std::string typenam = m_vstorage->getTypeNameFromIndex( fi->typeno);
+						std::string featnam = m_vstorage->getFeatNameFromIndex( fi->featno);
+						sentstr.append( strus::string_format( " %s '%s'", typenam.c_str(), featnam.c_str()));
+					}
+				}
+				m_debugtrace->event( "candidate", "seq %s, size %d, mincover %d, duplicates %d, weight %.5f", sentstr.c_str(), sentenceSize, minimalCoverSize, nofDuplicates, weight);
+			}
 		}
 
 		// Select the best N (weight) of the ranks and return them
@@ -576,7 +605,7 @@ std::vector<SentenceGuess> SentenceLexerInstance::call( const std::vector<std::s
 			for (; zi != ze; ++zi)
 			{
 				std::string sentstr = termListString( zi->terms(), ", ");
-				m_debugtrace->event( "sentence", "weight %.3f content %s", zi->weight(), sentstr.c_str());
+				m_debugtrace->event( "sentence", "norm-weight %.3f content %s", zi->weight(), sentstr.c_str());
 			}
 			m_debugtrace->close();
 		}

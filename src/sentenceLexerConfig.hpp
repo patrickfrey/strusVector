@@ -36,6 +36,7 @@ public:
 	}
 
 	void initDefaults();
+	void load( const std::string& cfgstr);
 
 	char spaceSubst;				//< character replacing seqences of spaces without a linking character
 	char linkSubst;					//< character replacing seqences of linking characters (with or without spaces)

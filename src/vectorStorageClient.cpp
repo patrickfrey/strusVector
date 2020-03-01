@@ -32,13 +32,18 @@ using namespace strus;
 
 VectorStorageClient::VectorStorageClient( const DatabaseInterface* database_, const std::string& configstring_, ErrorBufferInterface* errorhnd_)
 	:m_errorhnd(errorhnd_),m_debugtrace(0),m_database(),m_model(),m_simHashMapMap()
-	,m_inMemoryTypes(),m_lexerConfig(configstring_),m_transaction_mutex()
+	,m_inMemoryTypes(),m_lexerConfig(),m_transaction_mutex()
 {
 	DebugTraceInterface* dbgi = m_errorhnd->debugTrace();
 	if (dbgi) m_debugtrace = dbgi->createTraceContext( STRUS_DBGTRACE_COMPONENT_NAME);
 
 	std::string configstring = configstring_;
 	std::string stringvalue;
+
+	(void)strus::removeKeyFromConfigString( configstring, "types", m_errorhnd); //... sentence lexer
+	(void)strus::removeKeyFromConfigString( configstring, "coversim", m_errorhnd); //... sentence lexer
+	(void)strus::removeKeyFromConfigString( configstring, "spacesb", m_errorhnd); //... sentence lexer
+	(void)strus::removeKeyFromConfigString( configstring, "linksb", m_errorhnd); //... sentence lexer
 
 	if (strus::extractStringArrayFromConfigString( m_inMemoryTypes, configstring, "memtypes", ',', m_errorhnd))
 	{
@@ -51,6 +56,10 @@ VectorStorageClient::VectorStorageClient( const DatabaseInterface* database_, co
 	m_database.reset( new DatabaseAdapter( database_,configstring,m_errorhnd));
 	m_database->checkVersion();
 	m_model = m_database->readLshModel();
+
+	std::string storedLexerConfig = m_database->readVariable( "config");
+	m_lexerConfig.load( storedLexerConfig);
+	m_lexerConfig.load( configstring_);
 }
 
 VectorStorageClient::~VectorStorageClient()

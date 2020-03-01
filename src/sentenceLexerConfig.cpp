@@ -71,7 +71,11 @@ SentenceLexerConfig::SentenceLexerConfig( const SentenceLexerConfig& o)
 SentenceLexerConfig::SentenceLexerConfig( const std::string& cfgstr_)
 {
 	initDefaults();
+	load( cfgstr_);
+}
 
+void SentenceLexerConfig::load( const std::string& cfgstr_)
+{
 	strus::LocalErrorBuffer errhnd;
 	std::string cfgstr = cfgstr_;
 
@@ -107,8 +111,6 @@ SentenceLexerConfig::SentenceLexerConfig( const std::string& cfgstr_)
 		throw std::runtime_error( errhnd.fetchError());
 	}
 }
-
-
 
 
 
