@@ -3,6 +3,7 @@ cmake_minimum_required(VERSION 2.8 FATAL_ERROR)
 include_directories(
 	${Boost_INCLUDE_DIRS}
 	"${Intl_INCLUDE_DIRS}"
+	"${ARMADILLO_INCLUDE_DIRS}"
 	"${VECTOR_INCLUDE_DIRS}"
 	"${MAIN_SOURCE_DIR}"
 	"${strusbase_INCLUDE_DIRS}"
