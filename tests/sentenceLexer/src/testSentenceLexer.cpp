@@ -643,7 +643,7 @@ int main( int argc, const char** argv)
 		strus::local_ptr<strus::VectorStorageInterface> sti( strus::createVectorStorage_std( g_fileLocator, g_errorhnd));
 		if (!dbi.get() || !sti.get() || g_errorhnd->hasError()) throw std::runtime_error( g_errorhnd->fetchError());
 
-		static const char* vectorconfigkeys[] = {"memtypes","lexprun","vecdim","bits","variations",0};
+		static const char* vectorconfigkeys[] = {"memtypes","vecdim","bits","variations",0};
 		std::string dbconfigstr( configstr);
 		removeKeysFromConfigString( dbconfigstr, vectorconfigkeys, g_errorhnd);
 
