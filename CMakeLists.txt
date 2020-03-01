@@ -29,6 +29,7 @@ endif(NOT STRUS_ALL)
 
 find_strus_package( base )
 find_strus_package( core )
+find_strus_package( analyzer )
 find_strus_package( module )
 set( CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake" )
 configure_file( "${PROJECT_SOURCE_DIR}/include/strus/versionVector.hpp.in"  "${CMAKE_CURRENT_BINARY_DIR}/include/strus/versionVector.hpp"  @ONLY )

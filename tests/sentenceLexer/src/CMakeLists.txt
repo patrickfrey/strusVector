@@ -8,11 +8,14 @@ include_directories(
 	"${MAIN_SOURCE_DIR}"
 	"${strusbase_INCLUDE_DIRS}"
 	"${strus_INCLUDE_DIRS}"
+	"${strusanalyzer_INCLUDE_DIRS}"
 	${TEST_UTILS_INCLUDE_DIR}
 )
 link_directories(
 	"${VECTOR_LIBRARY_DIRS}"
 	"${strusbase_LIBRARY_DIRS}"
+	"${strus_LIBRARY_DIRS}"
+	"${strusanalyzer_LIBRARY_DIRS}"
 	${Boost_LIBRARY_DIRS}
 )
 
