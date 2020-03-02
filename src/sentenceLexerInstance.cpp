@@ -341,10 +341,22 @@ public:
 				}
 			}
 		}
-		std::set<int>::reverse_iterator di = duplicates.rbegin(), de = duplicates.rend();
-		for (; di != de; ++di)
+		if (!duplicates.empty())
 		{
-			m_ar.erase( m_ar.begin()+*di);
+			std::vector<FeatNumList>::iterator new_ai = m_ar.begin();
+			std::vector<FeatNumList>::iterator ai = m_ar.begin(), ae = m_ar.end();
+			for (int aidx=0; ai != ae; ++ai,++aidx)
+			{
+				if (duplicates.find( aidx) == duplicates.end())
+				{
+					if (new_ai != ai)
+					{
+						new_ai->swap( *ai);
+					}
+					++new_ai;
+				}
+			}
+			m_ar.resize( new_ai - m_ar.begin());
 		}
 	}
 
@@ -408,6 +420,7 @@ std::vector<SentenceGuess> SentenceLexerInstance::call( const std::vector<std::s
 		std::vector<std::string>::const_iterator fi = fields.begin(), fe = fields.end();
 		for (; fi != fe; ++fi)
 		{
+			if (fi->empty()) continue;
 			std::vector<FeatNumList> fieldSentenceList;
 			std::vector<SentenceLexerKeySearch::ItemList> items = keySearch.scanField( *fi);
 			std::vector<SentenceLexerKeySearch::ItemList>::const_iterator
@@ -484,7 +497,6 @@ std::vector<SentenceGuess> SentenceLexerInstance::call( const std::vector<std::s
 				}
 			}
 		}
-		if (m_debugtrace) m_debugtrace->close();
 
 		// Calculate minimal cover approximations and value boundaries for mapping pairs of (minimal cover size, nof terms) to an integer:
 		MinimalCoverData minimalCoverData( simGroupData.groups(), m_errorhnd);
@@ -536,6 +548,7 @@ std::vector<SentenceGuess> SentenceLexerInstance::call( const std::vector<std::s
 				m_debugtrace->event( "candidate", "seq %s, size %d, mincover %d, duplicates %d, weight %.5f", sentstr.c_str(), sentenceSize, minimalCoverSize, nofDuplicates, weight);
 			}
 		}
+		if (m_debugtrace) m_debugtrace->close();
 
 		// Select the best N (weight) of the ranks and return them
 		if (maxNofResults < 0 || maxNofResults > (int)ranks.size())

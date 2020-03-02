@@ -55,17 +55,14 @@ static strus::ErrorBufferInterface* g_errorhnd = 0;
 static strus::DebugTraceInterface* g_dbgtrace = 0;
 static strus::FileLocatorInterface* g_fileLocator = 0;
 
-enum {NofDelimiters = 19, NofSpaces = 5, NofAlphaCharacters = 46};
-static const int g_delimiters[ NofDelimiters] = {0x2019,'`','\'','?','!','/',':','.',',','-',0x2014,')','(','[',']','{','}','<','>'};
+enum {NofDelimiters = 17, NofSpaces = 5, NofAlphaCharacters = 46};
+static const int g_delimiters[ NofDelimiters] = {'?','!','/',':','.',',','-',0x2014,0x2015,')','(','[',']','{','}','<','>'};
 static const int g_spaces[ NofSpaces] = {32,'\t',0xA0,0x2001,0x2006};
 static const int g_alphaCharacters[ NofAlphaCharacters] = {'a','b','c','d','e','f','0','1','2','3','4','5','6','7','8','9',0xC0,0xC1,0xC2,0xC3,0xC4,0xC5,0x391,0x392,0x393,0x394,0x395,0x396,0x9A0,0x9A1,0x9A2,0x9A3,0x9A4,0x9A5,0x10B0,0x10B1,0x10B2,0x10B3,0x10B4,0x10B5,0x35B0,0x35B1,0x35B2,0x35B3,0x35B4,0x35B5};
 
 static int g_dimVectors = 300;
-static int g_nofTypes = 10;
-static int g_nofTerms = 100;
-static int g_nofFeatures = 1000;
-static int g_maxFeatureTerms = 10;
-static int g_maxTermLength = 10;
+static int g_nofTerms = 20;
+static int g_nofFeatures = 10;
 
 #define CONFIG_COVERSIM 0.8
 #define DEFAULT_CONFIG  "path=vstorage;coversim=0.8"
@@ -129,10 +126,10 @@ static std::vector<int> getPrimeFactors( int number)
 	while (number && (number & 1) == 0)
 	{
 		rt.push_back( 2);
-		number >>= 2;
+		number /= 2;
 	}
 	int ni = 3, ne = (std::sqrt( number) + std::numeric_limits<float>::epsilon());
-	for (; ni < ne && number > 1; ni += 2)
+	for (; ni <= ne && number > 1; ni += 2)
 	{
 		while (number % ni == 0)
 		{
@@ -140,7 +137,7 @@ static std::vector<int> getPrimeFactors( int number)
 			number /= ni;
 		}
 	}
-	if (number >= 2 && rt.empty())
+	if (number >= 2)
 	{
 		rt.push_back( number);
 	}
@@ -183,6 +180,13 @@ struct PrimeAlphaMap
 		std::map<int,int>::const_iterator ii = impl.find( prime);
 		if (ii == impl.end()) throw std::runtime_error( strus::string_format( "undefined prime %d", prime));
 		return ii->second;
+	}
+
+	int randomPrime() const
+	{
+		std::map<int,int>::const_iterator ri = impl.lower_bound( g_random.get( 2, maxprime+1));
+		if (ri == impl.end()) throw std::runtime_error("logic error calculating random prime");
+		return ri->first;
 	}
 
 	int maxprime;
@@ -230,9 +234,9 @@ public:
 	{
 		solution = randomSolution();
 		std::set<int> sset( solution.begin(), solution.end());
-		std::set<int> pset = uniquePrimeFactors( solution);
-		if (!primesInSupportedRange( pset)) goto AGAIN;
-		std::set<int> cofactors = nonSolutionCandidates( pset, solution);
+		std::set<int> usset = uniquePrimeFactors( solution);
+		if (!primesInSupportedRange( usset)) goto AGAIN;
+		std::set<int> cofactors = nonSolutionCandidates( usset, solution);
 
 		elements.insert( elements.end(), cofactors.begin(), cofactors.end());
 		elements.insert( elements.end(), sset.begin(), sset.end());
@@ -241,13 +245,27 @@ public:
 		{
 			attrmap[ elements[ ei]] = Attributes( g_random.get( 0, std::numeric_limits<short>::max()));
 			const char* type = isPrime( elements[ ei])
-					? (elements[ ei] > 20)
-						? "N"
+					? (elements[ ei] > 15)
+						? (elements[ ei] > 30)
+							? (elements[ ei] > 45)
+								? "N V A"
+								: "N V"
+							: "N"
 						: "V"
 					: "E";
 			typemap[ elements[ ei]] = type;
 		}
 		vectors = strus::test::createDistinctRandomVectors( g_random, g_dimVectors, elements.size(), CONFIG_COVERSIM);
+		int si = 0, se = usset.size();
+		if (se)
+		{
+			strus::WordVector rootvec = vectors[ elements.size() - se];
+			for (; si != se; ++si)
+			{
+				strus::WordVector simvec = strus::test::createSimilarVector( g_random, rootvec, 0.85);
+				vectors[ elements.size() - se + si] = simvec;
+			}
+		}
 		features = featureDefinitions();
 	}}
 
@@ -292,7 +310,7 @@ public:
 		return rt;
 	}
 
-	void runQuery( strus::VectorStorageClientInterface* storage) const
+	std::vector<strus::SentenceGuess> runQuery( strus::VectorStorageClientInterface* storage) const
 	{
 		strus::local_ptr<strus::SentenceLexerInstanceInterface> lexer( storage->createSentenceLexer());
 		if (!lexer.get()) throw std::runtime_error( "failed to create vector storage transaction");
@@ -301,7 +319,8 @@ public:
 		std::vector<std::string> fields = normalizeQueryString( qrystr);
 		if (g_verbose)
 		{
-			std::cerr << strus::string_format( "running query [%s]", qrystr.c_str()) << std::endl;
+			std::string solutionstr = queryElementString();
+			std::cerr << strus::string_format( "running query %s [%s]", solutionstr.c_str(), qrystr.c_str()) << std::endl;
 			std::vector<std::string>::const_iterator fi = fields.begin(), fe = fields.end();
 			for (; fi != fe; ++fi)
 			{
@@ -314,12 +333,12 @@ public:
 				std::cerr << strus::string_format( "\telement [%s]", fstr.c_str()) << std::endl;
 			}
 		}
-		std::vector<strus::SentenceGuess> result = lexer->call( fields, 20/*maxNofResults*/, 0.8/*minWeight*/);
+		std::vector<strus::SentenceGuess> rt = lexer->call( fields, 20/*maxNofResults*/, 0.8/*minWeight*/);
 
 		if (g_verbose)
 		{
 			std::vector<strus::SentenceGuess>::const_iterator
-				ri = result.begin(), re = result.end();
+				ri = rt.begin(), re = rt.end();
 			for (int ridx=1; ri != re; ++ri,++ridx)
 			{
 				std::cerr << strus::string_format( "answer %d:", ridx);
@@ -331,6 +350,76 @@ public:
 				}
 				std::cerr << strus::string_format( " = %5f", ri->weight()) << std::endl;
 			}
+		}
+		return rt;
+	}
+
+	std::string pureSentenceTermString( const strus::SentenceTerm& term)
+	{
+		std::string rt;
+		char const* vi = term.value().c_str();
+		for (; *vi; ++vi)
+		{
+			if (*vi == '_' || *vi == '-' || *vi == '-')
+			{
+				if (!rt.empty() && rt[ rt.size()-1] != ' ')
+				{
+					rt.push_back( ' ');
+				}
+			}
+			else
+			{
+				rt.push_back( *vi);
+			}
+		}
+		return rt;
+	}
+
+	void verifyResult( const std::vector<strus::SentenceGuess>& result)
+	{
+		if (result.empty()) throw std::runtime_error( "sentence guess result is empty");
+		std::vector<strus::SentenceGuess>::const_iterator
+			ri = result.begin(), re = result.end();
+		std::string expectedstr = pureQueryString();
+		for (; ri != re && ri->weight() >= 1.0 - std::numeric_limits<double>::epsilon(); ++ri){}
+		re = ri;
+		ri = result.begin();
+		for (; ri != re; ++ri)
+		{
+			if (ri->terms().size() != solution.size())
+			{
+				throw std::runtime_error( "result not covering the proposed solution one to one");
+			}
+			std::string resultstr;
+			std::vector<strus::SentenceTerm>::const_iterator
+				ti = ri->terms().begin(), te = ri->terms().end();
+			for (; ti != te; ++ti)
+			{
+				if (ti->type().empty())
+				{
+					throw std::runtime_error( "result not completely typed as expected");
+				}
+				if (!resultstr.empty() && resultstr[ resultstr.size()-1] != ' ')
+				{
+					resultstr.push_back( ' ');
+				}
+				resultstr.append( pureSentenceTermString( *ti));
+			}
+			if (resultstr != expectedstr)
+			{
+				throw std::runtime_error(
+					strus::string_format(
+						"best result match not as expected '%s' != '%s'",
+						resultstr.c_str(), expectedstr.c_str()));
+			}
+			else if (g_verbose)
+			{
+				std::cerr << "result (pure): " << resultstr << std::endl;
+			}
+		}
+		if (g_verbose)
+		{
+			std::cerr << "expected (pure): " << expectedstr << std::endl;
 		}
 	}
 
@@ -372,7 +461,7 @@ private:
 	static std::set<int> nonSolutionCandidates( const std::set<int>& base, const std::vector<int>& solution_)
 	{
 		std::set<int> rt = base;
-		int qi = 0, qe = g_random.get( 0, g_nofFeatures);
+		int qi = 0, qe = g_random.get( 0, g_nofFeatures * 10);
 		for (; qi != qe; ++qi)
 		{
 			std::set<int>::const_iterator c1 = rt.begin(), c2 = rt.begin();
@@ -382,12 +471,18 @@ private:
 			while (cidx2--) {++c2;}
 			
 			int factor = (*c1) * (*c2);
-
-			std::vector<int>::const_iterator xi = solution_.begin(), xe = solution_.end();
-			for (; xi != xe && (factor % *xi) != 0; ++xi) {}
-			if (xi == xe)
+			if (factor < 0 || g_random.get( 0,2) == 0)
 			{
-				rt.insert( factor);
+				rt.insert( g_primeAlphaMap.randomPrime());
+			}
+			else
+			{
+				std::vector<int>::const_iterator xi = solution_.begin(), xe = solution_.end();
+				for (; xi != xe && (factor % *xi) != 0; ++xi) {}
+				if (xi == xe)
+				{
+					rt.insert( factor);
+				}
 			}
 		}
 		return rt;
@@ -408,17 +503,55 @@ private:
 			if (fidx) printSeparator( rt, attr.separator);
 			int chr = g_alphaCharacters[ g_primeAlphaMap[ *fi]];
 			printUnicodeChar( rt, chr);
-			if (attr.withPrefix) printUnicodeChar( rt, chr);
 		}
 		if (attr.withEnd) printSeparator( rt, SeparatorLink);
 		return rt;
 	}
 
-	std::string typeString( int elementid) const
+	std::string pureFeatureString( int elementid) const
+	{
+		std::string rt;
+		std::vector<int> factors = getPrimeFactors( elementid);
+		std::vector<int>::const_iterator fi = factors.begin(), fe = factors.end();
+		for (int fidx=0; fi != fe; ++fi,++fidx)
+		{
+			if (fidx) rt.push_back(' ');
+			int chr = g_alphaCharacters[ g_primeAlphaMap[ *fi]];
+			printUnicodeChar( rt, chr);
+		}
+		return rt;
+	}
+
+	std::string pureQueryString() const
+	{
+		std::string rt;
+		std::vector<int>::const_iterator si = solution.begin(), se = solution.end();
+		for (int sidx=0; si != se; ++si,++sidx)
+		{
+			if (sidx) rt.push_back(' ');
+			rt.append( pureFeatureString( *si));
+		}
+		return rt;
+	}
+
+	static std::vector<std::string> splitSpaces( const char* src)
+	{
+		std::vector<std::string> rt;
+		char const* si = src;
+		char const* sn = std::strchr( si, ' ');
+		for (; sn; si=sn+1,sn = std::strchr( si, ' '))
+		{
+			rt.push_back( std::string( si, sn-si));
+		}
+		rt.push_back( si);
+		return rt;
+	}
+
+	std::vector<std::string> typeStrings( int elementid) const
 	{
 		std::map<int,const char*>::const_iterator ti = typemap.find( elementid);
 		if (ti == typemap.end()) throw std::runtime_error("undefined element (type map)");
-		return ti->second;
+		return splitSpaces( ti->second);
 	}
 
 	std::vector<FeatureDef> featureDefinitions() const
@@ -428,10 +561,35 @@ private:
 		int ei = 0, ee = elements.size();
 		for (; ei != ee; ++ei)
 		{
-			std::string typestr = typeString( elements[ ei]);
+			std::vector<std::string> typestrlist = typeStrings( elements[ ei]);
 			std::string featurestr = featureString( elements[ ei]);
 
-			rt.push_back( FeatureDef( typestr, normalizer->normalize( featurestr.c_str(), featurestr.size())));
+			std::vector<std::string>::const_iterator ti = typestrlist.begin(), te = typestrlist.end();
+			for (; ti != te; ++ti)
+			{
+				rt.push_back( FeatureDef( *ti, normalizer->normalize( featurestr.c_str(), featurestr.size())));
+			}
+		}
+		return rt;
+	}
+
+	std::string queryElementString() const
+	{
+		std::string rt;
+		std::vector<int>::const_iterator si = solution.begin(), se = solution.end();
+		for (int sidx=0; si != se; ++si,++sidx)
+		{
+			if (sidx) rt.push_back(' ');
+			rt.append( strus::string_format("%d {", *si));
+
+			std::vector<int> pfac = getPrimeFactors( *si);
+			std::vector<int>::const_iterator pi = pfac.begin(), pe = pfac.end();
+			for (int pidx=0; pi != pe; ++pi,++pidx)
+			{
+				if (pidx) rt.push_back(',');
+				rt.append( strus::string_format("%d", *pi));
+			}
+			rt.push_back('}');
 		}
 		return rt;
 	}
@@ -466,7 +624,7 @@ private:
 
 static void printUsage( std::ostream& out)
 {
-	out << "Usage testSentenceLexer: [<options>] [<workdir>] [<number of types> [<number of terms> [<number of features> [<max feature terms> [<max term length>]]]]]" << std::endl;
+	out << "Usage testSentenceLexer: [<options>] [<workdir>] <number of terms> <number of features>" << std::endl;
 	out << "options:" << std::endl;
 	out << "-h                     :print this usage" << std::endl;
 	out << "-V                     :verbose output to stderr" << std::endl;
@@ -475,11 +633,8 @@ static void printUsage( std::ostream& out)
 	out << "-T <QIDX>              :evaluate only test case with index <QIDX> starting with 0" << std::endl;
 	out << "-G <DEBUG>             :enable debug trace for <DEBUG>" << std::endl;
 	out << "<workdir>              :working directory, default './'" << std::endl;
-	out << "<number of types>      :number of types, default 2" << std::endl;
-	out << "<number of terms>      :number of terms, default 1000" << std::endl;
-	out << "<number of features>   :number of features, default 10000" << std::endl;
-	out << "<max feature terms>    :maximum number of terms in a feature, default 5" << std::endl;
-	out << "<max term length>      :maximum length of a term, default 30" << std::endl;
+	out << "<number of terms>      :number of terms" << std::endl;
+	out << "<number of features>   :number of features" << std::endl;
 }
 
 int main( int argc, const char** argv)
@@ -586,11 +741,6 @@ int main( int argc, const char** argv)
 		}
 		if (argc > argidx)
 		{
-			g_nofTypes = strus::numstring_conv::touint( argv[ argidx++], std::numeric_limits<strus::Index>::max());
-			if (g_nofTypes == 0) throw std::runtime_error("nof types argument is 0");
-		}
-		if (argc > argidx)
-		{
 			g_nofTerms = strus::numstring_conv::touint( argv[ argidx++], std::numeric_limits<strus::Index>::max());
 			if (g_nofTerms == 0) throw std::runtime_error("nof terms argument is 0");
 		}
@@ -601,21 +751,10 @@ int main( int argc, const char** argv)
 		}
 		if (argc > argidx)
 		{
-			g_maxFeatureTerms = strus::numstring_conv::touint( argv[ argidx++], std::numeric_limits<int>::max());
-			if (g_maxFeatureTerms == 0) throw std::runtime_error("max feature terms argument is 0");
-		}
-		if (argc > argidx)
-		{
-			g_maxTermLength = strus::numstring_conv::touint( argv[ argidx++], std::numeric_limits<int>::max());
-			if (g_maxTermLength == 0) throw std::runtime_error("max term length argument is 0");
-		}
-		if (argc > argidx)
-		{
-			std::cerr << "too many arguments (maximum 6 expected)" << std::endl;
+			std::cerr << "too many arguments (maximum 3 expected)" << std::endl;
 			rt = 1;
 			printUsageAndExit = true;
 		}
-
 		if (printUsageAndExit)
 		{
 			printUsage( std::cerr);
@@ -626,11 +765,8 @@ int main( int argc, const char** argv)
 		if (g_verbose)
 		{
 			std::cerr << "model config: " << configstr << std::endl;
-			std::cerr << "number of types: " << g_nofTypes  << std::endl;
 			std::cerr << "number of terms: " << g_nofTerms  << std::endl;
 			std::cerr << "number of features: " << g_nofFeatures  << std::endl;
-			std::cerr << "maximum number of feature terms: " << g_maxFeatureTerms  << std::endl;
-			std::cerr << "maximum length of a term: " << g_maxTermLength  << std::endl;
 			std::cerr << "random seed: " << g_random.seed() << std::endl;
 		}
 		if (testidx >= 0 && testidx >= g_nofFeatures)
@@ -668,8 +804,7 @@ int main( int argc, const char** argv)
 		if (g_verbose) std::cerr << "insert test data ..." << std::endl;
 		testData.insert( storage.get());
 		if (g_verbose) std::cerr << "run test query ..." << std::endl;
-		testData.runQuery( storage.get());
-		if (g_verbose) std::cerr << "verify results ..." << std::endl;
+		std::vector<strus::SentenceGuess> result = testData.runQuery( storage.get());
 
 		if (g_errorhnd->hasError())
 		{
@@ -680,6 +815,10 @@ int main( int argc, const char** argv)
 		{
 			throw std::runtime_error( "failed to dump the debug trace");
 		}
+		if (g_verbose) std::cerr << "verify results ..." << std::endl;
+		testData.verifyResult( result);
+
+		std::cerr << "NOTE: the verification of the test is weak" << std::endl;
 		std::cerr << "OK" << std::endl;
 
 		delete g_fileLocator;

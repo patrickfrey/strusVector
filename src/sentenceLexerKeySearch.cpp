@@ -66,18 +66,22 @@ struct QueueElement
 	int nofUnresolved;
 	int pos;
 	int predidx;
+	int size;
 
-	QueueElement( int nofUnresolved_, int pos_, int predidx_)
-		:nofUnresolved(nofUnresolved_),pos(pos_),predidx(predidx_){}
+	QueueElement( int nofUnresolved_, int pos_, int predidx_, int size_)
+		:nofUnresolved(nofUnresolved_),pos(pos_),predidx(predidx_),size(size_){}
 	QueueElement( const QueueElement& o)
-		:nofUnresolved(o.nofUnresolved),pos(o.pos),predidx(o.predidx){}
+		:nofUnresolved(o.nofUnresolved),pos(o.pos),predidx(o.predidx),size(o.size){}
 
 	bool operator < (const QueueElement& o) const
 	{
 		return nofUnresolved == o.nofUnresolved
 				? pos == o.pos
-					? predidx < o.predidx
+					? size == o.size
+						? predidx < o.predidx
+						: size < o.size
 					: pos > o.pos
+
 				: nofUnresolved < o.nofUnresolved;
 	}
 };
@@ -100,7 +104,7 @@ struct KeyCursor
 		:keySize(o.keySize),fieldPtr(o.fieldPtr),fieldSize(o.fieldSize),curpos(o.curpos)
 		,kitr(o.kitr),key(o.key),spaceSubst(o.spaceSubst),linkSubst(o.linkSubst)
 	{
-		std::memcpy( keyBuf, o.keyBuf, o.keySize);
+		std::memcpy( keyBuf, o.keyBuf, o.keySize+1);
 	}
 
 	void skipToken()
@@ -119,6 +123,11 @@ struct KeyCursor
 	bool isSpace() const
 	{
 		return *kitr == spaceSubst;
+	}
+
+	bool isSpaceAt( std::size_t pos) const
+	{
+		return key[pos] == spaceSubst;
 	}
 
 	void changeSpaceToLink()
@@ -219,22 +228,34 @@ std::vector<SentenceLexerKeySearch::ItemList> SentenceLexerKeySearch::scanField(
 	std::vector<Solution> solutions;
 	std::vector<KeyCursor> keyCursorStack;
 	std::string loadkey;
+	int minsize = -1;
 
 	// Process candidates in queue:
-	queue.insert( QueueElement( 0, 0, -1));
+	queue.insert( QueueElement( 0, 0, -1, 0));
 	while (!queue.empty())
 	{
 		QueueElement cur = *queue.begin();
 		queue.erase( queue.begin());
 
-		if (!solutions.empty() && solutions[0].nofUnresolved < cur.nofUnresolved)
+		if (!solutions.empty())
 		{
-			// ... no solution available anymore with less unresolved as queue is sorted ascending by nofUnresolved
-			break;
+			if (solutions[0].nofUnresolved < cur.nofUnresolved)
+			{
+				// ... no solution available anymore with less unresolved as queue is sorted ascending by nofUnresolved
+				break;
+			}
+			if (minsize != -1 && cur.size > minsize + 1)
+			{
+				continue;
+			}
 		}
 		KeyCursor keyCursor( field, cur.pos, m_spaceSubst, m_linkSubst);
 		if (!keyCursor.hasMore())
 		{
+			if (minsize == -1 || minsize > cur.size)
+			{
+				minsize = cur.size;
+			}
 			solutions.push_back( Solution( cur.predidx, cur.nofUnresolved));
 		}
 		else
@@ -248,12 +269,9 @@ std::vector<SentenceLexerKeySearch::ItemList> SentenceLexerKeySearch::scanField(
 
 				// Push found element and feed the queue with the successor:
 				int endTokenPos = cur.pos + loadkey.size();
-				int successorPos = (keyCursor.isSpace()) ? endTokenPos+1 : endTokenPos;
-				queue.insert( QueueElement( cur.nofUnresolved, successorPos, elemar.size()));
-				if (keyCursor.isLinkAt( loadkey.size()-1) && cur.pos < successorPos-1)
-				{
-					queue.insert( QueueElement( cur.nofUnresolved, successorPos-1, elemar.size()));
-				}
+				int successorPos = (keyCursor.isSpaceAt( loadkey.size())) ? endTokenPos+1 : endTokenPos;
+				if (successorPos > (int)field.size()) throw strus::runtime_error(_TXT("logic error: field position out of range: %d"), successorPos);
+				queue.insert( QueueElement( cur.nofUnresolved, successorPos, elemar.size(), cur.size+1));
 				elemar.push_back( SolutionElement( featno, cur.pos, endTokenPos, cur.predidx));
 
 				if (!keyCursor.currentTokenIsWord())
@@ -261,7 +279,8 @@ std::vector<SentenceLexerKeySearch::ItemList> SentenceLexerKeySearch::scanField(
 					//... skip lonely link char
 					endTokenPos = cur.pos + keyCursor.keypos();
 					successorPos = (keyCursor.isSpace()) ? endTokenPos+1 : endTokenPos;
-					queue.insert( QueueElement( cur.nofUnresolved, successorPos, cur.predidx));
+					if (successorPos > (int)field.size()) throw strus::runtime_error(_TXT("logic error: field position out of range: %d"), successorPos);
+					queue.insert( QueueElement( cur.nofUnresolved, successorPos, cur.predidx, cur.size));
 				}
 				// Set the key position to the found key length and
 				//	push the key with the first space changed to a link 
@@ -297,12 +316,9 @@ std::vector<SentenceLexerKeySearch::ItemList> SentenceLexerKeySearch::scanField(
 					{
 						// Push found element and feed the queue with the successor:
 						endTokenPos = cur.pos + loadkey.size();
-						successorPos = (keyCursor.isSpace()) ? endTokenPos+1 : endTokenPos;
-						queue.insert( QueueElement( cur.nofUnresolved, successorPos, elemar.size()));
-						if (keyCursor.isLinkAt( loadkey.size()-1) && cur.pos < successorPos-1)
-						{
-							queue.insert( QueueElement( cur.nofUnresolved, successorPos-1, elemar.size()));
-						}
+						successorPos = (keyCursor.isSpaceAt(loadkey.size())) ? endTokenPos+1 : endTokenPos;
+						if (successorPos > (int)field.size()) throw strus::runtime_error(_TXT("logic error: field position out of range: %d"), successorPos);
+						queue.insert( QueueElement( cur.nofUnresolved, successorPos, elemar.size(), cur.size+1));
 						elemar.push_back( SolutionElement( featno, cur.pos, endTokenPos, cur.predidx));
 
 						// Set the key position to the found key length and
@@ -347,14 +363,15 @@ std::vector<SentenceLexerKeySearch::ItemList> SentenceLexerKeySearch::scanField(
 				//... No feature found with this key, then push it as unknown
 				int endTokenPos = cur.pos + keyCursor.keypos();
 				int successorPos = (keyCursor.isSpace()) ? endTokenPos+1 : endTokenPos;
+				if (successorPos > (int)field.size()) throw strus::runtime_error(_TXT("logic error: field position out of range: %d"), successorPos);
 				if (keyCursor.currentTokenIsWord())
 				{
-					queue.insert( QueueElement( cur.nofUnresolved+1, successorPos, elemar.size()));
+					queue.insert( QueueElement( cur.nofUnresolved+1, successorPos, elemar.size(), cur.size+1));
 					elemar.push_back( SolutionElement( 0/*featno (unresolved)*/, cur.pos, endTokenPos, cur.predidx));
 				}
 				else
 				{
-					queue.insert( QueueElement( cur.nofUnresolved, successorPos, cur.predidx));
+					queue.insert( QueueElement( cur.nofUnresolved, successorPos, cur.predidx, cur.size));
 				}
 			}
 		}
@@ -363,6 +380,8 @@ std::vector<SentenceLexerKeySearch::ItemList> SentenceLexerKeySearch::scanField(
 	std::vector<Solution>::const_iterator si = solutions.begin(), se = solutions.end();
 	for (; si != se; ++si)
 	{
+		if (si->idx < 0) continue;
+
 		rt.push_back( ItemList());
 		ItemList& sl = rt.back();
 		int ei = si->idx;
