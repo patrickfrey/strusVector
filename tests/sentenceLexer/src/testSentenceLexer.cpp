@@ -30,6 +30,7 @@
 #include "strus/base/fileio.hpp"
 #include "strus/base/local_ptr.hpp"
 #include "strus/base/string_format.hpp"
+#include "strus/base/string_conv.hpp"
 #include "strus/base/numstring.hpp"
 #include "strus/base/pseudoRandom.hpp"
 #include "strus/base/utf8.hpp"
@@ -346,7 +347,14 @@ public:
 					ti = ri->terms().begin(), te = ri->terms().end();
 				for (; ti != te; ++ti)
 				{
-					std::cerr << strus::string_format( " %s '%s'", ti->type().c_str(), ti->value().c_str());
+					if (ti->type().empty())
+					{
+						std::cerr << strus::string_format( " ? '%s'", ti->value().c_str());
+					}
+					else
+					{
+						std::cerr << strus::string_format( " %s '%s'", ti->type().c_str(), ti->value().c_str());
+					}
 				}
 				std::cerr << strus::string_format( " = %5f", ri->weight()) << std::endl;
 			}
@@ -405,6 +413,7 @@ public:
 				}
 				resultstr.append( pureSentenceTermString( *ti));
 			}
+			resultstr = strus::string_conv::trim( resultstr);
 			if (resultstr != expectedstr)
 			{
 				throw std::runtime_error(
@@ -440,7 +449,7 @@ private:
 		int si = 0, se = g_random.get( 1, g_nofFeatures);
 		for (; si != se; ++si)
 		{
-			rt.push_back( g_random.get( 0, g_nofTerms));
+			rt.push_back( g_random.get( 1, g_nofTerms));
 		}
 		return rt;
 	}
@@ -471,17 +480,23 @@ private:
 			while (cidx2--) {++c2;}
 			
 			int factor = (*c1) * (*c2);
-			if (factor < 0 || g_random.get( 0,2) == 0)
+			if (factor < 0
+				|| factor > g_primeAlphaMap.maxprime * g_primeAlphaMap.maxprime
+				|| g_random.get( 0,2) == 0)
 			{
 				rt.insert( g_primeAlphaMap.randomPrime());
 			}
 			else
 			{
 				std::vector<int>::const_iterator xi = solution_.begin(), xe = solution_.end();
-				for (; xi != xe && (factor % *xi) != 0; ++xi) {}
+				for (; xi != xe && *xi > 1 && (factor % *xi) != 0; ++xi) {}
 				if (xi == xe)
 				{
 					rt.insert( factor);
+				}
+				else if (*xi <= 1)
+				{
+					throw std::runtime_error("logic error in test: illegal element in solution vector");
 				}
 			}
 		}
@@ -531,7 +546,7 @@ private:
 			if (sidx) rt.push_back(' ');
 			rt.append( pureFeatureString( *si));
 		}
-		return rt;
+		return strus::string_conv::trim( rt);
 	}
 
 	static std::vector<std::string> splitSpaces( const char* src)

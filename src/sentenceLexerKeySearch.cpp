@@ -163,9 +163,10 @@ struct KeyCursor
 	bool tryLoad( DatabaseAdapter::FeatureCursor& cursor, std::string& loadbuf, strus::Index& featno)
 	{
 		int kofs = kitr-key;
-		while (cursor.skipPrefix( key, kofs, loadbuf) && loadbuf.size() <= (fieldSize-curpos))
+		while (cursor.skipPrefix( key, kofs, loadbuf))
 		{
-			if (isEqualField( fieldPtr+curpos, loadbuf.c_str(), loadbuf.size())
+			if (loadbuf.size() <= (fieldSize-curpos)
+				&& isEqualField( fieldPtr+curpos, loadbuf.c_str(), loadbuf.size())
 				&& ((fieldSize-curpos) == loadbuf.size()
 					|| fieldPtr[ curpos+loadbuf.size()] == spaceSubst
 					|| fieldPtr[ curpos+loadbuf.size()] == linkSubst
@@ -174,7 +175,8 @@ struct KeyCursor
 				featno = cursor.getCurrentFeatureIndex();
 				return true;
 			}
-			if (key[kofs]) ++kofs;
+			if (!key[kofs]) break;
+			++kofs;
 		}
 		featno = 0;
 		return false;
