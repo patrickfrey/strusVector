@@ -22,6 +22,7 @@
 
 using namespace strus;
 
+#define STRUS_LOWLEVEL_DEBUG
 #define MODULENAME "sentence lexer instance (vector storage)"
 #define STRUS_DBGTRACE_COMPONENT_NAME "sentence"
 #define SENTENCESIZE_AGAINST_COVERSIZE_WEIGHT 0.3
@@ -341,6 +342,27 @@ public:
 				}
 			}
 		}
+#ifdef STRUS_LOWLEVEL_DEBUG
+		{
+		std::set<int> duplicates2;
+		std::size_t ai = 0, ae = m_ar.size();
+		for (; ai != ae; ++ai)
+		{
+			std::size_t oi = ai+1, oe = m_ar.size();
+			for (; oi != oe; ++oi)
+			{
+				if (m_ar[ai] == m_ar[oi])
+				{
+					duplicates2.insert( oi);
+				}
+			}
+		}
+		if (duplicates2 != duplicates)
+		{
+			throw std::runtime_error("logic error in search for duplicates");
+		}
+		}
+#endif
 		if (!duplicates.empty())
 		{
 			std::vector<FeatNumList>::iterator new_ai = m_ar.begin();
@@ -395,6 +417,20 @@ static std::string fieldListString( const std::vector<std::string>& fields, cons
 	return rt;
 }
 
+static int getUndefinedFeatureIndex( std::vector<std::string>& undefinedFeatureList, const std::string featstr)
+{
+	std::vector<std::string>::const_iterator ui = std::find( undefinedFeatureList.begin(), undefinedFeatureList.end(), featstr);
+	if (ui == undefinedFeatureList.end())
+	{
+		undefinedFeatureList.push_back( featstr);
+		return undefinedFeatureList.size();
+	}
+	else
+	{
+		return ui - undefinedFeatureList.begin() + 1;
+	}
+}
+
 std::vector<SentenceGuess> SentenceLexerInstance::call( const std::vector<std::string>& fields, int maxNofResults, double minWeight) const
 {
 	try
@@ -438,8 +474,8 @@ std::vector<SentenceGuess> SentenceLexerInstance::call( const std::vector<std::s
 						if (selectedTypes.empty())
 						{
 							std::string featstr = m_vstorage->getFeatNameFromIndex( ti->featno);
-							undefinedFeatureList.push_back( featstr);
-							variants.add( FeatNum( 0, undefinedFeatureList.size()));
+							int uidx = getUndefinedFeatureIndex( undefinedFeatureList, featstr);
+							variants.add( FeatNum( 0, uidx));
 						}
 						else if (selectedTypes.size() ==  1)
 						{
@@ -460,8 +496,8 @@ std::vector<SentenceGuess> SentenceLexerInstance::call( const std::vector<std::s
 					else
 					{
 						std::string featstr( fi->c_str() + ti->startpos, ti->endpos - ti->startpos);
-						undefinedFeatureList.push_back( featstr);
-						variants.add( FeatNum( 0, undefinedFeatureList.size()));
+						int uidx = getUndefinedFeatureIndex( undefinedFeatureList, featstr);
+						variants.add( FeatNum( 0, uidx));
 					}
 				}
 				fieldSentenceList.insert( fieldSentenceList.end(), variants.ar().begin(), variants.ar().end());

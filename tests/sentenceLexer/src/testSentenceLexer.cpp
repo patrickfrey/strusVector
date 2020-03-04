@@ -56,8 +56,8 @@ static strus::ErrorBufferInterface* g_errorhnd = 0;
 static strus::DebugTraceInterface* g_dbgtrace = 0;
 static strus::FileLocatorInterface* g_fileLocator = 0;
 
-enum {NofDelimiters = 17, NofSpaces = 5, NofAlphaCharacters = 46};
-static const int g_delimiters[ NofDelimiters] = {'?','!','/',':','.',',','-',0x2014,0x2015,')','(','[',']','{','}','<','>'};
+enum {NofDelimiters = 15, NofSpaces = 5, NofAlphaCharacters = 46};
+static const int g_delimiters[ NofDelimiters] = {'?','!','/',',','-',0x2014,0x2015,')','(','[',']','{','}','<','>'};
 static const int g_spaces[ NofSpaces] = {32,'\t',0xA0,0x2001,0x2006};
 static const int g_alphaCharacters[ NofAlphaCharacters] = {'a','b','c','d','e','f','0','1','2','3','4','5','6','7','8','9',0xC0,0xC1,0xC2,0xC3,0xC4,0xC5,0x391,0x392,0x393,0x394,0x395,0x396,0x9A0,0x9A1,0x9A2,0x9A3,0x9A4,0x9A5,0x10B0,0x10B1,0x10B2,0x10B3,0x10B4,0x10B5,0x35B0,0x35B1,0x35B2,0x35B3,0x35B4,0x35B5};
 
@@ -256,6 +256,27 @@ public:
 					: "E";
 			typemap[ elements[ ei]] = type;
 		}
+		std::vector<int>::const_iterator xi = solution.begin(), xe = solution.end();
+		for (int xidx=0; xi != xe; ++xi,++xidx)
+		{
+			std::vector<int> factors = getPrimeFactors( *xi);
+			std::vector<int>::const_iterator fi = factors.begin(), fe = factors.end();
+			for (int fidx=0; fi != fe; ++fi,++fidx)
+			{
+				if (fidx)
+				{
+					attrmap[ *fi].withStart = false;
+				}
+				else if (xidx)
+				{
+					if (!attrmap[ *xi].withDelimiter)
+					{
+						attrmap[ *fi].withStart = false;
+						attrmap[ *xi].withStart = false;
+					}
+				}
+			}
+		}
 		vectors = strus::test::createDistinctRandomVectors( g_random, g_dimVectors, elements.size(), CONFIG_COVERSIM);
 		int si = 0, se = usset.size();
 		if (se)
@@ -321,7 +342,11 @@ public:
 		if (g_verbose)
 		{
 			std::string solutionstr = queryElementString();
-			std::cerr << strus::string_format( "running query %s [%s]", solutionstr.c_str(), qrystr.c_str()) << std::endl;
+			std::string anstring = annotatedQueryString();
+
+			std::cerr << strus::string_format( "running query: %s", solutionstr.c_str()) << std::endl;
+			std::cerr << strus::string_format( "as string: [%s]", qrystr.c_str()) << std::endl;
+			std::cerr << strus::string_format( "annotated: %s", anstring.c_str()) << std::endl;
 			std::vector<std::string>::const_iterator fi = fields.begin(), fe = fields.end();
 			for (; fi != fe; ++fi)
 			{
@@ -389,15 +414,15 @@ public:
 		std::vector<strus::SentenceGuess>::const_iterator
 			ri = result.begin(), re = result.end();
 		std::string expectedstr = pureQueryString();
+		if (g_verbose)
+		{
+			std::cerr << "expected (pure): " << expectedstr << std::endl;
+		}
 		for (; ri != re && ri->weight() >= 1.0 - std::numeric_limits<double>::epsilon(); ++ri){}
 		re = ri;
 		ri = result.begin();
 		for (; ri != re; ++ri)
 		{
-			if (ri->terms().size() != solution.size())
-			{
-				throw std::runtime_error( "result not covering the proposed solution one to one");
-			}
 			std::string resultstr;
 			std::vector<strus::SentenceTerm>::const_iterator
 				ti = ri->terms().begin(), te = ri->terms().end();
@@ -425,10 +450,10 @@ public:
 			{
 				std::cerr << "result (pure): " << resultstr << std::endl;
 			}
-		}
-		if (g_verbose)
-		{
-			std::cerr << "expected (pure): " << expectedstr << std::endl;
+			if (ri->terms().size() != solution.size())
+			{
+				throw std::runtime_error( strus::string_format( "result not covering the proposed solution one to one, result size = %d, expected size = %d", (int)ri->terms().size(), (int)solution.size()));
+			}
 		}
 	}
 
@@ -449,7 +474,7 @@ private:
 		int si = 0, se = g_random.get( 1, g_nofFeatures);
 		for (; si != se; ++si)
 		{
-			rt.push_back( g_random.get( 1, g_nofTerms));
+			rt.push_back( g_random.get( 2, g_nofTerms));
 		}
 		return rt;
 	}
@@ -496,7 +521,7 @@ private:
 				}
 				else if (*xi <= 1)
 				{
-					throw std::runtime_error("logic error in test: illegal element in solution vector");
+					throw std::runtime_error("logic error in test: illegal element in solution");
 				}
 			}
 		}
@@ -634,6 +659,44 @@ private:
 		}
 		return rt;
 	}
+
+	std::string annotatedQueryString() const
+	{
+		std::string rt;
+		std::vector<int>::const_iterator si = solution.begin(), se = solution.end();
+		for (int sidx=0; si != se; ++si,++sidx)
+		{
+			if (sidx) rt.push_back( '|');
+
+			std::map<int,Attributes>::const_iterator ai = attrmap.find( *si);
+			if (ai == attrmap.end()) throw std::runtime_error("undefined element (attribute map)");
+			const Attributes& attr = ai->second;
+
+			if (sidx)
+			{
+				if (attr.withDelimiter)
+				{
+					rt.push_back( '"');
+				}
+				else
+				{
+					rt.push_back( ' ');
+				}
+			}
+			if (attr.withStart) rt.push_back( '-');
+			std::vector<int> factors = getPrimeFactors( *si);
+			std::vector<int>::const_iterator fi = factors.begin(), fe = factors.end();
+			for (int fidx=0; fi != fe; ++fi,++fidx)
+			{
+				if (fidx) rt.push_back( attr.separator == SeparatorLink ? '-' : '_');
+				int chr = g_alphaCharacters[ g_primeAlphaMap[ *fi]];
+				printUnicodeChar( rt, chr);
+				rt.append( strus::string_format( "{%d}", *fi));
+			}
+			if (attr.withStart) rt.push_back( '-');
+		}
+		return rt;
+	}
 };
 
 
@@ -758,6 +821,7 @@ int main( int argc, const char** argv)
 		{
 			g_nofTerms = strus::numstring_conv::touint( argv[ argidx++], std::numeric_limits<strus::Index>::max());
 			if (g_nofTerms == 0) throw std::runtime_error("nof terms argument is 0");
+			if (g_nofTerms < 3) throw std::runtime_error("nof terms argument is smaller than 3");
 		}
 		if (argc > argidx)
 		{
@@ -818,7 +882,7 @@ int main( int argc, const char** argv)
 		ProblemSpace testData( textproc.get());
 		if (g_verbose) std::cerr << "insert test data ..." << std::endl;
 		testData.insert( storage.get());
-		if (g_verbose) std::cerr << "run test query ..." << std::endl;
+		if (g_verbose) std::cerr << "run test query ... " << std::endl;
 		std::vector<strus::SentenceGuess> result = testData.runQuery( storage.get());
 
 		if (g_errorhnd->hasError())

@@ -130,12 +130,6 @@ struct KeyCursor
 		return key[pos] == spaceSubst;
 	}
 
-	void changeSpaceToLink()
-	{
-		if (!isSpace()) throw std::runtime_error(_TXT("logic error: invalid operation"));
-		*kitr = linkSubst;
-	}
-
 	bool isLink() const
 	{
 		return *kitr == linkSubst;
@@ -144,6 +138,22 @@ struct KeyCursor
 	bool isLinkAt( std::size_t pos) const
 	{
 		return key[pos] == linkSubst;
+	}
+
+	bool isSeparator() const
+	{
+		return *kitr == linkSubst || *kitr == spaceSubst; 
+	}
+
+	bool isSeparatorAt( std::size_t pos) const
+	{
+		return key[pos] == linkSubst || key[pos] == spaceSubst;
+	}
+
+	void changeSpaceToLink()
+	{
+		if (!isSpace()) throw std::runtime_error(_TXT("logic error: invalid operation"));
+		*kitr = linkSubst;
 	}
 
 	bool isEqualField( char const* c1, char const* c2, std::size_t csize) const
@@ -160,32 +170,62 @@ struct KeyCursor
 		return true;
 	}
 
-	bool tryLoad( DatabaseAdapter::FeatureCursor& cursor, std::string& loadbuf, strus::Index& featno)
+	bool cursorSkipPrefix( DatabaseAdapter::FeatureCursor& cursor, int kofs, std::string& loadbuf)
+	{
+		if (key[ kofs] == spaceSubst)
+		{
+			if (cursor.skipPrefix( key, kofs, loadbuf)) return true;
+			key[ kofs] = linkSubst;
+			bool rt = cursor.skipPrefix( key, kofs, loadbuf);
+			key[ kofs] = spaceSubst;
+			return rt;
+		}
+		else
+		{
+			return  cursor.skipPrefix( key, kofs, loadbuf);
+		}
+	}
+
+	bool tryLoad( DatabaseAdapter::FeatureCursor& cursor, std::string& loadbuf, strus::Index& featno, int& keylen)
 	{
 		int kofs = kitr-key;
-		while (cursor.skipPrefix( key, kofs, loadbuf))
+		while (cursorSkipPrefix( cursor, kofs, loadbuf))
 		{
-			if (loadbuf.size() <= (fieldSize-curpos)
-				&& isEqualField( fieldPtr+curpos, loadbuf.c_str(), loadbuf.size())
+			if (loadbuf.size() <= (fieldSize-curpos))
+			{
+				keylen = loadbuf.size();
+				if (isEqualField( fieldPtr+curpos, loadbuf.c_str(), loadbuf.size())
 				&& ((fieldSize-curpos) == loadbuf.size()
 					|| fieldPtr[ curpos+loadbuf.size()] == spaceSubst
 					|| fieldPtr[ curpos+loadbuf.size()] == linkSubst
+					|| fieldPtr[ curpos+loadbuf.size()-1] == spaceSubst
 					|| fieldPtr[ curpos+loadbuf.size()-1] == linkSubst))
+				{
+					featno = cursor.getCurrentFeatureIndex();
+					return true;
+				}
+			}
+			else if (loadbuf.size() == (fieldSize-curpos+1))
 			{
-				featno = cursor.getCurrentFeatureIndex();
-				return true;
+				keylen = loadbuf.size()-1;
+				if (loadbuf[ loadbuf.size()-1] == linkSubst)
+				{
+					featno = cursor.getCurrentFeatureIndex();
+					return true;
+				}
 			}
 			if (!key[kofs]) break;
 			++kofs;
 		}
 		featno = 0;
+		keylen = 0;
 		return false;
 	}
 
-	bool tryLoadNext( DatabaseAdapter::FeatureCursor& cursor, std::string& loadbuf, strus::Index& featno)
+	bool tryLoadNext( DatabaseAdapter::FeatureCursor& cursor, std::string& loadbuf, strus::Index& featno, int& keylen)
 	{
 		skipToken();
-		return tryLoad( cursor, loadbuf, featno);
+		return tryLoad( cursor, loadbuf, featno, keylen);
 	}
 
 	void setPosition( std::size_t pos)
@@ -263,15 +303,16 @@ std::vector<SentenceLexerKeySearch::ItemList> SentenceLexerKeySearch::scanField(
 		else
 		{
 			strus::Index featno = 0;
+			int keylen;
 			keyCursor.skipToken();
 
-			if (keyCursor.tryLoad( m_cursor, loadkey, featno))
+			if (keyCursor.tryLoad( m_cursor, loadkey, featno, keylen))
 			{
 				// ... found feature with the key, then examine all variants
 
 				// Push found element and feed the queue with the successor:
-				int endTokenPos = cur.pos + loadkey.size();
-				int successorPos = (keyCursor.isSpaceAt( loadkey.size())) ? endTokenPos+1 : endTokenPos;
+				int endTokenPos = cur.pos + keylen;
+				int successorPos = (keyCursor.isSeparatorAt( keylen)) ? endTokenPos+1 : endTokenPos;
 				if (successorPos > (int)field.size()) throw strus::runtime_error(_TXT("logic error: field position out of range: %d"), successorPos);
 				queue.insert( QueueElement( cur.nofUnresolved, successorPos, elemar.size(), cur.size+1));
 				elemar.push_back( SolutionElement( featno, cur.pos, endTokenPos, cur.predidx));
@@ -280,7 +321,7 @@ std::vector<SentenceLexerKeySearch::ItemList> SentenceLexerKeySearch::scanField(
 				{
 					//... skip lonely link char
 					endTokenPos = cur.pos + keyCursor.keypos();
-					successorPos = (keyCursor.isSpace()) ? endTokenPos+1 : endTokenPos;
+					successorPos = endTokenPos;
 					if (successorPos > (int)field.size()) throw strus::runtime_error(_TXT("logic error: field position out of range: %d"), successorPos);
 					queue.insert( QueueElement( cur.nofUnresolved, successorPos, cur.predidx, cur.size));
 				}
@@ -289,7 +330,7 @@ std::vector<SentenceLexerKeySearch::ItemList> SentenceLexerKeySearch::scanField(
 				//	on the alternative variant stack:
 				keyCursorStack.clear();
 				keyCursorStack.push_back( keyCursor);
-				keyCursor.setPosition( loadkey.size());
+				keyCursor.setPosition( keylen);
 				while (keyCursorStack.back().keypos() < keyCursor.keypos())
 				{
 					if (keyCursorStack.back().isSpace())
@@ -314,11 +355,11 @@ std::vector<SentenceLexerKeySearch::ItemList> SentenceLexerKeySearch::scanField(
 				bool hasMoreKeyCursors = true;
 				while (hasMoreKeyCursors)
 				{
-					while (keyCursor.hasMore() && keyCursor.tryLoadNext( m_cursor, loadkey, featno))
+					while (keyCursor.hasMore() && keyCursor.tryLoadNext( m_cursor, loadkey, featno, keylen))
 					{
 						// Push found element and feed the queue with the successor:
-						endTokenPos = cur.pos + loadkey.size();
-						successorPos = (keyCursor.isSpaceAt(loadkey.size())) ? endTokenPos+1 : endTokenPos;
+						endTokenPos = cur.pos + keylen;
+						successorPos = (keyCursor.isSeparatorAt(keylen)) ? endTokenPos+1 : endTokenPos;
 						if (successorPos > (int)field.size()) throw strus::runtime_error(_TXT("logic error: field position out of range: %d"), successorPos);
 						queue.insert( QueueElement( cur.nofUnresolved, successorPos, elemar.size(), cur.size+1));
 						elemar.push_back( SolutionElement( featno, cur.pos, endTokenPos, cur.predidx));
@@ -327,7 +368,7 @@ std::vector<SentenceLexerKeySearch::ItemList> SentenceLexerKeySearch::scanField(
 						//	push the key with the first space changed to a link 
 						//	on the alternative variant stack:
 						keyCursorStack.push_back( keyCursor);
-						keyCursor.setPosition( loadkey.size());
+						keyCursor.setPosition( keylen);
 						while (keyCursorStack.back().keypos() < keyCursor.keypos())
 						{
 							if (keyCursorStack.back().isSpace())
@@ -364,7 +405,7 @@ std::vector<SentenceLexerKeySearch::ItemList> SentenceLexerKeySearch::scanField(
 			{
 				//... No feature found with this key, then push it as unknown
 				int endTokenPos = cur.pos + keyCursor.keypos();
-				int successorPos = (keyCursor.isSpace()) ? endTokenPos+1 : endTokenPos;
+				int successorPos = (keyCursor.isSeparator()) ? endTokenPos+1 : endTokenPos;
 				if (successorPos > (int)field.size()) throw strus::runtime_error(_TXT("logic error: field position out of range: %d"), successorPos);
 				if (keyCursor.currentTokenIsWord())
 				{
