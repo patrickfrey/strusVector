@@ -219,6 +219,7 @@ std::vector<strus::Index> SentenceLexerInstance::getSelectedTypes( strus::Index 
 				
 				rt.clear();
 				rt.push_back( *ti);
+				priority = pi->second;
 			}
 			else if (pi->second == priority)
 			{
