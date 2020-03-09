@@ -40,7 +40,7 @@ VectorStorageClient::VectorStorageClient( const DatabaseInterface* database_, co
 	std::string configstring = configstring_;
 	std::string stringvalue;
 
-	(void)strus::removeKeyFromConfigString( configstring, "types", m_errorhnd); //... sentence lexer
+	(void)strus::removeKeyFromConfigString( configstring, "lextypes", m_errorhnd); //... sentence lexer
 	(void)strus::removeKeyFromConfigString( configstring, "coversim", m_errorhnd); //... sentence lexer
 	(void)strus::removeKeyFromConfigString( configstring, "recall", m_errorhnd); //... sentence lexer
 	(void)strus::removeKeyFromConfigString( configstring, "spacesb", m_errorhnd); //... sentence lexer

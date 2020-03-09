@@ -105,7 +105,7 @@ void SentenceLexerConfig::load( const std::string& cfgstr_)
 	{}
 
 	std::string typePrioStr;
-	if (strus::extractStringFromConfigString( typePrioStr, cfgstr, "types", &errhnd))
+	if (strus::extractStringFromConfigString( typePrioStr, cfgstr, "lextypes", &errhnd))
 	{
 		typepriomap = parseTypePriorityMap( typePrioStr);
 	}
