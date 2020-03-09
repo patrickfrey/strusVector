@@ -42,6 +42,7 @@ VectorStorageClient::VectorStorageClient( const DatabaseInterface* database_, co
 
 	(void)strus::removeKeyFromConfigString( configstring, "types", m_errorhnd); //... sentence lexer
 	(void)strus::removeKeyFromConfigString( configstring, "coversim", m_errorhnd); //... sentence lexer
+	(void)strus::removeKeyFromConfigString( configstring, "recall", m_errorhnd); //... sentence lexer
 	(void)strus::removeKeyFromConfigString( configstring, "spacesb", m_errorhnd); //... sentence lexer
 	(void)strus::removeKeyFromConfigString( configstring, "linksb", m_errorhnd); //... sentence lexer
 
@@ -67,7 +68,7 @@ VectorStorageClient::~VectorStorageClient()
 	if (m_debugtrace) delete m_debugtrace;
 }
 
-void VectorStorageClient::prepareSearch( const std::string& type)
+void VectorStorageClient::prepareSearch( const std::string& type) const
 {
 	try
 	{
@@ -407,6 +408,12 @@ SentenceLexerInstanceInterface* VectorStorageClient::createSentenceLexer() const
 {
 	try
 	{
+		std::map<std::string,int>::const_iterator
+			ti = m_lexerConfig.typepriomap.begin(), te = m_lexerConfig.typepriomap.end();
+		for (; ti != te; ++ti)
+		{
+			prepareSearch( ti->first);
+		}
 		return new SentenceLexerInstance( this, m_database->database(), m_lexerConfig, m_errorhnd);
 	}
 	CATCH_ERROR_ARG1_MAP_RETURN( _TXT("error in client interface of '%s' getting the configuration string this storage was built with: %s"), MODULENAME, *m_errorhnd, NULL);

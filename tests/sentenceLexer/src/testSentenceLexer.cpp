@@ -57,7 +57,7 @@ static strus::DebugTraceInterface* g_dbgtrace = 0;
 static strus::FileLocatorInterface* g_fileLocator = 0;
 
 enum {NofDelimiters = 15, NofSpaces = 5, NofAlphaCharacters = 46};
-static const int g_delimiters[ NofDelimiters] = {'?','!','/',',','-',0x2014,0x2015,')','(','[',']','{','}','<','>'};
+static const int g_delimiters[ NofDelimiters] = {'?','!','/',',','-',0x2E31,0x2E31,')','(','[',']','{','}','<','>'};
 static const int g_spaces[ NofSpaces] = {32,'\t',0xA0,0x2001,0x2006};
 static const int g_alphaCharacters[ NofAlphaCharacters] = {'a','b','c','d','e','f','0','1','2','3','4','5','6','7','8','9',0xC0,0xC1,0xC2,0xC3,0xC4,0xC5,0x391,0x392,0x393,0x394,0x395,0x396,0x9A0,0x9A1,0x9A2,0x9A3,0x9A4,0x9A5,0x10B0,0x10B1,0x10B2,0x10B3,0x10B4,0x10B5,0x35B0,0x35B1,0x35B2,0x35B3,0x35B4,0x35B5};
 

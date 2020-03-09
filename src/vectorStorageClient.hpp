@@ -40,7 +40,7 @@ public:
 
 	virtual ~VectorStorageClient();
 
-	virtual void prepareSearch( const std::string& type);
+	virtual void prepareSearch( const std::string& type) const;
 
 	virtual std::vector<VectorQueryResult> findSimilar( const std::string& type, const WordVector& vec, int maxNofResults, double minSimilarity, double speedRecallFactor, bool realVecWeights) const;
 

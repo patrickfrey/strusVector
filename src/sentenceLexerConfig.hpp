@@ -34,6 +34,10 @@ public:
 	{
 		return "E / N,V";
 	}
+	static double defaultSpeedRecallFactor()
+	{
+		return 0.8;
+	}
 
 	void initDefaults();
 	void load( const std::string& cfgstr);
@@ -41,6 +45,7 @@ public:
 	char spaceSubst;				//< character replacing seqences of spaces without a linking character
 	char linkSubst;					//< character replacing seqences of linking characters (with or without spaces)
 	double similarityDistance;			//< vector distance minimum defining similarity (value between 0.0 and 1.0)
+	double speedRecallFactor;			//< speed recall for similar vector seach
 	std::map<std::string,int> typepriomap;		//< type priority map
 };
 
