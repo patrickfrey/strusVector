@@ -54,8 +54,6 @@ void SentenceLexerConfig::initDefaults()
 	linkSubst = defaultLinkSubst();
 	groupSimilarityDistance = strus::Constants::defaultGroupSimilarityDistance();
 	speedRecallFactor = defaultSpeedRecallFactor();
-	std::string typepriostr = defaultTypesConfig();
-	typepriomap = parseTypePriorityMap( typepriostr);
 }
 
 SentenceLexerConfig::SentenceLexerConfig()

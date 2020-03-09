@@ -30,10 +30,6 @@ public:
 	{
 		return '-';
 	}
-	static const char* defaultTypesConfig()
-	{
-		return "E,N,V,A,C,W";
-	}
 	static double defaultSpeedRecallFactor()
 	{
 		return 0.8;

@@ -66,7 +66,7 @@ static int g_nofTerms = 20;
 static int g_nofFeatures = 10;
 
 #define CONFIG_COVERSIM 0.8
-#define DEFAULT_CONFIG  "path=vstorage;coversim=0.8"
+#define DEFAULT_CONFIG  "path=vstorage;coversim=0.8;types=E,N,V,A,C,W"
 
 enum Separator
 {
