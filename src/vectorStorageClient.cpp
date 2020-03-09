@@ -61,6 +61,16 @@ VectorStorageClient::VectorStorageClient( const DatabaseInterface* database_, co
 	std::string storedLexerConfig = m_database->readVariable( "config");
 	m_lexerConfig.load( storedLexerConfig);
 	m_lexerConfig.load( configstring_);
+
+	if (m_lexerConfig.typepriomap.empty())
+	{
+		std::vector<std::string> tplist = m_database->readTypes();
+		std::vector<std::string>::const_iterator ti = tplist.begin(), te = tplist.end();
+		for (; ti != te; ++ti)
+		{
+			m_lexerConfig.typepriomap[ *ti] = 1;
+		}
+	}
 }
 
 VectorStorageClient::~VectorStorageClient()

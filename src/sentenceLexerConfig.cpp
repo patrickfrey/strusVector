@@ -97,7 +97,7 @@ void SentenceLexerConfig::load( const std::string& cfgstr_)
 		}
 		linkSubst = linkSubstStr[ 0];
 	}
-	
+
 	if (strus::extractFloatFromConfigString( groupSimilarityDistance, cfgstr, "coversim", &errhnd))
 	{}
 
