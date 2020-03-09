@@ -92,10 +92,10 @@ struct FeatNum
 class SimGroupData
 {
 public:
-	SimGroupData( const VectorStorageClient* vstorage_, double similarityDistance_)
+	SimGroupData( const VectorStorageClient* vstorage_, double groupSimilarityDistance_)
 		:m_vstorage(vstorage_),m_featnomap()
 		,m_vectors(),m_groups(),m_featmap()
-		,m_similarityDistance(similarityDistance_){}
+		,m_groupSimilarityDistance(groupSimilarityDistance_){}
 
 	strus::Index getOrCreateFeatIndex( const std::string& value);
 	std::string getOrCreateTypeString( strus::Index typeno);
@@ -112,7 +112,7 @@ private:
 	std::vector<WordVector> m_vectors;
 	std::vector<Group> m_groups;
 	std::map<FeatNum,GroupId> m_featmap;
-	double m_similarityDistance;
+	double m_groupSimilarityDistance;
 };
 
 strus::Index SimGroupData::getOrCreateFeatIndex( const std::string& value)
@@ -158,7 +158,7 @@ GroupId SimGroupData::getOrCreateFeatGroup( const FeatNum& featnum)
 				if (!m_vectors.back().empty() && !m_vectors[ gidx].empty())
 				{
 					double sim = m_vstorage->vectorSimilarity( m_vectors.back(), m_vectors[ gidx]);
-					if (sim > m_similarityDistance)
+					if (sim > m_groupSimilarityDistance)
 					{
 						m_groups.back().push_back( gidx);
 						gi->push_back( created_gidx);
@@ -442,7 +442,7 @@ std::vector<SentenceGuess> SentenceLexerInstance::call( const std::vector<std::s
 		// Each set gets an integer assigned
 		// Assign group of such integers to sentences
 		// The minimal cover of a group is used to calculate the weight of the candidate
-		SimGroupData simGroupData( m_vstorage, m_config.similarityDistance);
+		SimGroupData simGroupData( m_vstorage, m_config.groupSimilarityDistance);
 		FeatNumVariantList sentences;
 
 		if (m_debugtrace)

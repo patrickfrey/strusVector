@@ -45,7 +45,7 @@ static strus::PseudoRandom g_random;
 static strus::ErrorBufferInterface* g_errorhnd = 0;
 static strus::FileLocatorInterface* g_fileLocator = 0;
 
-#define DEFAULT_CONFIG "path=vstorage"
+#define DEFAULT_CONFIG "path=vstorage;types="
 
 static std::string getFeatureName( unsigned int idx)
 {

@@ -52,7 +52,7 @@ void SentenceLexerConfig::initDefaults()
 {
 	spaceSubst = defaultSpaceSubst();
 	linkSubst = defaultLinkSubst();
-	similarityDistance = strus::Constants::defaultGroupSimilarityDistance();
+	groupSimilarityDistance = strus::Constants::defaultGroupSimilarityDistance();
 	speedRecallFactor = defaultSpeedRecallFactor();
 	std::string typepriostr = defaultTypesConfig();
 	typepriomap = parseTypePriorityMap( typepriostr);
@@ -66,7 +66,7 @@ SentenceLexerConfig::SentenceLexerConfig()
 SentenceLexerConfig::SentenceLexerConfig( const SentenceLexerConfig& o)
 	:spaceSubst(o.spaceSubst)
 	,linkSubst(o.linkSubst)
-	,similarityDistance(o.similarityDistance)
+	,groupSimilarityDistance(o.groupSimilarityDistance)
 	,speedRecallFactor(o.speedRecallFactor)
 	,typepriomap(o.typepriomap){}
 
@@ -100,7 +100,7 @@ void SentenceLexerConfig::load( const std::string& cfgstr_)
 		linkSubst = linkSubstStr[ 0];
 	}
 	
-	if (strus::extractFloatFromConfigString( similarityDistance, cfgstr, "coversim", &errhnd))
+	if (strus::extractFloatFromConfigString( groupSimilarityDistance, cfgstr, "coversim", &errhnd))
 	{}
 
 	if (strus::extractFloatFromConfigString( speedRecallFactor, cfgstr, "recall", &errhnd))

@@ -91,6 +91,17 @@ bool VectorStorage::createStorage( const std::string& configsource, const Databa
 			transaction->writeVersion();
 			transaction->writeVariable( "config", configsource);
 			transaction->writeLshModel( lshmodel);
+
+			strus::Index typeno = database.readNofTypeno();
+			SentenceLexerConfig lexerConfig( configsource);
+			std::map<std::string,int>::const_iterator
+				ti = lexerConfig.typepriomap.begin(), te = lexerConfig.typepriomap.end();
+			for (; ti != te; ++ti)
+			{
+				transaction->writeType( ti->first, ++typeno);
+			}
+			transaction->writeNofTypeno( typeno);
+
 			if (!transaction->commit())
 			{
 				throw strus::runtime_error(_TXT("failed to initialize vector storage: %s"), m_errorhnd->fetchError());

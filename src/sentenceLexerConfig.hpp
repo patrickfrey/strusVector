@@ -32,7 +32,7 @@ public:
 	}
 	static const char* defaultTypesConfig()
 	{
-		return "E / N,V";
+		return "E,N,V,A,C,W";
 	}
 	static double defaultSpeedRecallFactor()
 	{
@@ -44,7 +44,7 @@ public:
 
 	char spaceSubst;				//< character replacing seqences of spaces without a linking character
 	char linkSubst;					//< character replacing seqences of linking characters (with or without spaces)
-	double similarityDistance;			//< vector distance minimum defining similarity (value between 0.0 and 1.0)
+	double groupSimilarityDistance;			//< vector distance minimum defining similarity (value between 0.0 and 1.0)
 	double speedRecallFactor;			//< speed recall for similar vector seach
 	std::map<std::string,int> typepriomap;		//< type priority map
 };
