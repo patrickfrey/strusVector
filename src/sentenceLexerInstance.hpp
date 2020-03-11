@@ -44,7 +44,7 @@ public:
 
 	virtual std::vector<SentenceGuess> call( const std::vector<std::string>& fields, int maxNofResults, double minWeight) const;
 
-	virtual std::vector<SentenceTerm> similarTerms( const std::string& type, const std::vector<SentenceTerm>& termlist, double dist, int maxNofResults, double minWeight) const;
+	virtual std::vector<WeightedSentenceTerm> similarTerms( const std::string& type, const std::vector<WeightedSentenceTerm>& termlist, double dist, int maxNofResults, double minWeight) const;
 
 private:
 	std::vector<strus::Index> getSelectedTypes( strus::Index featno) const;

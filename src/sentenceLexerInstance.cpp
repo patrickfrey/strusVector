@@ -664,40 +664,41 @@ std::vector<SentenceGuess> SentenceLexerInstance::call( const std::vector<std::s
 }
 
 
-std::vector<SentenceTerm> SentenceLexerInstance::similarTerms( const std::string& type, const std::vector<SentenceTerm>& termlist, double minSimilarity, int maxNofResults, double minNormalizedWeight) const
+std::vector<WeightedSentenceTerm> SentenceLexerInstance::similarTerms( const std::string& type, const std::vector<WeightedSentenceTerm>& termlist, double minSimilarity, int maxNofResults, double minNormalizedWeight) const
 {
 	try
 	{
-		std::vector<SentenceTerm> rt;
-		std::vector<SentenceTerm>::const_iterator ti = termlist.begin(), te = termlist.end();
+		std::vector<WeightedSentenceTerm> rt;
+		std::vector<WeightedSentenceTerm>::const_iterator ti = termlist.begin(), te = termlist.end();
 		strus::WordVector vec;
 		for (; ti != te; ++ti)
 		{
 			vec = m_vstorage->featureVector( ti->type(), ti->value());
+			vec *= ti->weight();
 			if (!vec.empty()) break;
 		}
 		if (ti == te) return rt;
 		for (++ti; ti != te; ++ti)
 		{
-			vec += m_vstorage->featureVector( ti->type(), ti->value());
+			strus::WordVector addvec = m_vstorage->featureVector( ti->type(), ti->value());
+			addvec *= ti->weight();
+			vec += addvec;
 		}
 		std::vector<VectorQueryResult> simveclist = m_vstorage->findSimilar( type, vec, maxNofResults, minSimilarity, m_config.speedRecallFactor, true/*real vector weights*/);
 		std::vector<VectorQueryResult>::const_iterator
 			vi = simveclist.begin(), ve = simveclist.end();
-		for (; vi != ve; ++vi)
-		{
-			double ww = vi->weight() / simveclist[0].weight();
-			if (ww + std::numeric_limits<double>::epsilon()*10 < minNormalizedWeight) break;
-		}
+		double minWeight = vi == ve ? 0.0 : vi->weight() * minNormalizedWeight - std::numeric_limits<double>::epsilon()*10;
+		for (; vi != ve && vi->weight() > minWeight; ++vi){}
+
 		simveclist.resize( vi-simveclist.begin());
 		vi = simveclist.begin(), ve = simveclist.end();
 		for (; vi != ve; ++vi)
 		{
-			rt.push_back( SentenceTerm( type, vi->value()));
+			rt.push_back( WeightedSentenceTerm( type, vi->value(), vi->weight()));
 		}
 		return rt;
 	}
-	CATCH_ERROR_ARG1_MAP_RETURN( _TXT("error in '%s' getting ranked list of sentence guesses: %s"), MODULENAME, *m_errorhnd, std::vector<SentenceTerm>());
+	CATCH_ERROR_ARG1_MAP_RETURN( _TXT("error in '%s' getting ranked list of sentence guesses: %s"), MODULENAME, *m_errorhnd, std::vector<WeightedSentenceTerm>());
 }
 
 
