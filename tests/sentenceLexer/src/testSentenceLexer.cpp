@@ -359,7 +359,7 @@ public:
 				std::cerr << strus::string_format( "\telement [%s]", fstr.c_str()) << std::endl;
 			}
 		}
-		std::vector<strus::SentenceGuess> rt = lexer->call( fields, 20/*maxNofResults*/, 0.8/*minWeight*/);
+		std::vector<strus::SentenceGuess> rt = lexer->call( fields, 20/*maxNofResults*/, 0.95/*minWeight*/);
 
 		if (g_verbose)
 		{

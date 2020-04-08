@@ -172,18 +172,7 @@ struct KeyCursor
 
 	bool cursorSkipPrefix( DatabaseAdapter::FeatureCursor& cursor, int kofs, std::string& loadbuf)
 	{
-		if (key[ kofs] == spaceSubst)
-		{
-			if (cursor.skipPrefix( key, kofs, loadbuf)) return true;
-			key[ kofs] = linkSubst;
-			bool rt = cursor.skipPrefix( key, kofs, loadbuf);
-			key[ kofs] = spaceSubst;
-			return rt;
-		}
-		else
-		{
-			return  cursor.skipPrefix( key, kofs, loadbuf);
-		}
+		return cursor.skipPrefix( key, kofs, loadbuf);
 	}
 
 	bool tryLoad( DatabaseAdapter::FeatureCursor& cursor, std::string& loadbuf, strus::Index& featno, int& keylen)
@@ -196,10 +185,10 @@ struct KeyCursor
 				keylen = loadbuf.size();
 				if (isEqualField( fieldPtr+curpos, loadbuf.c_str(), loadbuf.size())
 				&& ((fieldSize-curpos) == loadbuf.size()
-					|| fieldPtr[ curpos+loadbuf.size()] == spaceSubst
-					|| fieldPtr[ curpos+loadbuf.size()] == linkSubst
-					|| fieldPtr[ curpos+loadbuf.size()-1] == spaceSubst
-					|| fieldPtr[ curpos+loadbuf.size()-1] == linkSubst))
+					|| fieldPtr[ keylen] == spaceSubst
+					|| fieldPtr[ keylen] == linkSubst
+					|| fieldPtr[ keylen-1] == spaceSubst
+					|| fieldPtr[ keylen-1] == linkSubst))
 				{
 					featno = cursor.getCurrentFeatureIndex();
 					return true;
@@ -208,7 +197,8 @@ struct KeyCursor
 			else if (loadbuf.size() == (fieldSize-curpos+1))
 			{
 				keylen = loadbuf.size()-1;
-				if (loadbuf[ loadbuf.size()-1] == linkSubst)
+				if (isEqualField( fieldPtr+curpos, loadbuf.c_str(), keylen)
+				&&  loadbuf[ keylen] == linkSubst)
 				{
 					featno = cursor.getCurrentFeatureIndex();
 					return true;
@@ -264,7 +254,7 @@ struct KeyCursor
 
 std::vector<SentenceLexerKeySearch::ItemList> SentenceLexerKeySearch::scanField( const std::string& field)
 {
-	std::vector<ItemList> rt;
+	std::set<ItemList> resultItemList;
 	std::vector<SolutionElement> elemar;
 	std::set<QueueElement> queue;
 	std::vector<Solution> solutions;
@@ -425,8 +415,7 @@ std::vector<SentenceLexerKeySearch::ItemList> SentenceLexerKeySearch::scanField(
 	{
 		if (si->idx < 0) continue;
 
-		rt.push_back( ItemList());
-		ItemList& sl = rt.back();
+		ItemList sl;
 		int ei = si->idx;
 		while (ei >= 0)
 		{
@@ -435,8 +424,9 @@ std::vector<SentenceLexerKeySearch::ItemList> SentenceLexerKeySearch::scanField(
 			sl.push_back( Item( elem.featno, elem.startpos, elem.endpos));
 		}
 		std::reverse( sl.begin(), sl.end());
+		resultItemList.insert( sl);
 	}
-	return rt;
+	return std::vector<ItemList>( resultItemList.begin(), resultItemList.end());
 }
 
 

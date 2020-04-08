@@ -505,7 +505,6 @@ std::vector<SentenceGuess> SentenceLexerInstance::call( const std::vector<std::s
 			sentences.crossJoin( fieldSentenceList);
 			sentences.eliminateDuplicates();
 		}}
-
 		std::vector<std::vector<GroupId> > sentence_groups;
 		std::map<int,int> featureDuplicateCountMap;
 		sentence_groups.reserve( sentences.ar().size());

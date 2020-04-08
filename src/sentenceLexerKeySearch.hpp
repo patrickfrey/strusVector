@@ -35,6 +35,15 @@ public:
 			:featno(featno_),startpos(startpos_),endpos(endpos_){}
 		Item( const Item& o)
 			:featno(o.featno),startpos(o.startpos),endpos(o.endpos){}
+
+		bool operator < (const Item& o) const
+		{
+			return featno == o.featno
+				? startpos == o.startpos
+					? endpos < o.endpos
+					: startpos < o.startpos
+				: featno < o.featno;
+		}
 	};
 	typedef std::vector<Item> ItemList;
 
