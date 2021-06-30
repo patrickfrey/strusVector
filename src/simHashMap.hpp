@@ -51,7 +51,7 @@ public:
 		{m_filter = std::move(o.m_filter); m_idar = std::move(o.m_idar); m_reader = std::move(o.m_reader); m_typeno = o.m_typeno; return *this;}
 #endif
 	SimHashMap& operator =( const SimHashMap& o)
-		{m_filter = o.m_filter; m_idar = m_idar; m_reader = o.m_reader; m_typeno = o.m_typeno; return *this;}
+		{m_filter = o.m_filter; m_idar = o.m_idar; m_reader = o.m_reader; m_typeno = o.m_typeno; return *this;}
 
 	void load();
 
