@@ -162,28 +162,14 @@ VectorStorageDumpInterface* VectorStorage::createDump( const std::string& config
 }
 
 
-const char* VectorStorage::getConfigDescription( const ConfigType& type) const
+const char* VectorStorage::getConfigDescription() const
 {
-	switch (type)
-	{
-		case CmdCreateClient:
-			return "lexprun=<parameter for the creation of a lexer, number of candidates with same position not better than the best candidate followed (default 3)>\nmemtypes=<comma separated list of type names where the LSH values should be loaded entirely into memory for speeding up retrieval>";
-
-		case CmdCreate:
-			return "vecdim=<dimension of vectors>\nbits=<number of bits calculated by separating hyperplanes (optional)>\nvariations=<number of random images used (optional - bits*variations = number of bits in LSH values>";
-	}
-	return 0;
+	return "lexprun=<parameter for the creation of a lexer, number of candidates with same position not better than the best candidate followed (default 3)>\nmemtypes=<comma separated list of type names where the LSH values should be loaded entirely into memory for speeding up retrieval>\nvecdim=<dimension of vectors>\nbits=<number of bits calculated by separating hyperplanes (optional)>\nvariations=<number of random images used (optional - bits*variations = number of bits in LSH values>";
 }
 
-const char** VectorStorage::getConfigParameters( const ConfigType& type) const
+const char** VectorStorage::getConfigParameters() const
 {
-	static const char* keys_CreateStorageClient[]	= {"memtypes", "lexprun", 0};
-	static const char* keys_CreateStorage[]		= {"vecdim", "bits", "variations", 0};
-	switch (type)
-	{
-		case CmdCreateClient:	return keys_CreateStorageClient;
-		case CmdCreate:		return keys_CreateStorage;
-	}
-	return 0;
+	static const char* ar[]	= {"memtypes", "lexprun", "vecdim", "bits", "variations", 0};
+	return ar;
 }
 
